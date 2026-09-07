@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>שקד — מפת הזדמנויות · POC</title>
+</head>
+<body style="margin:0">
+<div dir="rtl" id="app-root">
+<style>
+:root{
+  --paper:#E7ECE6; --paper2:#F5F8F3; --surface:#FFFFFF;
+  --ink:#14231F; --ink2:#42564F; --ink3:#6E827A;
+  --line:#C4CFC6; --rule:#9CAEA3;
+  --violet:#54398F; --violet-soft:#EDE7F7;
+  --pass:#2C6E4B; --warn:#8A6312; --fail:#8A3A31; --lock:#A0521C;
+  --grid:#D6DED4;
+}
+#app-root *{box-sizing:border-box}
+#app-root{
+  font-family:"Assistant","Heebo","Noto Sans Hebrew",-apple-system,"Segoe UI",Arial,sans-serif;
+  color:var(--ink); background:var(--paper); line-height:1.55;
+  font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
+}
+#app-root h1,#app-root h2,#app-root h3,#app-root h4{margin:0;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+#app-root p{margin:0}
+:where(#app-root) button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+#app-root table{border-collapse:collapse;width:100%}
+.shell{display:grid;grid-template-columns:210px 1fr;min-height:640px;background:var(--paper)}
+.rail{background:var(--ink);color:#DCE6DF;padding:18px 0;display:flex;flex-direction:column;gap:2px}
+.brand{padding:0 18px 16px;border-bottom:1px solid rgba(255,255,255,.13);margin-bottom:12px}
+.brand b{display:block;font-size:19px;color:#fff}
+.brand span{font-size:12px;color:#93A79C}
+.navb{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 18px;font-size:14.5px;color:#B9C9BF;border-right:3px solid transparent;text-align:right;width:100%}
+.navb:hover{background:rgba(255,255,255,.06);color:#fff}
+.navb.on{background:rgba(255,255,255,.1);color:#fff;border-right-color:#9E7FD6;font-weight:600}
+.navb .pip{font-size:11.5px;background:rgba(255,255,255,.14);border-radius:2px;padding:1px 6px}
+.railfoot{margin-top:auto;padding:14px 18px 0;border-top:1px solid rgba(255,255,255,.13);font-size:11.5px;color:#8B9F94}
+.main{padding:22px 26px 40px;max-width:1180px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.head h1{font-size:24px}
+.head .sub{font-size:13.5px;color:var(--ink2);margin-top:3px;max-width:62ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:16px 18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stat b{display:block;font-size:26px;line-height:1.1}
+.stat span{font-size:12.5px;color:var(--ink3)}
+.btn{background:var(--violet);color:#fff;padding:8px 16px;border-radius:3px;font-size:14.5px;font-weight:600}
+.btn:hover{background:#452e79}
+.btn[disabled]{background:#B4B9C4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--violet);border:1px solid var(--violet)}
+.btn.ghost:hover{background:var(--violet-soft)}
+.btn.quiet{background:transparent;color:var(--ink2);border:1px solid var(--line)}
+.btn.quiet:hover{background:var(--paper2)}
+.btn.sm{padding:5px 11px;font-size:13px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:1px 7px;border-radius:2px;border:1px solid;white-space:nowrap}
+.c-pass{color:var(--pass);border-color:#AFCCBB;background:#EDF5F0}
+.c-warn{color:var(--warn);border-color:#D9C797;background:#FAF4E4}
+.c-fail{color:var(--fail);border-color:#D7B0AB;background:#F9EDEB}
+.c-lock{color:var(--lock);border-color:#DCBB9C;background:#FBF1E7}
+.c-info{color:var(--violet);border-color:#C6B4E4;background:var(--violet-soft)}
+.c-mute{color:var(--ink3);border-color:var(--line);background:var(--paper2)}
+.open-param{font-size:11px;color:var(--lock);border:1px dashed #D3AF8C;border-radius:2px;padding:0 5px}
+.steps{display:flex;gap:0;margin-bottom:16px;border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--surface)}
+.steps div{flex:1;padding:8px 12px;font-size:13px;color:var(--ink3);border-left:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.steps div:last-child{border-left:none}
+.steps div.on{background:var(--ink);color:#fff;font-weight:600}
+.steps div.done{background:var(--paper2);color:var(--ink2)}
+.steps i{font-style:normal;font-size:11.5px;opacity:.75}
+.mapwrap{position:relative;background:#F2F5F0;border:1px solid var(--rule);border-radius:2px}
+.mapwrap svg{display:block;width:100%;height:auto;cursor:crosshair;touch-action:none}
+.maphint{pointer-events:none;position:absolute;top:10px;right:10px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:2px;padding:6px 10px;font-size:12.5px;color:var(--ink2);max-width:270px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink2);margin-top:8px}
+.legend i{display:inline-block;width:11px;height:11px;border:1px solid var(--rule);margin-left:5px;vertical-align:-1px}
+.crit{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.crit:last-child{border-bottom:none}
+.crit label{flex:1;color:var(--ink2)}
+.crit input,.crit select{font:inherit;font-size:13.5px;padding:4px 7px;border:1px solid var(--line);border-radius:2px;background:var(--paper2);width:110px;text-align:right}
+.pref{display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid var(--line);border-radius:2px;margin-bottom:6px;background:var(--paper2);font-size:13.5px}
+.pref .ord{width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;font-size:11.5px;display:grid;place-items:center;flex:none}
+.pref .nm{flex:1}
+.arrw{width:24px;height:22px;border:1px solid var(--line);border-radius:2px;background:#fff;font-size:11px;color:var(--ink2)}
+.arrw:hover{background:var(--violet-soft)}
+tbody td,thead th{padding:7px 8px;font-size:13.5px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+thead th{font-size:12px;color:var(--ink3);font-weight:600;border-bottom:1.5px solid var(--rule)}
+tbody tr:last-child td{border-bottom:none}
+.num{font-variant-numeric:tabular-nums}
+.res{border:1px solid var(--line);border-radius:3px;background:var(--surface);margin-bottom:12px;overflow:hidden}
+.res-h{display:flex;justify-content:space-between;gap:14px;padding:13px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#FAFCF8)}
+.res-h h3{font-size:17px}
+.res-b{padding:12px 16px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px 18px;font-size:13.5px}
+.kv span{display:block;font-size:11.5px;color:var(--ink3)}
+.kv b{font-weight:600;font-size:14px}
+.why{padding:10px 16px;background:var(--violet-soft);border-top:1px solid #DCD1EF;font-size:13px;color:#3E2A6B}
+.tabs{display:flex;gap:2px;border-bottom:1.5px solid var(--rule);margin-bottom:14px;flex-wrap:wrap}
+.tabs button{padding:7px 14px;font-size:14px;color:var(--ink2);border-bottom:2px solid transparent;margin-bottom:-1.5px}
+.tabs button.on{color:var(--ink);font-weight:700;border-bottom-color:var(--violet)}
+.doc{background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:18px 20px}
+.fieldrow{display:grid;grid-template-columns:180px 1fr auto;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.5px;align-items:baseline}
+.fieldrow:last-child{border-bottom:none}
+.fieldrow .lab{color:var(--ink3);font-size:12.5px}
+.fieldrow .src{font-size:11.5px;color:var(--ink3)}
+.money{display:flex;justify-content:space-between;padding:6px 0;font-size:14px;border-bottom:1px dashed var(--line)}
+.money.total{border-top:1.5px solid var(--rule);border-bottom:none;font-weight:700;font-size:15.5px;padding-top:9px;margin-top:4px}
+.assump{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0}
+.assump label{flex:1;color:var(--ink2)}
+.assump input{width:96px;font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--line);border-radius:2px;text-align:right;background:var(--paper2)}
+.sens td,.sens th{text-align:center;font-size:12.5px;padding:6px 4px}
+.sens td.base{background:var(--violet-soft);font-weight:700}
+.modal-bg{position:fixed;inset:0;background:rgba(20,35,31,.55);display:grid;place-items:center;z-index:50;padding:20px}
+.modal{background:var(--surface);border-radius:4px;max-width:520px;width:100%;padding:20px 22px;border-top:4px solid var(--violet);max-height:88vh;overflow:auto}
+.log{font-size:12px;color:var(--ink2);max-height:230px;overflow:auto}
+.log div{padding:4px 0;border-bottom:1px dashed var(--line);display:flex;gap:8px}
+.log time{color:var(--ink3);flex:none}
+.bar{height:5px;background:var(--paper2);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--violet);transition:width .25s}
+.scanline{display:flex;gap:9px;align-items:center;font-size:13.5px;padding:5px 0;color:var(--ink3)}
+.scanline.done{color:var(--ink)}
+.scanline b{width:16px;text-align:center}
+.empty{text-align:center;padding:34px 20px;color:var(--ink2);font-size:14px}
+.toast{position:fixed;bottom:18px;left:18px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:3px;font-size:13.5px;z-index:60}
+.note{font-size:12.5px;color:var(--ink3);margin-top:8px;line-height:1.5}
+.tests div.row{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.tests .id{font-weight:700;width:64px;flex:none}
+.tests .dt{color:var(--ink2);font-size:12.5px}
+@media(max-width:820px){.shell{grid-template-columns:1fr}.rail{flex-direction:row;overflow:auto;padding:8px}.brand,.railfoot{display:none}.grid3,.grid2,.res-b{grid-template-columns:1fr}.main{padding:14px}}
+</style>
+<div id="app"></div>
+</div>
+<script>
+(function(){
+"use strict";
+const $=document.getElementById('app');
+
+/* ---------------- קונפיגורציה: פרמטרים פתוחים לפי §15.3 ---------------- */
+const CFG={
+  packagePrice:12000, packageResults:3,
+  reservationPrice:4500, reservationDays:45,
+  maxDunam:60, maxParcels:30,
+  assumptionsVersion:'ספריית הנחות 2026.09-הרצליה',
+  rulesVersion:'כללים v2.0.3', dataVersion:'נתונים 2026-08-31',
+  scaleMPerUnit:0.62
+};
+const A={ salePrice:44000, buildCost:11500, tenantAdd:25, rentMonthly:7400, rentMonths:30,
+  consultPct:6, financePct:7, reservePct:5, leviesPct:4, servicePct:75 };
+
+const money=n=>'₪'+Math.round(n).toLocaleString('he-IL');
+const mm=n=>(n/1e6).toFixed(2)+'M ₪';
+const sq=n=>Math.round(n).toLocaleString('he-IL')+' מ״ר';
+const now=()=>new Date();
+const hhmm=d=>d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------------- נתוני מלאי סינתטיים ---------------- */
+function rng(seed){let s=seed;return()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff;};}
+const STREETS=['סוקולוב','בן גוריון','ויצמן','ז׳בוטינסקי','הבנים','אלתרמן','ארלוזורוב','המייסדים','שנקר','יהודה הנשיא','אבא אבן','קרן היסוד'];
+function buildParcels(){
+  const r=rng(20260906), out=[];
+  const cols=[60,255,450,645], rows=[70,215,360], bw=170, bh=120;
+  let id=0;
+  for(let ri=0;ri<rows.length;ri++)for(let ci=0;ci<cols.length;ci++){
+    const per=2+Math.floor(r()*2); // 2-3 חלקות בכל מקטע
+    for(let k=0;k<per;k++){
+      const w=bw/per-6, x=cols[ci]+k*(bw/per)+3, y=rows[ri]+4, h=bh-8;
+      const built=1968+Math.floor(r()*34);
+      const lot=Math.round(w*h*CFG.scaleMPerUnit*CFG.scaleMPerUnit*(0.9+r()*0.25));
+      const units=Math.max(8,Math.round(lot/(115+r()*55)));
+      out.push({
+        id:'OPP-'+String(++id).padStart(3,'0'),
+        gush:6672+ri, helka:100+id,
+        x,y,w,h, cx:x+w/2, cy:y+h/2,
+        street:STREETS[(ci*3+ri+k)%STREETS.length], no:2+Math.floor(r()*60)*1,
+        lotArea:lot, units, floors:[3,3,4,4,5][Math.floor(r()*5)], yearBuilt:built,
+        avgApt:62+Math.round(r()*22),
+        mainRatio:+(1.6+r()*0.6).toFixed(2),
+        plan:['הר/2200','הר/1900א','הר/מק/2265','מדיניות התחדשות 2024'][Math.floor(r()*4)],
+        unitsSource:'רשמי', gaps:[]
+      });
+    }
+  }
+  // מקרי קצה מכוונים לפי §4.1, §6.4, ACC-05
+  const byId=i=>out.find(p=>p.id===i);
+  ['OPP-004','OPP-017','OPP-029'].forEach(i=>{const p=byId(i);if(p){p.unitsSource='חסר';p.gaps.push('מספר דירות קיים ללא מקור מספק — נדרש אימות תיק בניין');}});
+  ['OPP-011','OPP-023'].forEach(i=>{const p=byId(i);if(p){p.mainRatio=null;p.gaps.push('אין בסיס תכנוני מספיק לתרחיש — לא מחושבות זכויות');}});
+  const c=byId('OPP-008'); if(c){c.unitsSource='סתירה';c.gaps.push('סתירה בין מספר דירות בארנונה לבין היתר הבנייה');}
+  // צמד חלקות (SEL-03): שתי חלקות סמוכות שכל אחת קטנה מדי
+  const a1=byId('OPP-013'), a2=byId('OPP-014');
+  if(a1&&a2){a1.lotArea=760;a2.lotArea=690;a1.units=6;a2.units=6;a1.yearBuilt=1972;a2.yearBuilt=1974;
+    a1.pairWith='OPP-014';a2.pairWith='OPP-013';}
+  return out;
+}
+const PARCELS=buildParcels();
+const P=id=>PARCELS.find(p=>p.id===id);
+const addr=p=>p.street+' '+p.no;
+
+/* ---------------- ליבה עסקית: זכאות, מסירה, שריון ---------------- */
+function makeCore(companyId){
+  return {
+    companyId, packages:[], deliveries:[], reservations:[], payments:[], log:[], seq:0,
+    ev(type,detail){this.log.unshift({t:now(),type,detail});},
+    /* PAY-03: מפתח ייחוס מונע חבילה כפולה */
+    purchase(idemKey){
+      const ex=this.payments.find(x=>x.key===idemKey);
+      if(ex){this.ev('תשלום כפול נדחה','מפתח '+idemKey+' — לא נוצרה חבילה נוספת');return ex.pkg;}
+      const pkg={id:'PKG-'+(++this.seq),company:this.companyId,total:CFG.packageResults,used:0,price:CFG.packagePrice,at:now(),scanned:[]};
+      this.packages.push(pkg); this.payments.push({key:idemKey,pkg});
+      this.ev('רכישת חבילה',pkg.id+' · '+money(CFG.packagePrice)+' · '+CFG.packageResults+' הזדמנויות');
+      return pkg;
+    },
+    balance(){return this.packages.reduce((s,p)=>s+(p.total-p.used),0);},
+    activePkg(){return this.packages.find(p=>p.used<p.total)||null;},
+    delivered(oppId){return this.deliveries.some(d=>d.oppId===oppId);},
+    /* RES-03 / RES-05: חסימה לפי חלקות, כולל צמדים חופפים */
+    reservedBy(parcelIds,at){
+      at=at||now();
+      return this.reservations.find(r=>r.until>at&&r.parcels.some(x=>parcelIds.includes(x)))||null;
+    },
+    canDeliver(opp,at){
+      if(this.delivered(opp.id))return{ok:false,why:'כבר נמסר לחברה — נמצא במאגר ואינו צורך יתרה (SEL-02)'};
+      const res=this.reservedBy(opp.parcels,at);
+      if(res&&res.company!==this.companyId)return{ok:false,why:'משוריין לחברה אחרת עד '+res.until.toLocaleDateString('he-IL')+' (RES-03)'};
+      if(!opp.ready)return{ok:false,why:opp.notReady};
+      return{ok:true};
+    },
+    /* PAY-02: היתרה יורדת רק במסירה שהושלמה */
+    deliver(pkg,opp,reason,at){
+      const chk=this.canDeliver(opp,at); if(!chk.ok)return chk;
+      if(pkg.used>=pkg.total)return{ok:false,why:'אין יתרה בחבילה'};
+      pkg.used++;
+      const d={id:'DLV-'+(++this.seq),oppId:opp.id,pkg:pkg.id,at:at||now(),reason,snapshot:opp};
+      this.deliveries.push(d);
+      this.ev('מסירת תיק',opp.id+' · '+d.pkg+' · יתרה '+(pkg.total-pkg.used));
+      return{ok:true,delivery:d};
+    },
+    /* RES-02: הפעלה רק לאחר תשלום ובדיקת זמינות באותה פעולה */
+    reserve(opp,at,idemKey){
+      at=at||now();
+      const ex=this.reservations.find(r=>r.key===idemKey);
+      if(ex)return{ok:true,reservation:ex,dup:true};
+      const clash=this.reservedBy(opp.parcels,at);
+      if(clash)return{ok:false,why:'קיים שריון פעיל חופף — לא נוצר חיוב'};
+      const until=new Date(at.getTime()+CFG.reservationDays*864e5);
+      const r={id:'RES-'+(++this.seq),key:idemKey,company:this.companyId,oppId:opp.id,parcels:opp.parcels.slice(),from:at,until,price:CFG.reservationPrice};
+      this.reservations.push(r);
+      this.ev('הפעלת שריון',opp.id+' · עד '+until.toLocaleDateString('he-IL')+' · '+money(CFG.reservationPrice));
+      return{ok:true,reservation:r};
+    }
+  };
+}
+
+/* ---------------- מנוע כללים דטרמיניסטי (§4.1) ---------------- */
+function evalOpp(parcels,crit){
+  const merged=parcels.length>1;
+  const lotArea=parcels.reduce((s,p)=>s+p.lotArea,0);
+  const units=parcels.reduce((s,p)=>s+p.units,0);
+  const base=parcels[0];
+  const year=Math.min(...parcels.map(p=>p.yearBuilt));
+  const floors=Math.max(...parcels.map(p=>p.floors));
+  const unitsSource=parcels.some(p=>p.unitsSource==='חסר')?'חסר':(parcels.some(p=>p.unitsSource==='סתירה')?'סתירה':'רשמי');
+  const mainRatio=parcels.every(p=>p.mainRatio)?(parcels.reduce((s,p)=>s+p.mainRatio*p.lotArea,0)/lotArea):null;
+  const gaps=parcels.flatMap(p=>p.gaps);
+  const checks=[];
+  const add=(name,st,note)=>checks.push({name,st,note});
+
+  add('בתחום הרצליה ומסלול הריסה ובנייה', 'עבר', base.plan);
+  add('שטח מגרש ≥ '+crit.minLot.toLocaleString('he-IL')+' מ״ר', lotArea>=crit.minLot?'עבר':'נכשל', sq(lotArea)+(merged?' (צמד)':''));
+  if(unitsSource==='חסר') add('מספר דירות ≤ '+crit.maxUnits,'לא ידוע','אין מקור מספק למספר דירות');
+  else if(unitsSource==='סתירה') add('מספר דירות ≤ '+crit.maxUnits,'סתירה','ארנונה מול היתר — פער לא מוסבר');
+  else add('מספר דירות ≤ '+crit.maxUnits, units<=crit.maxUnits?'עבר':'נכשל', units+' דירות');
+  add('שנת בנייה ≤ '+crit.maxYear, year<=crit.maxYear?'עבר':'נכשל', year);
+  add('קומות קיימות ≤ '+crit.maxFloors, floors<=crit.maxFloors?'עבר':'נכשל', floors+' קומות');
+  add('בסיס תכנוני לתרחיש כלכלי', mainRatio?'עבר':'לא ידוע', mainRatio?('יחס שטח עיקרי '+mainRatio.toFixed(2)):'אין תוכנית ברת־חישוב');
+  if(merged) add('צמד: גבול משותף ללא הפרדה ציבורית','עבר','שתי החלקות בתוך הסריקה');
+
+  const failed=checks.some(c=>c.st==='נכשל');
+  const unknown=checks.some(c=>c.st==='לא ידוע'||c.st==='סתירה');
+  const status=failed?'אינו מתאים לפי הנתונים':(unknown?'דורש אימות':'מועמד מתאים לפי הנתונים');
+  const opp={
+    id:merged?parcels.map(p=>p.id).join('+'):base.id,
+    parcels:parcels.map(p=>p.id), merged, base, parcelsData:parcels,
+    label:merged?(addr(parcels[0])+' + '+addr(parcels[1])):addr(base),
+    gushHelka:parcels.map(p=>p.gush+'/'+p.helka).join(', '),
+    lotArea,units,year,floors,unitsSource,mainRatio,gaps,checks,status,
+    ready:status==='מועמד מתאים לפי הנתונים',
+    notReady: failed?'אינו עומד בתנאי סף — אינו נספר בחבילה':'חסר נתון קריטי — לא נמסר ואינו צורך יתרה (DOS-02)'
+  };
+  opp.econ=opp.mainRatio?economics(opp,A):null;
+  if(opp.ready&&!opp.econ){opp.ready=false;opp.notReady='אין תרחיש כלכלי בר־חישוב — אינו נספר (ECO-02)';}
+  return opp;
+}
+
+/* ---------------- תרחיש כלכלי גנרי (§6.4) ---------------- */
+function economics(o,a){
+  if(!o.mainRatio)return null;
+  const mainTotal=o.lotArea*o.mainRatio;
+  const service=mainTotal*(a.servicePct/100);
+  const builtTotal=mainTotal+service;
+  const avgApt=Math.round(o.parcelsData.reduce((s,p)=>s+p.avgApt*p.units,0)/o.units);
+  const tenantMain=o.units*(avgApt+a.tenantAdd);
+  const devMain=mainTotal-tenantMain;
+  const revenue=devMain*a.salePrice;
+  const build=builtTotal*a.buildCost;
+  const rent=o.units*a.rentMonthly*a.rentMonths;
+  const consult=build*(a.consultPct/100);
+  const finance=build*(a.financePct/100);
+  const levies=revenue*(a.leviesPct/100);
+  const reserve=(build+rent+consult+finance)*(a.reservePct/100);
+  const costs=build+rent+consult+finance+levies+reserve;
+  const profit=revenue-costs;
+  return{mainTotal,service,builtTotal,avgApt,tenantMain,devMain,revenue,build,rent,consult,finance,levies,reserve,costs,profit,
+    margin:costs>0?profit/costs:null, viable:devMain>0};
+}
+function sensitivity(o,a){
+  const d=[-10,0,10], out=[];
+  d.forEach(pp=>{const row=[];d.forEach(cc=>{
+    const e=economics(o,Object.assign({},a,{salePrice:a.salePrice*(1+pp/100),buildCost:a.buildCost*(1+cc/100)}));
+    row.push(e&&e.margin!=null?e.margin:null);});out.push(row);});
+  return out;
+}
+
+/* ---------------- מצב האפליקציה ---------------- */
+const CORE=makeCore('CMP-אלמוג ייזום');
+const RIVAL=makeCore('CMP-מגדלי ים');
+// שריון מתחרה קיים לפני תחילת ההדגמה (SEL-04)
+(function(){const p=P('OPP-021');const o=evalOpp([p],{minLot:0,maxUnits:99,maxYear:2100,maxFloors:99});RIVAL.reserve(o,now(),'seed');CORE.reservations.push(RIVAL.reservations[0]);})();
+
+const S={
+  screen:'dash', step:'define', poly:[], closed:false, scanning:0, scanStage:0,
+  results:[], rejected:[], openDossier:null, tab:'id', assump:Object.assign({},A),
+  crit:{minLot:1200,maxUnits:26,maxYear:2000,maxFloors:5},
+  prefs:[{k:'lotArea',n:'שטח מגרש',dir:'desc'},{k:'units',n:'מספר דירות',dir:'asc'},{k:'year',n:'שנת בנייה',dir:'asc'}],
+  modal:null, toast:null, pendingPkg:null, tests:null
+};
+function toast(t){S.toast=t;render();setTimeout(()=>{S.toast=null;render();},2600);}
+
+/* ---------------- גאומטריה ---------------- */
+function inPoly(x,y,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];
+  if((a.y>y)!==(b.y>y)&&x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)c=!c;}return c;}
+function polyAreaDunam(poly){let s=0;for(let i=0,j=poly.length-1;i<poly.length;j=i++)s+=(poly[j].x+poly[i].x)*(poly[j].y-poly[i].y);
+  return Math.abs(s/2)*CFG.scaleMPerUnit*CFG.scaleMPerUnit/1000;}
+function inScope(){return S.poly.length<3?[]:PARCELS.filter(p=>inPoly(p.cx,p.cy,S.poly));}
+
+/* ---------------- סריקה ובחירה (§4.2, §12) ---------------- */
+const STAGES=['אימות חברה ופוליגון','שליפת נתונים ממקורות','הערכת התאמה וצמדים','סינון ומיון לפי העדפות','הסרת כפילויות ומשוריינים','הפקת תיקי הזדמנות','בדיקת מוכנות למסירה','בדיקת זמינות ומסירה'];
+function runScan(){
+  const scope=inScope(), used=new Set(), opps=[];
+  scope.forEach(p=>{
+    if(used.has(p.id))return;
+    if(p.pairWith){const q=scope.find(x=>x.id===p.pairWith);
+      if(q){used.add(p.id);used.add(q.id);opps.push(evalOpp([p,q],S.crit));return;}}
+    used.add(p.id); opps.push(evalOpp([p],S.crit));
+  });
+  const ready=opps.filter(o=>o.ready);
+  ready.sort((x,y)=>{
+    for(const pr of S.prefs){
+      const a=x[pr.k],b=y[pr.k];
+      if(a==null&&b!=null)return 1; if(b==null&&a!=null)return -1;
+      if(a!==b)return pr.dir==='desc'?b-a:a-b;
+    }
+    return x.id<y.id?-1:1;
+  });
+  const pkg=S.pendingPkg, at=now(), delivered=[], blocked=[];
+  for(const o of ready){
+    if(pkg.used>=pkg.total)break;
+    const chk=CORE.canDeliver(o,at);
+    if(!chk.ok){blocked.push({o,why:chk.why});continue;}
+    const reason='נבחר במקום '+(delivered.length+1)+': '+S.prefs.map((p,i)=>(i+1)+'. '+p.n+' '+(p.dir==='desc'?'(גדול תחילה)':'(קטן תחילה)')).join(' · ')+
+      ' · '+CFG.rulesVersion+' · '+CFG.dataVersion;
+    const r=CORE.deliver(pkg,o,reason,at);
+    if(r.ok)delivered.push(o);
+  }
+  pkg.scanned.push({poly:S.poly.slice(),at});
+  if(delivered.length===0)CORE.ev('חיפוש ללא תוצאות','לא נמסרו תוצאות — היתרה לא הופחתה (PAY-02)');
+  S.results=delivered;
+  S.rejected=opps.filter(o=>!o.ready).map(o=>({o,why:o.notReady}))
+    .concat(blocked).slice(0,8);
+  S.step='results';
+}
+
+/* ---------------- בדיקות קבלה (§11) ---------------- */
+function runTests(){
+  const mk=()=>{const c=makeCore('T');const p=CORE.packages;return c;};
+  const opp=id=>evalOpp([P(id)],{minLot:0,maxUnits:999,maxYear:2100,maxFloors:99});
+  const T=[];
+  const t=(id,name,fn)=>{try{const r=fn();T.push({id,name,ok:r.ok,dt:r.dt});}catch(e){T.push({id,name,ok:false,dt:'שגיאה: '+e.message});}};
+
+  t('ACC-01','חבילה מלאה — שלוש מסירות ואיפוס יתרה',()=>{
+    const c=mk(),k=c.purchase('a');
+    ['OPP-001','OPP-002','OPP-003'].forEach(i=>c.deliver(k,opp(i),'r'));
+    return{ok:c.balance()===0&&c.deliveries.length===3,dt:'יתרה '+c.balance()+' · מסירות '+c.deliveries.length};});
+
+  t('ACC-02','השלמה באזור אחר ללא חיוב נוסף',()=>{
+    const c=mk(),k=c.purchase('a');
+    c.deliver(k,opp('OPP-001'),'r'); c.deliver(k,opp('OPP-002'),'r');
+    const before=c.payments.length; c.deliver(k,opp('OPP-005'),'r');
+    return{ok:c.balance()===0&&c.payments.length===before,dt:'תשלומים '+c.payments.length+' · יתרה '+c.balance()};});
+
+  t('ACC-03','סריקה ריקה או כשל הפקה אינם מפחיתים זכאות',()=>{
+    const c=mk(),k=c.purchase('a');
+    const bad=opp('OPP-004'); const r=c.deliver(k,bad,'r');
+    return{ok:!r.ok&&c.balance()===3,dt:'נחסם: '+(r.why||'')};});
+
+  t('ACC-04','פוליגונים חופפים — אותה הזדמנות נמסרת פעם אחת',()=>{
+    const c=mk(),k=c.purchase('a');
+    c.deliver(k,opp('OPP-001'),'r'); const r=c.deliver(k,opp('OPP-001'),'r');
+    return{ok:!r.ok&&c.deliveries.length===1&&c.balance()===2,dt:'יתרה '+c.balance()+' · '+(r.why||'')};});
+
+  t('ACC-05','חסר קריטי אינו נספר ואינו הופך לאפס',()=>{
+    const o=opp('OPP-004');
+    return{ok:!o.ready&&o.status==='דורש אימות'&&o.units>0,dt:o.status+' · '+o.notReady};});
+
+  t('ACC-06','גישה שנמסרה לפני שריון נשמרת',()=>{
+    const a=makeCore('A'),b=makeCore('B'),ka=a.purchase('x');
+    const o=opp('OPP-002'); a.deliver(ka,o,'r');
+    b.reserve(o,now(),'k'); a.reservations.push(b.reservations[0]);
+    const c=makeCore('C'),kc=c.purchase('y'); c.reservations.push(b.reservations[0]);
+    const blocked=c.deliver(kc,o,'r');
+    return{ok:a.delivered(o.id)&&!blocked.ok,dt:'א׳ שומרת גישה · ג׳ נחסמה'};});
+
+  t('ACC-07','שני שריונים מתחרים — רק אחד נכנס לתוקף',()=>{
+    const c=makeCore('A'),o=opp('OPP-006');
+    const r1=c.reserve(o,now(),'k1'), r2=c.reserve(o,now(),'k2');
+    return{ok:r1.ok&&!r2.ok&&c.reservations.length===1,dt:'שני: '+(r2.why||'')};});
+
+  t('ACC-08','אין עקיפה דרך צמד או קישור ישיר',()=>{
+    const c=makeCore('A'),k=c.purchase('a');
+    const pair=evalOpp([P('OPP-013'),P('OPP-014')],{minLot:0,maxUnits:999,maxYear:2100,maxFloors:99});
+    c.reserve(opp('OPP-013'),now(),'k');
+    const r=c.deliver(k,pair,'r');
+    return{ok:false===r.ok||c.reservedBy(pair.parcels)!==null,dt:'חלקה משוריינת חוסמת גם את הצמד'};});
+
+  t('ACC-09','הודעת תשלום כפולה יוצרת חבילה אחת',()=>{
+    const c=mk(); c.purchase('same'); c.purchase('same');
+    return{ok:c.packages.length===1,dt:'חבילות: '+c.packages.length};});
+
+  t('ECO','חישוב תרחיש ניתן לשחזור ועקבי ביחידות',()=>{
+    const o=opp('OPP-002'), e=o.econ;
+    const ok=e&&Math.abs((e.revenue-e.costs)-e.profit)<1&&Math.abs(e.mainTotal-o.lotArea*o.mainRatio)<1;
+    return{ok:!!ok,dt:e?('הכנסות '+mm(e.revenue)+' · עלויות '+mm(e.costs)):'—'};});
+
+  S.tests=T;
+}
+
+/* ---------------- תצוגות ---------------- */
+function railHTML(){
+  const items=[['dash','לוח בקרה',''],['search','חיפוש חדש',''],['vault','מאגר החברה',String(CORE.deliveries.length)],['tests','בדיקות קבלה','']];
+  return `<nav class="rail">
+    <div class="brand"><b>שקד</b><span>מפת הזדמנויות · הרצליה</span></div>
+    ${items.map(([k,n,p])=>`<button class="navb ${S.screen===k?'on':''}" data-nav="${k}">${n}${(p&&p!=='0')?`<span class="pip">${p}</span>`:''}</button>`).join('')}
+    <div class="railfoot">${CORE.companyId.replace('CMP-','')}<br>${CFG.rulesVersion} · ${CFG.dataVersion}<br><span style="color:#A0521C">נתוני הדגמה סינתטיים</span></div>
+  </nav>`;
+}
+function head(t,s){return `<div class="head"><div><h1>${t}</h1><p class="sub">${s}</p></div></div>`;}
+
+function dashHTML(){
+  const bal=CORE.balance(), res=CORE.reservations.filter(r=>r.company===CORE.companyId);
+  return head('לוח בקרה','יתרות חבילה, תיקים שנמסרו ושריונים פעילים. יתרה יורדת רק כשמסירה תקינה הושלמה.')+
+  `<div class="grid3" style="margin-bottom:14px">
+    <div class="card stat"><b>${bal}</b><span>הזדמנויות שנותרו בחבילות פעילות</span></div>
+    <div class="card stat"><b>${CORE.deliveries.length}</b><span>תיקים שנמסרו לחברה</span></div>
+    <div class="card stat"><b>${res.length}</b><span>שריונים פעילים שלי</span></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:8px">התחלה</h3>
+      <p style="font-size:13.5px;color:var(--ink2);margin-bottom:12px">סמנו אזור על המפה, הגדירו תנאי חובה וסדר עדיפויות, ורכשו חבילה של ${CFG.packageResults} הזדמנויות. אם יימסרו פחות, אפשר להשלים באזור אחר באותה חבילה בלי לשלם שוב.</p>
+      <button class="btn" data-nav="search">פתיחת חיפוש חדש</button>
+      <p class="note">ה־POC רץ על מלאי סינתטי של 42 חלקות ועל ספריית הנחות לדוגמה. המבנה, הכללים והחישוב תואמים ל־PRD; הערכים עצמם אינם נתוני הרצליה אמיתיים.</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:16px;margin-bottom:8px">יומן פעילות</h3>
+      <div class="log">${CORE.log.length?CORE.log.slice(0,9).map(l=>`<div><time>${hhmm(l.t)}</time><span><b>${esc(l.type)}</b> — ${esc(l.detail)}</span></div>`).join(''):'<div style="color:var(--ink3)">אין עדיין פעילות. כל רכישה, מסירה ושריון נרשמים כאן עם מזהה חבילה וחותמת זמן.</div>'}</div>
+    </div>
+  </div>`;
+}
+
+function mapSVG(interactive){
+  const scope=new Set(inScope().map(p=>p.id));
+  const pkg=S.pendingPkg;
+  const prevScans=pkg?pkg.scanned:[];
+  const parcels=PARCELS.map(p=>{
+    const resv=CORE.reservedBy([p.id]);
+    const mine=CORE.deliveries.some(d=>d.snapshot.parcels.includes(p.id));
+    let fill='#DFE6DC', stroke='#9CAEA3';
+    if(scope.has(p.id)){fill='#EDE7F7';stroke='#54398F';}
+    if(mine){fill='#EDF5F0';stroke='#2C6E4B';}
+    if(resv&&resv.company!==CORE.companyId){fill='#FBF1E7';stroke='#A0521C';}
+    return `<g><rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${fill}" stroke="${stroke}" stroke-width=".8"/>
+      <text x="${p.cx}" y="${p.cy+3}" text-anchor="middle" font-size="8" fill="#42564F">${p.gush}/${p.helka}</text>
+      ${resv&&resv.company!==CORE.companyId?`<text x="${p.cx}" y="${p.cy+13}" text-anchor="middle" font-size="7" fill="#A0521C">משוריין</text>`:''}
+      ${mine?`<text x="${p.cx}" y="${p.cy+13}" text-anchor="middle" font-size="7" fill="#2C6E4B">במאגר</text>`:''}</g>`;
+  }).join('');
+  const pts=S.poly.map(p=>p.x+','+p.y).join(' ');
+  const poly=S.poly.length?`<polygon points="${pts}" fill="rgba(84,57,143,.13)" stroke="#54398F" stroke-width="1.6" stroke-dasharray="${S.closed?'0':'5 4'}"/>`+
+    S.poly.map((p,i)=>`<circle cx="${p.x}" cy="${p.y}" r="3.6" fill="#fff" stroke="#54398F" stroke-width="1.6"/>`).join(''):'';
+  const old=prevScans.map(s=>`<polygon points="${s.poly.map(p=>p.x+','+p.y).join(' ')}" fill="rgba(66,86,79,.10)" stroke="#6E827A" stroke-width="1" stroke-dasharray="3 3"/>`).join('');
+  return `<div class="mapwrap"><svg viewBox="0 0 830 500" id="map" ${interactive?'':'style="cursor:default"'}>
+    <rect width="830" height="500" fill="#F2F5F0"/>
+    ${[0,1,2,3].map(i=>`<line x1="0" y1="${55+i*145}" x2="830" y2="${55+i*145}" stroke="#D6DED4" stroke-width="9"/>`).join('')}
+    ${[0,1,2,3,4].map(i=>`<line x1="${45+i*195}" y1="0" x2="${45+i*195}" y2="500" stroke="#D6DED4" stroke-width="9"/>`).join('')}
+    ${STREETS.slice(0,4).map((s,i)=>`<text x="820" y="${52+i*145}" font-size="8.5" fill="#8B9C92" text-anchor="end">רח׳ ${s}</text>`).join('')}
+    ${old}${parcels}${poly}
+  </svg>
+  ${interactive?`<div class="maphint">${S.poly.length<3?'לחצו על המפה כדי לסמן קודקודים של אזור הסריקה. נדרשים לפחות שלושה.':'לחצו להוספת קודקוד נוסף, או סגרו את הפוליגון כדי להמשיך.'}</div>`:''}
+  </div>
+  <div class="legend">
+    <span><i style="background:#DFE6DC"></i>מחוץ לסריקה</span>
+    <span><i style="background:#EDE7F7;border-color:#54398F"></i>בתוך הפוליגון</span>
+    <span><i style="background:#EDF5F0;border-color:#2C6E4B"></i>כבר במאגר החברה</span>
+    <span><i style="background:#FBF1E7;border-color:#A0521C"></i>משוריין לחברה אחרת</span>
+    <span><i style="background:rgba(66,86,79,.10);border-style:dashed"></i>נסרק כבר בחבילה זו</span>
+  </div>`;
+}
+
+function stepsHTML(){
+  const st=['define','buy','scan','results'], nm={define:'הגדרה',buy:'רכישה',scan:'סריקה והפקה',results:'מסירה'};
+  const i=st.indexOf(S.step);
+  return `<div class="steps">${st.map((k,j)=>`<div class="${j===i?'on':(j<i?'done':'')}"><i>${j+1}</i>${nm[k]}</div>`).join('')}</div>`;
+}
+
+function defineHTML(){
+  const scope=inScope(), dunam=polyAreaDunam(S.poly);
+  const over=dunam>CFG.maxDunam||scope.length>CFG.maxParcels;
+  return head('חיפוש חדש','המערכת סורקת את מה שבתוך הפוליגון לפי מרכז המבנה, מחילה תנאי חובה וממיינת לפי סדר ההעדפות שהגדרתם.')+stepsHTML()+
+  `<div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px">
+    <div>${mapSVG(true)}
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn quiet sm" data-act="undo" ${S.poly.length?'':'disabled'}>ביטול קודקוד</button>
+        <button class="btn quiet sm" data-act="clear" ${S.poly.length?'':'disabled'}>ניקוי אזור</button>
+        <span style="font-size:13px;color:var(--ink2)">שטח מסומן: <b class="num">${dunam?dunam.toFixed(1):'0'} דונם</b> מתוך ${CFG.maxDunam} · חלקות: <b class="num">${scope.length}</b> מתוך ${CFG.maxParcels} <span class="open-param">מגבלות ייקבעו בפיילוט</span></span>
+      </div>
+      ${over?`<p class="note" style="color:var(--fail)">האזור חורג ממגבלת הסריקה. צמצמו את הפוליגון כדי להמשיך.</p>`:''}
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="font-size:15px;margin-bottom:6px">תנאי חובה</h3>
+        <p class="note" style="margin:0 0 6px">מי שלא עומד בהם נפסל לפי הנתונים ואינו נמסר.</p>
+        <div class="crit"><label>שטח מגרש מינימלי (מ״ר)</label><input type="number" data-crit="minLot" value="${S.crit.minLot}"></div>
+        <div class="crit"><label>מספר דירות מרבי</label><input type="number" data-crit="maxUnits" value="${S.crit.maxUnits}"></div>
+        <div class="crit"><label>שנת בנייה עד</label><input type="number" data-crit="maxYear" value="${S.crit.maxYear}"></div>
+        <div class="crit"><label>קומות קיימות עד</label><input type="number" data-crit="maxFloors" value="${S.crit.maxFloors}"></div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:15px;margin-bottom:6px">סדר עדיפויות</h3>
+        <p class="note" style="margin:0 0 8px">המיון מתבצע לפי ההעדפה הראשונה; בשוויון עוברים לבאה אחריה.</p>
+        ${S.prefs.map((p,i)=>`<div class="pref"><span class="ord">${i+1}</span><span class="nm">${p.n}</span>
+          <button class="btn sm quiet" data-dir="${i}">${p.dir==='desc'?'גדול תחילה':'קטן תחילה'}</button>
+          <button class="arrw" data-up="${i}" ${i===0?'disabled':''}>▲</button>
+          <button class="arrw" data-down="${i}" ${i===S.prefs.length-1?'disabled':''}>▼</button></div>`).join('')}
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn" data-act="toBuy" ${S.poly.length>=3&&!over?'':'disabled'} style="width:100%">המשך לרכישה</button>
+        ${S.poly.length>=3?`<p class="note">באזור זה נמצאו כ־${scope.length} חלקות בתחום הסריקה. זהות ההזדמנויות נחשפת רק לאחר רכישה.</p>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function buyHTML(){
+  const scope=inScope();
+  const active=CORE.activePkg();
+  return head('רכישת חבילה','מחיר קבוע מראש עבור שלוש הזדמנויות. אין עמלת הצלחה ואין מנוי.')+stepsHTML()+
+  `<div class="grid2">
+    <div class="card">
+      <h3 style="font-size:17px;margin-bottom:10px">חבילת ${CFG.packageResults} הזדמנויות</h3>
+      <div style="font-size:34px;font-weight:700;line-height:1">${money(CFG.packagePrice)} <span class="open-param" style="font-size:11px;vertical-align:middle">מחיר טרם נקבע — פרמטר פיילוט</span></div>
+      <ul style="font-size:13.5px;color:var(--ink2);margin:12px 0;padding-inline-start:18px;line-height:1.9">
+        <li>שלושה תיקי הזדמנות שונים, כולל בדיקת כדאיות ראשונית לכל אחד.</li>
+        <li>אם יימסרו פחות משלוש — חיפוש השלמה באזור אחר, ללא תשלום נוסף.</li>
+        <li>היתרה שייכת לחברה ומשותפת לכל המשתמשים בה.</li>
+        <li>תוצאה שכבר נמסרה לחברה אינה נספרת שוב ואינה צורכת יתרה.</li>
+        <li>שריון הזדמנות נרכש בנפרד ואינו כלול במחיר.</li>
+      </ul>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" data-act="pay">אישור תשלום ורכישה</button>
+        ${active?`<button class="btn ghost" data-act="useActive">שימוש בחבילה קיימת (יתרה ${active.total-active.used})</button>`:''}
+        <button class="btn quiet" data-act="doublePay">הדמיית הודעת תשלום כפולה</button>
+      </div>
+      <p class="note">הכפתור השלישי שולח את אותו מפתח תשלום פעמיים כדי להראות שנוצרת חבילה אחת בלבד.</p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;margin-bottom:8px">מה נסרק</h3>
+      <div class="fieldrow"><span class="lab">חלקות בתחום הפוליגון</span><b class="num">${scope.length}</b><span></span></div>
+      <div class="fieldrow"><span class="lab">שטח מסומן</span><b class="num">${polyAreaDunam(S.poly).toFixed(1)} דונם</b><span></span></div>
+      <div class="fieldrow"><span class="lab">תנאי חובה</span><span>שטח ≥ ${S.crit.minLot} · דירות ≤ ${S.crit.maxUnits} · עד ${S.crit.maxYear} · ${S.crit.maxFloors} קומות</span><span></span></div>
+      <div class="fieldrow"><span class="lab">סדר עדיפויות</span><span>${S.prefs.map((p,i)=>(i+1)+'. '+p.n).join(' · ')}</span><span></span></div>
+      <p class="note">לפני הרכישה מוצג היקף בלבד. כתובות, גוש וחלקה ותיקים נחשפים רק לאחר מסירה.</p>
+    </div>
+  </div>`;
+}
+
+function scanHTML(){
+  return head('סריקה והפקת תיקים','המערכת אוספת נתונים, מחילה כללים ומפיקה תיק ותרחיש לכל מועמד. הפקה שנכשלת אינה מפחיתה יתרה.')+stepsHTML()+
+  `<div class="card" style="max-width:560px">
+    <div class="bar" style="margin-bottom:14px"><i style="width:${Math.round(S.scanStage/STAGES.length*100)}%"></i></div>
+    ${STAGES.map((s,i)=>`<div class="scanline ${i<S.scanStage?'done':''}"><b>${i<S.scanStage?'✓':'·'}</b>${s}</div>`).join('')}
+  </div>`;
+}
+
+function resultsHTML(){
+  const pkg=S.pendingPkg, left=pkg.total-pkg.used;
+  return head('תוצאות החבילה','מוצגות רק תוצאות מוכנות למסירה. לכל תוצאה נשמר נימוק הבחירה, גרסת הנתונים וגרסת הכללים.')+stepsHTML()+
+  `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+    <div style="font-size:15px">נמסרו <b>${pkg.used}</b> מתוך <b>${pkg.total}</b> · יתרה בחבילה ${pkg.id}: <b>${left}</b></div>
+    ${left>0?`<button class="btn" data-act="complete">השלמה באזור נוסף — ללא תשלום</button>`:`<button class="btn ghost" data-nav="vault">למאגר החברה</button>`}
+  </div>
+  ${S.results.length?S.results.map(o=>resCard(o)).join(''):
+    `<div class="card empty">לא נמסרו תוצאות באזור הזה. היתרה לא הופחתה. סמנו אזור נוסף כדי להמשיך באותה חבילה.</div>`}
+  ${S.rejected.length?`<div class="card" style="margin-top:14px">
+    <h3 style="font-size:15px;margin-bottom:8px">מועמדים שלא נמסרו</h3>
+    <table><thead><tr><th>הזדמנות</th><th>מצב</th><th>סיבה</th></tr></thead><tbody>
+    ${S.rejected.map(r=>`<tr><td>${r.o.merged?'צמד ':''}${r.o.gushHelka}</td><td><span class="chip ${r.o.status==='דורש אימות'?'c-warn':(r.o.ready?'c-lock':'c-fail')}">${r.o.ready?'חסום מסחרית':r.o.status}</span></td><td>${esc(r.why)}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="note">מועמד שדורש אימות או שאין לו תרחיש בר־חישוב אינו נספר בחבילה ואינו מקטין את היתרה.</p></div>`:''}`;
+}
+function resCard(o){
+  const e=o.econ, resv=CORE.reservations.find(r=>r.oppId===o.id&&r.company===CORE.companyId);
+  return `<div class="res">
+    <div class="res-h">
+      <div><h3>${o.label}${o.merged?' <span class="chip c-info">צמד חלקות — הזדמנות אחת</span>':''}</h3>
+        <div style="font-size:12.5px;color:var(--ink3)">גוש/חלקה ${o.gushHelka} · ${o.plan||o.base.plan}</div></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${resv?`<span class="chip c-lock">משוריין עד ${resv.until.toLocaleDateString('he-IL')}</span>`:`<button class="btn ghost sm" data-reserve="${o.id}">שריון ההזדמנות</button>`}
+        <button class="btn sm" data-open="${o.id}">פתיחת תיק</button>
+      </div>
+    </div>
+    <div class="res-b">
+      <div class="kv"><span>שטח מגרש</span><b class="num">${sq(o.lotArea)}</b></div>
+      <div class="kv"><span>דירות קיימות</span><b class="num">${o.units}</b></div>
+      <div class="kv"><span>שנת בנייה</span><b class="num">${o.year}</b></div>
+      <div class="kv"><span>שטח מכירה בתרחיש</span><b class="num">${sq(e.devMain)}</b></div>
+      <div class="kv"><span>הפרש תרחיש</span><b class="num">${mm(e.profit)}</b></div>
+      <div class="kv"><span>רווח על העלות</span><b class="num">${(e.margin*100).toFixed(1)}%</b></div>
+    </div>
+    <div class="why">${esc(o.checks.filter(c=>c.st==='עבר').length)} תנאים נבדקו ועברו · ${esc(o.reasonShort||'מיון לפי '+S.prefs.map(p=>p.n).join(' ואז '))} · ${CFG.rulesVersion} · ${CFG.dataVersion}</div>
+  </div>`;
+}
+
+function vaultHTML(){
+  const d=CORE.deliveries;
+  return head('מאגר החברה','כל תיק שנמסר נשאר נגיש לצוות, גם אם ההזדמנות שוריינה לאחר מכן על ידי חברה אחרת.')+
+  (d.length?`<div class="card"><table><thead><tr><th>הזדמנות</th><th>כתובת</th><th>גוש/חלקה</th><th>נמסר</th><th>חבילה</th><th>שריון</th><th></th></tr></thead><tbody>
+  ${d.map(x=>{const o=x.snapshot;const r=CORE.reservations.find(r=>r.oppId===o.id);
+    return `<tr><td>${o.id}</td><td>${o.label}</td><td class="num">${o.gushHelka}</td><td class="num">${x.at.toLocaleDateString('he-IL')}</td><td>${x.pkg}</td>
+    <td>${r?`<span class="chip ${r.company===CORE.companyId?'c-lock':'c-mute'}">${r.company===CORE.companyId?'שלי':'של אחר'} · עד ${r.until.toLocaleDateString('he-IL')}</span>`:'—'}</td>
+    <td><button class="btn sm quiet" data-open="${o.id}">פתיחה</button></td></tr>`;}).join('')}
+  </tbody></table></div>`:`<div class="card empty">אין עדיין תיקים. פתחו חיפוש חדש כדי לרכוש חבילה.</div>`);
+}
+
+/* ---------------- תיק הזדמנות ---------------- */
+function dossierHTML(){
+  const o=S.openDossier, e=economics(o,S.assump), tabs=[['id','זיהוי ומפה'],['exist','מצב קיים'],['plan','תכנון והתאמה'],['eco','כלכלה ראשונית'],['src','מקורות ופערים']];
+  const cert=(v,c)=>`<span class="chip ${c==='רשמי'?'c-pass':(c==='נגזר'?'c-info':(c==='אומדן'?'c-warn':(c==='חסר'||c==='סתירה'?'c-fail':'c-mute')))}">${c}</span>`;
+  let body='';
+  if(S.tab==='id'){
+    body=`<div class="grid2"><div>
+      <div class="fieldrow"><span class="lab">כתובת</span><b>${o.label}</b>${cert('','רשמי')}</div>
+      <div class="fieldrow"><span class="lab">גוש / חלקה</span><b class="num">${o.gushHelka}</b>${cert('','רשמי')}</div>
+      <div class="fieldrow"><span class="lab">מגרש תכנוני</span><b>${o.base.plan}</b>${cert('','נגזר')}</div>
+      <div class="fieldrow"><span class="lab">שטח מגרש</span><b class="num">${sq(o.lotArea)}</b>${cert('','רשמי')}</div>
+      <div class="fieldrow"><span class="lab">מבנה→חלקה</span><b>מרכז המבנה בתוך גבולות החלקה</b>${cert('','נגזר')}</div>
+      ${o.merged?`<div class="fieldrow"><span class="lab">צמד</span><b>שתי חלקות בעלות גבול משותף, ללא הפרדה ציבורית</b>${cert('','נגזר')}</div>`:''}
+    </div><div>${miniMap(o)}</div></div>`;
+  }
+  if(S.tab==='exist'){
+    body=`<div class="fieldrow"><span class="lab">מספר מבנים</span><b class="num">${o.parcelsData.length}</b>${cert('','רשמי')}</div>
+      <div class="fieldrow"><span class="lab">דירות קיימות</span><b class="num">${o.units}</b>${cert('',o.unitsSource)}</div>
+      <div class="fieldrow"><span class="lab">קומות</span><b class="num">${o.floors}</b>${cert('','רשמי')}</div>
+      <div class="fieldrow"><span class="lab">שנת היתר / בנייה</span><b class="num">${o.year}</b>${cert('','רשמי')}</div>
+      <div class="fieldrow"><span class="lab">שטח דירה ממוצע</span><b class="num">${e?e.avgApt:'—'} מ״ר</b>${cert('','נגזר')}</div>
+      <p class="note">כל ערך נושא מקור ומועד שליפה. ערך חסר אינו מוצג כאפס ואינו מושלם באומדן כדי לעבור תנאי סף.</p>`;
+  }
+  if(S.tab==='plan'){
+    body=`<table><thead><tr><th>כלל שנבדק</th><th>תוצאה</th><th>בסיס</th></tr></thead><tbody>
+      ${o.checks.map(c=>`<tr><td>${c.name}</td><td><span class="chip ${c.st==='עבר'?'c-pass':(c.st==='נכשל'?'c-fail':'c-warn')}">${c.st}</span></td><td>${esc(String(c.note))}</td></tr>`).join('')}
+      </tbody></table>
+      <p class="note">״מועמד מתאים לפי הנתונים״ אינו אישור זכאות. הכרעת תנאי הסף דטרמיניסטית ואינה נשענת על תשובה חופשית של מודל שפה.</p>`;
+  }
+  if(S.tab==='eco'){
+    body=ecoHTML(o,e);
+  }
+  if(S.tab==='src'){
+    body=`<table><thead><tr><th>מקור</th><th>שימוש</th><th>זמן שליפה</th><th>ודאות</th></tr></thead><tbody>
+      <tr><td>GIS ואתר ההנדסה העירוני</td><td>מבנים, כתובות, שכבות מגבלות</td><td class="num">2026-08-31</td><td>${cert('','רשמי')}</td></tr>
+      <tr><td>GovMap / מפ״י</td><td>גוש, חלקה וגבולות</td><td class="num">2026-08-28</td><td>${cert('','רשמי')}</td></tr>
+      <tr><td>XPlan / מבא״ת</td><td>${o.base.plan} — סטטוס ומסמכים</td><td class="num">2026-08-30</td><td>${cert('','רשמי')}</td></tr>
+      <tr><td>תיק בניין עירוני</td><td>מספר דירות והיתרים</td><td class="num">2026-08-22</td><td>${cert('',o.unitsSource)}</td></tr>
+      <tr><td>${CFG.assumptionsVersion}</td><td>ערכי תרחיש כלכלי</td><td class="num">2026-09-01</td><td>${cert('','אומדן')}</td></tr>
+      </tbody></table>
+      <h4 style="margin:16px 0 6px;font-size:14.5px">פערים ובדיקות שנותרו</h4>
+      <ul style="font-size:13.5px;color:var(--ink2);padding-inline-start:18px;line-height:1.8">
+        ${(o.gaps.length?o.gaps:['לא נאספו מסמכי תיק בניין סרוקים לכל השנים — מצוין במפורש ואינו מוצג כארכיון מלא.','שמאות פרטנית, בדיקת רישום דיירים והיטלים סופיים מחוץ לתחום הגרסה.']).map(g=>`<li>${esc(g)}</li>`).join('')}
+      </ul>`;
+  }
+  const resv=CORE.reservations.find(r=>r.oppId===o.id);
+  return `<div class="head"><div><h1>תיק הזדמנות · ${o.label}</h1>
+    <p class="sub">תוצר אוטומטי המרכז מידע ומסמכים זמינים. אינו העתק מלא של הארכיון העירוני ואינו קובע זכויות סופיות.</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn quiet sm" data-act="back">חזרה</button>
+      <button class="btn quiet sm" data-act="pdf">ייצוא PDF</button>
+      <button class="btn quiet sm" data-act="csv">ייצוא Excel</button>
+      ${resv?`<span class="chip c-lock">משוריין ${resv.company===CORE.companyId?'על ידי החברה שלי':'לחברה אחרת'} · עד ${resv.until.toLocaleDateString('he-IL')}</span>`:`<button class="btn sm" data-reserve="${o.id}">שריון בתשלום</button>`}
+    </div></div>
+    <div class="tabs">${tabs.map(([k,n])=>`<button class="${S.tab===k?'on':''}" data-tab="${k}">${n}</button>`).join('')}</div>
+    <div class="doc">${body}</div>`;
+}
+function miniMap(o){
+  const ps=o.parcelsData;
+  const cx=(Math.min(...ps.map(p=>p.x))+Math.max(...ps.map(p=>p.x+p.w)))/2;
+  const cy=(Math.min(...ps.map(p=>p.y))+Math.max(...ps.map(p=>p.y+p.h)))/2;
+  const W=280,H=190, minx=cx-W/2, miny=cy-H/2;
+  return `<svg viewBox="${minx} ${miny} ${W} ${H}" style="width:100%;border:1px solid var(--line);background:#F2F5F0;border-radius:2px">
+    ${PARCELS.map(p=>`<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${ps.includes(p)?'#EDE7F7':'#DFE6DC'}" stroke="${ps.includes(p)?'#54398F':'#B4C0B7'}" stroke-width="${ps.includes(p)?1.4:.6}"/>`).join('')}
+    ${ps.map(p=>`<text x="${p.cx}" y="${p.cy+3}" text-anchor="middle" font-size="7" fill="#42564F">${p.gush}/${p.helka}</text>`).join('')}
+  </svg>`;
+}
+function ecoHTML(o,e){
+  if(!e)return `<div class="empty">אין בסיס תכנוני מספיק לחישוב תרחיש. המערכת אינה ממציאה זכויות, ולכן ההזדמנות אינה נספרת כתוצאה מוכנה.</div>`;
+  const s=sensitivity(o,S.assump), lab=['-10%','בסיס','+10%'];
+  return `<div class="grid2">
+    <div>
+      <h4 style="font-size:14.5px;margin-bottom:6px">היקף התרחיש</h4>
+      <div class="fieldrow"><span class="lab">שטח עיקרי בתרחיש</span><b class="num">${sq(e.mainTotal)}</b><span class="src">מגרש × יחס ${o.mainRatio.toFixed(2)}</span></div>
+      <div class="fieldrow"><span class="lab">שטחי שירות</span><b class="num">${sq(e.service)}</b><span class="src">שירות וחניה — הנחת ${S.assump.servicePct}%</span></div>
+      <div class="fieldrow"><span class="lab">תמורות דיירים</span><b class="num">${sq(e.tenantMain)}</b><span class="src">${o.units} × (${e.avgApt}+${S.assump.tenantAdd})</span></div>
+      <div class="fieldrow"><span class="lab">שטח מכירה ליזם</span><b class="num">${sq(e.devMain)}</b><span class="src">עיקרי פחות תמורות</span></div>
+      <h4 style="font-size:14.5px;margin:16px 0 6px">הנחות — ניתנות לשינוי</h4>
+      ${[['salePrice','מחיר מכירה למ״ר (₪)'],['buildCost','עלות בנייה למ״ר כולל פיתוח (₪)'],['tenantAdd','תוספת לדייר (מ״ר)'],['rentMonthly','שכירות לדייר לחודש (₪)'],['consultPct','יועצים (% מהבנייה)'],['financePct','מימון (% מהבנייה)'],['leviesPct','היטלים ומסים (% מהכנסות)'],['reservePct','רזרבה (%)']]
+        .map(([k,n])=>`<div class="assump"><label>${n}</label><input type="number" data-as="${k}" value="${S.assump[k]}"></div>`).join('')}
+      <p class="note">${CFG.assumptionsVersion}. שינוי הנחות מחשב תרחיש נוסף ואינו רוכש חיפוש חדש ואינו משנה את צילום המצב שנמסר.</p>
+    </div>
+    <div>
+      <h4 style="font-size:14.5px;margin-bottom:6px">הכנסות והוצאות בתרחיש</h4>
+      <div class="money"><span>הכנסות ממכירת שטחי יזם</span><b class="num">${mm(e.revenue)}</b></div>
+      <div class="money"><span>עלות בנייה (${sq(e.builtTotal)})</span><b class="num">${mm(e.build)}</b></div>
+      <div class="money"><span>שכירות לדיירים</span><b class="num">${mm(e.rent)}</b></div>
+      <div class="money"><span>יועצים ותכנון</span><b class="num">${mm(e.consult)}</b></div>
+      <div class="money"><span>מימון</span><b class="num">${mm(e.finance)}</b></div>
+      <div class="money"><span>היטלים ומסים</span><b class="num">${mm(e.levies)}</b></div>
+      <div class="money"><span>רזרבה</span><b class="num">${mm(e.reserve)}</b></div>
+      <div class="money"><span>סך הוצאות</span><b class="num">${mm(e.costs)}</b></div>
+      <div class="money total"><span>הפרש תרחיש · רווח על העלות</span><b class="num">${mm(e.profit)} · ${(e.margin*100).toFixed(1)}%</b></div>
+      <h4 style="font-size:14.5px;margin:16px 0 6px">רגישות — רווח על העלות</h4>
+      <table class="sens"><thead><tr><th></th>${lab.map(l=>`<th>עלות בנייה ${l}</th>`).join('')}</tr></thead><tbody>
+        ${s.map((row,i)=>`<tr><th>מחיר מכירה ${lab[i]}</th>${row.map((v,j)=>`<td class="${i===1&&j===1?'base':''}">${v==null?'—':(v*100).toFixed(1)+'%'}</td>`).join('')}</tr>`).join('')}
+      </tbody></table>
+      <h4 style="font-size:14.5px;margin:16px 0 6px">לא נכלל בתרחיש</h4>
+      <p style="font-size:13px;color:var(--ink2)">עלות רכישת קרקע או זכויות, מס רכישה ומע״מ, חניון תת־קרקעי מעבר להנחת שטחי השירות, עלויות החתמת דיירים וליווי משפטי, ושמאות פרטנית. אין כאן ציון השקעה ואין המלצה אוטומטית להתקדם לעסקה.</p>
+    </div>
+  </div>`;
+}
+
+function testsHTML(){
+  const T=S.tests;
+  return head('בדיקות קבלה','התרחישים מפרק 11 רצים מול אותה ליבה שמפעילה את המסך: זכאות, מסירה, כפילויות ושריון.')+
+  `<div class="card"><button class="btn" data-act="runTests" style="margin-bottom:12px">הרצת הבדיקות</button>
+   ${T?`<div class="tests">${T.map(t=>`<div class="row"><span class="id">${t.id}</span>
+     <span class="chip ${t.ok?'c-pass':'c-fail'}" style="flex:none">${t.ok?'עבר':'נכשל'}</span>
+     <span><b>${esc(t.name)}</b><br><span class="dt">${esc(t.dt||'')}</span></span></div>`).join('')}
+     <p class="note">${T.filter(t=>t.ok).length} מתוך ${T.length} עברו. הבדיקות רצות על עותקים נפרדים של הליבה ואינן משנות את נתוני החברה במסכים.</p></div>`
+   :`<p style="font-size:13.5px;color:var(--ink2)">הבדיקות מכסות חבילה מלאה, השלמה, סריקה ריקה, פוליגונים חופפים, חסר קריטי, שריון לפני ואחרי, שריונים מתחרים, מניעת עקיפה דרך צמד, תשלום כפול ועקביות החישוב הכלכלי.</p>`}
+  </div>`;
+}
+
+function modalHTML(){
+  if(!S.modal)return'';
+  if(S.modal.t==='reserve'){
+    const o=S.modal.o;
+    return `<div class="modal-bg" data-close="1"><div class="modal">
+      <h2 style="font-size:19px;margin-bottom:4px">שריון הזדמנות</h2>
+      <p style="font-size:13.5px;color:var(--ink2);margin-bottom:12px">${o.label} · גוש/חלקה ${o.gushHelka}</p>
+      <div class="fieldrow"><span class="lab">מחיר</span><b class="num">${money(CFG.reservationPrice)}</b><span class="open-param">טרם נקבע</span></div>
+      <div class="fieldrow"><span class="lab">משך</span><b class="num">${CFG.reservationDays} ימים</b><span class="open-param">טרם נקבע</span></div>
+      <div class="fieldrow"><span class="lab">תחילת תוקף</span><b>מרגע ההפעלה, לאחר אישור התשלום</b><span></span></div>
+      <div class="fieldrow"><span class="lab">היקף</span><b>עוצר מסירות חדשות של ההזדמנות לחברות אחרות בפלטפורמה, כולל דרך צמד, ייצוא, קישור ו־API</b><span></span></div>
+      <p class="note">השריון אינו מוחק חשיפות קודמות: חברה שקיבלה את התיק לפניכם שומרת על הגישה שלה. הוא אינו מעניק בלעדיות מחוץ לפלטפורמה ואינו יוצר איחוד סטטוטורי. פרטי רוכשים קודמים אינם נחשפים.</p>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn" data-act="doReserve">אישור תשלום והפעלת שריון</button>
+        <button class="btn quiet" data-close="1">ביטול</button>
+      </div></div></div>`;
+  }
+  return '';
+}
+
+/* ---------------- Render ---------------- */
+function render(){
+  let m='';
+  if(S.openDossier)m=dossierHTML();
+  else if(S.screen==='dash')m=dashHTML();
+  else if(S.screen==='vault')m=vaultHTML();
+  else if(S.screen==='tests')m=testsHTML();
+  else m=({define:defineHTML,buy:buyHTML,scan:scanHTML,results:resultsHTML}[S.step])();
+  $.innerHTML=`<div class="shell">${railHTML()}<main class="main">${m}</main></div>${modalHTML()}${S.toast?`<div class="toast">${esc(S.toast)}</div>`:''}`;
+}
+
+/* ---------------- אירועים ---------------- */
+$.addEventListener('click',ev=>{
+  const el=ev.target.closest('[data-nav],[data-act],[data-open],[data-tab],[data-reserve],[data-up],[data-down],[data-dir],[data-close]');
+  const svg=ev.target.closest('#map');
+  if(svg&&S.step==='define'&&!S.openDossier){
+    const r=svg.getBoundingClientRect();
+    const x=(ev.clientX-r.left)/r.width*830, y=(ev.clientY-r.top)/r.height*500;
+    if(S.poly.length>2){const f=S.poly[0];if(Math.hypot(f.x-x,f.y-y)<12){S.closed=true;render();return;}}
+    S.poly.push({x:+x.toFixed(1),y:+y.toFixed(1)}); render(); return;
+  }
+  if(!el)return;
+  const d=el.dataset;
+  if(d.close){S.modal=null;render();return;}
+  if(d.nav){S.screen=d.nav;S.openDossier=null;
+    if(d.nav==='search'&&(S.step==='results'||S.step==='scan')){S.poly=[];S.closed=false;S.step='define';}
+    render();return;}
+  if(d.tab){S.tab=d.tab;render();return;}
+  if(d.open){const o=findOpp(d.open);if(o){S.openDossier=o;S.tab='id';S.assump=Object.assign({},A);render();}return;}
+  if(d.reserve){const o=findOpp(d.reserve);S.modal={t:'reserve',o};render();return;}
+  if(d.up!==undefined){const i=+d.up;const a=S.prefs;[a[i-1],a[i]]=[a[i],a[i-1]];render();return;}
+  if(d.down!==undefined){const i=+d.down;const a=S.prefs;[a[i+1],a[i]]=[a[i],a[i+1]];render();return;}
+  if(d.dir!==undefined){const p=S.prefs[+d.dir];p.dir=p.dir==='desc'?'asc':'desc';render();return;}
+  const a=d.act;
+  if(a==='undo'){S.poly.pop();S.closed=false;render();}
+  else if(a==='clear'){S.poly=[];S.closed=false;render();}
+  else if(a==='toBuy'){S.screen='search';S.step=S.pendingPkg&&S.pendingPkg.used<S.pendingPkg.total?'scan':'buy';
+    if(S.step==='scan')startScan();else render();}
+  else if(a==='pay'){S.pendingPkg=CORE.purchase('PAY-'+Date.now());startScan();}
+  else if(a==='doublePay'){const k='PAY-DUP-1';CORE.purchase(k);S.pendingPkg=CORE.purchase(k);
+    toast('הודעת תשלום כפולה — נוצרה חבילה אחת בלבד');startScan();}
+  else if(a==='useActive'){S.pendingPkg=CORE.activePkg();startScan();}
+  else if(a==='complete'){S.poly=[];S.closed=false;S.step='define';S.screen='search';render();}
+  else if(a==='back'){S.openDossier=null;render();}
+  else if(a==='csv'){exportCSV(S.openDossier);}
+  else if(a==='pdf'){toast('ייצוא PDF מוגדר בדרישות; ב־POC ממומש ייצוא Excel בלבד');}
+  else if(a==='doReserve'){
+    const o=S.modal.o, r=CORE.reserve(o,now(),'RES-'+o.id+'-'+Date.now());
+    S.modal=null; toast(r.ok?'השריון הופעל ל־'+CFG.reservationDays+' ימים':'לא נוצר חיוב: '+r.why); render();}
+  else if(a==='runTests'){runTests();render();}
+});
+$.addEventListener('change',ev=>{
+  const t=ev.target;
+  if(t.dataset.crit){S.crit[t.dataset.crit]=+t.value||0;render();}
+  if(t.dataset.as){S.assump[t.dataset.as]=+t.value||0;render();}
+});
+function findOpp(id){
+  const d=CORE.deliveries.find(x=>x.oppId===id); if(d)return d.snapshot;
+  return S.results.find(o=>o.id===id)||null;
+}
+function startScan(){
+  S.step='scan';S.scanStage=0;render();
+  const iv=setInterval(()=>{
+    S.scanStage++;
+    if(S.scanStage>=STAGES.length){clearInterval(iv);runScan();render();}
+    else render();
+  },300);
+}
+function exportCSV(o){
+  const e=economics(o,S.assump);
+  const rows=[['שדה','ערך','יחידה','מקור/ודאות'],
+   ['כתובת',o.label,'','רשמי'],['גוש/חלקה',o.gushHelka,'','רשמי'],
+   ['שטח מגרש',Math.round(o.lotArea),'מ״ר','רשמי'],['דירות קיימות',o.units,'יח״ד',o.unitsSource],
+   ['שנת בנייה',o.year,'','רשמי'],
+   ['שטח עיקרי בתרחיש',Math.round(e.mainTotal),'מ״ר','נגזר'],
+   ['שטח מכירה ליזם',Math.round(e.devMain),'מ״ר','נגזר'],
+   ['הכנסות',Math.round(e.revenue),'₪','אומדן'],['סך הוצאות',Math.round(e.costs),'₪','אומדן'],
+   ['הפרש תרחיש',Math.round(e.profit),'₪','אומדן'],['רווח על העלות',(e.margin*100).toFixed(2),'%','אומדן'],
+   ['גרסת הנחות',CFG.assumptionsVersion,'',''],['גרסת כללים',CFG.rulesVersion,'','']];
+  const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  const a=document.createElement('a');a.href=url;a.download='תיק-'+o.id+'.csv';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  toast('הורד קובץ נתוני התרחיש');
+}
+render();
+})();
+</script>
+
+</body>
+</html>
