@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="GnG — טופ הנכסים בהרצליה לפי תנאי הסף של היזם, עם התיק האינטראקטיבי המלא על כל נכס.">
+<meta name="description" content="Shakdan — טופ הנכסים בהרצליה לפי תנאי הסף של היזם, עם התיק האינטראקטיבי המלא על כל נכס.">
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#FBFBFD" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0B0C0F" media="(prefers-color-scheme: dark)">
-<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Ccircle%20cx='28'%20cy='26'%20r='18'%20fill='none'%20stroke='%23575756'%20stroke-width='6'/%3E%3Cpath%20d='M15%2039%206%2048'%20stroke='%23575756'%20stroke-width='6'%20stroke-linecap='round'%20fill='none'/%3E%3Ctext%20x='28'%20y='35'%20font-family='Arial,Helvetica,sans-serif'%20font-weight='bold'%20font-size='24'%20text-anchor='middle'%20fill='%230B4DA8'%3EG%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#FFF9F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#13161E" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="shakdan-lockup-horizontal-light.svg" type="image/svg+xml">
 <style>
   html { color-scheme: light dark; }
   img { max-width: 100%; }
   [hidden] { display: none !important; }
 </style>
-<title>תיק הדגמה סוקולוב 24</title>
+<title>Shakdan | תיק הדגמה סוקולוב 24</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,52 +22,49 @@
 <style>
   /* ================= tokens ================= */
   :root {
-    --ground:#FBFBFD; --surface:#FFFFFF; --sunken:#F3F3F5;
-    --ink:#1A1C1E; --ink-2:#575756; --ink-3:#8A8A88;
-    --line:#DEDEDF; --line-2:#C4C4C4;
-    --accent:#0B4DA8; --accent-ink:#0B4DA8;
-    --accent-soft:rgba(11,77,168,.055); --accent-mid:rgba(11,77,168,.24);
-    --amber:#E09B33; --amber-ink:#8E5F0C;
-    --amber-soft:rgba(224,155,51,.13); --amber-mid:rgba(224,155,51,.5);
-    --sea:#E3EAF3; --sand:#EFE9DE;
-    --teal:#12726B; --teal-ink:#0E5C56;
-    --teal-soft:rgba(18,114,107,.09); --teal-mid:rgba(18,114,107,.35);
-    --logo-blue:#0B4DA8; --logo-amber:#E09B33; --logo-grey:#575756;
-    --shadow:0 1px 2px rgba(20,22,28,.04), 0 12px 32px -12px rgba(20,22,28,.13);
-    --shadow-lift:0 2px 4px rgba(11,77,168,.06), 0 20px 44px -18px rgba(11,77,168,.28);
+    --ground:#FFF9F2; --surface:#FFFDF9; --sunken:#FAF1E1;
+    --ink:#13161E; --ink-2:#5E5148; --ink-3:#8A7567;
+    --line:#E8D8CB; --line-2:#D4BBA7;
+    --accent:#C8763B; --accent-ink:#A65F2C;
+    --accent-soft:rgba(200,118,59,.09); --accent-mid:rgba(200,118,59,.28);
+    --amber:#FF8FA6; --amber-ink:#A83957;
+    --amber-soft:rgba(255,143,166,.15); --amber-mid:rgba(255,143,166,.52);
+    --sea:#F7DDDD; --sand:#FAE3C4;
+    --teal:#D06E7F; --teal-ink:#96384D;
+    --teal-soft:rgba(208,110,127,.12); --teal-mid:rgba(208,110,127,.38);
+    --shadow:0 1px 2px rgba(19,22,30,.04), 0 12px 32px -12px rgba(138,74,27,.16);
+    --shadow-lift:0 2px 4px rgba(200,118,59,.08), 0 20px 44px -18px rgba(200,118,59,.30);
     --maxw:1120px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --ground:#0B0C0F; --surface:#14161A; --sunken:#0F1114;
-      --ink:#F2F3F5; --ink-2:#A6A6A3; --ink-3:#74746F;
-      --line:#26282C; --line-2:#383B40;
-      --accent:#6BA5F0; --accent-ink:#8CBAF5;
-      --accent-soft:rgba(107,165,240,.09); --accent-mid:rgba(107,165,240,.34);
-      --amber:#F0AC46; --amber-ink:#F2B75C;
-      --amber-soft:rgba(240,172,70,.12); --amber-mid:rgba(240,172,70,.44);
-      --sea:#0C131C; --sand:#171510;
-      --teal:#4FBFB5; --teal-ink:#6FCFC6;
-      --teal-soft:rgba(79,191,181,.12); --teal-mid:rgba(79,191,181,.42);
-      --logo-blue:#5B9BF5; --logo-amber:#F0AC46; --logo-grey:#9A9A97;
+      --ground:#13161E; --surface:#1A1D26; --sunken:#171922;
+      --ink:#FAF1E1; --ink-2:#DDC9B8; --ink-3:#AA9483;
+      --line:#342D2A; --line-2:#514138;
+      --accent:#EC9A5F; --accent-ink:#FFB77C;
+      --accent-soft:rgba(236,154,95,.11); --accent-mid:rgba(236,154,95,.36);
+      --amber:#FF8FA6; --amber-ink:#FFABC0;
+      --amber-soft:rgba(255,143,166,.13); --amber-mid:rgba(255,143,166,.46);
+      --sea:#211A1D; --sand:#2B211A;
+      --teal:#D67C8C; --teal-ink:#FFA0B4;
+      --teal-soft:rgba(214,124,140,.14); --teal-mid:rgba(214,124,140,.44);
       --shadow:0 1px 2px rgba(0,0,0,.5), 0 16px 40px -16px rgba(0,0,0,.75);
-      --shadow-lift:0 1px 2px rgba(0,0,0,.5), 0 22px 48px -18px rgba(107,165,240,.35);
+      --shadow-lift:0 1px 2px rgba(0,0,0,.5), 0 22px 48px -18px rgba(236,154,95,.38);
     }
   }
   :root[data-theme="dark"] {
-    --ground:#0B0C0F; --surface:#14161A; --sunken:#0F1114;
-    --ink:#F2F3F5; --ink-2:#A6A6A3; --ink-3:#74746F;
-    --line:#26282C; --line-2:#383B40;
-    --accent:#6BA5F0; --accent-ink:#8CBAF5;
-    --accent-soft:rgba(107,165,240,.09); --accent-mid:rgba(107,165,240,.34);
-    --amber:#F0AC46; --amber-ink:#F2B75C;
-    --amber-soft:rgba(240,172,70,.12); --amber-mid:rgba(240,172,70,.44);
-    --sea:#0C131C; --sand:#171510;
-    --teal:#4FBFB5; --teal-ink:#6FCFC6;
-    --teal-soft:rgba(79,191,181,.12); --teal-mid:rgba(79,191,181,.42);
-    --logo-blue:#5B9BF5; --logo-amber:#F0AC46; --logo-grey:#9A9A97;
+    --ground:#13161E; --surface:#1A1D26; --sunken:#171922;
+    --ink:#FAF1E1; --ink-2:#DDC9B8; --ink-3:#AA9483;
+    --line:#342D2A; --line-2:#514138;
+    --accent:#EC9A5F; --accent-ink:#FFB77C;
+    --accent-soft:rgba(236,154,95,.11); --accent-mid:rgba(236,154,95,.36);
+    --amber:#FF8FA6; --amber-ink:#FFABC0;
+    --amber-soft:rgba(255,143,166,.13); --amber-mid:rgba(255,143,166,.46);
+    --sea:#211A1D; --sand:#2B211A;
+    --teal:#D67C8C; --teal-ink:#FFA0B4;
+    --teal-soft:rgba(214,124,140,.14); --teal-mid:rgba(214,124,140,.44);
     --shadow:0 1px 2px rgba(0,0,0,.5), 0 16px 40px -16px rgba(0,0,0,.75);
-    --shadow-lift:0 1px 2px rgba(0,0,0,.5), 0 22px 48px -18px rgba(107,165,240,.35);
+    --shadow-lift:0 1px 2px rgba(0,0,0,.5), 0 22px 48px -18px rgba(236,154,95,.38);
   }
 
   /* ================= base ================= */
@@ -104,13 +101,33 @@
     backdrop-filter:saturate(180%) blur(20px); -webkit-backdrop-filter:saturate(180%) blur(20px);
     border-bottom:1px solid var(--line);
   }
-  .nav-inner { max-width:var(--maxw); margin-inline:auto; padding-inline:24px; height:58px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+  .nav-inner { max-width:var(--maxw); margin-inline:auto; padding-inline:24px; min-height:82px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
   .nav-links { display:flex; align-items:center; gap:30px; font-size:.875rem; color:var(--ink-2); }
   .nav-links a { transition:color .16s ease; }
   .nav-links a:hover { color:var(--ink); }
   @media (max-width:880px) { .nav-links { display:none; } }
 
-  .logo { display:block; height:32px; width:auto; }
+  .brand-link {
+    direction:ltr; display:inline-flex; align-items:center; flex:none;
+    padding:7px 12px; border:1px solid rgba(200,118,59,.22); border-radius:14px;
+    background:#FAF1E1;
+  }
+  .brand-logo { display:block; width:auto; height:38px; }
+  .hero-brand {
+    display:block; width:min(406px,90vw); height:auto; margin:0 auto 28px; padding:15px 24px;
+    direction:ltr; border:1px solid rgba(200,118,59,.22); border-radius:20px; background:#FAF1E1;
+    box-shadow:var(--shadow);
+  }
+  .footer-logo {
+    display:block; width:auto; height:44px; padding:6px 10px; direction:ltr;
+    border:1px solid rgba(200,118,59,.22); border-radius:12px; background:#FAF1E1;
+  }
+  @media (max-width:560px) {
+    .nav-inner { min-height:72px; gap:12px; padding-inline:16px; }
+    .brand-link { padding:6px 10px; }
+    .brand-logo { height:32px; }
+    .nav .btn-sm { padding-inline:14px; }
+  }
 
   /* ================= buttons ================= */
   .btn {
@@ -120,7 +137,7 @@
     border:1px solid transparent; cursor:pointer;
     transition:background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
   }
-  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary { background:var(--accent); color:#13161E; }
   :root[data-theme="dark"] .btn-primary { color:#08090B; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn-primary { color:#08090B; } }
   .btn-primary:hover { transform:translateY(-1px); }
@@ -413,19 +430,6 @@
     <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
     <path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
   </symbol>
-  <!-- Presentation attributes, not classes: document CSS does not reach into a <use> shadow tree,
-       but inherited custom properties do — so var() resolves and the mark follows the theme. -->
-  <symbol id="i-logo" viewBox="0 0 132 80">
-    <circle cx="39" cy="35" r="30" fill="none" stroke="var(--logo-blue)"  stroke-width="4"/>
-    <circle cx="45" cy="41" r="30" fill="none" stroke="var(--logo-amber)" stroke-width="4"/>
-    <circle cx="42" cy="38" r="30" fill="var(--ground)" stroke="none"/>
-    <path d="M21.5 59.5 8.5 72.5" fill="none" stroke="var(--logo-grey)" stroke-width="9" stroke-linecap="round"/>
-    <circle cx="42" cy="38" r="26" fill="none" stroke="var(--logo-grey)" stroke-width="9"/>
-    <text x="42" y="38" font-size="38" text-anchor="middle" dominant-baseline="central"
-          fill="var(--logo-blue)" font-family="Heebo, Assistant, sans-serif" font-weight="700" direction="ltr">G</text>
-    <text x="76" y="52" font-size="38" text-anchor="start"
-          fill="var(--logo-amber)" font-family="Heebo, Assistant, sans-serif" font-weight="700" direction="ltr">nG</text>
-  </symbol>
 </defs></svg>
 
 <div dir="rtl" lang="he">
@@ -433,7 +437,9 @@
   <!-- ================= NAV ================= -->
   <header class="nav">
     <div class="nav-inner">
-      <a href="#top" aria-label="GnG"><svg class="logo" viewBox="0 0 132 80" role="img" aria-label="GnG"><use href="#i-logo"/></svg></a>
+      <a href="#top" class="brand-link" aria-label="Shakdan — לדף הבית">
+        <img class="brand-logo" src="shakdan-lockup-horizontal-light.svg" alt="Shakdan">
+      </a>
       <nav class="nav-links">
         <a href="#shortlist">הרשימה</a>
         <a href="#dossier">התיק</a>
@@ -453,6 +459,7 @@
       <div class="hero-glow" aria-hidden="true"></div>
 
       <div class="wrap hero-inner center">
+        <img class="hero-brand" src="shakdan-lockup-horizontal-light.svg" alt="Shakdan">
         <p class="kicker">הרצליה · חלופת שקד</p>
 
         <h1 class="headline">
@@ -2101,7 +2108,7 @@
                 <th>פרמטר</th>
                 <th>מתווך</th>
                 <th>מערכות GIS ומידע</th>
-                <th class="ours">GnG</th>
+                <th class="ours">Shakdan</th>
               </tr>
             </thead>
             <tbody>
@@ -2264,8 +2271,8 @@
   <footer>
     <div class="foot-inner">
       <div style="display:flex; align-items:center; gap:14px">
-        <svg class="logo" viewBox="0 0 132 80" role="img" aria-label="GnG" style="height:26px"><use href="#i-logo"/></svg>
-        <span>© 2026 GnG</span>
+        <img class="footer-logo" src="shakdan-lockup-horizontal-light.svg" alt="Shakdan">
+        <span>© 2026 Shakdan</span>
       </div>
       <div>המידע מוצג לצורכי בחינה ראשונית ואינו מהווה תחליף לבדיקה תכנונית, שמאית או משפטית פרטנית.</div>
     </div>
