@@ -46,6 +46,7 @@ powershell -ExecutionPolicy Bypass -File .\setup-windows.ps1
 לאחר מכן פותחים:
 
 - ממשק: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- מצב הדגמת משקיעים ללא תלות במקורות חיים: [http://127.0.0.1:8000/investor-demo](http://127.0.0.1:8000/investor-demo)
 - בדיקת בריאות: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
 - תיעוד API: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
@@ -158,4 +159,3 @@ docker compose up --build
 ```
 
 מסלול זה מפעיל את האתר ואת PostgreSQL/PostGIS ומוסיף Tesseract בתוך הקונטיינר. מסלול הדפדפן העירוני של Playwright עדיין מיועד להפעלה המקומית ב־Windows עם Edge, ולכן לצורך הניסוי הנוכחי עדיף להתחיל במסלול SQLite שבסעיפים הקודמים.
-

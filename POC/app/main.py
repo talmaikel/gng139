@@ -37,6 +37,8 @@ app.mount('/static',StaticFiles(directory=ROOT/'static'),name='static')
 
 @app.get('/',response_class=HTMLResponse)
 def index():return (ROOT/'static'/'index.html').read_text(encoding='utf8')
+@app.get('/investor-demo',response_class=HTMLResponse)
+def investor_demo():return (ROOT/'static'/'index.html').read_text(encoding='utf8')
 @app.get('/demo',response_class=HTMLResponse)
 def demo():
     body=(ROOT/'shaked-poc (3).html').read_text(encoding='utf8')

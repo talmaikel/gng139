@@ -15,6 +15,8 @@ python -m venv .venv
 
 Open http://127.0.0.1:8000. Use **פתיחת התיק המנותח** to inspect the completed Shoshanim 4 evidence experiment, **פתיחת בדיקת 10 המבנים** for the preserved area audit, or **בחירת אזור לדוגמה** then **סריקת האזור** to collect live data. Live sources require internet access. Basemap tiles are provided by OpenStreetMap; Leaflet code is vendored.
 
+For a deterministic investor presentation that does not call the municipal or GovMap sources, open http://127.0.0.1:8000/investor-demo. It loads the preserved Hashoshanim 4 evidence, renders an offline parcel/building map, and keeps the dossier, PDF and Excel flows available for recording.
+
 To keep the local server running in the background, run `./start-background.ps1`. It prints the server PID and saves logs under `data`. Stop that process using its printed PID when finished.
 
 ## PostgreSQL / PostGIS
