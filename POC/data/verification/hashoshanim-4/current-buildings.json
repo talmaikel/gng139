@@ -1,0 +1,48 @@
+[
+  {
+    "id": "osm:way:385608705",
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            185020.4654556928,
+            675051.3790176539
+          ],
+          [
+            185009.55971205662,
+            675064.6899545325
+          ],
+          [
+            185022.0825351159,
+            675074.8496595477
+          ],
+          [
+            185032.98828389173,
+            675061.538735978
+          ],
+          [
+            185020.4654556928,
+            675051.3790176539
+          ]
+        ]
+      ]
+    },
+    "properties": {
+      "addr:housenumber": "4",
+      "addr:street": "השושנים",
+      "building": "apartments",
+      "building:levels": "4"
+    },
+    "_source": {
+      "url": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A25%5D%3Bway%5B%22building%22%5D%2832.168362770851374%2C34.839151363648746%2C32.16870883115542%2C34.83953144556739%29%3Bout+tags+geom%3B",
+      "retrieved_at": "2026-09-08T09:55:48.047286+00:00",
+      "epoch": 1788861348.0472863,
+      "sha256": "71561743305b5514fa2ad427a46ab123d9931e6eedbadd5480702ea67600dea5",
+      "content_type": "application/json",
+      "feature_url": "https://www.openstreetmap.org/way/385608705",
+      "source_updated_at": "2026-09-08T09:54:20Z"
+    },
+    "authority": "community"
+  }
+]

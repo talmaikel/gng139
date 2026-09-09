@@ -1,0 +1,39 @@
+{
+  "collected_at": "2026-09-09T16:07:24.736186+00:00",
+  "building_file": 2772,
+  "gush": 6546,
+  "parcel": 271,
+  "request": 19440048,
+  "address": "סנש חנה 10 הרצליה",
+  "archive_search": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikimByGush&siteid=121&g=6546&h=271&m=&l=true&arguments=siteid%2Cg%2Ch%2Cm%2Cl",
+    "retrieved_at": "2026-09-09T16:01:15.264143+00:00",
+    "epoch": 1788969675.264143,
+    "sha256": "e4ea8e3f6ad87d97d7e7d9df9b20da6943c1dfb11b6df93aef73dc30ed60a569",
+    "content_type": "text/html"
+  },
+  "request_page": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetBakashaFile&siteid=121&b=19440048&arguments=siteid%2Cb",
+    "retrieved_at": "2026-09-09T16:04:25.758899+00:00",
+    "epoch": 1788969865.758899,
+    "sha256": "d9fe1089d5be7368798a39a0fe0d00e70deb73414079dd98d4791b8fece7d36b",
+    "content_type": "text/html"
+  },
+  "download_page": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=ShowPhoto&siteid=121&ec=2&en=19440048&bn=0&m=1&arguments=siteid%2Cec%2Cen%2Cbn%2Cm",
+    "retrieved_at": "2026-09-09T16:07:23.886684+00:00",
+    "epoch": 1788970043.8866842,
+    "sha256": "3ddc85e34295671fd300e6db7924aa7c115d82a849aec71818ee5893ebcd9ea6",
+    "content_type": "text/html"
+  },
+  "pdf": {
+    "url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/1930-1949/19440048/19440048_20.pdf",
+    "retrieved_at": "2026-09-09T16:07:24.727462+00:00",
+    "epoch": 1788970044.7274623,
+    "sha256": "69ed776ed51b4ceae5810c89262f34d682d4a8390e89395e721c4254093bf588",
+    "content_type": "application/pdf"
+  },
+  "pdf_sha256": "69ed776ed51b4ceae5810c89262f34d682d4a8390e89395e721c4254093bf588",
+  "pdf_bytes": 1362951,
+  "extraction_note": "Public archive metadata only; full request HTML is not stored because it can contain unnecessary personal data."
+}

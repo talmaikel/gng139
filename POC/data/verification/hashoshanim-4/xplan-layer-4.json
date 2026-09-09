@@ -1,0 +1,5470 @@
+{
+ "currentVersion": 10.81,
+ "id": 4,
+ "name": "יעודי קרקע",
+ "type": "Feature Layer",
+ "description": "640967",
+ "geometryType": "esriGeometryPolygon",
+ "sourceSpatialReference": {
+  "wkid": 2039,
+  "latestWkid": 2039
+ },
+ "copyrightText": "",
+ "parentLayer": null,
+ "subLayers": [],
+ "minScale": 0,
+ "maxScale": 0,
+ "drawingInfo": {
+  "renderer": {
+   "type": "uniqueValue",
+   "field1": "mavat_code",
+   "field2": null,
+   "field3": null,
+   "defaultSymbol": null,
+   "defaultLabel": null,
+   "uniqueValueInfos": [
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "10",
+     "label": "מגורים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "20",
+     "label": "מגורים א",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       191,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "60",
+     "label": "מגורים ב",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       127,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "100",
+     "label": "מגורים ג",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       127,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "140",
+     "label": "מגורים ד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       127,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        78,
+        78,
+        78,
+        255
+       ],
+       "width": 2.5
+      }
+     },
+     "value": "145",
+     "label": "מגורים ה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "150",
+     "label": "דיור מיוחד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        127,
+        255,
+        127,
+        255
+       ],
+       "width": 2.7
+      }
+     },
+     "value": "160",
+     "label": "מגורים בישוב כפרי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "170",
+     "label": "משק עזר",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       0,
+       197,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "200",
+     "label": "תעסוקה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "210",
+     "label": "מסחר",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       191,
+       127,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "220",
+     "label": "משרדים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       102,
+       204,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "230",
+     "label": "תעשיה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       214,
+       157,
+       188,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0583391835839822
+      }
+     },
+     "value": "240",
+     "label": "אחסנה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       102,
+       204,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "250",
+     "label": "תעשיה עתירת ידע",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       102,
+       204,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "260",
+     "label": "תעשיה קלה ומלאכה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       127,
+       127,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "280",
+     "label": "מתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       186,
+       186,
+       186,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "290",
+     "label": "עירוני מעורב",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       186,
+       186,
+       186,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "300",
+     "label": "מבני משק",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "400",
+     "label": "מבנים ומוסדות ציבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "410",
+     "label": "מבנים ומוסדות ציבור לחינוך",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "420",
+     "label": "מבנים ומוסדות ציבור למינהל ציבורי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "430",
+     "label": "מבנים ומוסדות ציבור לתרבות ולפנאי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "440",
+     "label": "מבנים ומוסדות ציבור לבריאות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "450",
+     "label": "מבנים ומוסדות ציבור לדת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "460",
+     "label": "מבנים ומוסדות ציבור לחרום ולהצלה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "461",
+     "label": "מגורים מוסדות ציבור ושצפ",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       56,
+       168,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "462",
+     "label": "חקלאי משומר",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       205,
+       170,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "463",
+     "label": "מבני ציבור בשצפ",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       127,
+       159,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "600",
+     "label": "תירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       127,
+       159,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "610",
+     "label": "אירוח כפרי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       126,
+       159,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "620",
+     "label": "מלונאות (אכסון מלונאי)",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       127,
+       159,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "630",
+     "label": "אטרקציה תירותית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       127,
+       255,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "650",
+     "label": "שטחים פתוחים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       127,
+       255,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "660",
+     "label": "קרקע חקלאית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       127,
+       255,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "661",
+     "label": "חקלאי פתוח",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       191,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "670",
+     "label": "שטח ציבורי פתוח",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       191,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "680",
+     "label": "שטח פרטי פתוח",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       191,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "690",
+     "label": "ספורט ונופש",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       191,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "700",
+     "label": "פארק/גן ציבורי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       204,
+       51,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "710",
+     "label": "יער",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       133,
+       153,
+       76,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "711",
+     "label": "יער נטע אדם",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       38,
+       76,
+       38,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        0,
+        0,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "712",
+     "label": "יער טבעי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       209,
+       255,
+       115,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        0,
+        0,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "713",
+     "label": "יער פארק",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       114,
+       153,
+       76,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "720",
+     "label": "שמורת טבע",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       114,
+       153,
+       76,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "730",
+     "label": "גן לאומי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       127,
+       255,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "740",
+     "label": "נחל/תעלת נחל",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       0,
+       197,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "741",
+     "label": "אתר איגום ו/או החדרה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       127,
+       255,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "750",
+     "label": "גן ארועים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "760",
+     "label": "טיילת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       0,
+       153,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "770",
+     "label": "חוף רחצה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       230,
+       152,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        170,
+        0,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "771",
+     "label": "חוף",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       169,
+       230,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.9999894165957189
+      }
+     },
+     "value": "773",
+     "label": "מרחב ימי פתוח",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSDiagonalCross",
+      "color": [
+       220,
+       165,
+       109,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "780",
+     "label": "ככר עירונית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "800",
+     "label": "תחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSHorizontal",
+      "color": [
+       255,
+       190,
+       190,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        112,
+        255,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "801",
+     "label": "אזור פיתוח",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSHorizontal",
+      "color": [
+       115,
+       223,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        112,
+        255,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "802",
+     "label": "אזור התחדשות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSHorizontal",
+      "color": [
+       255,
+       235,
+       175,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        112,
+        255,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "803",
+     "label": "אזור שימור מקומי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSHorizontal",
+      "color": [
+       56,
+       168,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        112,
+        255,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "804",
+     "label": "שטח פתוח",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSHorizontal",
+      "color": [
+       168,
+       112,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        112,
+        255,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "805",
+     "label": "מוסדות ציבור כלל עירוניים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSHorizontal",
+      "color": [
+       178,
+       178,
+       178,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        112,
+        255,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "806",
+     "label": "דרכים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSHorizontal",
+      "color": [
+       225,
+       225,
+       225,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        112,
+        255,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "807",
+     "label": "תשתיות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSHorizontal",
+      "color": [
+       102,
+       153,
+       205,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        112,
+        255,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "808",
+     "label": "מרחב עירוני מוטה מטרו",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "810",
+     "label": "מרכז תחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       178,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "820",
+     "label": "דרך מאושרת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "830",
+     "label": "דרך מוצעת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "835",
+     "label": "תחבורה וככר עירונית ",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       191,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "840",
+     "label": "דרך משולבת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "850",
+     "label": "דרך ו/או טיפול נופי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       156,
+       156,
+       156,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "855",
+     "label": "מסילה ו/או טיפול נופי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       153,
+       114,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "860",
+     "label": "שביל",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       56,
+       168,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "861",
+     "label": "שביל רב קיבולת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "870",
+     "label": "חניון",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       91,
+       91,
+       91,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "880",
+     "label": "מסילה מאושרת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "890",
+     "label": "מסילה מוצעת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "900",
+     "label": "שטח לתפעול מסילה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "902",
+     "label": "תחנת תחבורה ציבורית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "903",
+     "label": "תוואי תחבורה ציבורית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "910",
+     "label": "תחנת תדלוק",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "920",
+     "label": "מרכז להדרכת נהיגה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       62,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "930",
+     "label": "מפגש דרך-מסילה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "931",
+     "label": "מעגנה-תחום יבשתי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "932",
+     "label": "מעגנה-תחום ימי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       148,
+       152,
+       129,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "933",
+     "label": "נמל",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       127,
+       223,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "935",
+     "label": "נמל תעופה-כללי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       127,
+       223,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "936",
+     "label": "נמל תעופה-מסלולים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       127,
+       223,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "937",
+     "label": "נמל תעופה-אזורי שירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "940",
+     "label": "דרך נופית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       132,
+       132,
+       132,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "950",
+     "label": "שטח לתכנון בעתיד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSDiagonalCross",
+      "color": [
+       0,
+       77,
+       168,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        110,
+        110,
+        110,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "955",
+     "label": "רצועת תשתיות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       168,
+       168,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.9999894165957189
+      }
+     },
+     "value": "960",
+     "label": "כריה וחציבה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       127,
+       127,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "970",
+     "label": "פסולת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       190,
+       255,
+       232,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        0,
+        0,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "971",
+     "label": "שדה תעופה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       102,
+       204,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        127,
+        127,
+        255
+       ],
+       "width": 3.4
+      }
+     },
+     "value": "972",
+     "label": "מרכז לוגיסטי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       169,
+       230,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        0,
+        0,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "973",
+     "label": "תחום ימי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "980",
+     "label": "בית קברות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       127,
+       111,
+       63,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "990",
+     "label": "מחנה צבאי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       132,
+       0,
+       168,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        0,
+        0,
+        255
+       ],
+       "width": 0.4
+      }
+     },
+     "value": "991",
+     "label": "תחום סקירה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        0,
+        255,
+        255
+       ],
+       "width": 3
+      }
+     },
+     "value": "994",
+     "label": "גבול הודעה בדבר הכנת תכנית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       0,
+       153,
+       204,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28346399999999994
+      }
+     },
+     "value": "995",
+     "label": "יעוד עפ\"י תכנית מאושרת אחרת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       102,
+       178,
+       204,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        102,
+        178,
+        204,
+        255
+       ],
+       "width": 0.28346399999999994
+      }
+     },
+     "value": "996",
+     "label": "מגבלות בניה ופיתוח",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       230,
+       76,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        127,
+        159,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "997",
+     "label": "מגבלות בניה ופיתוח ב",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        0,
+        255,
+        255
+       ],
+       "width": 3
+      }
+     },
+     "value": "998",
+     "label": "גבול תכנית ארצית/מחוזית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        127,
+        255,
+        255
+       ],
+       "width": 5.66928
+      }
+     },
+     "value": "999",
+     "label": "שטח שהתכנית אינה חלה עליו",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1000",
+     "label": "מגורים ומסחר",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.5291677250021167
+      }
+     },
+     "value": "1001",
+     "label": "דיור מיוחד ומסחר",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28346399999999994
+      }
+     },
+     "value": "1003",
+     "label": "דיור מיוחד ותעסוקה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       156,
+       156,
+       156,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28346399999999994
+      }
+     },
+     "value": "1050",
+     "label": "מגורים, מסחר ותעסוקה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28346399999999994
+      }
+     },
+     "value": "1051",
+     "label": "דיור מיוחד, מסחר ותעסוקה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28346399999999994
+      }
+     },
+     "value": "1100",
+     "label": "מגורים ותעסוקה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1200",
+     "label": "מגורים ומשרדים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1201",
+     "label": "דיור מיוחד ומשרדים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1211",
+     "label": "מגורים ותעשיה עתירת ידע",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1212",
+     "label": "דיור מיוחד ותעשיה עתירת ידע",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1221",
+     "label": "מגורים ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1222",
+     "label": "דיור מיוחד ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1250",
+     "label": "מגורים ומבנים ומוסדות ציבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.705556966669489
+      }
+     },
+     "value": "1300",
+     "label": "דיור מיוחד ומבנים ומוסדות ציבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1311",
+     "label": "מגורים ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1312",
+     "label": "דיור מיוחד ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1321",
+     "label": "מגורים ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1322",
+     "label": "דיור מיוחד ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1350",
+     "label": "מגורים ודיור מיוחד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1352",
+     "label": "מגורים ואירוח כפרי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       253,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1410",
+     "label": "מגורים,מסחר ומבנים ומוסדות ציבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1411",
+     "label": "דיור מיוחד,מסחר ומבנים ומוסדות ציבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1420",
+     "label": "מגורים, מסחר ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1421",
+     "label": "דיור מיוחד, מסחר ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1430",
+     "label": "מגורים, מסחר ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1431",
+     "label": "דיור מיוחד,מסחר ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1440",
+     "label": "מגורים, מסחר ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1441",
+     "label": "דיור מיוחד, מסחר ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1460",
+     "label": "מגורים, מסחר ומעגנה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1461",
+     "label": "דיור מיוחד, מסחר ומעגנה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1470",
+     "label": "מגורים, תעסוקה ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1471",
+     "label": "דיור מיוחד, תעסוקה ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1480",
+     "label": "מגורים,תעסוקה ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1481",
+     "label": "דיור מיוחד,תעסוקה ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1482",
+     "label": "מגורים, תעסוקה ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1483",
+     "label": "דיור מיוחד, תעסוקה ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1484",
+     "label": "מגורים, תעסוקה ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1485",
+     "label": "דיור מיוחד, תעסוקה ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1488",
+     "label": "מגורים, תעסוקה ומעגנה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1489",
+     "label": "דיור מיוחד, תעסוקה ומעגנה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1490",
+     "label": "מגורים, תירות ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1491",
+     "label": "דיור מיוחד, תירות ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1492",
+     "label": "מגורים,תירות ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1493",
+     "label": "דיור מיוחד,תירות ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1494",
+     "label": "מגורים, תירות ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       223,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1495",
+     "label": "דיור מיוחד, תירות ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1500",
+     "label": "מסחר ותעשיה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1502",
+     "label": "מסחר ותעסוקה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1504",
+     "label": "מסחר ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1506",
+     "label": "מסחר ותעשיה חקלאית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1510",
+     "label": "מסחר ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1520",
+     "label": "מסחר ומשרדים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1530",
+     "label": "מסחר ותעשיה עתירת ידע",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1540",
+     "label": "מסחר ותעשיה קלה ומלאכה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1550",
+     "label": "מסחר ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1560",
+     "label": "מסחר ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1562",
+     "label": "מסחר, תעסוקה ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       155,
+       0,
+       62,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1563",
+     "label": "מסחר, תחבורה ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        126,
+        255,
+        126,
+        255
+       ],
+       "width": 2.83464
+      }
+     },
+     "value": "1564",
+     "label": "מסחר ואירוח כפרי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       191,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        185,
+        46,
+        0,
+        255
+       ],
+       "width": 2.83464
+      }
+     },
+     "value": "1565",
+     "label": "מסחר ספורט ונופש",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1570",
+     "label": "מסחר ואחסנה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1572",
+     "label": "מסחר, תעסוקה ומתקנים הנדסיים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1574",
+     "label": "מסחר, תעסוקה ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1576",
+     "label": "מסחר,תעסוקה ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       173,
+       173,
+       173,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1578",
+     "label": "מסחר,תירות ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       252,
+       0,
+       62,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1579",
+     "label": "מסחר,תחבורה ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       127,
+       0,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1580",
+     "label": "תעשיה, תעשיה קלה ומלאכה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       197,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1590",
+     "label": "תעסוקה ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       197,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1600",
+     "label": "תעסוקה ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1602",
+     "label": "מבנים ומוסדות צבור ומתקנים הנדסים ",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1604",
+     "label": "מבנים ומוסדות צבור ותחבורה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1610",
+     "label": "מבנים ומוסדות צבור ומשרדים ",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       255,
+       0,
+       197,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1620",
+     "label": "תעסוקה,מבנים ומוסדות צבור ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       204,
+       102,
+       204,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1630",
+     "label": "תעשיה ומשרדים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       127,
+       0,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1640",
+     "label": "תעשיה ואחסנה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1650",
+     "label": "מבנים ומוסדות צבור ותירות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       126,
+       126,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1660",
+     "label": "שטחים פתוחים ומתקנים הנדסים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       126,
+       255,
+       126,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1670",
+     "label": "שטחים פתוחים ומבנים ומוסדות צבור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       133,
+       255,
+       133,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1680",
+     "label": "קרקע חקלאית ומתקנים הנדסים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       126,
+       255,
+       126,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "1681",
+     "label": "קרקע חקלאית ונופש כפרי",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       127,
+       127,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "1690",
+     "label": "כריה, חציבה ופסולת",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        0,
+        255,
+        255
+       ],
+       "width": 3
+      }
+     },
+     "value": "3000",
+     "label": "מפעל ניקוז",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSForwardDiagonal",
+      "color": [
+       56,
+       168,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        110,
+        110,
+        110,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "5663",
+     "label": "יער נטע אדם מוצע-למאושרות בלבד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSForwardDiagonal",
+      "color": [
+       56,
+       168,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        110,
+        110,
+        110,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "5664",
+     "label": "יער נטע אדם קיים-למאושרות בלבד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSVertical",
+      "color": [
+       255,
+       170,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        110,
+        110,
+        110,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "5665",
+     "label": "יער טבעי לטיפוח-למאושרות בלבד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSVertical",
+      "color": [
+       168,
+       0,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        110,
+        110,
+        110,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "5666",
+     "label": "יער פארק מוצע-למאושרות בלבד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSForwardDiagonal",
+      "color": [
+       255,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        110,
+        110,
+        110,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "5667",
+     "label": "יער פארק חופי-למאושרות בלבד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSVertical",
+      "color": [
+       168,
+       0,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        110,
+        110,
+        110,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "5668",
+     "label": "נטיעות בגדות נחלים-למאושרות בלבד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSHorizontal",
+      "color": [
+       255,
+       211,
+       127,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        110,
+        110,
+        110,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "5669",
+     "label": "יער טבעי לשימור-למאושרות בלבד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSVertical",
+      "color": [
+       168,
+       56,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        110,
+        110,
+        110,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "5670",
+     "label": "יער פארק קיים-למאושרות בלבד",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       255,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "5690",
+     "label": "שטח לפיתוח עירוני",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       184,
+       133,
+       122,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "5700",
+     "label": "בית סוהר",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "5704",
+     "label": "שטח שמור למתקן/ אשכול כליאה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "5705",
+     "label": "מרחב חיפוש למתקן/ אשכול כליאה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       204,
+       153,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 1.0000035277848334
+      }
+     },
+     "value": "5706",
+     "label": "מתקן/ אשכול כליאה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       205,
+       170,
+       102,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "5707",
+     "label": "אתר הנצחה ",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSBackwardDiagonal",
+      "color": [
+       168,
+       168,
+       0,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        63,
+        255,
+        255
+       ],
+       "width": 0.28
+      }
+     },
+     "value": "5708",
+     "label": "מתקן בטחוני",
+     "description": ""
+    }
+   ],
+   "fieldDelimiter": ","
+  },
+  "transparency": 0,
+  "labelingInfo": [
+   {
+    "labelPlacement": "esriServerPolygonPlacementAlwaysHorizontal",
+    "where": null,
+    "labelExpression": "[NUM]",
+    "useCodedValues": true,
+    "symbol": {
+     "type": "esriTS",
+     "color": [
+      0,
+      92,
+      230,
+      255
+     ],
+     "backgroundColor": null,
+     "borderLineColor": null,
+     "borderLineSize": null,
+     "verticalAlignment": "baseline",
+     "horizontalAlignment": "left",
+     "rightToLeft": false,
+     "angle": 0,
+     "xoffset": 0,
+     "yoffset": 0,
+     "kerning": false,
+     "haloColor": null,
+     "haloSize": null,
+     "font": {
+      "family": "Arial",
+      "size": 8,
+      "style": "normal",
+      "weight": "bold",
+      "decoration": "none"
+     }
+    },
+    "minScale": 3000,
+    "maxScale": 0
+   }
+  ]
+ },
+ "defaultVisibility": false,
+ "extent": {
+  "xmin": 130163.19890000019,
+  "ymin": 379694.75009999983,
+  "xmax": 284068.46889999975,
+  "ymax": 804540.1301000006,
+  "spatialReference": {
+   "wkid": 2039,
+   "latestWkid": 2039
+  }
+ },
+ "hasAttachments": false,
+ "htmlPopupType": "esriServerHTMLPopupTypeAsHTMLText",
+ "displayField": "label",
+ "typeIdField": null,
+ "subtypeFieldName": null,
+ "subtypeField": null,
+ "defaultSubtypeCode": null,
+ "fields": [
+  {
+   "name": "group_id",
+   "type": "esriFieldTypeInteger",
+   "alias": "מזהה קבוצת שכבות",
+   "domain": null
+  },
+  {
+   "name": "last_update_date",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך עדכון אחרון",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "layer_id",
+   "type": "esriFieldTypeInteger",
+   "alias": "מזהה שכבה",
+   "domain": null
+  },
+  {
+   "name": "legal_area",
+   "type": "esriFieldTypeDouble",
+   "alias": "שטח רשום דונם",
+   "domain": null
+  },
+  {
+   "name": "mavat_code",
+   "type": "esriFieldTypeInteger",
+   "alias": "קוד מבא\"ת",
+   "domain": null
+  },
+  {
+   "name": "mavat_name",
+   "type": "esriFieldTypeString",
+   "alias": "שם ייעוד קרקע",
+   "length": 50,
+   "domain": null
+  },
+  {
+   "name": "mp_id",
+   "type": "esriFieldTypeDouble",
+   "alias": "מזהה תכנית ראשי",
+   "domain": null
+  },
+  {
+   "name": "num",
+   "type": "esriFieldTypeString",
+   "alias": "מזהה תא שטח",
+   "length": 10,
+   "domain": null
+  },
+  {
+   "name": "objectid",
+   "type": "esriFieldTypeOID",
+   "alias": "ESRI Object ID",
+   "domain": null
+  },
+  {
+   "name": "pl_id",
+   "type": "esriFieldTypeDouble",
+   "alias": "מספר מהדורה",
+   "domain": null
+  },
+  {
+   "name": "pl_name",
+   "type": "esriFieldTypeString",
+   "alias": "שם תכנית",
+   "length": 78,
+   "domain": null
+  },
+  {
+   "name": "pl_number",
+   "type": "esriFieldTypeString",
+   "alias": "מספר תכנית",
+   "length": 78,
+   "domain": null
+  },
+  {
+   "name": "pl_order_print_version",
+   "type": "esriFieldTypeDouble",
+   "alias": "גירסת הוראות תכנית",
+   "domain": null
+  },
+  {
+   "name": "pl_tasrit_prn_version",
+   "type": "esriFieldTypeDouble",
+   "alias": "גירסת תשריט",
+   "domain": null
+  },
+  {
+   "name": "shape",
+   "type": "esriFieldTypeGeometry",
+   "alias": "Shape",
+   "domain": null
+  },
+  {
+   "name": "shape_area",
+   "type": "esriFieldTypeDouble",
+   "alias": "שטח מחושב",
+   "domain": null
+  },
+  {
+   "name": "shape_length",
+   "type": "esriFieldTypeDouble",
+   "alias": "היקף תא השטח מ'",
+   "domain": null
+  },
+  {
+   "name": "station",
+   "type": "esriFieldTypeDouble",
+   "alias": "קוד סטטוס",
+   "domain": null
+  },
+  {
+   "name": "station_desc",
+   "type": "esriFieldTypeString",
+   "alias": "סטטוס",
+   "length": 26,
+   "domain": null
+  }
+ ],
+ "geometryField": {
+  "name": "shape",
+  "type": "esriFieldTypeGeometry",
+  "alias": "Shape"
+ },
+ "indexes": null,
+ "subtypes": [],
+ "relationships": [],
+ "canModifyLayer": true,
+ "canScaleSymbols": false,
+ "hasLabels": true,
+ "capabilities": "Map,Query,Data",
+ "maxRecordCount": 1000,
+ "supportsStatistics": true,
+ "supportsAdvancedQueries": true,
+ "supportedQueryFormats": "JSON, geoJSON",
+ "isDataVersioned": false,
+ "ownershipBasedAccessControlForFeatures": {"allowOthersToQuery": true},
+ "useStandardizedQueries": true,
+ "advancedQueryCapabilities": {
+  "useStandardizedQueries": true,
+  "supportsStatistics": true,
+  "supportsHavingClause": true,
+  "supportsCountDistinct": true,
+  "supportsOrderBy": true,
+  "supportsDistinct": true,
+  "supportsPagination": true,
+  "supportsTrueCurve": true,
+  "supportsReturningQueryExtent": true,
+  "supportsQueryWithDistance": true,
+  "supportsSqlExpression": true
+ },
+ "supportsDatumTransformation": true,
+ "dateFieldsTimeReference": null,
+ "supportsCoordinatesQuantization": true
+}

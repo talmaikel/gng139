@@ -1,0 +1,77 @@
+{
+  "reviewed_document": "השושנים 4 — תכנית היתר 1970",
+  "decisions": [
+    {
+      "field": "address",
+      "proposed_value": "השושנים, הרצליה",
+      "decision": "approve",
+      "note": "השושנים 4"
+    },
+    {
+      "field": "gush",
+      "proposed_value": "6529",
+      "decision": "approve",
+      "note": ""
+    },
+    {
+      "field": "parcel",
+      "proposed_value": "167",
+      "decision": "approve",
+      "note": ""
+    },
+    {
+      "field": "permit_date",
+      "proposed_value": "1970-04-12",
+      "decision": "approve",
+      "note": ""
+    },
+    {
+      "field": "units",
+      "proposed_value": "6",
+      "decision": "approve",
+      "note": ""
+    },
+    {
+      "field": "residential_floors",
+      "proposed_value": "3",
+      "decision": "approve",
+      "note": ""
+    },
+    {
+      "field": "pilotis_area_m2",
+      "proposed_value": "148.50",
+      "decision": "reject",
+      "note": "מרפסות"
+    },
+    {
+      "field": "main_residential_area_per_floor_m2",
+      "proposed_value": "187.97",
+      "decision": "approve",
+      "note": ""
+    },
+    {
+      "field": "stair_area_m2",
+      "proposed_value": "14.68",
+      "decision": "approve",
+      "note": ""
+    },
+    {
+      "field": "shelter_area_m2",
+      "proposed_value": "21.00",
+      "decision": "approve",
+      "note": ""
+    },
+    {
+      "field": "original_total_area_m2",
+      "proposed_value": "748.09",
+      "decision": "approve",
+      "note": ""
+    },
+    {
+      "field": "original_permit_number",
+      "proposed_value": null,
+      "decision": "approve",
+      "note": ""
+    }
+  ]
+}

@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html ng-app="app">
+<head>
+    <meta http-equiv="x-ua-compatible" content="IE=11">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>GISNET V5 By Complot - הרצליה</title>
+    
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src=//www.googletagmanager.com/gtag/js?id=&#39;UA-138064299-10&#39;></script>
+
+    <script>
+        window.ga = window.ga || function () { (ga.q = ga.q || []).push(arguments) }; ga.l = +new Date;
+        ga('create', 'UA-138064299-10', 'auto');
+        window.dataLayer = window.dataLayer || [];
+        ga('send', 'pageview');
+
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'UA-138064299-10');
+
+    
+    </script>
+    <link rel="shortcut icon" href="./Content/site/images/Icons/Complot-favicon.png" />
+    <link href="/V5/Content/libs/telerik/styles/a?v=jXBp4UBtNlIPlBvJKwuk7ZEwRyAEDouzbjsxV4IkLxU1" rel="stylesheet"/>
+
+    
+    <link rel="stylesheet" href="//v5.gis-net.co.il/arcgis_js_api/library/3.35/3.35/dijit/themes/claro/claro.css">
+    <link rel="stylesheet" href="//v5.gis-net.co.il/arcgis_js_api/library/3.35/3.35/esri/css/esri.css">
+    
+    
+    <link href="/V5/Content/themes/base/jquery-ui.min.css" rel="stylesheet" />
+    <link href="/V5/Content/libs/bootstrap/css/a?v=Hq3BmybCQcyd54eQ3uR34DH-2F8SU_EDhxjh9fEny2U1" rel="stylesheet"/>
+
+    <link href="/V5/libs/css?v=FcsHCIcXCfhGT20rp9l6TnPYkJzEYG5IRUbNSQlZoyo1" rel="stylesheet"/>
+
+    <link href="/V5/Content/libs/font-awesome/css/a?v=ap16OQwnluasEtFz_9fcnvtr7y2kUeLxJcOm5M3k8_M1" rel="stylesheet"/>
+
+
+    <link href="/V5/Content/site/css/a?v=FjbuDrv0819h20XCAwnUfPZD0c9vPoLvEeJi17T5TlU1" rel="stylesheet"/>
+
+
+    <script src="/V5/Content/firstGlobal.js"></script>
+    <script>
+        $sys.firstGlobal.isMobileScreen = 0;
+    </script>
+    
+    <script src="/V5/libs/js?v=jg-llWN7WF7cSey7Mg0jf2kaQG2pIZeLhh4s3fonYP41"></script>
+
+    
+
+    <script src="/V5/Content/libs/telerik/js/kendo.all.min.js"></script>
+    <script src="//v5.gis-net.co.il/arcgis_js_api/library/3.35/3.35/init.js?e368e4f5-cf6d-49d1-a721-3809223820ed"></script>
+    
+
+    <script src="/V5/site/js?v=rtjFVSPjVbm2xQiavT9LjeD7jbXlamoNoTUhnlTMsVI1"></script>
+
+    
+</head>
+<body oncontextmenu="return false" class="claro">
+    <script>
+   urls = {
+        home: {
+            isLogedIn: '/V5/Hertzeliya/Home/IsLogedIn',
+            login: '/V5/Hertzeliya/Home/LogIn',
+            log: '/V5/Hertzeliya/Home/Log',
+            otpLogin: '/V5/Hertzeliya/Home/OtpFirstCheck',
+            otp2Login: '/V5/Hertzeliya/Home/OtpSecondCheck',
+        },
+       data: {
+           populationReport: '/V5/Hertzeliya/Data/PopulationReport',
+           getDescription: '/V5/Hertzeliya/Data/GetDescription',
+           getMap: '/V5/Hertzeliya/Data/GetMap',
+           getJson: '/V5/Hertzeliya/Data/GetJson',
+           getDictionary: '/V5/Hertzeliya/Data/GetDictionary',
+           getMessage: '/V5/Hertzeliya/Data/GetMessage',
+           sentMail: '/V5/Hertzeliya/Data/SentMail',
+           sentShareMail: '/V5/Hertzeliya/Data/SentShareMail',
+           getSearchs: '/V5/Hertzeliya/Data/GetSearchs',
+           getFastInfo: '/V5/Hertzeliya/Data/GetFastInfo',
+           getDynamicLods: '/V5/Hertzeliya/Data/GetDynamicLods',
+           PopulationExportToCsv: '/V5/Hertzeliya/Data/PopulationExportToCsv',
+           getFlyingTaba: '/V5/Hertzeliya/Data/GetFlyingTaba',
+           sendToSiata: '/V5/Hertzeliya/Data/SendToSiata',
+           getBackgroundMapGS: '/V5/Hertzeliya/Data/GetBackgroundMapGS',
+           getCallsCrmc: '/V5/Hertzeliya/Data/GetCallsCrmc',
+           getFocus: '/V5/Hertzeliya/Data/GetFocusCrmc',
+           getExternalFocusingSystems: '/V5/Hertzeliya/Data/GetExternalFocusingSystems',
+           getCrossSection: '/V5/Hertzeliya/Data/GetCrossSection'
+       },
+       report: {
+           populationRegistry: '/V5/Hertzeliya/Report/PopulationRegistry',
+           kinderGardens : '/V5/Hertzeliya/Report/KinderGardens',
+           residentsStreet: '/V5/Hertzeliya/Report/ResidentsStreet',
+           populationByAge: '/V5/Hertzeliya/Report/PopulationByAge',
+           siata: '/V5/Hertzeliya/Report/Siata',
+
+       }
+    }
+
+</script>
+
+    <div id="a" class="container body-content">
+        <style>
+    .templatePicker {
+        border: none;
+    }
+    /*.esriAttributeInspector .atiButton {
+        background-image:none
+    }*/
+</style>
+<div id="main-loading" style="display:none">
+    <div id="app-loading"></div>
+    <div id="loading-gif"></div>
+    <div id="demo-section" class="k-content">
+        <div id="testPor">
+            <div id="loadingPor"></div>
+            <div id="siteStucked" style="display:none;direction:rtl"></div>
+        </div>
+    </div>
+</div>
+<div id="second-loading">
+    <div id="app-beware">
+        <div id="bewareImgs">
+            <img id="splashImg" class="splashImg" />
+            <img class="splashImg" src="/V5/Content/site/images/Icons/complot.png" />
+        </div>
+        <div id="bewareText">
+            
+            <h2 id="bewareTextH2">ברוכים הבאים למערכת מידע גיאוגרפית - <text id="muniName"></text></h2>
+            <p id="bewareTextP">.אנו שמחים להעמיד לרשות הציבור מערכת מידע חדשה זו<br>.מערכת המידע ידידותית למשתמש המכילה מידע רב ומגוון בטכנולוגיה חדישה ויעילה<br>.אנו מקווים שתפיקו את מירב התועלת בצורה מיטבית&nbsp;<br>.אין המידע המופיע באתר מחייב סטטוטורית<br>.המידע המצוי באתר אינו מחייב ואינו מחליף עיון במקור<br>.הרשות ו/או גופים אחרים אינם אחראים לכל טעות, שיבוש, השמטה תוספת או כל פגם המופיעים באתר&nbsp;<br>.המידע המחייב הינו המידע המצוי במשרדי אגף ההנדסה בלבד<br><a href="GIS.pdf" target="_blank">לפתיחת המדריך</a></p>
+        </div>
+        <div id="bewareBtns">
+            <input id="chkAware" type="checkbox" /><text id="chkAwareText">  אל תציג הודעה זו שוב</text>
+        </div>
+        <div id="bewareBtnDiv">
+            <button id="bewareBtn" onclick="$sys.init.splashAware()" type="button">אישור</button>
+        </div>
+    </div>
+</div>
+
+<div ng-controller="mapViewCtrl" id="main-page">
+    
+    
+
+    <div id="divAll">
+        <div id="divOurTop">
+
+            
+
+        <div class="side-menu-rectangle" ng-controller="toolboxCtrl" style="display:none">
+            
+        <div class="searches">
+            <div id="logo">
+                <img id="logoImg" />
+            </div>
+            <div>
+                <div>
+                    <input id="txtFreeSearch" ng-click="showDivLocate(false,'txtFreeSearch')" />
+                    <img id="imgSearchLoader" src="./Content/site/images/loaders/loader1.gif" alt="Loading" />
+                    <img id="toolbarLocates" src="/V5/Content/site/images/TestIcons/search blue@1.5x.svg" alt="" ng-click="showDivLocate(false)" />
+                    <img id="errorLocates" src="/V5/Content/site/images/TestIcons/errorSharch.svg" alt="" />
+                </div>
+            </div>
+            <div id="clearSearch" ng-click="clearSearch()">
+                <div class="searchLine"></div>
+                <img id="clearSearchimg" src="/V5/Content/site/images/TestIcons/close@1.5x.svg" alt="" />
+            </div>
+        </div>
+
+        <div class="divClosingMenu" id="searchClosingMenu" ng-click="showDivLocate(true)">
+            <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+        </div>
+    
+
+<div id="myDivLocate" class="k-content">
+    <div class="divMenuHeader">
+        <span class="spnMenuHeader" id="spnMenuHeaderDivLocate">חיפוש מתקדם</span>
+    </div>
+    <div class="divWrapArrow">
+        <div class="divArrow"></div>
+    </div>
+    <div id="myDivLocate2"> </div>
+    <div id="divSearchPanel">
+        <div id="searchPanel"></div>
+    </div>
+</div>
+
+<div class="divClosingMenu" id="divLocateClosingMenu" ng-click="showDivLocate(true)">
+    <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+</div>
+<!--divLocateClosingMenu-->
+
+            
+<div class="tools-rectangle" id="background-toolbarLayers" ng-class="tocClass" ng-click="showDivToc()" ng-mouseover="changeTocCss(true)" ng-mouseout="changeTocCss(false)">
+    <img id="toolbarLayers" ng-src="{{imgTocsrc}}" alt="" />
+    <div id="spnToolbarLayers">שכבות מידע</div>
+    <div id="spnToolbarLayersCount"></div>
+</div>
+
+
+<div id="myDivToc" class="k-content">
+    <div class="divMenuHeader">
+        <span ng-click="showDivFastInfo()" id="boyanFastInfoTest" class="spnMenuHeader" style="top:20px;width:150px;margin-left: 50px; cursor:pointer">מידע מהיר</span>
+        <span ng-click="showDivPanelToc()" id="boyanTocTest" class="spnMenuHeader" style="top:20px;width:150px;margin-right: 50px; cursor:pointer">שכבות מידע</span>
+    </div>
+    <div class="divWrapArrow">
+        <div id="tocFastInfoArrow" class="divArrow"></div>
+    </div>
+
+    <div id="panelToc">
+        <div id="myDivToc2">
+            <div id="sliderDiv" class="k-rtl">
+                <div id="lblSliderOpacity">OPACITY</div>
+                <div id="opacityValue"></div>
+                <div id="sliderOpacity"></div>
+            </div>
+            <div id="filterLayers">
+                <input class="k-rtl" id="filterLayersAutoComplete" />
+                <button class="k-rtl" type="button" id="btnAddShapefile"></button>
+                <button class="k-rtl" type="button" id="btnUncheckAllLayers"></button>
+            </div>
+        </div>
+        <div id="panelLayersParent">
+            <div id="panelLayers"></div>
+        </div>
+    </div>
+    <div id="dialogSelectFile"></div>
+
+
+    <div id="myDivFastInfo" class="k-content" style="display: none;width: 303px;background-color: #0169CC;">
+        <div id="myId" style="width:303px; padding-top: 20px;"></div>
+        
+        <div id="myFrequentLayersInfo" style="color:#FFFFFF;background-color:#4A90E2;"></div>
+    </div>
+
+
+    <div class="divClosingMenu" ng-click="showDivToc()">
+        <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+    </div>
+
+</div>
+
+            <div class="tools-rectangle"
+      ng-class="identifyClass"
+      ng-click="showIdentify()" ng-mouseover="changeIdentifyCss(true)" ng-mouseout="changeIdentifyCss(false)">
+
+    <img id="toolbarIdentify" ng-src="{{imgIdentifysrc}}"  alt="" />
+    <span id="spnToolbarIdentify">IDENTIFY</span>
+
+</div>
+<div id="myWindowSearch1">
+    
+    <div id="myWindowSearch2" >
+        <div id="divSearchTree"></div>
+        <div id="divSearchGrid"></div>
+        <input type="checkbox" id="chkSearchZoomOnClick" />
+        <span id="spnSearchZoomOnClick">ZOOMTOFEATURE</span>
+    </div>
+</div>
+
+
+            <div class="tools-rectangle" ng-class="selectClass" ng-click="showSelect()" ng-mouseover="changeSelectCss(true)" ng-mouseout="changeSelectCss(false)">
+    <img id="toolbarSelect" ng-src="{{imgSelectsrc}}" />
+    <span id="spnToolbarSelect">כלי בחירה</span>
+</div>
+
+
+<div>
+    <div id="myDivSelectByLocation" class="k-content">
+        <div class="divMenuHeader">
+            <span class="spnMenuHeader">כלי בחירה</span>
+        </div>
+        <div class="divWrapArrow">
+            <div class="divArrow"></div>
+        </div>
+        <div id="divSelectBody">
+            <div class="divWrapSelectImg">
+                <div class="divSelectImgBackground" id="backgroundCircle">
+                    <img class="imgSelect" id="imgSelectCircle" src="/V5/Content/site/images/TestIcons/oval@1.5x.svg" alt="" />
+                </div>
+                <span id="spnSelectCircle" class="spnSelectText">CIRCLE</span>
+            </div>
+            <div class="divWrapSelectImg">
+                <div class="divSelectImgBackground" id="backgroundRectangle">
+                    <img class="imgSelect" id="imgSelectRectangle" src="/V5/Content/site/images/TestIcons/scuare@1.5x.svg" alt="" />
+                </div>
+                <span id="spnSelectRectangle" class="spnSelectText">RECTANGLE</span>
+            </div>
+            <div class="divWrapSelectImg">
+                <div class="divSelectImgBackground" id="backgroundPolygon">
+                    <img class="imgSelect" id="imgSelectPolygon" src="/V5/Content/site/images/TestIcons/poligon@1.5x.svg" alt="" />
+                </div>
+                <span id="spnSelectPolygon" class="spnSelectText">POLYGON</span>
+            </div>
+            <div class="divWrapSelectImg">
+                <div class="divSelectImgBackground" id="backgroundSelectLine">
+                    <img class="imgSelect" id="imgSelectLine" src="/V5/Content/site/images/TestIcons/open line@1.5x.svg" alt="" />
+                </div>
+                <span id="spnSelectLine" class="spnSelectText">LINE</span>
+            </div>
+        </div>
+        <div id="divSelectFooter">
+            <hr id="hrSelectByLocation" />
+            
+            
+            
+
+            <div id="checkBoxSelect" style="width:108px;color:white;padding-top:5px;text-align: right;position: relative;right: 20px;float:right;">
+                <input id="checkboxRadius" class="btnSelect" type="checkbox" name="selectRadio" onclick="drawCircleFunc()" value="" />
+                <label for="checkboxRadius">בחירת רדיוס</label>
+                <br />
+                <input type="number" class="numberRadius" id="numberRadius" name="numberRadius" min="1" max="1000" value="50" style="color:black;width:50px; display:none;">
+                <label class="numberRadius" for="numberRadius" style="display:none;">1000 - 1</label>
+                <br />
+                
+            </div>
+            <div id="radioSelect" style="color:white;padding-top:5px;text-align: right;position: relative;right: 40px;float:right;">
+                <input id="radioBtnSelect1" class="btnSelect" type="radio" name="selectRadio" value="1" checked />
+                <label for="radioBtnSelect1">בחירה חדשה</label>
+                <br />
+                <input id="radioBtnSelect2" class="btnSelect" type="radio" name="selectRadio" value="2" />
+                <label for="radioBtnSelect2">הוסף לבחירה קיימת</label>
+            </div>
+        </div>
+        <div class="divClosingMenu" ng-click="showSelect()">
+            <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+        </div>
+    </div>
+</div>
+<div id="dialog"></div>
+<script>
+    function drawCircleFunc() {
+        var checkBox = document.querySelector("#checkboxRadius");
+        var numberRadius = document.querySelectorAll(".numberRadius");
+        if (checkBox.checked) {
+            for (var i = 0; i < numberRadius.length; i++) {
+                numberRadius[i].style.display = "initial";
+                $sys.globals3.myNumberRadius = true;
+            }
+        } else {
+            for (var i = 0; i < numberRadius.length; i++) {
+                numberRadius[i].style.display = "none";
+                $sys.globals3.myNumberRadius = false;
+            }
+        }
+    }
+</script>
+
+            <div class="tools-rectangle" ng-class="measureClass" ng-click="showMeasure()" ng-mouseover="changeMeasureCss(true)" ng-mouseout="changeMeasureCss(false)">
+    <img id="toolbarMeasure" ng-src="{{imgMeasuresrc}}" alt="" />
+    <span id="spnToolbarMeasure">כלי מדידה</span>
+</div>
+
+<div>
+    <div id="myDivMeasure" class="k-content">
+        <div class="divMenuHeader">
+            <span class="spnMenuHeader">כלי מדידה</span>
+        </div>
+        <div class="divWrapArrow">
+            <div class="divArrow"></div>
+        </div>
+        <div id="divMeasureBody">
+            <div id="divWrapMeasureLineImg">
+                <div class="divMeasureImgBackground" id="backgroundLine">
+                    <img id="imgMeasureDistance" src="/V5/Content/site/images/TestIcons/measure line@1.5x.svg" alt="" />
+                </div>
+                <span class="spnMeasureText" id="spnMeasureDistance">DISTANCE</span>
+            </div>
+            <div id="divWrapMeasureAreaImg">
+                <div class="divMeasureImgBackground" id="backgroundArea">
+                    <img id="imgMeasureArea" src="/V5/Content/site/images/TestIcons/measure Area@1.5x.svg" alt="" />
+                </div>
+                <span class="spnMeasureText" id="spnMeasureArea">AREA</span>
+            </div>
+        </div>
+        <div class="divClosingMenu" ng-click="showMeasure()" >
+            <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+        </div>
+    </div>
+</div>
+            
+    <div class="tools-rectangle" id="background-toolbarBackground" ng-class="backgroundClass" ng-click="showBackground()" ng-mouseover="changeBackgroundCss(true)" ng-mouseout="changeBackgroundCss(false)">
+        <img id="toolbarBackground" ng-src="{{imgBackgroundsrc}}" alt="" />
+        <span id="spnToolbarBackground">BACKGROUND</span>
+    </div>
+
+
+            <div id="smallScreen">
+                <div id="background-toolbarAdvancedTools">
+    <div class="tools-rectangle" ng-class="advancedToolClass" ng-click="showAdvancedTools()" ng-mouseover="changeAdvancedToolsCss(true)" ng-mouseout="changeAdvancedToolsCss(false)">
+        <img class="toolbarAdvancedTools" ng-src="{{imgAdvancedToolsrc}}" alt="" />
+        <span class="spnToolbarAdvancedTools">כלים מתקדמים</span>
+    </div>
+</div>
+
+<div id="myDivAdvancedTools" class="k-content">
+    <div class="divMenuHeader">
+        <span class="spnMenuHeader">כלים מתקדמים</span>
+    </div>
+    <div class="divWrapArrow">
+        <div class="divArrow"></div>
+    </div>
+    <div id="myDivAdvancedTools2">
+                <div class="advanceItem">
+            <div class="advanceOval" id="backgroundAdvCompare">
+                <img class="icon-advance" id="imgAdvCompare" src="/V5/Content/site/images/TestIcons/compare.svg" alt="" />
+            </div>
+            <span class="advanceSpanItem" id="spnAdvCompare">COMPARE</span>
+        </div>
+
+                <div class="advanceItem" id="btnFreeDraw" ng-click="freeDraw()" ng-mouseover="changeFreeDrawCss(true)" ng-mouseout="changeFreeDrawCss(false)">
+            <div ng-class="freeDrawClass" class="advanceOval">
+                <img class="icon-advance" id="imgAdvFreeDraw" ng-src="{{imgFreeDrawsrc}}" alt="" />
+            </div>
+            <span ng-class="freeDrawSpan" class="advanceSpanItem" id="spnAdvFreeDraw">ציור חופשי</span>
+        </div>
+
+        
+        
+        
+                <div class="advanceItem" ng-click="showAdvSearch()">
+            <div class="advanceOval" id="divAdvSearch">
+                <img class="icon-advance" id="imgAdvSearch" src="/V5/Content/site/images/TestIcons/filter@1.5x.svg" alt="" />
+            </div>
+            <span class="advanceSpanItem" id="spnAdvSearch">חיפוש מתקדם</span>
+        </div>
+
+        
+        
+        
+        
+        
+
+        
+        
+
+
+    </div>
+    <div class="divClosingMenu" ng-click="showAdvancedTools()">
+        <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+    </div>
+</div>
+
+<div id="freeDraw">
+    <div class="divMenuHeader">
+        <span class="spnMenuHeader">ציור חופשי</span>
+    </div>
+    <div class="divWrapArrow">
+        <div class="divArrow"></div>
+    </div>
+    <div id="divDrawTools">
+        <div>
+            <div>
+                יש לבחור מצב ציור
+            </div>
+        </div>
+        <div>
+            <div>
+                <div class="drawButton" id="draw_point_div" ng-click="changeToolPaint('Point','point')"><img class="drawImage" id="draw_point_img" src="/V5/Content/site/images/drawTool/draw_point@1.5x.svg"></div>
+                <div class="drawButton" id="draw_multiPoint_div" ng-click="changeToolPaint('Multi Point','point')"><img class="drawImage" id="draw_multiPoint_img" src="/V5/Content/site/images/drawTool/draw_multiPoint@1.5x.svg" /></div>
+                <div class="drawButton" id="draw_line_div" ng-click="changeToolPaint('Line','line')"><img class="drawImage" id="draw_line_img" src="/V5/Content/site/images/drawTool/draw_line@1.5x.svg" /></div>
+                <div class="drawButton" id="draw_polyline_div" ng-click="changeToolPaint('Polyline','line')"><img class="drawImage" id="draw_polyline_img" src="/V5/Content/site/images/drawTool/draw_polyline@1.5x.svg" /></div>
+            </div>
+        </div>
+        <div>
+            <div>
+                <div class="drawButton" id="draw_polygon_div" ng-click="changeToolPaint('Polygon','fill')"><img class="drawImage" id="draw_polygon_img" src="/V5/Content/site/images/drawTool/draw_polygon@1.5x.svg" /></div>
+                <div class="drawButton" id="draw_freehand_polyline_div" ng-click="changeToolPaint('Freehand Polyline','line')"><img class="drawImage" id="draw_freehand_polyline_img" src="/V5/Content/site/images/drawTool/draw_freehand_polyline@1.5x.svg" /></div>
+                <div class="drawButton" id="draw_freehand_polygon_div" ng-click="changeToolPaint('Freehand Polygon','fill')"><img class="drawImage" id="draw_freehand_polygon_img" src="/V5/Content/site/images/drawTool/draw_freehand_polygon@1.5x.svg" /></div>
+                <div class="drawButton" id="draw_arrow_div" ng-click="changeToolPaint('Arrow','fill')"><img img class="drawImage" id="draw_arrow_img" src="/V5/Content/site/images/drawTool/draw_arrow@1.5x.svg" /></div>
+            </div>
+        </div>
+        <div>
+            <div>
+                <div class="drawButton" id="draw_triangle_div" ng-click="changeToolPaint('Triangle','fill')"><img class="drawImage" id="draw_triangle_img" src="/V5/Content/site/images/drawTool/draw_triangle@1.5x.svg" /></div>
+                <div class="drawButton" id="draw_circle_div" ng-click="changeToolPaint('Circle','fill')"><img class="drawImage" id="draw_circle_img" src="/V5/Content/site/images/drawTool/draw_circle@1.5x.svg" /></div>
+                <div class="drawButton" id="draw_ellipse_div" ng-click="changeToolPaint('Ellipse','fill')"><img class="drawImage" id="draw_ellipse_img" src="/V5/Content/site/images/drawTool/draw_ellipse@1.5x.svg" /></div>
+                <div class="drawButton" id="draw_text_div" ng-click="addFreeText()"><img class="drawImage" id="draw_text_img" src="/V5/Content/site/images/drawTool/draw_text@1.5x.svg" /></div>
+            </div>
+        </div>
+        <div id="divFreeDraw">
+            <ul id="noBullets">
+                <li id="drawListPadding" ng-if="symbolType=='text'">
+                    <div id="block_container">
+                        <div id="bloc1">טקסט</div>
+                        <div id="bloc2"> <input type="text" ng-model="symbol.text" placeholder="enter text" /></div>
+                    </div>
+                </li>
+                <li id="drawListPadding" ng-if="symbolType=='text'">
+                    <span>פונט</span>
+                    <div>
+                        <ul id="noBullets">
+                            <li id="drawListPadding">
+                                <div id="block_container">
+                                    <div id="bloc1">גודל</div>
+                                    <div id="bloc2"> <input type="number" ng-model="symbol.font.size" min="5" max="50" value="12"></div>
+                                </div>
+                            </li>
+
+                            <li id="drawListPadding">
+                                <div id="block_container">
+                                    <div id="bloc1">סגנון</div>
+                                    <div id="bloc2"><select ng-model="symbol.font.style" ng-options="item for item in styleText"></select></div>
+                                </div>
+                            </li>
+                            <li id="drawListPadding">
+                                <div id="block_container">
+                                    <div id="bloc1">עובי</div>
+                                    <div id="bloc2"><select ng-model="symbol.font.weight" ng-options="item for item in weightText"></select> </div>
+                                </div>
+                            </li>
+                            <li id="drawListPadding">
+                                <div id="block_container">
+                                    <div id="bloc1">עיצוב</div>
+                                    <div id="bloc2"><select ng-model="symbol.font.decoration" ng-options="item for item in decorationText"></select> </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                <li id="drawListPadding" ng-if="symbolType=='text'">
+                    <div id="block_container">
+                        <div id="bloc1">זווית</div>
+                        <div id="bloc2"> <input ng-model="symbol.angle" type="number" min="0" max="360" /></div>
+                    </div>
+                </li>
+                <li id="drawListPadding" ng-if="symbolType=='point'|| symbolType== 'fill'">
+                    <div id="block_container">
+                        <div id="bloc1">סגנון</div>
+                        <div id="bloc2"> <select ng-model="symbol.style" ng-options="item for item in styleList"></select></div>
+                    </div>
+                </li>
+                <li id="drawListPadding" ng-if="symbolType== 'point'">
+                    <div id="block_container">
+                        <div id="bloc1">גודל</div>
+                        <div id="bloc2"> <input type="number" ng-model="symbol.size" step="0.5" min="5"></div>
+                    </div>
+                </li>
+                <li id="drawListPadding" ng-if="symbolType== 'point'|| symbolType=='fill'||symbolType== 'line'">
+                    <div id="block_container">
+                        <div>קו חיצוני</div> <div></div>
+                        <div>
+                            <ul id="noBullets">
+                                <li id="drawListPadding" ng-if="symbolType=='point'|| symbolType== 'fill' || symbolType== 'line'">
+                                    <div id="block_container">
+                                        <div id="bloc1">סגנון</div>
+                                        <div id="bloc2"> <select ng-model="symbol.outlineStyle.style" ng-options="item for item in styleLine"></select></div>
+                                    </div>
+                                </li>
+                                <li id="drawListPadding" ng-if="symbolType== 'point'|| symbolType== 'fill' || symbolType== 'line'">
+                                    <div id="block_container">
+                                        <div id="bloc1">צבע</div>
+                                        <div id="bloc2"><input ng-model="symbol.outlineStyle.color" kendo-color-picker k-buttons="false" k-preview="false" k-input="false" /></div>
+                                    </div>
+                                </li>
+                                <li id="drawListPadding" ng-if="symbolType== 'point'|| symbolType== 'fill' ||symbolType== 'line'">
+                                    <div id="block_container">
+                                        <div id="bloc1">עובי</div>
+                                        <div id="bloc2"><input ng-model="symbol.outlineStyle.width" type="number" step="0.25" min="0.25" max="25"> </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </li>
+                <li id="drawListPadding" ng-if="symbolType== 'point'|| symbolType== 'fill' || symbolType=='text'">
+                    <div id="block_container">
+                        <div id="bloc1">צבע</div>
+                        <div id="bloc2">
+                            <input id="colorpicker" kendo-color-picker ng-model="symbol.color" k-buttons="false" k-preview="false" k-input="false" />
+                        </div>
+                    </div>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+
+    <div class="divClosingMenu" ng-click="freeDraw()">
+        <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+    </div>
+</div>
+
+                <div id="background-toolbarPrint" class="tools-rectangle" ng-class="printClass" ng-click="showPrint()" ng-mouseover="changePrintCss(true)" ng-mouseout="changePrintCss(false)">
+    <img id="toolbarPrint" ng-src="{{imgPrintsrc}}" alt="" />
+    <span id="spnToolbarPrint">שיתוף והדפסה</span>
+</div>
+                <div>
+    <div id="externalLook" class="tools-rectangle" ng-class="externalLookClass" ng-click="showExternalLook()" ng-mouseover="changeExternalLookCss(true)" ng-mouseout="changeExternalLookCss(false)">
+        <img id="toolbarExternalLook" ng-src="{{imgExternalLooksrc}}" alt="" />
+        <span id="spnToolbarExternalLook">מבט חיצוני</span>
+    </div>
+</div>
+
+
+<div id="myDivExternalLook">
+    <div class="divMenuHeader">
+        <span class="spnMenuHeader">התמקדות במפה</span>
+    </div>
+    <div class="divWrapArrow">
+        <div class="divArrow"></div>
+    </div>
+    <div id="myDivExternalLook2">
+
+        <div class="advanceItem" draggable="true" ng-click="changeToolGsv()" ondragstart="drag(event,'gsv')" ng-mouseover="changeGsvCss(true)" ng-mouseout="changeGsvCss(false)">
+            <div ng-class="gsvClass">
+                <img class="icon-advance" ng-src="{{imgGsvsrc}}" alt="" />
+            </div>
+            <span ng-class="gsvSpan" class="advanceSpanItem">מבט רחוב</span>
+        </div>
+
+
+
+
+
+
+
+
+
+    </div>
+    <div class="divClosingMenu" ng-click="showExternalLook()">
+        <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+    </div>
+</div>
+
+
+<div id="myWindowOpenUrl1" class="k-content">
+    <div id="myWindowOpenUrl2">
+    </div>
+</div>
+
+<script>
+    function allowDrop(ev) {
+        ev.preventDefault();
+    }
+
+    function drag(ev, tool) {
+        ev.dataTransfer.setData("text", ev.target.id);
+        $sys.globals3.evtool = tool;
+    }
+
+    function drop(ev) {
+        ev.preventDefault();
+        ev.tool = $sys.globals3.evtool;
+        $sys.tools.drawingEnd(ev);
+    }
+</script>
+
+
+            </div>
+            
+            <div class="tools-rectangle" id="moreBtn" ng-class="measureClass" ng-click="showDivMore()" ng-mouseover="changeMoreCss(true)" ng-mouseout="changeMoreCss(false)">
+    <img id="toolbarMeasure" ng-src="{{imgMeasuresrc}}" alt="" />
+    <span id="spnToolbarMeasure">כלים נוספים</span>
+</div>
+
+<div id="myDivMore" class="k-content" style="display:none">
+    <div class="divMenuHeader">
+        <span class="spnMenuHeader">כלים נוספים</span>
+    </div>
+    <div class="divWrapArrow">
+        <div class="divArrow"></div>
+    </div>
+    <div id="myDivMore2">
+        <div class="advanceItem" ng-click="showAdvancedTools()">
+            <div class="advanceOval">
+                <img class="icon-advance" src="/V5/Content/site/images/TestIcons/pro tools blue@1.5x.svg" alt="" />
+            </div>
+            <span class="advanceSpanItem">כלים מתקדמים</span>
+        </div>
+        <div class="advanceItem" ng-click="showPrint()">
+            <div class="advanceOval">
+                <img class="icon-advance" src="/V5/Content/site/images/TestIcons/plusBlue@1.5x.svg" alt="" />
+            </div>
+            <span class="advanceSpanItem">שיתוף והדפסה</span>
+        </div>
+        <div class="advanceItem" ng-click="showExternalLook()">
+            <div class="advanceOval">
+                <img class="icon-advance" src="/V5/Content/site/images/TestIcons/focus blue@1.5x.svg" alt="" />
+            </div>
+            <span class="advanceSpanItem">מבט חיצוני</span>
+        </div>
+
+
+    </div>
+    <div class="divClosingMenu" ng-click="showMeasure()">
+        <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+    </div>
+</div>
+
+        </div>
+
+            <div id="map" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+
+            
+            
+
+            <span id="popupNotification"></span>
+            
+
+
+            <div id="divZoomSlider" ng-controller="buttonsZoomCtrl" style="display:none">
+    
+    
+            <div class="group-3">
+                <button type="button" class="clsButtonZoomHalf" id="btnZoomPrev" ng-click="zoomPrev()"></button>
+                <button type="button" class="clsButtonZoomHalf" id="btnZoomNext" ng-click="zoomNext()"></button>
+            </div>
+      
+    <div class="gray-circle-icon-search-copy">
+        <button type="button" class="clsButtonZoom" id="btnZoomIn" ng-click="zoomIn()"></button>
+    </div>
+    <div class="gray-circle-icon-search-copy">
+        <button type="button" class="clsButtonZoom" id="btnZoomOut" ng-click="zoomOut()"></button>
+    </div>
+</div>
+
+
+            
+        <div id="divButtonsLeft" ng-controller="buttonsLeftCtrl">
+            <div class="gray-circle-icon-search-copy"><button type="button" class="clsButton" ng-click="fullExtent()" id="btnFullExtent"></button></div>
+
+            <div class="gray-circle-icon-search-copy">
+    
+    
+        <button type="button" class="clsButton" id="btnLegend" ng-click="showLegend()"></button>
+    
+
+</div>
+<div id="myWindowLegend1" class="k-content">
+    <div id="myWindowLegend2" style="display: none">
+        <div id="divLegend"></div>
+    </div>
+</div>
+            <div class="gray-circle-icon-search-copy">
+    <button type="button" class="clsButton" id="btnBookmarks" ng-click="showBookmarks()"></button>
+</div>
+
+<div id="myWindowBookmarks1" class="k-content">
+    <div id="myWindowBookmarks2">
+        <div id="spnBookmarks"></div>
+        <div id="listViewBookmarks"></div>
+        <br />
+        <button id="btnCreateBookmark" class="k-button" type="submit">Submit</button>
+        <input type="search" id="txtNewBookmarkName" name="search" />
+    </div>
+</div>
+
+
+<script type="text/x-kendo-tmpl" id="templateBookmark">
+    <div data-index="${index}" class="product myBookmarkClass">
+        <img class="clsImgStar" src="./Content/site/images/bookmark.png" />
+        <h3>#:name#</h3>
+        <img class="clsImgDelete" src="./Content/site/images/delete16.png" />
+    </div>
+</script>
+
+
+            <div class="gray-circle-icon-search-copy">
+    <button type="button" class="clsButton" id="btnClear" ng-click="clear()"></button>
+</div>
+            <div class="gray-circle-icon-search-copy">
+    
+        <button type="button" class="clsButton" id="btnLocateMe" ng-click="geoLocate()"></button>
+    
+</div>
+        </div>
+
+
+            <div id="layerListTest" style="width:300px;z-index:31000"></div>
+
+        </div>
+        
+        <div id="divCenter"></div>
+
+
+        <div id="divBottom">
+            <span id="txtScale"></span>
+            
+            <div id="bottomInnerDiv">
+                <span id="m_span_ma" class="clsLinkBottom"></span>
+                <span id="m_span_odot" class="clsLinkBottom"></span>
+                <span id="m_span_terms" class="clsLinkBottom"></span>
+                <span id="m_span_links" class="clsLinkBottom"></span>
+                <span id="m_span_developers" class="clsLinkBottom"></span>
+                <span id="m_span_faq" class="clsLinkBottom"></span>
+                <span id="m_span_ktovlanu" class="clsLinkBottom"></span>
+                <a id="m_span_site" class="clsLinkBottom"></a>
+                <a id="m_span_madrich" class="clsLinkBottom"></a>
+                <span id="userName" class="clsLinkBottom" style="cursor: default;">{{userName}} Public</span>
+            </div>
+            <div id="errorLog">
+                <ul>
+                    <li class="statusLight" id="securityGood"></li>
+                    <li class="statusLight" id="securityProblem"></li>
+                </ul>
+            </div>
+            <span id="txtCoords"></span>
+        </div>
+    </div>
+
+    <div id="divWindows">
+        
+        <div id="loadCsv">
+            <div id="panelHeader">
+                loadCsv
+            </div>
+            <div class="divWrapArrow">
+                <div id="divArrow" class="divArrow"></div>
+            </div>
+            <div>
+                <input class="k-rtl" id="selectCsv" />
+
+            </div>
+        </div>
+
+
+        
+        <div id="boyangsv" style="width:520px;height:520px;background-color:#FAFAFA;display:none;position:center;position: absolute;top: 20px;left: 100px;">
+            <div onclick="$sys.tools.resetToolsAndCloseWindows()" style="cursor:pointer;width:20px;height:20px;float:right;text-align:center;font-weight:bolder;color:black;">X</div>
+            <div id="pano" style="width:520px;height:500px;"></div>
+            <script>
+                function closeMyGSV() {
+                    $("#boyangsv").css("display", "none");
+                }
+            </script>
+            
+        </div>
+        
+        
+        <img id="drop_down" src="/V5/Content/site/images/arrow_drop_down.png" display="block" />
+        <div id="myDivEditLayer" style="display:none">
+            <div id="panelHeader">
+                עריכת שכבות
+            </div>
+            <div>
+                <input class="k-rtl" id="selectEdit" />
+
+            </div>
+            <div id="forAppend">
+                <div style="padding:10px;" id="templateDiv"></div>
+                <div style="padding:10px;" id="editorDiv"></div>
+            </div>
+            <div class="divClosingMenu" ng-click="closeEdit()">
+                <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+            </div>
+        </div>
+
+        <div id="myDivApplyEdits" style="display:none">
+            <div id="panelHeader">
+                עדכון נתונים גורף
+            </div>
+            <div class="divWrapArrow">
+                <div id="divArrow" class="divArrow"></div>
+            </div>
+
+
+            <h5 class="apply-header">שכבה</h5>
+            <h5>קובץ csv</h5>
+            <button class="k-rtl" type="button" id="btnAddCSVfile"></button>
+            <input class="k-rtl" id="selectApplyEdit" />
+            <button type="button" disabled class="k-button  btn-print" id="btnApplEdit">שלח עדכון</button>
+            <hr />
+            <input type="radio" name="edit" id="edit1" value="UPDATE" checked="checked">
+            <h5 style="display:inline-block;margin-right:5px">עדכון נתונים  &nbsp| </h5>
+            <input type="radio" name="edit" value="INSERT" id="edit2">
+            <h5 style="display:inline-block;margin-right:5px">הוספת נתונים  &nbsp| </h5>
+            <input type="radio" name="edit" value="DELETE" id="edit3">
+            <h5 style="display:inline-block">מחיקת נתונים</h5>
+            <hr />
+
+            <h5 id="applyEditMessage">הינו שדה חובה OBJECTID שדה*</h5>
+            <h5>שמות השדות חייבים להיות זהים לשכבת היעד*</h5>
+            <h5>לא ניתן להכניס אותיות לשדה מספרי*</h5>
+
+            <div id="prograsBar" style="width:90%;display:none"></div>
+            <img id="imgApplyLoader" src="./Content/site/images/loaders/loader1.gif" alt="Loading" />
+            <div class="divClosingMenu" ng-click="closeApplyEdit()">
+                <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+            </div>
+        </div>
+
+        <div id="outerDivControlValves" style="display:none">
+            <div id="panelHeader">
+                מגופים שולטים
+            </div>
+            <div class="divWrapArrow">
+                <div id="divArrow" class="divArrow"></div>
+            </div>
+            <h5>יש לבחור מצב תקלה</h5>
+            <div>
+                <div class="advanceItem">
+                    <div class="advanceOval" id="pierceLines">
+                        <img class="icon-advance" id="pierceLinesImg" src="/V5/Content/site/images/TestIcons/pipe.svg" />
+                    </div>
+                </div>
+                <div class="advanceItem">
+                    <div class="advanceOval" id="piercePolygon">
+                        <img class="icon-advance" id="piercePolygonImg" src="/V5/Content/site/images/TestIcons/pipe.svg" />
+                    </div>
+                </div><br />
+                <div class="advanceItem" id="closingValvesOuterDiv">
+                    <div class="advanceOval" id="closingValves">
+                        <img disabled class="icon-advance" id="closingValvesImg" src="/V5/Content/site/images/TestIcons/valveClose@1.5.svg" />
+                    </div>
+                </div>
+                <div class="advanceItem" id="disfuncValvesOuterDiv">
+                    <div class="advanceOval" id="disfuncValves">
+                        <img disabled class="icon-advance" id="disfuncValvesImg" src="/V5/Content/site/images/TestIcons/valve.svg" />
+                    </div>
+                </div>
+            </div>
+
+            <img id="wlSpinner" src="./Content/site/images/loaders/loader1.gif" alt="Loading" />
+            <button type="button" disabled class="k-button  btn-print" id="calcWaterCell">חשב</button>
+            <div class="divClosingMenu" ng-click="closeControlValves()">
+                <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+            </div>
+        </div>
+
+        <div id="outerDivSewageSection" style="display:none">
+            <div id="panelHeader">
+                חתך אורך
+            </div>
+            <div class="divWrapArrow">
+                <div id="divArrow" class="divArrow"></div>
+            </div>
+            <h5>יש לבחור שני שוחות</h5>
+            <div><button id="takeSewageSection" type="button" class="k-button  btn-print" onclick="$sys.winChatachim.startTool()">חתכים</button></div>
+
+            <img id="ssSpinner" src="./Content/site/images/loaders/loader1.gif" alt="Loading" />
+            
+            <button id="calcSewageSection" type="button" disabled class="k-button  btn-print" onclick="$sys.winChatachim.calcChatach()">חישוב חתך</button>
+            <div class="divClosingMenu" ng-click="closeSewageSection()">
+                <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+            </div>
+        </div>
+
+        <div id="outerDivOmekSection" style="display:none">
+            <div id="panelHeader">
+                חתך רוחב
+            </div>
+            <div class="divWrapArrow">
+                <div id="divArrow" class="divArrow"></div>
+            </div>
+            <h5>יש לצייר קו</h5>
+            <div><button id="takeOmekSection" type="button" class="k-button  btn-print" onclick="$sys.divOmek.cleanDraws()">חתך חדש</button></div>
+
+            <img id="osSpinner" src="./Content/site/images/loaders/loader1.gif" alt="Loading" />
+            
+            <button id="calcOmekSection" type="button" disabled class="k-button  btn-print" onclick="$sys.divOmek.calcChatachOmek()">חישוב חתך</button>
+            <div class="divClosingMenu" ng-click="closeOmekSection()">
+                <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+            </div>
+        </div>
+
+        <div id="myDivTaba">
+            
+            <div id="panelHeader">
+                תב"ע מעופפת
+            </div>
+            <div class="divWrapArrow">
+                <div id="divArrow" class="divArrow"></div>
+            </div>
+            <div>
+                <h5>מתאריך</h5>
+                <input id="startTaba" value="01/01/1990" />
+
+                <h5>עד תאריך</h5>
+                <input id="endTaba" value="07/09/2026" />
+                <h5>סטטוס</h5>
+                <input class="k-rtl" id="tabaStatus" />
+                <div dir="rtl" id="selectTaba" style="display:none">
+                    <br />
+                    <table id="tableTaba" class="table">
+                        <thead>
+                            <tr>
+                                <td></td>
+                                <td>שם</td>
+                                <td>תאריך</td>
+                                <td>סטטוס</td>
+                                <td></td>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div>
+                        <div class="col-sm-6">
+                            <input type="button" id="cleanTabaBtn" value="נקה הכל" />
+                        </div>
+                        <div class="col-sm-6">
+                            <input type="button" id="flyingTabaBtn" value="הצג נבחרים" />
+                        </div>
+                    </div>
+                </div>
+                <h5 id="msgTaba"> התמקד למיקום הרצוי ולחץ על המפה</h5>
+
+
+
+            </div>
+
+            <div class="divClosingMenu" ng-click="closeTaba()">
+                <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+            </div>
+        </div>
+
+        
+        <div id="myDivTabaRasteri">
+            
+            <div id="panelHeader">
+                תב"ע ראסטרית
+            </div>
+            <div class="divWrapArrow">
+                <div id="divArrow" class="divArrow"></div>
+            </div>
+            <div>
+                <h5>מתאריך</h5>
+                <input id="startTabaRasteri" value="01/01/1990" />
+
+                <h5>עד תאריך</h5>
+                <input id="endTabaRasteri" value="07/09/2026" />
+                <h5>סטטוס</h5>
+                <input class="k-rtl" id="tabaRasteriStatus" />
+
+                <h5 id="msgTabaRasteri"> התמקד למיקום הרצוי ולחץ על המפה</h5>
+
+
+
+            </div>
+            <div dir="rtl" id="selectTabaRasteri" style="display:none;">
+                <br />
+                <table id="tableTabaRasteri" class="table" style="display:block; max-height:400px;overflow-y:auto;">
+                    <thead>
+                        <tr>
+                            <td></td>
+                            <td>שם</td>
+                            <td>תאריך</td>
+                            <td>סטטוס</td>
+                            <td></td>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+            </div>
+            <div>
+                <div class="col-sm-2">
+                    <img id="trSpinner" src="./Content/site/images/loaders/loader1.gif" alt="Loading" />
+                </div>
+                <div class="col-sm-4">
+                    <input type="button" id="cleanTabaRasteriBtn" value="נקה הכל" />
+                </div>
+                <div class="col-sm-4">
+                    <input type="button" id="flyingTabaRasteriBtn" value="הצג נבחרים" />
+                </div>
+            </div>
+
+            <div class="divClosingMenu" ng-click="closeTabaRasteri()">
+                <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+            </div>
+        </div>
+
+        <div id="myDivPrintAndShare">
+            <div class="divMenuHeader" style="height: 43px;">
+                <div class="spnMenuHeader" dir="rtl">
+                    <span id="spnPSShare">שיתוף</span>
+                    <span id="spnPSPrint">הדפסה</span>
+                </div>
+            </div>
+            <div class="divWrapArrow">
+                <div id="printdivArrow" class="divArrow"></div>
+            </div>
+            <div id="windowPrint" style="display:none" dir="rtl">
+                <div id="windowPrint2">
+                    <div class="divPrintM">
+                        <span id="lblPrintHeader">HEADER</span>
+                        <input id="txtPrintHeader" style="right: 47px !important;color:#003f59;font-size:16px;text-indent:5px; width: 197px;padding: 0px;border:0px;  border-radius: 3px;  height: 35px;    margin-bottom: 15px;" />
+
+                    </div>
+                    <div class="line" id="printLine"></div>
+
+                    <div class="divPrintM">
+                        <span id="lblPrintPaper">PAPER</span>
+
+                        <span id="cmbPrintPaper" style="right: 45px !important;	width: 194px;	border-radius: 3px;	background-color: #FFFFFF;"></span>
+
+                    </div>
+                    <div class="divPrintM">
+
+                        <span id="lblPrintScales">SCALES</span>
+
+                        <span id="cmbPrintScales" style="right: 30px !important;	width: 194px;	border-radius: 3px;	background-color: #FFFFFF;"></span>
+
+                    </div>
+                    <div class="divPrintM">
+                        <span id="lblPrintFormat">FORMAT</span>
+
+                        <span id="cmbPrintFormat" style="right: 35px !important;	width: 194px;	border-radius: 3px;	background-color: #FFFFFF;"></span>
+                    </div>
+                    <div class="divPrintM">
+                        <span id="lblPrintLegend">LEGEND</span>
+
+                        <span id="cmbPrintLegend" style="right: 15px !important;	width: 194px;	border-radius: 3px;	background-color: #FFFFFF;"></span>
+                    </div>
+                    <button type="button" class="k-button  btn-print" id="btnPrint">PRINT</button>
+                    <img id="imgPrintLoader" src="./Content/site/images/loaders/loader1.gif" alt="Loading" />
+                    <a id="downloadPrint" style="display: none" href="http://www.nba.com" target="_blank">Download</a>
+                </div>
+            </div>
+            <div id="windowShare" style="display:none" dir="rtl">
+                <div id="windowShare2">
+                    <div id="windowShare2body" style="padding:5px 0px 5px 0px">
+                        <div id="ShareTitle768pxScreen">
+                            <div id="lblShareTitle" class="lblShare">TITLE</div>
+                            <input id="txtShareTitle" />
+                        </div>
+
+                        <div id="ShareFrom768pxScreen">
+                            <div id="lblShareFrom" class="lblShare">FROM</div>
+
+                            <input id="txtShareFrom" value="" class="txtShare" />
+                        </div>
+                        <div id="ShareTo768pxScreen">
+                            <div id="lblShareTo" class="lblShare">TO</div>
+
+                            <input id="txtShareTo" value="" class="txtShare" />
+
+                        </div>
+                    </div>
+                </div>
+                <div id="windowShareBody">
+                    <div>
+                        <div id="lblShareMessage" class="lblShare">MESSAGE</div>
+                        <textarea id="txtShareMessage"
+                                  class="txtAreaShare"></textarea>
+                    </div>
+                    <div>
+                        <div id="lblShareUrl" class="lblShare">URL</div>
+                        <textarea readonly="readonly" id="txtShareUrl" class="txtAreaShare"></textarea>
+
+                    </div>
+                </div>
+                <div id="windowShareFooter">
+                    <button type="button" class="k-button btn-share" id="btnShare">SHARE</button>
+                    <button type="button" class="k-button btn-qr" id="btnQr">QR</button>
+                </div>
+
+
+            </div>
+
+            <div class="divClosingMenu" id="closePrintDiv">
+                <img class="imgClosingArrow" src="./Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+            </div>
+        </div>
+
+        <div id="myWindowQr1" class="k-content">
+            <div id="myWindowQr2" style="display: none">
+                <div id="qrSendUrl"></div>
+            </div>
+        </div>
+
+        
+        <div id="myDivBack" class="k-content">
+            <div class="divMenuHeader" style="height: 43px;">
+                <span class="spnMenuHeader">החלפת רקע</span>
+            </div>
+            <div class="divWrapArrow">
+                <div class="divArrow"></div>
+            </div>
+            <div id="myDivBack2">
+                <img id="imgBackMap" src="/V5/Content/site/images/TestIcons/map white@1.5x.svg" alt="" />
+                <img id="imgBackHybrid" src="/V5/Content/site/images/TestIcons/planeMapIcon@1.5x.svg" alt="" />
+                <img id="imgBackOrtho" src="/V5/Content/site/images/TestIcons/plane white@1.5x.svg" alt="" />
+                <span id="spnBackMap">MAP</span>
+                <span id="spnBackHybrid">HYBRID</span>
+                <span id="spnBackOrtho">ORTHO</span>
+                <img id="iconBackMap" src="/V5/Content/site/images/TestIcons/map white@1.5x.svg" alt="" />
+                <img id="iconBackOrtho" src="/V5/Content/site/images/TestIcons/plane white@1.5x.svg" alt="" />
+                <span id="sliderBack" style=""></span>
+
+                <input id="inputBackYear" class="k-rtl" />
+                <input id="inputBackBaseMap" class="k-rtl" />
+
+            </div>
+            <div class="divClosingMenu" id="closeBackDiv">
+                <img class="imgClosingArrow" src="/V5/Content/site/images/TestIcons/close arrow gray@1.5x.svg" />
+            </div>
+        </div>
+
+        <div id="myDivSettings" class="k-content" style="display: none">
+            <img id="imgSettings" src="/V5/Content/site/images/Inkod/divs/settings3.png" alt="" />
+
+            <table id="tableSettings">
+                <tr>
+                    <th style="width: 220px"></th>
+                    <th style="width: 190px"></th>
+                </tr>
+                <tr>
+                    <td>
+                        <span id="lblSettingsLanguage">Language / שפה:</span>
+                    </td>
+                    <td>
+                        <input id="cmbSettingsLanguage" value="" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span id="lblSettingsProjection">מערכת קואורדינטות:</span>
+                    </td>
+                    <td>
+                        <input id="cmbSettingsProjection" value="" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span id="lblSettingsSaveLast"></span>
+                    </td>
+                    <td>
+                        <input id="cmbSettingsSaveLast" value="" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span id="lblSettingsShowVideo"></span>
+                    </td>
+                    <td>
+                        <input id="cmbSettingsShowVideo" value="" />
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span id="lblSettingsPopup"></span>
+                    </td>
+                    <td>
+                        <input id="cmbSettingsPopup" value="" />
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div id="myDivTimeMachine" class="k-content" style="display: none">
+            <div id="lstOrthos"></div>
+        </div>
+
+        <script type="text/x-kendo-tmpl" id="templateOrtho">
+            <div class="clsTemplateOrtho">
+                <span class="spanYear">#:text#</span>
+                <img class="clsImgLens" src="./Content/site/images/plus.blue.png" />
+            </div>
+        </script>
+
+        <div id="myWindowFaq1" class="k-content">
+            <div id="myWindowFaq2" style="display: none">
+                <span id="spnFaq"></span>
+                <img id="imgFaq" src="/V5/Content/site/images/Inkod/divs/terms.png" alt="" />
+            </div>
+        </div>
+
+        <div id="myWindowKtovLanu1" class="k-content">
+            <div id="myWindowKtovLanu2" style="display: none">
+                <span id="lblKtovLanuFrom">FROM</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <input id="txtKtovLanuFrom" value="" />
+                <br />
+                <span id="lblKtovLanuTechnical">TECHICAL</span>&nbsp;&nbsp;&nbsp;
+                <a id="refDepratments" href="http://www.nba.com" target="_blank">DEPARTMENTS</a>
+                <br />
+                <br />
+                <span id="lblKtovLanuMessage">MESSAGE</span><br />
+                <textarea id="txtKtovLanuMessage"></textarea><br />
+                <br />
+                <button type="button" class="k-button myButton67" id="btnKtovLanu">KTOVLANU</button><br />
+                <input type="checkbox" id="chkKtovLanuReadFaq" />
+                <span id="spnKtovLanuReadFaq">READFAQ</span>
+            </div>
+        </div>
+
+        <div id="myWindowLinks1" class="k-content">
+            <div id="myWindowLinks2" style="display: none">
+                <span id="spnLinks"></span>
+                <img id="imgLinks" src="/V5/Content/site/images/Inkod/divs/terms.png" alt="" />
+            </div>
+        </div>
+
+        
+
+        <div id="myWindowOdot1" class="k-content">
+            <div id="myWindowOdot2" style="display: none">
+                <span id="spnOdot"></span>
+                <img id="imgOdot" src="/V5/Content/site/images/Inkod/divs/terms.png" alt="" />
+            </div>
+        </div>
+
+        <div id="myWindowPrompt1" class="k-content">
+            <div id="myWindowPrompt2" style="display: none">
+                <div id="divPrompt"></div>
+            </div>
+        </div>
+
+        
+        <div id="myWindowProfile1" class="k-content">
+            <div id="myWindowProfile2" class="k-content">
+                <div id="divProfile"></div>
+            </div>
+        </div>
+
+        
+        <div id="myWindowShadows1" class="k-content">
+            <div id="myWindowShadows2" style="display: none">
+                <table style="width: 100%">
+                    <colgroup>
+                        <col span="1" style="width: 20%;" />
+                        <col span="1" style="width: 80%;" />
+                    </colgroup>
+                    <tr>
+                        <td>
+                            <span id="spnShadowsDistance">xxxdistancexxx</span>
+                        </td>
+                        <td>
+                            <input id="shadowsDistance" type="number" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="spnShadowsColor">COLOR</span>
+                        </td>
+                        <td>
+                            <input type="color" id="shadowsColor" accesskey="h" data-role="colorpicker" data-opacity="true" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="spnShadowsOpacity">xxxopacityxxx</span>
+                        </td>
+                        <td>
+                            <div id="sldShadowsOpacity"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="lblShadowsDate">DATE</span>
+                        </td>
+                        <td>
+                            <input id="dtShadows" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="lblTimeShadows">TIME</span>
+                        </td>
+                        <td>
+                            <input id="sldShadowsTime" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <span id="lblShadowsSunRise">SUNRISE</span>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            <span id="spnSunTime"></span>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            <span id="lblShadowsSunSet">SUNSET</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <span id="spnSunLocation"></span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        
+        <div id="myWindowVisi1" class="k-content">
+            <div id="myWindowVisi2" style="display: none">
+                <table style="width: 100%">
+                    <tr>
+                        <td>
+                            <span id="spnVisibleHeightAndBuilding"></span>
+                        </td>
+                        <td>
+                            <span></span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="spnVisibleHeight">HEIGHT</span>
+                        </td>
+                        <td>
+                            <input id="visiHeight" type="number" value="2" min="0" max="200" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="spnVisibleHeightTarget">TARGETHEIGHT</span>
+                        </td>
+                        <td>
+                            <input id="visiHeightTarget" type="number" value="2" min="0" max="200" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="spnVisibleDistance">DISTANCE</span>
+                        </td>
+                        <td>
+                            
+                            <input id="visiDistance" type="number" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="spnVisibleHigh">HIGH</span>
+                        </td>
+                        <td>
+                            <input type="color" id="colorVisiHigh" accesskey="h" data-role="colorpicker" data-opacity="true" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="spnVisibleLow">BELOW</span>
+                        </td>
+                        <td>
+                            <input type="color" id="colorVisiLow" accesskey="h" data-role="colorpicker" data-opacity="true" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="spnCmbVisiQuality">QUALITY</span>
+                        </td>
+                        <td>
+                            <input id="cmbVisiQuality" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span id="spnVisiColorOpacity">OPACITY</span>
+                        </td>
+                        <td>
+                            <div id="sldVisiOpacity"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            &nbsp;
+                        </td>
+                        <td>
+                            &nbsp;
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div id="btnVisiCalculate">xxxcalculatexxx</div>
+                        </td>
+                        <td>
+                            <img id="imgVisiWait" src="/V5/Content/site/images/loaders/loader1.gif" alt="Please Wait" />
+                            <a id="downloadVisiFile" href="http://www.nba.com" target="_blank">Download</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div id="myWindowSelectByAttributes1" class="k-content">
+            <div id="myWindowSelectByAttributes2" style="display: none">
+                <div id="cmbSbaSelectOptions"></div>
+                <div id="cmbSbaLayerName"></div>
+                <div id="lstSbaFields"></div>
+                <button type="button" class="clsSbaButton" id="btnSbaEqual">שווה1</button><br />
+                <button type="button" class="clsSbaButton" id="btnSbaNotEqual">1שונה</button><br />
+                <button type="button" class="clsSbaButton" id="btnSbaLike">1מכיל</button><br />
+                <button type="button" class="clsSbaButton" id="btnSbaGreater">גדול1</button><br />
+                <button type="button" class="clsSbaButton" id="btnSbaGreaterEqual">גדול שווה1</button><br />
+                <button type="button" class="clsSbaButton" id="btnSbaLess">1קטן</button><br />
+                <button type="button" class="clsSbaButton" id="btnSbaLessEqual">קטן שווה1</button><br />
+                <button type="button" class="clsSbaButton" id="btnSbaAnd">1וגם</button><br />
+                <button type="button" class="clsSbaButton" id="btnSbaOr">1או</button>
+                <input id="btnPickDate" value="01/01/1990" />
+                <div id="lstSbaUniqueValues"></div>
+                <textarea id="txtSbaQueryDefinintion" class="k-textbox"></textarea>
+                <button type="button" class="clsSbaButton" id="btnSbaGetUnique">נקה1</button>
+                <button type="button" class="clsSbaButton" id="btnSbaClear">נקה1</button>
+                <button type="button" class="clsSbaButton" id="btnSbaSearch"><b>חפש1</b></button>
+                <img id="imgDataLoader" src="./Content/site/images/loaders/loader1.gif" alt="Loading" />
+
+                <button type="button" class="clsSbaButton" id="btnSbaLoad">1טען</button>
+                <button type="button" class="clsSbaButton" id="btnSbaSave">שמור1</button>
+                <div id="divForFiles" style="display: none">
+                    <input type="file" id="inpFiles" style="display: none" name="files[]" accept=".txt" />
+                </div>
+            </div>
+        </div>
+
+        
+        <div id="divFileLoaderShapefile"></div>
+        
+        
+        <div id="canvasDiv" style="height:190mm;width:297mm;position:absolute;top:0px;left:0px;visibility:hidden;">
+            <canvas id="mycanvas"></canvas>
+        </div>
+        <div id="canvasDiv2" style="height:297mm;width:190mm;position:absolute;top:0px;left:0px;visibility:hidden;">
+            <canvas id="mycanvas2"></canvas>
+        </div>
+
+        <div id="rmcMenu">
+            <div id="rmcMenuMember"></div>
+        </div>
+        <div id="copied">
+            <div>הועתק ללוח</div>
+            <div id="closeCopy">X</div>
+        </div>
+
+    </div>
+
+
+
+    <div id="myWindowUrlBuilder1" class="k-content">
+        <div id="myWindowUrlBuilder2" style="display: none">
+            <div id="tabStripUrlBuilder">
+                <ul>
+                    <li class="k-state-active"><a id="lblTabDisplay">תצוגה</a></li>
+                    <li><a id="lblTabZoom">התמקדות</a></li>
+                    <li><a id="lblTabLayers">שכבות גלויות</a></li>
+                </ul>
+                <div id="tabUrlBuilderDisplay">
+                    <br />
+                    <table>
+                        <tr>
+                            <td>
+                                <span id="lblApiLanguage" class="clsSpanBlue">שפה</span><br />
+                                <span id="cmbApiLanguage"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiBackground" class="clsSpanBlue">מפת בסיס</span><br />
+                                <span id="cmbApiBackground"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiOrthoYear" class="clsSpanBlue">שנת צילום אוויר</span><br />
+                                <span id="cmbApiOrthoYear"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiAll" class="clsSpanBlue">כל הכלים</span><br />
+                                <span id="cmbApiAll"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span id="lblApiOverview" class="clsSpanBlue">סקירה כללית</span><br />
+                                <span id="cmbApiOverview"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiDeviceMode" class="clsSpanBlue">מצב מכשיר</span><br />
+                                <span id="cmbApiDeviceMode"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiHeader" class="clsSpanBlue">כותרת</span><br />
+                                <span id="cmbApiHeader"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiZoomSlider" class="clsSpanBlue">כפתורי זום</span><br />
+                                <span id="cmbApiZoomSlider"></span>
+                            </td>
+                        </tr>
+                        <tr>
+
+                            <td>
+                                <span id="lblApiBtnFullExtent" class="clsSpanBlue">כפתור התמקד בכל שטח המפה</span><br />
+                                <span id="cmbApiBtnFullExtent"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiBtnLegend" class="clsSpanBlue">כפתור מקרא</span><br />
+                                <span id="cmbApiBtnLegend"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiBtnBookmarks" class="clsSpanBlue">כפתור סימניות</span><br />
+                                <span id="cmbApiBtnBookmarks"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiBtnGsv" class="clsSpanBlue">כלי מבט רחוב גוגל</span><br />
+                                <span id="cmbApiBtnGsv"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span id="lblApiBtnClearGraphics" class="clsSpanBlue">כפתור נקה סימוני מפה</span><br />
+                                <span id="cmbApiBtnClearGraphics"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiBtnLocateMe" class="clsSpanBlue">כפתור מיקום GPS</span><br />
+                                <span id="cmbApiBtnLocateMe"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiBtnToc" class="clsSpanBlue">TOC כפתור</span><br />
+                                <span id="cmbApiBtnToc"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiBtnSearches" class="clsSpanBlue">חיפושים</span><br />
+                                <span id="cmbApiBtnSearches"></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span id="lblApiBtnBackgroundToggle" class="clsSpanBlue">החלף את לחצן Bckgrnd</span><br />
+                                <span id="cmbApiBtnBackgroundToggle"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiBottomLine" class="clsSpanBlue">שורת תחתית האתר</span><br />
+                                <span id="cmbApiBottomLine"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiCoordinates" class="clsSpanBlue">קורדינטות </span><br />
+                                <span id="cmbApiCoordinates"></span>
+                            </td>
+                            <td>
+                                <span id="lblApiScale" class="clsSpanBlue">קנ"מ</span><br />
+                                <span id="cmbApiScale"></span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div id="tabUrlBuilderZoom">
+                    <span id="tabUrlBuilderZoomSpn">אם צוין יותר מתצוגה אחת, העדיפות היא בחלק העליון של הטופס</span>
+                    <br />
+                    <table>
+                        <tr id="apiZoomToSearch1"></tr>
+                        <tr>
+                            <td>
+                                <span id="lblApiZoomToX" class="clsSpanBlue">X:</span><br />
+                                <input id="txtApiZoomToX" />
+                            </td>
+                            <td>
+                                <span id="lblApiZoomToY" class="clsSpanBlue">Y:</span><br />
+                                <input id="txtApiZoomToY" />
+                            </td>
+                            <td>
+                                <span id="lblApiZoomToWidth" class="clsSpanBlue">Width(m):</span><br />
+                                <input id="txtApiZoomToWidth" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span id="lblApiZoomToLon" class="clsSpanBlue">Lon:</span><br />
+                                <input id="txtApiZoomToLon" />
+                            </td>
+                            <td>
+                                <span id="lblApiZoomToLat" class="clsSpanBlue">Lat:</span><br />
+                                <input id="txtApiZoomToLat" />
+                            </td>
+                        </tr>
+                        <tr id="apiZoomToSearch2"></tr>
+                        <tr id="apiZoomToSearch3"></tr>
+                        <tr>
+                            <td>
+                                <span id="lblApiZoomToLayerCode" class="clsSpanBlue">:שכבה</span><br />
+                                <input id="cmbApiZoomToLayerCode" />
+                            </td>
+                            <td>
+                                <span id="lblApiZoomToLayerField" class="clsSpanBlue">:שדה</span><br />
+                                <input id="cmbApiZoomToLayerField" />
+                            </td>
+                            <td>
+                                <span id="lblApiZoomToLayerValue" class="clsSpanBlue">:ערך</span><br />
+                                <input id="cmbApiZoomToLayerValue" />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span id="lblApiZoomToExtentXmin" class="clsSpanBlue">Xmin:</span><br />
+                                <input id="txtApiZoomToExtentXmin" />
+                            </td>
+                            <td>
+                                <span id="lblApiZoomToExtentYmin" class="clsSpanBlue">Ymin:</span><br />
+                                <input id="txtApiZoomToExtentYmin" />
+                            </td>
+                            <td>
+                                <span id="lblApiZoomToExtentXmax" class="clsSpanBlue">Xmax:</span><br />
+                                <input id="txtApiZoomToExtentXmax" />
+                            </td>
+                            <td>
+                                <span id="lblApiZoomToExtentYmax" class="clsSpanBlue">Ymax:</span><br />
+                                <input id="txtApiZoomToExtentYmax" />
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div id="tabUrlBuilderLayers" style="height: 385px; width: 690px">
+                    <br />
+                    <br />
+                    <br />
+                    <input id="cmbApiLayersList" />
+                    &nbsp;&nbsp;
+                    <button id="btnUrlLayersListAdd" class="k-button">הוסף</button>
+                    &nbsp;&nbsp;<input id="txtApiLayersList" style="width: 250px; height: 35px" />
+                </div>
+            </div>
+
+            <textarea id="txtUrlBuilder">https://gisn.tel-aviv.gov.il</textarea>
+
+            <button id="btnUrlBuilderClear" class="k-button">התחל מחדש</button>
+            <button id="btnUrlIframe" class="k-button">קוד להטמעה</button>
+
+            <button id="btnUrlClipboard" data-clipboard-target="#txtUrlBuilder" class="k-button">העתק</button>
+
+            <div id="divChkUrlBuilderStatic">
+                <input type="checkbox" id="chkUrlBuilderStatic" class="k-checkbox" />
+                <label class="k-checkbox-label" for="chkUrlBuilderStatic">גודל ממוצע</label>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $sys.firstGlobal.otp = "False";
+    </script>
+    <div id="dialog-form" title="מסך כניסה" dir="rtl" style="z-index:502; ">
+    <p class="validateTips">כל השדות הינם שדות חובה</p>
+    <script src="https://www.google.com/recaptcha/api.js?render=6LfGPakiAAAAAKZeot6HV7cTAwtIeLFdErMKprkB"></script>
+    <script>
+
+        grecaptcha.ready(function () {
+            grecaptcha.execute('6LfGPakiAAAAAKZeot6HV7cTAwtIeLFdErMKprkB', { action: 'submit' }).then(function (token) {
+                var r = document.getElementById('reCAPTCHA');
+                r.value = token;
+            })
+        });
+        interval = setInterval(
+            function () {
+                grecaptcha.execute('6LfGPakiAAAAAKZeot6HV7cTAwtIeLFdErMKprkB', {
+                    action: 'submit'
+                }).
+                    then(function (token) {
+                        var r = document.getElementById('reCAPTCHA');
+                        r.value = token;
+                    })
+            }, (1000 * 60 * 2));
+    </script>
+    <style>
+        .grecaptcha-badge {
+            visibility: hidden;
+        }
+    </style>
+    <form id="form-id">
+
+        <fieldset>
+            <div>
+                <label for="name">שם משתמש</label>
+                <input type="text" name="name" id="name" style="font-size:16px;margin-right: 5px;" class="text ui-widget-content ui-corner-all">
+            </div>
+            <div>
+                <label for="password">סיסמא</label>
+                <input type="password" name="password" id="password" style="font-size:16px;margin-right: 35px;" class="text ui-widget-content ui-corner-all">
+            </div>
+
+            <input type="hidden" name="reCAPTCHA" id="reCAPTCHA" />
+
+        </fieldset>
+    </form>
+</div>
+
+
+    <div id="otp-form" title="מסך כניסה" dir="rtl" style="z-index:502; ">
+    <p class="validateTips">כל השדות הינם שדות חובה</p>
+    <form id="otp-form-id">
+        <fieldset>
+            <div>
+                <label for="identifier">מזהה</label>
+                <input type="text" name="identifier" id="otp-identifier" style="font-size:16px;margin-right: 5px;" class="text ui-widget-content ui-corner-all">
+            </div>
+            <div>
+                <label for="email">מייל</label>
+                <input type="email" name="email" id="otp-email" style="font-size:16px;margin-right: 13px;" class="text ui-widget-content ui-corner-all">
+            </div>
+        </fieldset>
+    </form>
+</div>
+
+
+    <div id="otp2-form" title="מסך כניסה" dir="rtl" style="z-index:502; ">
+    <p class="validateTips">הכנס קוד סודי</p>
+    <form id="otp2-form-id">
+        <fieldset>
+            <div>
+                <label for="pin">קוד סודי</label>
+                <input type="text" name="pin" id="otp2-pin" style="font-size:16px;margin-right: 5px;" class="text ui-widget-content ui-corner-all">
+            </div>
+        </fieldset>
+    </form>
+</div>
+
+
+</div>
+
+
+
+<script type="text/javascript">
+    var rootPath = '/V5/';
+</script>
+
+
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,139 @@
+{
+  "provider": "tesseract",
+  "cost_usd": 0,
+  "document": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\input\\19650106-plan.pdf",
+  "retrieved_at": "2026-09-09T16:10:11.334017+00:00",
+  "language": "heb+eng",
+  "page_segmentation_mode": 11,
+  "tile_limit": 24,
+  "tiles": [
+    {
+      "id": "p1-r1-c1",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c1.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c1.txt",
+      "characters": 89
+    },
+    {
+      "id": "p1-r1-c2",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c2.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c2.txt",
+      "characters": 409
+    },
+    {
+      "id": "p1-r1-c3",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c3.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c3.txt",
+      "characters": 417
+    },
+    {
+      "id": "p1-r1-c4",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c4.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c4.txt",
+      "characters": 309
+    },
+    {
+      "id": "p1-r1-c5",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c5.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c5.txt",
+      "characters": 240
+    },
+    {
+      "id": "p1-r1-c6",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c6.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c6.txt",
+      "characters": 369
+    },
+    {
+      "id": "p1-r1-c7",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c7.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c7.txt",
+      "characters": 452
+    },
+    {
+      "id": "p1-r1-c8",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c8.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c8.txt",
+      "characters": 227
+    },
+    {
+      "id": "p1-r1-c9",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c9.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c9.txt",
+      "characters": 540
+    },
+    {
+      "id": "p1-r1-c10",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c10.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c10.txt",
+      "characters": 863
+    },
+    {
+      "id": "p1-r1-c11",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c11.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c11.txt",
+      "characters": 1618
+    },
+    {
+      "id": "p1-r1-c12",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p1-r1-c12.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p1-r1-c12.txt",
+      "characters": 4084
+    },
+    {
+      "id": "p2-r1-c1",
+      "page": 2,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p2-r1-c1.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p2-r1-c1.txt",
+      "characters": 166
+    },
+    {
+      "id": "p2-r1-c2",
+      "page": 2,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p2-r1-c2.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p2-r1-c2.txt",
+      "characters": 218
+    },
+    {
+      "id": "p2-r1-c3",
+      "page": 2,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p2-r1-c3.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p2-r1-c3.txt",
+      "characters": 128
+    },
+    {
+      "id": "p2-r1-c4",
+      "page": 2,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p2-r1-c4.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p2-r1-c4.txt",
+      "characters": 181
+    },
+    {
+      "id": "p2-r1-c5",
+      "page": 2,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p2-r1-c5.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p2-r1-c5.txt",
+      "characters": 101
+    },
+    {
+      "id": "p2-r1-c6",
+      "page": 2,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\tiles\\p2-r1-c6.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr\\p2-r1-c6.txt",
+      "characters": 75
+    }
+  ],
+  "combined_text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\ocr.txt",
+  "notes": "Raw OCR only. Values must be verified against the cited tile before entering a dossier."
+}

@@ -1,0 +1,46 @@
+[
+  {
+    "path": "data\\verification\\hashoshanim-4\\1970-plan.pdf",
+    "bytes": 11979332,
+    "source": {
+      "url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/1970-1989/19700069/19700069_20.pdf",
+      "retrieved_at": "2026-09-08T09:50:35.258624+00:00",
+      "epoch": 1788861035.258624,
+      "sha256": "78b2f6d26b39326ec3dab3349c36a013b92411b3fe85e244c57c46c497223f40",
+      "content_type": "application/pdf"
+    }
+  },
+  {
+    "path": "data\\verification\\hashoshanim-4\\1970-permit.pdf",
+    "bytes": 37638,
+    "source": {
+      "url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/1970-1989/19700069/19700069_22.pdf",
+      "retrieved_at": "2026-09-08T09:45:16.767015+00:00",
+      "epoch": 1788860716.7670152,
+      "sha256": "d0ab4c669f98bd306e1a690afd702b9e74d6980f6b91d66ec9d197a69291862e",
+      "content_type": "application/pdf"
+    }
+  },
+  {
+    "path": "data\\verification\\hashoshanim-4\\2013-plan.pdf",
+    "bytes": 2434210,
+    "source": {
+      "url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/2010-2030/20130304/20130304_20.pdf",
+      "retrieved_at": "2026-09-08T09:45:18.184453+00:00",
+      "epoch": 1788860718.1844535,
+      "sha256": "42b811b27459511920e1bf468e007fc5a226ca6c41883f6b5fe7f198a67329be",
+      "content_type": "application/pdf"
+    }
+  },
+  {
+    "path": "data\\verification\\hashoshanim-4\\2013-permit.pdf",
+    "bytes": 858658,
+    "source": {
+      "url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/2010-2030/20130304/20130304_22.pdf",
+      "retrieved_at": "2026-09-08T09:45:18.738244+00:00",
+      "epoch": 1788860718.7382445,
+      "sha256": "ad7d3d40b5d704de18fd22b8942cfb3fa6326166b74a5733073bb44fe989545b",
+      "content_type": "application/pdf"
+    }
+  }
+]

@@ -1,0 +1,112 @@
+﻿var siteVersion = '1.32.0';
+var siteBaseURL = 'https://handasi.complot.co.il/';
+var xpaBaseURL = 'magicscripts/mgrqispi.dll?appname=cixpa&prgname=';
+var wsBaseURL = 'wsComplotPublicData/ComplotPublicData.asmx/';
+
+var MAIN_CONTAINER_SELECTOR = '#MainContainerHandasa';
+var xhrMap = {};
+
+//used to modify bread-crumbs and title of a page.
+var MAIN_PAGE_BREADCRUMBS_SELECTOR = 'nav.breadCrumb > ul > li.lastNode > a, nav.breadCrumb2 > ul > li.lastNode > a';
+var MAIN_PAGE_TITLE_SELECTOR = 'h1';
+
+var TABA_MODULE_TITLE = 'תוכניות בניין עיר';
+var MEET_MODULE_TITLE = 'ישיבות הועדה';
+var GUSH_MODULE_TITLE = 'איתור גוש חלקה';
+var REQU_MODULE_TITLE = 'בקשות להיתר';
+var BINY_MODULE_TITLE = 'תיקי בניין';
+var PIRS_MODULE_TITLE = 'פרסומי תכנון ובניה';
+var UNIF_MODULE_TITLE = 'מידע רוחבי';
+var TAAR_MODULE_TITLE = 'תעריפים';
+var PIKU_MODULE_TITLE = 'תיקי פיקוח';
+
+var TABA_MODULE_URL = 'taba2.aspx';
+var MEET_MODULE_URL = 'meetings2.aspx';
+var GUSH_MODULE_URL = 'gush2.aspx';
+var REQU_MODULE_URL = 'request2.aspx';
+var BINY_MODULE_URL = 'buildings2.aspx';
+var PIRS_MODULE_URL = 'pirsumim2.aspx';
+var UNIF_MODULE_URL = 'gush2.aspx';
+var TAAR_MODULE_URL = 'taarifim2.aspx';
+var PIKU_MODULE_URL = 'pikuach2.aspx';
+
+  // ===========================================
+  // FIX: GeoDirectory plugin conflict workaround
+  // Prevents GeoDirectory from crashing when URL contains Backbone routes
+  // ===========================================
+  (function() {
+      var hash = window.location.hash;
+      if (hash && (
+          hash.indexOf('#search/') === 0 ||
+          hash.indexOf('#meeting/') === 0 ||
+          hash.indexOf('#taba/') === 0 ||
+          hash.indexOf('#request/') === 0 ||
+          hash.indexOf('#building/') === 0 ||
+          hash.indexOf('#gush/') === 0 ||
+          hash.indexOf('#gushmakor/') === 0 ||
+          hash.indexOf('#unified/') === 0
+      )) {
+          window._savedBackboneHash = hash;
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+
+          function restoreHash() {
+              setTimeout(function() {
+                  if (window._savedBackboneHash) {
+                      history.replaceState(null, '', window.location.pathname + window.location.search + window._savedBackboneHash);
+                      if (window.Backbone && Backbone.history) {
+                          Backbone.history.loadUrl(window._savedBackboneHash.substring(1));
+                      }
+                  }
+              }, 100);
+          }
+
+          // If DOMContentLoaded already fired (e.g. on Next.js sites where scripts
+          // are injected post-hydration), restore immediately instead of waiting
+          if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', restoreHash);
+          } else {
+              restoreHash();
+          }
+      }
+  })();
+
+// === תיקון תאריכון: בחירת שנה+חודש ולחיצה על האייקון (PROD/WordPress) ===
+// === תיקון תאריכון: בחירת שנה+חודש ולחיצה על האייקון (PROD/WordPress) ===
+(function () {
+  function fixAll() {
+    if (!window.jQuery || !jQuery.fn.datepicker) return;
+    jQuery('input.hasDatepicker').each(function () {
+      var $i = jQuery(this);
+      try {
+        if ($i.datepicker('option', 'changeYear') !== true) {
+          $i.datepicker('option', {
+            changeMonth: true,
+            changeYear: true,
+            yearRange: 'c-100:c+1',
+            dateFormat: 'dd/mm/yy',
+            monthNames: ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'],
+            monthNamesShort: ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+          });
+        }
+      } catch (e) {}
+    });
+  }
+  // רץ באופן עצמאי, לא תלוי ב-document.ready, ובודק שוב ושוב עד שהשדות מוכנים
+  var tries = 0;
+  var iv = setInterval(function () {
+    fixAll();
+    tries++;
+    if (tries > 40) clearInterval(iv); // עד ~20 שניות, אז עוצר
+  }, 500);
+  // לחיצה על אייקון לוח השנה — בשלב ה-capture כדי לתפוס לפני jQuery UI
+  document.addEventListener('click', function (e) {
+    var icon = e.target.closest && e.target.closest('.glyphicon-calendar.circle-icon');
+    if (!icon) return;
+    e.preventDefault();
+    var input = icon.parentNode.querySelector('input.form-control');
+    if (input) {
+      try { jQuery(input).datepicker('show'); }
+      catch (err) { input.focus(); }
+    }
+  }, true);
+})();

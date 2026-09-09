@@ -1,0 +1,157 @@
+[
+  {
+    "name": "gis_page",
+    "url": "https://v5.gis-net.co.il/v5/Hertzeliya",
+    "status": 200,
+    "bytes": 83137,
+    "retrieved_at": "2026-09-07T13:33:09.523446+00:00"
+  },
+  {
+    "name": "gis_map",
+    "url": "https://v5.gis-net.co.il/V5/Hertzeliya/Data/GetMap",
+    "status": 200,
+    "bytes": 2756,
+    "retrieved_at": "2026-09-07T13:33:09.692454+00:00"
+  },
+  {
+    "name": "gis_json",
+    "url": "https://v5.gis-net.co.il/V5/Hertzeliya/Data/GetJson",
+    "status": 200,
+    "bytes": 3920,
+    "retrieved_at": "2026-09-07T13:33:09.994413+00:00"
+  },
+  {
+    "name": "gis_script",
+    "url": "https://v5.gis-net.co.il/V5/site/js?v=rtjFVSPjVbm2xQiavT9LjeD7jbXlamoNoTUhnlTMsVI1",
+    "status": 200,
+    "bytes": 42463,
+    "retrieved_at": "2026-09-07T13:33:10.146528+00:00"
+  },
+  {
+    "name": "wfs_catalog",
+    "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&request=GetCapabilities",
+    "status": 200,
+    "bytes": 97413,
+    "retrieved_at": "2026-09-07T13:33:10.548097+00:00"
+  },
+  {
+    "name": "municipality_schema",
+    "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=DescribeFeatureType&typeNames=opendata:muni_il&outputFormat=application/json",
+    "status": 200,
+    "bytes": 3878,
+    "retrieved_at": "2026-09-07T13:33:10.837955+00:00"
+  },
+  {
+    "name": "parcel_schema",
+    "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=DescribeFeatureType&typeNames=opendata:Parcels_ITM&outputFormat=application/json",
+    "status": 200,
+    "bytes": 3253,
+    "retrieved_at": "2026-09-07T13:33:10.972326+00:00"
+  },
+  {
+    "name": "engineering",
+    "url": "https://handasa.herzliya.muni.il/",
+    "status": 200,
+    "bytes": 230494,
+    "retrieved_at": "2026-09-07T13:33:11.145968+00:00"
+  },
+  {
+    "name": "municipal_layers",
+    "url": "https://v5.gis-net.co.il/proxy/proxy.ashx?http://arcgis005/arcgis/rest/services/Herzliya/herzliya_main_date1/MapServer?f=json",
+    "error": "HTTP Error 500: Internal Server Error"
+  },
+  {
+    "name": "planning_layers",
+    "url": "https://ags.iplan.gov.il/arcgisiplan/rest/services/PlanningPublic/Xplan/MapServer?f=json",
+    "error": "<urlopen error [SSL: SSLV3_ALERT_HANDSHAKE_FAILURE] ssl/tls alert handshake failure (_ssl.c:1010)>"
+  },
+  {
+    "name": "archive",
+    "url": "https://handasa.herzliya.muni.il/tikbinyan/",
+    "status": 200,
+    "bytes": 225620,
+    "retrieved_at": "2026-09-07T13:33:11.533422+00:00"
+  },
+  {
+    "name": "renewal",
+    "url": "https://handasa.herzliya.muni.il/urbanrenewal/",
+    "status": 200,
+    "bytes": 230832,
+    "retrieved_at": "2026-09-07T13:33:11.675268+00:00"
+  },
+  {
+    "name": "boundary",
+    "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata:muni_il&outputFormat=application/json&srsName=EPSG:2039&CQL_FILTER=CR_LAMAS%3D%276400%27",
+    "status": 200,
+    "bytes": 33752,
+    "retrieved_at": "2026-09-07T13:33:12.808529+00:00"
+  },
+  {
+    "name": "direct_layers",
+    "url": "https://v5.gis-net.co.il/arcgis/rest/services/Herzliya/herzliya_main_date1/MapServer?f=json",
+    "error": "Remote end closed connection without response"
+  },
+  {
+    "name": "archive_routes",
+    "url": "https://handasi.complot.co.il/handasi2016/Scripts/Complot/building/min/_routes.min.js",
+    "status": 200,
+    "bytes": 1951,
+    "retrieved_at": "2026-09-07T13:33:13.987148+00:00"
+  },
+  {
+    "name": "archive_globals",
+    "url": "https://handasi.complot.co.il/handasi2016/Scripts/globals.js",
+    "status": 200,
+    "bytes": 4867,
+    "retrieved_at": "2026-09-07T13:33:17.288447+00:00"
+  },
+  {
+    "name": "archive_site",
+    "url": "https://handasi.complot.co.il/handasi2016/Scripts/wp/site.min.js",
+    "status": 200,
+    "bytes": 739548,
+    "retrieved_at": "2026-09-07T13:33:20.859844+00:00"
+  },
+  {
+    "name": "archive_search",
+    "url": "https://handasi.complot.co.il/handasi2016/building/building-index.htm",
+    "status": 200,
+    "bytes": 8776,
+    "retrieved_at": "2026-09-07T13:34:16.587542+00:00"
+  },
+  {
+    "name": "osm_buildings",
+    "url": "https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A25%5D%3Bway%5B%22building%22%5D%2832.162%2C34.838%2C32.166%2C34.844%29%3Bout%20tags%20geom%3B",
+    "status": 200,
+    "bytes": 123030,
+    "retrieved_at": "2026-09-07T13:34:19.414077+00:00"
+  },
+  {
+    "name": "policy_pdf",
+    "url": "https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/%D7%9E%D7%93%D7%99%D7%A0%D7%99%D7%95%D7%AA-%D7%91%D7%A0%D7%99%D7%94-%D7%97%D7%9C%D7%95%D7%A4%D7%AA-%D7%A9%D7%A7%D7%93-%D7%90%D7%A4%D7%A8%D7%99%D7%9C-2026.pdf",
+    "status": 200,
+    "bytes": 1451407,
+    "retrieved_at": "2026-09-07T13:34:20.027471+00:00"
+  },
+  {
+    "name": "archive_search_js",
+    "url": "https://handasi.complot.co.il/handasi2016/Scripts/Complot/Building/min/building-index.min.js",
+    "status": 200,
+    "bytes": 5184,
+    "retrieved_at": "2026-09-07T13:35:21.290948+00:00"
+  },
+  {
+    "name": "public_gis",
+    "url": "https://v5.gis-net.co.il/v5/Hertzeliya?minisite=public",
+    "status": 200,
+    "bytes": 83143,
+    "retrieved_at": "2026-09-07T13:35:21.652601+00:00"
+  },
+  {
+    "name": "public_config",
+    "url": "https://v5.gis-net.co.il/V5/Hertzeliya/Data/GetJson?minisite=public",
+    "status": 200,
+    "bytes": 72685,
+    "retrieved_at": "2026-09-07T13:35:21.807125+00:00"
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "collected_at": "2026-09-09T16:07:24.742183+00:00",
+  "area": "נווה ישראל, הרצליה",
+  "documents": [
+    {
+      "building_file": 1652,
+      "gush": 6424,
+      "parcel": 83,
+      "request": 19610028,
+      "state": "completed",
+      "address": "בר-כוכבא 12 הרצליה",
+      "pdf": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\input\\19610028-plan.pdf",
+      "bytes": 479005
+    },
+    {
+      "building_file": 4461,
+      "gush": 6538,
+      "parcel": 206,
+      "request": 19650106,
+      "state": "completed",
+      "address": "הרב קוק 10 הרצליה",
+      "pdf": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\input\\19650106-plan.pdf",
+      "bytes": 16400626
+    },
+    {
+      "building_file": 2772,
+      "gush": 6546,
+      "parcel": 271,
+      "request": 19440048,
+      "state": "completed",
+      "address": "סנש חנה 10 הרצליה",
+      "pdf": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\input\\19440048-plan.pdf",
+      "bytes": 1362951
+    }
+  ],
+  "completed": 3,
+  "failed": 0
+}

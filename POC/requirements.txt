@@ -1,0 +1,14 @@
+fastapi>=0.115,<1
+uvicorn>=0.34,<1
+httpx>=0.28,<1
+shapely>=2.0,<3
+pyproj>=3.7,<4
+psycopg[binary]>=3.2,<4
+pydantic>=2.10,<3
+pypdf>=5,<7
+reportlab>=4,<5
+python-bidi>=0.6,<1
+xlsxwriter>=3.2,<4
+pytest>=8,<10
+pymupdf>=1.25,<2
+playwright>=1.50,<2

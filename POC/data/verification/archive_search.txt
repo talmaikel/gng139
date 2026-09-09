@@ -1,0 +1,117 @@
+﻿<script>$.getScript(siteBaseURL + "handasi2016/Scripts/Complot/Building/min/building-index.min.js")</script>
+
+<hr>
+<div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h2 class="panel-title" translatable-text>אופן איתור תיק בניין</h2>
+        </div>
+        <div class="panel-body">
+            <div class="row">
+                <div class="complot-mobile-combo hidden-sm hidden-md hidden-lg">
+                    <div class="panel-body">
+                        <label for="ComplotComboSearch" class="col-md-1 col-sm-1 col-xs-1 control-label" translatable-text>יש לבחור באחת מאפשרויות איתור המידע</label>
+                        <div class="col-md-4 col-sm-4 col-xs-12">
+                            <select class="form-control" id="ComplotComboSearch" aria-label="חיפוש על פי">
+                                <option translatable-text value="BuildingByNumberGRP">מספר תיק בניין</option>
+                                <option translatable-text value="BuildingByRequestGRP">מספר בקשה</option>
+                                <option translatable-text value="BuildingByAddressGRP">כתובת</option>
+                                <option translatable-text value="BuildingByGushGRP">גוש וחלקה</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12 hidden-xs">
+                    <fieldset id="ComplotBuildingFieldset">
+                        <legend translatable-text>יש לבחור באחת מאפשרויות איתור המידע</legend><br />
+                        <label class="radio-inline" id="C_BuildingByNumberGRP">
+                            <input type="radio" name="optionsRadios" id="optNumber" value="BuildingByNumberGRP" checked="checked" /><span translatable-text>מספר תיק בניין</span>
+                        </label>
+                        <label class="radio-inline" id="C_BuildingByRequestGRP">
+                            <input type="radio" name="optionsRadios" id="optBuilding" value="BuildingByRequestGRP" /><span translatable-text>מספר בקשה</span>
+                        </label>
+                        <label class="radio-inline" id="C_BuildingByAddressGRP">
+                            <input type="radio" name="optionsRadios" id="optAddress" value="BuildingByAddressGRP" /><span translatable-text>כתובת</span>
+                        </label>
+                        <label class="radio-inline" id="C_BuildingByGushGRP">
+                            <input type="radio" name="optionsRadios" id="optGush" value="BuildingByGushGRP" /><span translatable-text>גוש וחלקה</span>
+                        </label>
+                    </fieldset>
+                </div>
+            </div>
+            <br>
+            <div class="row">
+
+                <div class="form-horizontal row-border margin-center">
+
+                    <!--Building by number-->
+                    <div class="form-group" dir="rtl" id="BuildingByNumberGRP">
+                        <label for="BuildingNumber" class="col-md-1 col-sm-1 col-xs-1 control-label control-label-required" translatable-text>תיק בניין</label>
+                        <div class="col-md-4 col-sm-11 col-xs-12">
+                            <input translatable-placeholder class="form-control" type="number" min="1" name="BuildingNumber" id="BuildingNumber" placeholder="מספר תיק בניין" aria-label="מספר תיק בניין" aria-required="true" aria-autocomplete="list" />
+                        </div>
+                    </div>
+
+                    <!--Building by request-->
+                    <div class="form-group" dir="rtl" id="BuildingByRequestGRP" style="display: none;">
+                        <label for="RequestNumber" class="col-md-1 col-sm-1 col-xs-1 control-label control-label-required" translatable-text>מס' בקשה</label>
+                        <div class="col-md-4 col-sm-11 col-xs-12">
+                            <input translatable-placeholder class="form-control" type="number" min="1" name="RequestNumber" id="RequestNumber" placeholder="מספר בקשה" aria-label="מספר בקשה" aria-required="true" aria-autocomplete="list" />
+                            <input class="form-control" type="hidden" name="RequestType_Code" id="RequestType_Code" value="0" />
+                        </div>
+                    </div>
+
+                    <!--Building by address-->
+                    <div class="form-group" dir="rtl" id="BuildingByAddressGRP" style="display: none;">
+                        <div>
+                            <label for="BuildingCity" class="col-md-1 col-sm-1 control-label control-label-required hidden-xs" translatable-text>ישוב</label>
+                            <div class="col-md-3 col-sm-3 col-xs-12">
+                                <select class="form-control" id="BuildingCity" aria-label="ישוב"></select>
+                            </div>
+                        </div>
+                        <label for="BuildingStreet" class="col-md-1 col-sm-1 control-label control-label-required hidden-xs" translatable-text>רחוב</label>
+                        <div class="col-md-2 col-sm-2 col-xs-12">
+                            <input translatable-placeholder class="form-control" type="text" name="BuildingStreet" id="BuildingStreet" placeholder="רחוב" maxlength="80" aria-label="שם רחוב" aria-required="true" aria-autocomplete="list" />
+                            <input class="form-control" type="hidden" name="BuildingStreet_Code" id="BuildingStreet_Code" />
+                        </div>
+                        <label for="BuildingHouseNum" class="col-md-1 col-sm-1 control-label hidden-xs" translatable-text>מספר בית</label>
+                        <div class="col-md-2 col-sm-2 col-xs-12">
+                            <input translatable-placeholder class="form-control" type="number" min="1" name="BuildingHouseNum" id="BuildingHouseNum" placeholder="מספר בית" aria-label="מספר בית" />
+                        </div>
+                    </div>
+
+                    <!--Building by gush-helka-migrash -->
+                    <div class="form-group" dir="rtl" id="BuildingByGushGRP" style="display: none;">
+                        <label for="BuildingGush" class="col-md-1 col-sm-1 col-xs-1 control-label control-label-required" translatable-text>גוש</label>
+                        <div class="col-md-2 col-sm-2 col-xs-12">
+                            <input translatable-placeholder class="form-control" type="number" min="1" name="BuildingGush" id="BuildingGush" placeholder="גוש" aria-label="גוש" aria-required="true" aria-autocomplete="list" />
+                        </div>
+                        <label for="BuildingHelka" class="col-md-1 col-sm-1 col-xs-1 control-label" translatable-text>חלקה</label>
+                        <div class="col-md-2 col-sm-2 col-xs-12">
+                            <input translatable-placeholder class="form-control" type="number" min="1" name="BuildingHelka" id="BuildingHelka" placeholder="חלקה" aria-label="חלקה" aria-autocomplete="list" />
+                        </div>
+                        <label for="BuildingMigrash" class="col-md-1 col-sm-1 col-xs-1 control-label" translatable-text>מגרש</label>
+                        <div class="col-md-2 col-sm-2 col-xs-12">
+                            <input translatable-placeholder class="form-control" type="text" name="BuildingMigrash" id="BuildingMigrash" placeholder="מגרש" maxlength="15" aria-label="מגרש" />
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <br>
+            <div class="row">
+                <div class="col-xs-8 hidden-xs"><strong><span id="WarningSpan"></span></strong></div>
+                <div class="col-xs-2 left-text">
+                    <button type="button"
+                            translatable-text class="btn btn-primary btn-md" id="btnShow" onclick="btnShow_Clicked(this)">
+                        הצג
+                    </button>
+                </div>
+                <div class="col-xs-6 visible-xs"><strong><span></span></strong></div>
+                <div class="col-xs-1">
+                    <button translatable-value translatable-text type="button" class="btn btn-primary btn-md" id="btnClear" value="נקה" onclick="btnClear_Clicked()">נקה</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

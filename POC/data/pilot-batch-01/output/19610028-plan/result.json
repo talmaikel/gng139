@@ -1,0 +1,27 @@
+{
+  "provider": "tesseract",
+  "cost_usd": 0,
+  "document": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\input\\19610028-plan.pdf",
+  "retrieved_at": "2026-09-09T16:09:58.751430+00:00",
+  "language": "heb+eng",
+  "page_segmentation_mode": 11,
+  "tile_limit": 24,
+  "tiles": [
+    {
+      "id": "p1-r1-c1",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19610028-plan\\tiles\\p1-r1-c1.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19610028-plan\\ocr\\p1-r1-c1.txt",
+      "characters": 649
+    },
+    {
+      "id": "p1-r1-c2",
+      "page": 1,
+      "image": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19610028-plan\\tiles\\p1-r1-c2.jpg",
+      "text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19610028-plan\\ocr\\p1-r1-c2.txt",
+      "characters": 888
+    }
+  ],
+  "combined_text": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19610028-plan\\ocr.txt",
+  "notes": "Raw OCR only. Values must be verified against the cited tile before entering a dossier."
+}

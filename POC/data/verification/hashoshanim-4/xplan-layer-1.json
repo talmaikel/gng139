@@ -1,0 +1,959 @@
+{
+ "currentVersion": 10.81,
+ "id": 1,
+ "name": "קוים כחולים-תכניות מקוונות",
+ "type": "Feature Layer",
+ "description": "Xplan for xplan site",
+ "geometryType": "esriGeometryPolygon",
+ "sourceSpatialReference": {
+  "wkid": 2039,
+  "latestWkid": 2039
+ },
+ "copyrightText": "",
+ "parentLayer": null,
+ "subLayers": [],
+ "minScale": 50001,
+ "maxScale": 0,
+ "drawingInfo": {
+  "renderer": {
+   "type": "uniqueValue",
+   "field1": "station_desc",
+   "field2": null,
+   "field3": null,
+   "defaultSymbol": null,
+   "defaultLabel": null,
+   "uniqueValueInfos": [
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        232,
+        190,
+        255,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "(חסר)",
+     "label": "ללא סטטוס",
+     "description": "אחר"
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        170,
+        0,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "אחר",
+     "label": "אחר",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        77,
+        168,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "אישור",
+     "label": "אישור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        255,
+        197,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "בבדיקה תכנונית",
+     "label": "בבדיקה תכנונית",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSDash",
+       "color": [
+        0,
+        112,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "בהליך אישור",
+     "label": "בהליך אישור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        167,
+        127,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "במילוי תנאים להפקדה",
+     "label": "במילוי תנאים להפקדה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        235,
+        200,
+        127,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "דיון בהערות והשגות",
+     "label": "דיון בהערות והשגות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        112,
+        168,
+        0,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "דיון בהתנגדויות ותיקונים",
+     "label": "דיון בהתנגדויות ותיקונים",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        205,
+        137,
+        102,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "הגשת הערות והשגות",
+     "label": "הגשת הערות והשגות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        250,
+        52,
+        17,
+        255
+       ],
+       "width": 3.4
+      }
+     },
+     "value": "החלטת העברה להערות והשגות",
+     "label": "החלטת העברה תמ\"א להערות והשגות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       0,
+       197,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        0,
+        197,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "הכנת הודעה 77/78",
+     "label": "הודעה 77/78 בהכנה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        255,
+        255,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "העברה לממשלה לאחר אישור",
+     "label": "העברה לממשלה לאחר אישור",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        167,
+        127,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "הפקדה להתנגדויות/השגות",
+     "label": "הפקדה להתנגדויות/השגות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       255,
+       255,
+       255,
+       255
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        255,
+        255,
+        255
+       ],
+       "width": 18
+      }
+     },
+     "value": "טיפול בתשריט מתקן",
+     "label": "טיפול בתשריט מתקן",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        0,
+        0,
+        255
+       ],
+       "width": 3
+      }
+     },
+     "value": "מילוי תנאים להערות והשגות",
+     "label": "מילוי תנאים להערות והשגות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        0,
+        0,
+        0,
+        255
+       ],
+       "width": 1
+      }
+     },
+     "value": "מסמך מדיניות",
+     "label": "מסמך מדיניות",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        255,
+        190,
+        190,
+        255
+       ],
+       "width": 3
+      }
+     },
+     "value": "עריכת תכנית תמ\"א",
+     "label": "עריכת תמ\"א",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        170,
+        170,
+        170,
+        255
+       ],
+       "width": 3
+      }
+     },
+     "value": "רשת חלוקה",
+     "label": "רשת חלוקה",
+     "description": ""
+    },
+    {
+     "symbol": {
+      "type": "esriSFS",
+      "style": "esriSFSSolid",
+      "color": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "outline": {
+       "type": "esriSLS",
+       "style": "esriSLSSolid",
+       "color": [
+        85,
+        255,
+        0,
+        255
+       ],
+       "width": 2
+      }
+     },
+     "value": "תסקיר סביבתי",
+     "label": "תסקיר סביבתי",
+     "description": ""
+    }
+   ],
+   "fieldDelimiter": ","
+  },
+  "transparency": 0,
+  "labelingInfo": [
+   {
+    "labelPlacement": "esriServerPolygonPlacementAlwaysHorizontal",
+    "where": null,
+    "labelExpression": "[pl_number]",
+    "useCodedValues": true,
+    "symbol": {
+     "type": "esriTS",
+     "color": [
+      0,
+      0,
+      255,
+      255
+     ],
+     "backgroundColor": [
+      255,
+      255,
+      255,
+      255
+     ],
+     "borderLineColor": [
+      0,
+      0,
+      255,
+      255
+     ],
+     "borderLineSize": 1,
+     "verticalAlignment": "baseline",
+     "horizontalAlignment": "left",
+     "rightToLeft": false,
+     "angle": 0,
+     "xoffset": 0,
+     "yoffset": 0,
+     "kerning": true,
+     "haloColor": [
+      255,
+      255,
+      255,
+      255
+     ],
+     "haloSize": 2,
+     "font": {
+      "family": "Arial",
+      "size": 9,
+      "style": "normal",
+      "weight": "bold",
+      "decoration": "none"
+     }
+    },
+    "minScale": 10000,
+    "maxScale": 0
+   }
+  ]
+ },
+ "defaultVisibility": true,
+ "extent": {
+  "xmin": 130163.19890000019,
+  "ymin": 379694.75009999983,
+  "xmax": 284068.46889999975,
+  "ymax": 804540.1301000006,
+  "spatialReference": {
+   "wkid": 2039,
+   "latestWkid": 2039
+  }
+ },
+ "hasAttachments": false,
+ "htmlPopupType": "esriServerHTMLPopupTypeAsHTMLText",
+ "displayField": "plan_name",
+ "typeIdField": null,
+ "subtypeFieldName": null,
+ "subtypeField": null,
+ "defaultSubtypeCode": null,
+ "fields": [
+  {
+   "name": "date_saf",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך עמידה בתנאי סף",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "depositing_date",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך דיון בהפקדה",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "district_name",
+   "type": "esriFieldTypeString",
+   "alias": "שם מחוז",
+   "length": 30,
+   "domain": null
+  },
+  {
+   "name": "entity_subtype_desc",
+   "type": "esriFieldTypeString",
+   "alias": "תת-סוג תכנית",
+   "length": 78,
+   "domain": null
+  },
+  {
+   "name": "jurstiction_area_name",
+   "type": "esriFieldTypeString",
+   "alias": "תחום גבול שיפוט",
+   "length": 78,
+   "domain": null
+  },
+  {
+   "name": "ja_concat",
+   "type": "esriFieldTypeString",
+   "alias": "שם ועדת תכנון",
+   "length": 3999,
+   "domain": null
+  },
+  {
+   "name": "last_update_date",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך עדכון אחרון",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "mp_id",
+   "type": "esriFieldTypeDouble",
+   "alias": "מזהה תכנית ראשי",
+   "domain": null
+  },
+  {
+   "name": "objectid",
+   "type": "esriFieldTypeOID",
+   "alias": "OBJECTID",
+   "domain": null
+  },
+  {
+   "name": "on_hold_date",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך תחילת טיפול באישור",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "open_date",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך סיום טיפול באישור",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "pa_concat",
+   "type": "esriFieldTypeString",
+   "alias": "שרשור מרחבי תכנון",
+   "length": 3999,
+   "domain": null
+  },
+  {
+   "name": "pl_area_dunam",
+   "type": "esriFieldTypeDouble",
+   "alias": "שטח תכנית רשום בדונם",
+   "domain": null
+  },
+  {
+   "name": "pl_by_auth_of",
+   "type": "esriFieldTypeDouble",
+   "alias": "היררכיית סמכות ועדה",
+   "domain": null
+  },
+  {
+   "name": "pl_date_8",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך פרסום ברשומות",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "pl_date_advertise",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך פרסום בעיתונים",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "pl_date7",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך דיון באישור",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "pl_id",
+   "type": "esriFieldTypeDouble",
+   "alias": "מספר מהדורה",
+   "domain": null
+  },
+  {
+   "name": "pl_landuse_string",
+   "type": "esriFieldTypeString",
+   "alias": "סוג ייעוד קרקע",
+   "length": 4000,
+   "domain": null
+  },
+  {
+   "name": "pl_last_deposit_date",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך אחרון להפקדה",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "pl_name",
+   "type": "esriFieldTypeString",
+   "alias": "שם תכנית",
+   "length": 78,
+   "domain": null
+  },
+  {
+   "name": "pl_number",
+   "type": "esriFieldTypeString",
+   "alias": "מספר תכנית",
+   "length": 78,
+   "domain": null
+  },
+  {
+   "name": "pl_order_print_version",
+   "type": "esriFieldTypeDouble",
+   "alias": "גירסת הוראות תכנית",
+   "domain": null
+  },
+  {
+   "name": "pl_rejection_date",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך אחרון להתנגדויות",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "pl_tasrit_prn_version",
+   "type": "esriFieldTypeDouble",
+   "alias": "גירסת תשריט",
+   "domain": null
+  },
+  {
+   "name": "pl_url",
+   "type": "esriFieldTypeString",
+   "alias": "קישור לאתר מידע תכנוני",
+   "length": 255,
+   "domain": null
+  },
+  {
+   "name": "plan_area_name",
+   "type": "esriFieldTypeString",
+   "alias": "מרחב תכנון",
+   "length": 78,
+   "domain": null
+  },
+  {
+   "name": "plan_charactor_name",
+   "type": "esriFieldTypeString",
+   "alias": "סוג היתר שניתן להוציא",
+   "length": 78,
+   "domain": null
+  },
+  {
+   "name": "plan_county_name",
+   "type": "esriFieldTypeString",
+   "alias": "שם יישוב",
+   "length": 78,
+   "domain": null
+  },
+  {
+   "name": "pq_authorised_quantity_105",
+   "type": "esriFieldTypeDouble",
+   "alias": "חדרי מלון מאושר מ\"ר",
+   "domain": null
+  },
+  {
+   "name": "pq_authorised_quantity_110",
+   "type": "esriFieldTypeDouble",
+   "alias": "דיור מיוחד מאושר מ\"ר",
+   "domain": null
+  },
+  {
+   "name": "pq_authorised_quantity_120",
+   "type": "esriFieldTypeDouble",
+   "alias": "מגורים מאושר יח\"ד",
+   "domain": null
+  },
+  {
+   "name": "pq_detailed_plan_105",
+   "type": "esriFieldTypeDouble",
+   "alias": "מלון תיירות מוצע חד'",
+   "domain": null
+  },
+  {
+   "name": "pq_detailed_plan_110",
+   "type": "esriFieldTypeDouble",
+   "alias": "דיור מיוחד מוצע יח\"ד",
+   "domain": null
+  },
+  {
+   "name": "pq_detailed_plan_80",
+   "type": "esriFieldTypeDouble",
+   "alias": "מבני ציבור מוצע מ\"ר",
+   "domain": null
+  },
+  {
+   "name": "pq_implementation_105",
+   "type": "esriFieldTypeDouble",
+   "alias": "תיירות למימוש מ\"ר",
+   "domain": null
+  },
+  {
+   "name": "quantity_delta_105",
+   "type": "esriFieldTypeDouble",
+   "alias": "שינוי מוצע מלונאות מ\"ר",
+   "domain": null
+  },
+  {
+   "name": "quantity_delta_110",
+   "type": "esriFieldTypeDouble",
+   "alias": "שינוי מס' יח' דיור מיוחד",
+   "domain": null
+  },
+  {
+   "name": "quantity_delta_120",
+   "type": "esriFieldTypeDouble",
+   "alias": "שינוי מס' יח' דיור ",
+   "domain": null
+  },
+  {
+   "name": "quantity_delta_125",
+   "type": "esriFieldTypeDouble",
+   "alias": "שינוי שטח דיור מ\"ר",
+   "domain": null
+  },
+  {
+   "name": "quantity_delta_60",
+   "type": "esriFieldTypeDouble",
+   "alias": "שינוי בשטח מבני תעסוקה מ\"ר",
+   "domain": null
+  },
+  {
+   "name": "quantity_delta_75",
+   "type": "esriFieldTypeDouble",
+   "alias": "שינוי בשטח מבני מסחר מ\"ר",
+   "domain": null
+  },
+  {
+   "name": "quantity_delta_80",
+   "type": "esriFieldTypeDouble",
+   "alias": "שינוי בשטח מבני ציבור מ\"ר",
+   "domain": null
+  },
+  {
+   "name": "receiving_date",
+   "type": "esriFieldTypeDate",
+   "alias": "תאריך קבלת תכנית",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "shape",
+   "type": "esriFieldTypeGeometry",
+   "alias": "SHAPE",
+   "domain": null
+  },
+  {
+   "name": "shape_area",
+   "type": "esriFieldTypeDouble",
+   "alias": "שטח מחושב מר",
+   "domain": null
+  },
+  {
+   "name": "shape_length",
+   "type": "esriFieldTypeDouble",
+   "alias": "היקף מחושב מטר",
+   "domain": null
+  },
+  {
+   "name": "station_desc",
+   "type": "esriFieldTypeString",
+   "alias": "תיאור סטטוס",
+   "length": 26,
+   "domain": null
+  },
+  {
+   "name": "internet_short_status",
+   "type": "esriFieldTypeString",
+   "alias": "שלב תכנוני רצוי",
+   "length": 26,
+   "domain": null
+  },
+  {
+   "name": "pl_objectives",
+   "type": "esriFieldTypeString",
+   "alias": "מטרות",
+   "length": 250,
+   "domain": null
+  }
+ ],
+ "geometryField": {
+  "name": "shape",
+  "type": "esriFieldTypeGeometry",
+  "alias": "SHAPE"
+ },
+ "indexes": null,
+ "subtypes": [],
+ "relationships": [],
+ "canModifyLayer": true,
+ "canScaleSymbols": false,
+ "hasLabels": true,
+ "capabilities": "Map,Query,Data",
+ "maxRecordCount": 1000,
+ "supportsStatistics": true,
+ "supportsAdvancedQueries": true,
+ "supportedQueryFormats": "JSON, geoJSON",
+ "isDataVersioned": false,
+ "ownershipBasedAccessControlForFeatures": {"allowOthersToQuery": true},
+ "useStandardizedQueries": true,
+ "advancedQueryCapabilities": {
+  "useStandardizedQueries": true,
+  "supportsStatistics": true,
+  "supportsHavingClause": true,
+  "supportsCountDistinct": true,
+  "supportsOrderBy": true,
+  "supportsDistinct": true,
+  "supportsPagination": true,
+  "supportsTrueCurve": true,
+  "supportsReturningQueryExtent": true,
+  "supportsQueryWithDistance": true,
+  "supportsSqlExpression": true
+ },
+ "supportsDatumTransformation": true,
+ "dateFieldsTimeReference": null,
+ "supportsCoordinatesQuantization": true
+}

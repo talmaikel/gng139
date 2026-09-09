@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+data/cache/
+data/documents/
+data/*.sqlite*
+data/pg/
+.env
+data/experiments/
+test-output/

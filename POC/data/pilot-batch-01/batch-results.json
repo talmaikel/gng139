@@ -1,0 +1,54 @@
+{
+  "created_at": "2026-09-09T16:10:11.946080+00:00",
+  "provider": "tesseract",
+  "cost_usd": 0,
+  "documents": [
+    {
+      "document": {
+        "local_filename": "19610028-plan.pdf",
+        "address": "בר-כוכבא 12 הרצליה",
+        "municipal_file_number": "1652",
+        "public_source_url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/1950-1969/19610028/19610028_20.pdf",
+        "document_type": "signed permit plan",
+        "notes": "request 19610028; gush 6424; parcel 83"
+      },
+      "state": "completed",
+      "cost_usd": 0,
+      "ocr_result": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19610028-plan\\result.json",
+      "tiles": 2,
+      "characters": 1537
+    },
+    {
+      "document": {
+        "local_filename": "19650106-plan.pdf",
+        "address": "הרב קוק 10 הרצליה",
+        "municipal_file_number": "4461",
+        "public_source_url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/1950-1969/19650106/19650106_20.pdf",
+        "document_type": "signed permit plan",
+        "notes": "request 19650106; gush 6538; parcel 206"
+      },
+      "state": "completed",
+      "cost_usd": 0,
+      "ocr_result": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19650106-plan\\result.json",
+      "tiles": 18,
+      "characters": 10486
+    },
+    {
+      "document": {
+        "local_filename": "19440048-plan.pdf",
+        "address": "סנש חנה 10 הרצליה",
+        "municipal_file_number": "2772",
+        "public_source_url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/1930-1949/19440048/19440048_20.pdf",
+        "document_type": "signed permit plan",
+        "notes": "request 19440048; gush 6546; parcel 271"
+      },
+      "state": "completed",
+      "cost_usd": 0,
+      "ocr_result": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\output\\19440048-plan\\result.json",
+      "tiles": 2,
+      "characters": 6
+    }
+  ],
+  "completed": 3,
+  "failed": 0
+}

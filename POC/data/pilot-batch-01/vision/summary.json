@@ -1,0 +1,17 @@
+[
+  {
+    "document": "bar-kochba-12",
+    "state": "not_run",
+    "reason": "OPENAI_API_KEY is not set in this PowerShell session"
+  },
+  {
+    "document": "harav-kook-10",
+    "state": "not_run",
+    "reason": "OPENAI_API_KEY is not set in this PowerShell session"
+  },
+  {
+    "document": "senesh-hanna-10",
+    "state": "not_run",
+    "reason": "OPENAI_API_KEY is not set in this PowerShell session"
+  }
+]

@@ -1,0 +1,2 @@
+{"at": "2026-09-09T16:59:49.994460+00:00", "phase": "discover", "catalog_streets": 791, "processed": 1, "completed": 0, "failed": 1, "streets": {"complete": {"count": 14, "reported_files": 72}, "failed": {"count": 1, "reported_files": 0}, "pending": {"count": 776, "reported_files": 0}}, "files": {"discovered": 68, "metadata_complete": 2}, "coverage_complete": false}
+{"at": "2026-09-09T16:59:49.997923+00:00", "phase": "rate_limit_pause", "seconds": 900, "failed_streets": 1}

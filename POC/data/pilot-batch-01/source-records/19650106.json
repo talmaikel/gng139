@@ -1,0 +1,39 @@
+{
+  "collected_at": "2026-09-09T16:07:23.727974+00:00",
+  "building_file": 4461,
+  "gush": 6538,
+  "parcel": 206,
+  "request": 19650106,
+  "address": "הרב קוק 10 הרצליה",
+  "archive_search": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikimByGush&siteid=121&g=6538&h=206&m=&l=true&arguments=siteid%2Cg%2Ch%2Cm%2Cl",
+    "retrieved_at": "2026-09-09T16:01:12.680297+00:00",
+    "epoch": 1788969672.6802976,
+    "sha256": "120efe372c3d931d7b96a4fbcaa85cdbe04eb30a0a9106cecd3352a30f2945b6",
+    "content_type": "text/html"
+  },
+  "request_page": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetBakashaFile&siteid=121&b=19650106&arguments=siteid%2Cb",
+    "retrieved_at": "2026-09-09T16:04:20.402716+00:00",
+    "epoch": 1788969860.4027166,
+    "sha256": "19a33cdba758cb4a10421fded40c326f18e222e22e154324d938e991dc9c090d",
+    "content_type": "text/html"
+  },
+  "download_page": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=ShowPhoto&siteid=121&ec=2&en=19650106&bn=0&m=1&arguments=siteid%2Cec%2Cen%2Cbn%2Cm",
+    "retrieved_at": "2026-09-09T16:07:20.312627+00:00",
+    "epoch": 1788970040.3126268,
+    "sha256": "faaf9f35f91e4a3de1e1946e0bfac20b9389a2cef81a0f0a51ec0eb404dfaa69",
+    "content_type": "text/html"
+  },
+  "pdf": {
+    "url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/1950-1969/19650106/19650106_20.pdf",
+    "retrieved_at": "2026-09-09T16:07:23.705163+00:00",
+    "epoch": 1788970043.7051632,
+    "sha256": "e3571db96540220fa45a44655a2df9ca74969ffa21f30a8e11b250e7084e0a6f",
+    "content_type": "application/pdf"
+  },
+  "pdf_sha256": "e3571db96540220fa45a44655a2df9ca74969ffa21f30a8e11b250e7084e0a6f",
+  "pdf_bytes": 16400626,
+  "extraction_note": "Public archive metadata only; full request HTML is not stored because it can contain unnecessary personal data."
+}

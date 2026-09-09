@@ -1,0 +1,13 @@
+{
+  "collector": "playwright",
+  "browser_channel": "msedge",
+  "request_id": 19610028,
+  "address": "בר-כוכבא 12 הרצליה",
+  "request_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetBakashaFile&siteid=121&b=19610028&arguments=siteid%2Cb",
+  "download_page_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=ShowPhoto&siteid=121&ec=2&en=19610028&bn=0&m=1&arguments=siteid%2Cec%2Cen%2Cbn%2Cm",
+  "source_url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/1950-1969/19610028/19610028_20.pdf",
+  "retrieved_at": "2026-09-09T16:26:32.640438+00:00",
+  "sha256": "0aebf0ef36e47ef48b2ee127f1aa6633ea22e522db16ee7213e9ff42cc876ab0",
+  "bytes": 479005,
+  "path": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\pilot-batch-01\\playwright\\19610028-plan.pdf"
+}

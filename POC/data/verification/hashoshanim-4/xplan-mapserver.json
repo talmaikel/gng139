@@ -1,0 +1,136 @@
+{
+ "currentVersion": 10.81,
+ "serviceDescription": "Xplan for the Xplan Site",
+ "mapName": "Layers",
+ "description": "",
+ "copyrightText": "",
+ "supportsDynamicLayers": true,
+ "layers": [
+  {
+   "id": 0,
+   "name": "ישויות נקודתיות",
+   "parentLayerId": -1,
+   "defaultVisibility": false,
+   "subLayerIds": null,
+   "minScale": 0,
+   "maxScale": 0,
+   "type": "Feature Layer",
+   "geometryType": "esriGeometryPoint"
+  },
+  {
+   "id": 1,
+   "name": "קוים כחולים-תכניות מקוונות",
+   "parentLayerId": -1,
+   "defaultVisibility": true,
+   "subLayerIds": null,
+   "minScale": 50001,
+   "maxScale": 0,
+   "type": "Feature Layer",
+   "geometryType": "esriGeometryPolygon"
+  },
+  {
+   "id": 2,
+   "name": "ישויות קוויות",
+   "parentLayerId": -1,
+   "defaultVisibility": false,
+   "subLayerIds": null,
+   "minScale": 0,
+   "maxScale": 0,
+   "type": "Feature Layer",
+   "geometryType": "esriGeometryPolyline"
+  },
+  {
+   "id": 3,
+   "name": "ישויות פוליגונליות",
+   "parentLayerId": -1,
+   "defaultVisibility": false,
+   "subLayerIds": null,
+   "minScale": 0,
+   "maxScale": 0,
+   "type": "Feature Layer",
+   "geometryType": "esriGeometryPolygon"
+  },
+  {
+   "id": 4,
+   "name": "יעודי קרקע",
+   "parentLayerId": -1,
+   "defaultVisibility": false,
+   "subLayerIds": null,
+   "minScale": 0,
+   "maxScale": 0,
+   "type": "Feature Layer",
+   "geometryType": "esriGeometryPolygon"
+  }
+ ],
+ "tables": [],
+ "spatialReference": {
+  "wkid": 2039,
+  "latestWkid": 2039
+ },
+ "singleFusedMapCache": false,
+ "initialExtent": {
+  "xmin": 222948.79409215582,
+  "ymin": 719897.5367750262,
+  "xmax": 234015.01414126257,
+  "ymax": 721650.4048640958,
+  "spatialReference": {
+   "wkid": 2039,
+   "latestWkid": 2039
+  }
+ },
+ "fullExtent": {
+  "xmin": 130160.27670000028,
+  "ymin": 374060.0061000008,
+  "xmax": 284068.47009999957,
+  "ymax": 804540.1301000006,
+  "spatialReference": {
+   "wkid": 2039,
+   "latestWkid": 2039
+  }
+ },
+ "minScale": 0,
+ "maxScale": 0,
+ "units": "esriMeters",
+ "supportedImageFormatTypes": "PNG32,PNG24,PNG,JPG,DIB,TIFF,EMF,PS,PDF,GIF,SVG,SVGZ,BMP",
+ "documentInfo": {
+  "Title": "",
+  "Author": "",
+  "Comments": "Xplan for the Xplan Site",
+  "Subject": "Xplan for the Xplan Site ",
+  "Category": "",
+  "AntialiasingMode": "None",
+  "TextAntialiasingMode": "Force",
+  "Keywords": "xplan"
+ },
+ "capabilities": "Map,Query,Data",
+ "supportedQueryFormats": "JSON, geoJSON",
+ "exportTilesAllowed": false,
+ "referenceScale": 0,
+ "datumTransformations": [
+  {
+   "geoTransforms": [
+    {
+     "wkid": 108021,
+     "latestWkid": 108021,
+     "transformForward": true,
+     "name": "WGS_1984_To_Israel_CoordFrame"
+    }
+   ]
+  },
+  {
+   "geoTransforms": [
+    {
+     "wkid": 108021,
+     "latestWkid": 108021,
+     "transformForward": false,
+     "name": "WGS_1984_To_Israel_CoordFrame"
+    }
+   ]
+  }
+ ],
+ "supportsDatumTransformation": true,
+ "maxRecordCount": 1000,
+ "maxImageHeight": 4096,
+ "maxImageWidth": 4096,
+ "supportedExtensions": "WFSServer, WMSServer"
+}

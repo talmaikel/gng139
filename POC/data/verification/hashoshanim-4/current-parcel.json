@@ -1,0 +1,74 @@
+[
+  {
+    "type": "Feature",
+    "id": "Parcels_ITM.785443",
+    "geometry": {
+      "type": "MultiPolygon",
+      "coordinates": [
+        [
+          [
+            [
+              185019.4063,
+              675046.5
+            ],
+            [
+              185001.75,
+              675071.3125
+            ],
+            [
+              185019.6406,
+              675084.875
+            ],
+            [
+              185025.9688,
+              675076.1875
+            ],
+            [
+              185037.5625,
+              675060.125
+            ],
+            [
+              185019.4063,
+              675046.5
+            ]
+          ]
+        ]
+      ]
+    },
+    "geometry_name": "the_geom",
+    "properties": {
+      "PARCEL_ID": 790518,
+      "GUSH_NUM": 6529,
+      "GUSH_SUFFI": 0,
+      "PARCEL": 167,
+      "LEGAL_AREA": 704,
+      "PNUMTYPE": 0,
+      "PNUMTYPE_T": "",
+      "STATUS": 6,
+      "STATUS_TEX": "מוסדר",
+      "LOCALITY_I": 6400,
+      "LOCALITY_N": "הרצלייה",
+      "REG_MUN_ID": 0,
+      "REG_MUN_NA": "",
+      "COUNTY_ID": 51,
+      "COUNTY_NAM": "תל-אביב",
+      "REGION_ID": 5,
+      "REGION_NAM": "תל-אביב",
+      "WP": 6400,
+      "TALAR_NUMB": 0,
+      "TALAR_YEAR": 0,
+      "SYS_DATE": "2024-03-04 17:13:23",
+      "ID": "6529--167",
+      "NOTE": "הנתון שטח רשום כאן אינו מהווה אסמכתה. לאסמכתה חוקית לשטח הרשום של חלקה יש לפנות ללשכות המרשם במשרד המשפטים.",
+      "SHAPE_AREA": 688.92618125,
+      "SHAPE_LEN": 106.161068726
+    },
+    "_source": {
+      "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata%3AParcels_ITM&outputFormat=application%2Fjson&srsName=EPSG%3A2039&CQL_FILTER=GUSH_NUM%3D6529+AND+PARCEL%3D167&count=100&startIndex=0",
+      "retrieved_at": "2026-09-08T09:54:37.282503+00:00",
+      "epoch": 1788861277.2825031,
+      "sha256": "1c93a973d2b50062d5a8f5071d307676326b61ff3bcf8de3de79094454ed90b9",
+      "content_type": "application/json;charset=UTF-8"
+    }
+  }
+]

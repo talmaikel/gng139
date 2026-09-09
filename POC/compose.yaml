@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: shaked
+      POSTGRES_USER: shaked
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-pilot-only}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shaked"]
+      interval: 5s
+      retries: 10
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://shaked:${POSTGRES_PASSWORD:-local-pilot-only}@db:5432/shaked
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  pgdata:
