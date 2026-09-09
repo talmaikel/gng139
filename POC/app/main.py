@@ -53,6 +53,10 @@ def boundary():
         f=GovMap(PublicClient()).boundary()
         return {'type':'Feature','geometry':wgs(shape(f['geometry'])),'properties':{'name':'הרצליה','source':f['_source']}}
     except Exception as exc:raise HTTPException(503,str(exc))
+@app.get('/api/investor-boundary')
+def investor_boundary():
+    feature=json.loads((DATA/'verification'/'boundary_verified.json').read_text(encoding='utf8'))
+    return {'type':'Feature','geometry':wgs(shape(feature['geometry'])),'properties':{'name':'הרצליה','source':'preserved-official-snapshot'}}
 @app.get('/api/sources')
 def sources():
     p=ROOT/'docs'/'source-matrix.json'

@@ -28,12 +28,11 @@ dialog{background:#fbf5ef;border-color:#d7bda8}dialog::backdrop{background:#1713
 /* Deterministic, local-only investor presentation mode. */
 .investor-banner{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#1b1512;color:#fff;border-right:5px solid #e5803f;border-radius:6px;padding:15px 20px;margin:-4px 0 22px;box-shadow:0 12px 28px #4f28151f}
 .investor-banner div{display:flex;align-items:center;gap:16px}.investor-banner span{background:#e5803f;color:#24150d;border-radius:20px;padding:4px 11px;font-size:10px;font-weight:700}.investor-banner strong{font-size:13px}.investor-banner small{color:#d9bdab}
-.investor-demo .workspace{grid-template-columns:1fr}.investor-demo .criteria,.investor-demo .map-actions,.investor-demo #audit-sample,.investor-demo .history{display:none}
-.investor-demo #map{height:390px;background-color:#efe1d2;background-image:linear-gradient(#c79f7b26 1px,transparent 1px),linear-gradient(90deg,#c79f7b26 1px,transparent 1px),radial-gradient(circle at 50% 45%,#fff8f0 0,#ead4bf 72%);background-size:36px 36px,36px 36px,100% 100%}
-.investor-demo .leaflet-control-attribution{display:none}.investor-demo .map-card{border-color:#d49a70}.investor-demo .results{grid-template-columns:minmax(300px,560px);justify-content:center;margin-top:22px}
+.investor-demo .workspace{grid-template-columns:minmax(0,1fr) 260px}.investor-demo #audit-sample,.investor-demo .history,.investor-demo .audit-banner.featured{display:none}
+.investor-demo #map{height:506px;background:#e7d5c4}
+.investor-demo .map-card{border-color:#d49a70}.investor-demo .results{grid-template-columns:minmax(300px,560px);justify-content:center;margin-top:22px}
 .investor-demo .result{border-top:4px solid #df7d3d}.investor-demo .result p{min-height:0}.investor-demo .demo-badge{background:#f5d9c2;color:#6f3218;border-color:#d99a6c}
-.investor-demo .map-footer span:first-child{display:none}.investor-demo .map-footer span:nth-child(2){display:none}
 .dossier-highlight{background:linear-gradient(135deg,#fff4e9,#f1d8c2);border:1px solid #d9aa86;border-radius:5px;padding:16px 18px;margin:16px 0}.dossier-highlight strong{display:block;font-size:18px;color:#6f3218}.dossier-highlight p{font-size:12px;color:#60493d}
 .rights-grid{grid-template-columns:repeat(4,1fr)}
-@media(max-width:850px){.investor-banner,.investor-banner div{align-items:flex-start;flex-direction:column;gap:7px}.investor-demo #map{height:320px}.rights-grid{grid-template-columns:repeat(2,1fr)}}
 
+@media(max-width:850px){.investor-banner,.investor-banner div{align-items:flex-start;flex-direction:column;gap:7px}.investor-demo .workspace{grid-template-columns:1fr}.investor-demo #map{height:380px}.rights-grid{grid-template-columns:repeat(2,1fr)}}
