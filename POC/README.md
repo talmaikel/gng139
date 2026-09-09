@@ -1,6 +1,8 @@
-# Shaked — Herzliya real-data POC
+# Shakdan — Herzliya real-data POC
 
 Hebrew, RTL local pilot built from the supplied product demo. Live collection, saved evidence, real map selection, draft dossiers, PDF and Excel exports, simulated entitlement. The original demo is separate at `/demo`.
+
+For a clean Windows setup after cloning or pulling the repository, see the [Hebrew colleague setup guide](docs/colleague-setup-windows.md). It includes the one-command setup script, Edge/Tesseract checks, first-run verification and common fixes.
 
 ## Run locally on Windows
 
