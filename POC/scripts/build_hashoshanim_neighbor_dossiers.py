@@ -14,9 +14,8 @@ if str(ROOT) not in sys.path:sys.path.insert(0,str(ROOT))
 
 from shapely.geometry import Point,shape
 
-from app.archive_catalog import parse_building_file
+from app.archive_catalog import parse_building_file,parse_request_page
 from app.config import DATA
-from app.documents import archive_tables
 from app.local_ocr import extract_local
 from app.pilot_dossiers import build_case_dossier
 from app.sources import ARCHIVE,BuildingArchive,GovMap,PublicClient,SourceError,text_from_html,utcnow
@@ -27,41 +26,14 @@ PERMITS=DATA/"verification"/"permits"
 ANCHOR={"label":"השושנים 4 הרצליה","gush":6529,"parcel":167,"itm":(185019.62,675065.69)}
 MIN_PARCEL_AREA=150
 
-LABELS=["מספר הבקשה","כתובת","תאריך הגשה","מספר תיק בניין","סוג הבקשה","שימוש עיקרי","תיאור הבקשה","מספר היתר","תאריך הפקת היתר","שטח עיקרי","שטח שירות","סך מספר יחידות דיור המבוקשות"]
-
-
 def log(message):
     print(f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] {message}",flush=True)
 
 
-def iso_date(value):
-    match=re.fullmatch(r"(\d{2})/(\d{2})/(\d{4})",(value or "").strip())
-    return f"{match.group(3)}-{match.group(2)}-{match.group(1)}" if match else None
-
-
-def parse_request_page(html):
-    lines=[x.strip() for x in text_from_html(html).splitlines()];lines=[x for x in lines if x]
-    labelled={}
-    for index,line in enumerate(lines):
-        key=line.rstrip(":")
-        if key in LABELS and key not in labelled and index+1<len(lines):
-            value=lines[index+1]
-            labelled[key]=None if value.rstrip(":") in LABELS else value
-    designations=[]
-    for table in archive_tables(html):
-        headers=[x.replace("‏","").strip() for x in table["headers"]]
-        if "מספר גוש" in headers and "יעוד" in headers:
-            zi=headers.index("יעוד")
-            designations+=[row[zi].strip() for row in table["rows"] if len(row)>zi and row[zi].strip()]
-    # A parcel can carry several rows (e.g. a road strip plus residential); keep all of them.
-    zoning=" / ".join(dict.fromkeys(designations)) or None
-    def number(text):
-        match=re.search(r"\d+(?:\.\d+)?",text or "")
-        return float(match.group()) if match else None
-    return {"address":labelled.get("כתובת"),"submitted":iso_date(labelled.get("תאריך הגשה")),"request_type":labelled.get("סוג הבקשה"),
-            "use":labelled.get("שימוש עיקרי"),"description":labelled.get("תיאור הבקשה"),"permit":labelled.get("מספר היתר"),
-            "permit_date":iso_date(labelled.get("תאריך הפקת היתר")),"main_area":number(labelled.get("שטח עיקרי")),
-            "service_area":number(labelled.get("שטח שירות")),"units_requested":number(labelled.get("סך מספר יחידות דיור המבוקשות")),"zoning":zoning}
+def register_archive_file(store,parsed,page,page_source):
+    """Store the hydrated file in the citywide catalog so XPlan 995 results can be resolved from it."""
+    payload=dict(parsed,designations=page["designations"],designation_source=page_source)
+    store.save_archive_file(parsed["file_number"],payload,"metadata_complete")
 
 
 def fetch_plan_pdf(client,request_id):
@@ -91,7 +63,7 @@ def nearby_parcels(client,radius):
 
 
 def collect(target,radius):
-    client=PublicClient();archive=BuildingArchive(client)
+    client=PublicClient();archive=BuildingArchive(client);store=Store();store.init()
     (BATCH/"input").mkdir(parents=True,exist_ok=True);(BATCH/"source-records").mkdir(parents=True,exist_ok=True);PERMITS.mkdir(parents=True,exist_ok=True)
     evidence_path=BATCH/"parcel-evidence.json"
     parcel_evidence=json.loads(evidence_path.read_text(encoding="utf-8")) if evidence_path.exists() else {}
@@ -120,6 +92,7 @@ def collect(target,radius):
             if not chosen:
                 item["reason"]="no issued permit request found";item["requests"]=parsed["requests"];report.append(item);log(f"{gush}/{parcel}: {item['reason']}");continue
             request_id,page,html,page_source=chosen
+            register_archive_file(store,parsed,page,page_source)
             pdf,pdf_source,link_source=fetch_plan_pdf(client,request_id)
             name=f"{request_id}-plan.pdf";(BATCH/"input"/name).write_bytes(pdf)
             (PERMITS/f"{request_id}.json").write_text(json.dumps({"id":request_id,"source":page_source,"html":html,"text":text_from_html(html)},ensure_ascii=False,indent=2),encoding="utf-8")

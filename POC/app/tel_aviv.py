@@ -480,6 +480,45 @@ def write_review_package(dossiers: list[dict], ocr_reports: list[dict], root: Pa
     return review_dir / "index.html", review_dir / "review-decisions.json"
 
 
+def finalize_disqualified_dossier(pre_review: dict):
+    """Close out a dossier without field-level OCR review.
+
+    When ``current_status_assessment`` already found a recent redevelopment/permit
+    process in the file, the property is not a new opportunity regardless of what
+    units/floors/area/permit_date turn out to be — those fields only matter for
+    building an economics case on a property that could still be one. Reviewing
+    hundreds of OCR candidates in that situation would not change the conclusion,
+    so this path records it directly, citing the same documents that triggered
+    ``eligibility_status`` == "not_suitable_currently" as evidence.
+    """
+    if pre_review.get("eligibility_status") != "not_suitable_currently":
+        raise PipelineError("finalize_disqualified_dossier is only for eligibility_status=not_suitable_currently")
+    dossier = json.loads(json.dumps(pre_review, ensure_ascii=False))
+    evidence_ids = dossier["eligibility"].get("evidence_document_ids", [])
+    evidence_docs = [doc for doc in dossier["documents"] if doc["id"] in evidence_ids]
+    dossier["human_review"] = {
+        "state": "skipped_disqualified",
+        "reviewed_at": utcnow(),
+        "reason": (
+            "הנכס כבר נפסל כהזדמנות חדשה על בסיס מסמכי התחדשות/היתר עדכניים בתיק "
+            "(ר' evidence_document_ids); לא בוצעה בדיקה אנושית של מועמדי OCR לשדות "
+            "יחידות/קומות/שטח/תאריך היתר כי היא אינה משנה את המסקנה."
+        ),
+        "evidence_document_ids": evidence_ids,
+        "evidence_documents": evidence_docs,
+    }
+    dossier["checks"] = [
+        dict(row, status="not_required") if row["id"] == "human_ocr_review" else row
+        for row in dossier["checks"]
+    ]
+    dossier["gaps"] = [gap for gap in dossier["gaps"] if "OCR" not in gap]
+    dossier["created_at"] = utcnow()
+    stable = dict(dossier)
+    stable.pop("created_at", None)
+    dossier["id"] = hashlib.sha256(json.dumps(stable, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:24]
+    return dossier
+
+
 def finalize_reviewed_dossier(pre_review: dict, decisions: dict):
     """Create an immutable dossier only after every OCR candidate was reviewed."""
     pending = [row for row in decisions.get("candidates", []) if row.get("approved") is None]

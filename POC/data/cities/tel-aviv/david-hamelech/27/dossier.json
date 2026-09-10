@@ -1,0 +1,535 @@
+{
+  "city": "tel-aviv",
+  "building_id": "tel-aviv-file:04810270",
+  "entity_keys": [
+    "parcel:6111:657"
+  ],
+  "status": "needs_verification",
+  "eligibility_status": "not_suitable_currently",
+  "eligibility": {
+    "status": "not_suitable_currently",
+    "label": "לא מתאים לפי המצב הנוכחי",
+    "reason": "בתיק מופיע הליך התחדשות/היתר עדכני; הנכס אינו מוצג כהזדמנות חדשה.",
+    "evidence_document_ids": [
+      "9F43C973-1CBF-4209-960B-3B95E52830DB",
+      "64F170E3-305C-4CA3-8688-8209963EEADA",
+      "011D0117-218D-40ED-BFF4-BEAB0E1964B6",
+      "75DE2FF7-5124-42A6-86DB-C125FD2F6335",
+      "4C4CF688-1F0D-475A-896A-1C1C4CAEB893",
+      "CAECB4AE-F6C4-4E4A-8649-615E99AE50AF",
+      "AB540617-9AE3-436A-B79F-DACB6E91A927",
+      "401A3A13-B854-4299-AED0-A0A377D2457D",
+      "1025D6F9-84C6-4EE5-AF3E-7875CD746F47"
+    ]
+  },
+  "fields": {
+    "address": {
+      "value": "דוד המלך 27, תל אביב-יפו",
+      "certainty": "official",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/Pages/SearchResultsAnonPageNew.aspx?partialAddress=481_27",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00",
+        "method": "Playwright public archive index"
+      },
+      "location": "כותרת תיק בניין",
+      "method": "structured browser extraction"
+    },
+    "building_file_number": {
+      "value": "04810270",
+      "certainty": "official",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/Pages/SearchResultsAnonPageNew.aspx?partialAddress=481_27",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00",
+        "method": "Playwright public archive index"
+      },
+      "location": "פרטי תיק בניין",
+      "method": "structured browser extraction"
+    },
+    "gush": {
+      "value": [
+        6111
+      ],
+      "certainty": "official",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/Pages/SearchResultsAnonPageNew.aspx?partialAddress=481_27",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00",
+        "method": "Playwright public archive index"
+      },
+      "location": "גושים/חלקות בתיק",
+      "method": "structured browser extraction"
+    },
+    "parcel": {
+      "value": [
+        657
+      ],
+      "certainty": "official",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/Pages/SearchResultsAnonPageNew.aspx?partialAddress=481_27",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00",
+        "method": "Playwright public archive index"
+      },
+      "location": "גושים/חלקות בתיק",
+      "method": "structured browser extraction"
+    },
+    "units": {
+      "value": null,
+      "certainty": "missing",
+      "source": null,
+      "location": null,
+      "method": null
+    },
+    "floors": {
+      "value": null,
+      "certainty": "missing",
+      "source": null,
+      "location": null,
+      "method": null
+    },
+    "permit_date": {
+      "value": null,
+      "certainty": "missing",
+      "source": null,
+      "location": null,
+      "method": null
+    },
+    "original_permit_number": {
+      "value": null,
+      "certainty": "missing",
+      "source": null,
+      "location": null,
+      "method": null
+    },
+    "existing_legal_area": {
+      "value": null,
+      "certainty": "missing",
+      "source": null,
+      "location": null,
+      "method": null
+    },
+    "planning_basis": {
+      "value": null,
+      "certainty": "missing",
+      "source": null,
+      "location": null,
+      "method": null
+    },
+    "overriding_plans_checked": {
+      "value": null,
+      "certainty": "missing",
+      "source": null,
+      "location": null,
+      "method": null
+    }
+  },
+  "geometry": {
+    "type": "Point",
+    "coordinates": [
+      34.7868,
+      32.0816
+    ]
+  },
+  "parcels": [
+    {
+      "id": "parcel:6111:657",
+      "gush": 6111,
+      "parcel": 657,
+      "geometry": null,
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/Pages/SearchResultsAnonPageNew.aspx?partialAddress=481_27",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00",
+        "method": "Playwright public archive index"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "id": "current_redevelopment",
+      "label": "אין הליך התחדשות/היתר עדכני החוסם הזדמנות חדשה",
+      "status": "failed",
+      "source_url": "https://handasa.tel-aviv.gov.il/Pages/SearchResultsAnonPageNew.aspx?partialAddress=481_27",
+      "page": null
+    },
+    {
+      "id": "planning_basis",
+      "label": "בסיס תכנוני נכסי מאומת",
+      "status": "unknown",
+      "source_url": "https://www.tel-aviv.gov.il/Residents/Development/Pages/KoleletTlv.aspx?Iccid=4",
+      "page": null
+    },
+    {
+      "id": "human_ocr_review",
+      "label": "אימות אנושי לשדות OCR קריטיים",
+      "status": "not_required",
+      "source_url": "https://handasa.tel-aviv.gov.il/Pages/SearchResultsAnonPageNew.aspx?partialAddress=481_27",
+      "page": null
+    }
+  ],
+  "gaps": [
+    "לא הוכן חישוב כלכלי ללא בסיס זכויות מאומת"
+  ],
+  "source_issues": [
+    {
+      "document_id": "1682CBC9-4EC7-4514-8FFF-C2FDDC5614F0",
+      "state": "unsupported_format",
+      "file_type": "dwf"
+    },
+    {
+      "document_id": "BAA99594-CA40-43EC-84CE-46CF406F7730",
+      "state": "unsupported_format",
+      "file_type": "dwf"
+    },
+    {
+      "document_id": "64F170E3-305C-4CA3-8688-8209963EEADA",
+      "state": "too_large"
+    },
+    {
+      "document_id": "B5110F1C-B76D-44C3-AA2E-1E6D611B1E53",
+      "state": "failed",
+      "error": "Document exceeds the 24-tile pilot limit",
+      "tiles": 0,
+      "characters": 0
+    },
+    {
+      "document_id": "B6FC0FDE-547A-48B3-B765-A32A019653F7",
+      "state": "unsupported_format",
+      "file_type": "dwfx"
+    },
+    {
+      "document_id": "75DE2FF7-5124-42A6-86DB-C125FD2F6335",
+      "state": "unsupported_format",
+      "file_type": "dwf"
+    },
+    {
+      "document_id": "4C4CF688-1F0D-475A-896A-1C1C4CAEB893",
+      "state": "failed",
+      "error": "Document exceeds the 24-tile pilot limit",
+      "tiles": 0,
+      "characters": 0
+    },
+    {
+      "document_id": "401A3A13-B854-4299-AED0-A0A377D2457D",
+      "state": "unsupported_format",
+      "file_type": "docx"
+    },
+    {
+      "document_id": "1025D6F9-84C6-4EE5-AF3E-7875CD746F47",
+      "state": "unsupported_format",
+      "file_type": "dwfx"
+    }
+  ],
+  "archive_records": [
+    {
+      "id": "04810270",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/Pages/SearchResultsAnonPageNew.aspx?partialAddress=481_27",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00",
+        "method": "Playwright public archive index"
+      },
+      "document_count": 80
+    }
+  ],
+  "documents": [
+    {
+      "id": "C964A206-D2F7-4BC9-A4ED-E320E6A823D9",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=C964A206-D2F7-4BC9-A4ED-E320E6A823D9",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "9F43C973-1CBF-4209-960B-3B95E52830DB",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=9F43C973-1CBF-4209-960B-3B95E52830DB",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "DBBA5C6A-E54C-4C54-84BA-DA475542DB06",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=DBBA5C6A-E54C-4C54-84BA-DA475542DB06",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "5E74D957-0AEC-4E8E-B4AD-EE26B7CEA95A",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=5E74D957-0AEC-4E8E-B4AD-EE26B7CEA95A",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "1682CBC9-4EC7-4514-8FFF-C2FDDC5614F0",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=1682CBC9-4EC7-4514-8FFF-C2FDDC5614F0",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "unsupported_format"
+    },
+    {
+      "id": "BAA99594-CA40-43EC-84CE-46CF406F7730",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=BAA99594-CA40-43EC-84CE-46CF406F7730",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "unsupported_format"
+    },
+    {
+      "id": "64F170E3-305C-4CA3-8688-8209963EEADA",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=64F170E3-305C-4CA3-8688-8209963EEADA",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "too_large"
+    },
+    {
+      "id": "B5110F1C-B76D-44C3-AA2E-1E6D611B1E53",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=B5110F1C-B76D-44C3-AA2E-1E6D611B1E53",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "failed"
+    },
+    {
+      "id": "011D0117-218D-40ED-BFF4-BEAB0E1964B6",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=011D0117-218D-40ED-BFF4-BEAB0E1964B6",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "B6FC0FDE-547A-48B3-B765-A32A019653F7",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=B6FC0FDE-547A-48B3-B765-A32A019653F7",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "unsupported_format"
+    },
+    {
+      "id": "75DE2FF7-5124-42A6-86DB-C125FD2F6335",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=75DE2FF7-5124-42A6-86DB-C125FD2F6335",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "unsupported_format"
+    },
+    {
+      "id": "4C4CF688-1F0D-475A-896A-1C1C4CAEB893",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=4C4CF688-1F0D-475A-896A-1C1C4CAEB893",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "failed"
+    },
+    {
+      "id": "CAECB4AE-F6C4-4E4A-8649-615E99AE50AF",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=CAECB4AE-F6C4-4E4A-8649-615E99AE50AF",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "AB540617-9AE3-436A-B79F-DACB6E91A927",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=AB540617-9AE3-436A-B79F-DACB6E91A927",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "401A3A13-B854-4299-AED0-A0A377D2457D",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=401A3A13-B854-4299-AED0-A0A377D2457D",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "unsupported_format"
+    },
+    {
+      "id": "1025D6F9-84C6-4EE5-AF3E-7875CD746F47",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=1025D6F9-84C6-4EE5-AF3E-7875CD746F47",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "unsupported_format"
+    },
+    {
+      "id": "B09E900F-B455-4A28-AE25-CC4C224C690F",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=B09E900F-B455-4A28-AE25-CC4C224C690F",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "D474589D-46A2-40E7-A4D9-1AC6DE51D608",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=D474589D-46A2-40E7-A4D9-1AC6DE51D608",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "609CC386-DCD3-4F6B-8087-828DEF6F7760",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=609CC386-DCD3-4F6B-8087-828DEF6F7760",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "B9B24F80-A663-4495-AA47-8AF9F8228AD9",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=B9B24F80-A663-4495-AA47-8AF9F8228AD9",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "D5E374B5-383F-4CF8-9CBD-F6CDCB75CAF7",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=D5E374B5-383F-4CF8-9CBD-F6CDCB75CAF7",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "85495785-3FCD-4217-84D3-0D3709740446",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=85495785-3FCD-4217-84D3-0D3709740446",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "774030CF-E0A3-4833-A23C-D4DB8808363E",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=774030CF-E0A3-4833-A23C-D4DB8808363E",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "2A3D876F-8CBD-4714-B5EE-79E31EDA194B",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=2A3D876F-8CBD-4714-B5EE-79E31EDA194B",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    },
+    {
+      "id": "9FA596A4-128C-4EA0-83D8-3BC8E1156456",
+      "source": {
+        "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=9FA596A4-128C-4EA0-83D8-3BC8E1156456",
+        "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+      },
+      "state": "completed"
+    }
+  ],
+  "scenario": null,
+  "rights_analysis": null,
+  "rule_version": "tel-aviv-current-status-2026-09-10-v1",
+  "template_version": "dossier-1",
+  "policy_source": "https://www.tel-aviv.gov.il/Residents/Development/Pages/KoleletTlv.aspx?Iccid=4",
+  "created_at": "2026-09-10T16:41:30.075762+00:00",
+  "building_source": {
+    "url": "https://handasa.tel-aviv.gov.il/Pages/SearchResultsAnonPageNew.aspx?partialAddress=481_27",
+    "retrieved_at": "2026-09-10T15:54:07.960208+00:00",
+    "method": "Playwright public archive index"
+  },
+  "human_review": {
+    "state": "skipped_disqualified",
+    "reviewed_at": "2026-09-10T16:41:30.075762+00:00",
+    "reason": "הנכס כבר נפסל כהזדמנות חדשה על בסיס מסמכי התחדשות/היתר עדכניים בתיק (ר' evidence_document_ids); לא בוצעה בדיקה אנושית של מועמדי OCR לשדות יחידות/קומות/שטח/תאריך היתר כי היא אינה משנה את המסקנה.",
+    "evidence_document_ids": [
+      "9F43C973-1CBF-4209-960B-3B95E52830DB",
+      "64F170E3-305C-4CA3-8688-8209963EEADA",
+      "011D0117-218D-40ED-BFF4-BEAB0E1964B6",
+      "75DE2FF7-5124-42A6-86DB-C125FD2F6335",
+      "4C4CF688-1F0D-475A-896A-1C1C4CAEB893",
+      "CAECB4AE-F6C4-4E4A-8649-615E99AE50AF",
+      "AB540617-9AE3-436A-B79F-DACB6E91A927",
+      "401A3A13-B854-4299-AED0-A0A377D2457D",
+      "1025D6F9-84C6-4EE5-AF3E-7875CD746F47"
+    ],
+    "evidence_documents": [
+      {
+        "id": "9F43C973-1CBF-4209-960B-3B95E52830DB",
+        "source": {
+          "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=9F43C973-1CBF-4209-960B-3B95E52830DB",
+          "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+        },
+        "state": "completed"
+      },
+      {
+        "id": "64F170E3-305C-4CA3-8688-8209963EEADA",
+        "source": {
+          "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=64F170E3-305C-4CA3-8688-8209963EEADA",
+          "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+        },
+        "state": "too_large"
+      },
+      {
+        "id": "011D0117-218D-40ED-BFF4-BEAB0E1964B6",
+        "source": {
+          "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=011D0117-218D-40ED-BFF4-BEAB0E1964B6",
+          "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+        },
+        "state": "completed"
+      },
+      {
+        "id": "75DE2FF7-5124-42A6-86DB-C125FD2F6335",
+        "source": {
+          "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=75DE2FF7-5124-42A6-86DB-C125FD2F6335",
+          "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+        },
+        "state": "unsupported_format"
+      },
+      {
+        "id": "4C4CF688-1F0D-475A-896A-1C1C4CAEB893",
+        "source": {
+          "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=4C4CF688-1F0D-475A-896A-1C1C4CAEB893",
+          "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+        },
+        "state": "failed"
+      },
+      {
+        "id": "CAECB4AE-F6C4-4E4A-8649-615E99AE50AF",
+        "source": {
+          "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=CAECB4AE-F6C4-4E4A-8649-615E99AE50AF",
+          "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+        },
+        "state": "completed"
+      },
+      {
+        "id": "AB540617-9AE3-436A-B79F-DACB6E91A927",
+        "source": {
+          "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=AB540617-9AE3-436A-B79F-DACB6E91A927",
+          "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+        },
+        "state": "completed"
+      },
+      {
+        "id": "401A3A13-B854-4299-AED0-A0A377D2457D",
+        "source": {
+          "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=401A3A13-B854-4299-AED0-A0A377D2457D",
+          "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+        },
+        "state": "unsupported_format"
+      },
+      {
+        "id": "1025D6F9-84C6-4EE5-AF3E-7875CD746F47",
+        "source": {
+          "url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=1025D6F9-84C6-4EE5-AF3E-7875CD746F47",
+          "retrieved_at": "2026-09-10T15:54:07.960208+00:00"
+        },
+        "state": "unsupported_format"
+      }
+    ]
+  },
+  "id": "af3f421458d12b02a5473ae6"
+}

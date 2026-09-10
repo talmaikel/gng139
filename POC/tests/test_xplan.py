@@ -3,7 +3,7 @@ from shapely.geometry import box,mapping,Point
 
 from app.sources import utcnow
 from app.store import Store
-from app.xplan import XPlanCatalog,XPlanScreen,combine_screenings
+from app.xplan import XPlanCatalog,XPlanScreen,combine_screenings,resolve_with_archive
 from app.rules import evaluate,evidence,eligibility_status
 
 def feature(geometry,**props):return {'type':'Feature','geometry':mapping(geometry),'properties':props}
@@ -47,6 +47,25 @@ def test_special_routes_and_compound_are_not_download_queue():
     assert XPlanScreen(snapshot([land(10)],[renewal])).screen(parcel())['category']=='existing_renewal_plan'
     combined=combine_screenings([XPlanScreen(snapshot([land(10)])).screen(parcel())],3,1)
     assert combined['category']=='urban_renewal_compound' and not combined['queue_eligible']
+
+def test_archive_designation_resolves_995_but_never_demotes():
+    from app.archive_catalog import archive_designation,parse_request_page
+    ambiguous=XPlanScreen(snapshot([land(995,'יעוד לפי תכנית מאושרת אחרת')])).screen(parcel())
+    assert ambiguous['ambiguous_only'] and ambiguous['category']=='needs_verification'
+    combined=combine_screenings([ambiguous],1,1)
+    html='<table><tr><th>מספר גוש</th><th>מספר חלקה</th><th>מספר מגרש</th><th>יעוד</th></tr><tr><td>1</td><td>2</td><td></td><td>דרך מוצעת</td></tr><tr><td>1</td><td>2</td><td></td><td>מגורים ב</td></tr></table>'
+    page=parse_request_page(html);assert page['designations']==['דרך מוצעת','מגורים ב']
+    residential={'file_number':5,'address':'x','designations':page['designations'],'designation_source':{'url':'https://example.org/permit'}}
+    promoted=resolve_with_archive(combined,[residential],archive_designation)
+    assert promoted['category']=='primary_candidate' and promoted['queue_eligible'] and promoted['archive_resolution'][0]['basis']=='permit_page'
+    assert any('רצועת דרך' in w for w in promoted['warnings'])
+    commercial={'file_number':6,'designations':['מסחר'],'designation_source':{'url':'u'}}
+    kept=resolve_with_archive(combined,[commercial],archive_designation)
+    assert kept['category']=='needs_verification' and not kept.get('tags',[]).count('archive_resolved_995')
+    from_plans={'file_number':7,'plans':[{'number':'1192','name':"מגורים ב'",'status':'בתוקף'}],'source':{'url':'u'}}
+    assert resolve_with_archive(combined,[from_plans],archive_designation)['archive_resolution'][0]['basis']=='plans_list'
+    concrete=XPlanScreen(snapshot([land(500,'מסחר')])).screen(parcel())
+    assert resolve_with_archive(combine_screenings([concrete],1,1),[residential],archive_designation)['category']=='filtered_landuse'
 
 def test_scope_rule_routes_instead_of_failing():
     src={'url':'https://example.org','retrieved_at':utcnow()}

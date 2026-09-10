@@ -10,6 +10,7 @@ from app.tel_aviv import (
     TimingReport,
     build_pre_review_dossier,
     current_status_assessment,
+    finalize_disqualified_dossier,
     finalize_reviewed_dossier,
     is_relevant,
 )
@@ -63,6 +64,25 @@ def test_finalization_refuses_pending_human_review():
     draft = build_pre_review_dossier(manifest(), {"documents": [], "candidates": []})
     with pytest.raises(PipelineError, match="pending"):
         finalize_reviewed_dossier(draft, {"candidates": [{"approved": None}]})
+
+
+def test_disqualified_dossier_skips_review_and_cites_the_blocking_documents():
+    docs = [{"document_id": "x", "document_type": "היתר (תכנית ומילולי) חתום דיגיטלית", "document_date": "9/7/2024", "request_number": "20220930", "viewer_url": "https://handasa.tel-aviv.gov.il/API/Pages/DocViewer.aspx?id=x"}]
+    report = {"documents": [{"document_id": "x", "state": "completed"}], "candidates": [{"id": "c1", "approved": None}] * 50}
+    draft = build_pre_review_dossier(manifest(docs), report)
+    assert draft["eligibility_status"] == "not_suitable_currently"
+    final = finalize_disqualified_dossier(draft)
+    assert final["human_review"]["state"] == "skipped_disqualified"
+    assert final["human_review"]["evidence_document_ids"] == ["x"]
+    assert not any("OCR" in gap for gap in final["gaps"])
+    assert [c for c in final["checks"] if c["id"] == "human_ocr_review"][0]["status"] == "not_required"
+    assert len(final["id"]) == 24
+
+
+def test_disqualified_dossier_refuses_when_eligible():
+    draft = build_pre_review_dossier(manifest(), {"documents": [], "candidates": []})
+    with pytest.raises(PipelineError, match="not_suitable_currently"):
+        finalize_disqualified_dossier(draft)
 
 
 def test_finalization_is_content_addressed_after_review():

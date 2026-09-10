@@ -4,12 +4,13 @@ from .config import ROOT
 
 LABELS={'address':'כתובת','eligibility_summary':'מסקנת בדיקת הסף','building_file_number':'מספר תיק בניין','gush':'גוש','parcel':'חלקה','parcel_area':'שטח חלקה במ״ר','footprint_area':'שטח טביעת מבנה במ״ר','building_use':'שימוש עיקרי','units':'דירות בהיתר','floors':'קומות לפי הגדרת המדיניות','floor_configuration':'תצורת קומות','permit_date':'מועד היתר מקורי','original_permit_number':'מספר היתר מקורי','strengthened':'נמצא היתר חיזוק סיסמי','residential_zoning':'ייעוד מגורים','zoning_designation':'ייעוד רשום בתיק','residential_share':'שיעור מגורים חוקי','planning_lot':'מגרש תכנוני','planning_basis':'בסיס תכנוני','overriding_plans_checked':'בדיקת תכניות גוברות','engineer_opinion':'חוות דעת מהנדס לתנאי הגיל','existing_legal_area':'בסיס שטח חוקי מעל הקרקע','main_residential_area':'שטח מגורים עיקרי','service_area':'שטחי שירות','stair_area':'חדר מדרגות','open_pilotis_area':'קומת עמודים מפולשת','shelter_area':'מקלט','original_permitted_total_area':'סך שטחים בהיתר','post_2005_addition_area':'תוספת שירות מ-2013','shaked_area_cap':'תקרת שטח ראשונית לפי 400%','indicative_unit_range':'טווח יחידות אינדיקטיבי','indicative_additional_units':'תוספת יחידות אינדיקטיבית','additional_balcony_area':'מרפסות נוספות — תקרה','tama70_zone':'סיווג תמ״א 70'}
 CERTAINTY={'official':'רשמי','manually_verified':'אומת ידנית','derived':'מחושב','community':'מקור קהילתי','missing':'חסר','conflict':'סתירה','ocr_candidate':'מועמד OCR — דורש אימות'}
-CHECK_STATUS={'passed':'עבר','failed':'נכשל','unknown':'טרם אומת'}
+CHECK_STATUS={'passed':'עבר','failed':'נכשל','unknown':'טרם אומת','not_required':'אינו נדרש'}
 
 def display_value(key,value):
     if value is None:return 'חסר'
     if isinstance(value,bool):return 'כן' if value else 'לא'
     if key=='residential_share':return f'{value*100:.1f}%'
+    if isinstance(value,(list,tuple)):return ', '.join(str(v) for v in value) if value else 'חסר'
     return value
 
 def pdf_export(d):

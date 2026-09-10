@@ -5,7 +5,8 @@ from .config import MAX_AREA_M2,MAX_RADIUS_M,MAX_BUILDINGS,MAX_PARCELS,RULE_VERS
 from .geo import validate_polygon,circle_polygon,match_parcels,wgs,center_selected
 from .rules import evidence,evaluate,resolve_evidence,eligibility_status
 from .documents import archive_tables
-from .xplan import XPlanCatalog,XPlanScreen,combine_screenings,snapshot_is_fresh
+from .xplan import XPlanCatalog,XPlanScreen,combine_screenings,resolve_with_archive,snapshot_is_fresh
+from .archive_catalog import archive_designation
 
 MISSING_FIELDS=['units','floors','permit_date','strengthened','engineer_opinion','residential_zoning','residential_share','scope_parcels','scope_buildings','renewal_policy_category','planning_lot','planning_basis','overriding_plans_checked','existing_legal_area']
 
@@ -116,6 +117,10 @@ class Collector:
                         screening=screener.screen(parcel,scope_parcels=len(matches),scope_buildings=None)
                         self.store.save_parcel_screening(screening);screenings.append(screening)
                 xplan=combine_screenings(screenings,len(matches),None)
+                pairs=[(p['properties']['GUSH_NUM'],p['properties']['PARCEL']) for _,p in matches]
+                archive_payloads=self.store.archive_files_for_parcels(pairs) if pairs else []
+                xplan=resolve_with_archive(xplan,archive_payloads,archive_designation)
+                if 'archive_resolved_995' in xplan['tags']:result['archive_resolved_995']=result.get('archive_resolved_995',0)+1
                 result.setdefault('xplan_categories',{})[xplan['category']]=result.setdefault('xplan_categories',{}).get(xplan['category'],0)+1
                 if not xplan['queue_eligible']:
                     d=make_dossier(building,parcels,[],request['filters'],[],[],xplan)
@@ -127,10 +132,7 @@ class Collector:
                     self.store.update(jid,'running',25+int(65*(index+1)/max(1,len(buildings))),result)
                     continue
                 if matches:
-                    pairs=[]
-                    for _,p in matches:
-                        props=p['properties'];pairs.append((props['GUSH_NUM'],props['PARCEL']))
-                    for payload in self.store.archive_files_for_parcels(pairs):
+                    for payload in archive_payloads:
                         records.append({'id':str(payload['file_number']),'source':payload['source'],
                                         'text':'כתובת: '+(payload.get('address') or ''),'html':'','tables':payload.get('tables',[])})
                     if not records:

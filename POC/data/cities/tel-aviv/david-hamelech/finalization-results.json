@@ -1,0 +1,17 @@
+[
+  {
+    "house": 23,
+    "dossier_id": "1e12b4615f5fe5247aa99461",
+    "export_and_store_seconds": 0.188
+  },
+  {
+    "house": 25,
+    "dossier_id": "d3f21a12e6f79f12bc5c2875",
+    "export_and_store_seconds": 0.045
+  },
+  {
+    "house": 27,
+    "dossier_id": "af3f421458d12b02a5473ae6",
+    "export_and_store_seconds": 0.03
+  }
+]

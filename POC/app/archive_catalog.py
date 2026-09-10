@@ -2,7 +2,48 @@
 import hashlib
 import re
 from .documents import archive_tables
-from .sources import BuildingArchive,PublicClient,SourceError,utcnow
+from .sources import BuildingArchive,PublicClient,SourceError,text_from_html,utcnow
+
+REQUEST_LABELS=["מספר הבקשה","כתובת","תאריך הגשה","מספר תיק בניין","סוג הבקשה","שימוש עיקרי","תיאור הבקשה","מספר היתר","תאריך הפקת היתר","שטח עיקרי","שטח שירות","סך מספר יחידות דיור המבוקשות"]
+NON_RESIDENTIAL_WORDS=("דרך","מסחר","תעסוקה","תעשיה","תעשייה","ציבור","מלונאות","משרדים","חקלאי","שטח פתוח","שצ\"פ","שפ\"פ")
+
+def _iso_date(value):
+    match=re.fullmatch(r"(\d{2})/(\d{2})/(\d{4})",(value or "").strip())
+    return f"{match.group(3)}-{match.group(2)}-{match.group(1)}" if match else None
+
+def parse_request_page(html):
+    """Structured fields from a public GetBakashaFile page, including every parcel designation row."""
+    lines=[x.strip() for x in text_from_html(html).splitlines()];lines=[x for x in lines if x]
+    labelled={}
+    for index,line in enumerate(lines):
+        key=line.rstrip(":")
+        if key in REQUEST_LABELS and key not in labelled and index+1<len(lines):
+            value=lines[index+1];labelled[key]=None if value.rstrip(":") in REQUEST_LABELS else value
+    designations=[]
+    for table in archive_tables(html):
+        headers=[x.replace("‏","").strip() for x in table["headers"]]
+        if "מספר גוש" in headers and "יעוד" in headers:
+            zi=headers.index("יעוד")
+            designations+=[row[zi].strip() for row in table["rows"] if len(row)>zi and row[zi].strip()]
+    designations=list(dict.fromkeys(designations))
+    def number(text):
+        match=re.search(r"\d+(?:\.\d+)?",text or "");return float(match.group()) if match else None
+    return {"address":labelled.get("כתובת"),"submitted":_iso_date(labelled.get("תאריך הגשה")),"request_type":labelled.get("סוג הבקשה"),
+            "use":labelled.get("שימוש עיקרי"),"description":labelled.get("תיאור הבקשה"),"permit":labelled.get("מספר היתר"),
+            "permit_date":_iso_date(labelled.get("תאריך הפקת היתר")),"main_area":number(labelled.get("שטח עיקרי")),
+            "service_area":number(labelled.get("שטח שירות")),"units_requested":number(labelled.get("סך מספר יחידות דיור המבוקשות")),
+            "designations":designations,"zoning":" / ".join(designations) or None}
+
+def archive_designation(payload):
+    """Resolve the residential question from archive metadata. Permit-page rows outrank plan titles."""
+    rows=payload.get('designations') or []
+    if rows:
+        residential=[x for x in rows if 'מגורים' in x];other=[x for x in rows if 'מגורים' not in x and any(w in x for w in NON_RESIDENTIAL_WORDS)]
+        if residential:return {'residential':True,'designations':rows,'basis':'permit_page','source':payload.get('designation_source'),'mixed':bool(other)}
+        if other:return {'residential':False,'designations':rows,'basis':'permit_page','source':payload.get('designation_source'),'mixed':False}
+    zoning=[p for p in payload.get('plans',[]) if 'מגורים' in (p.get('name') or '') and (p.get('status') or '').startswith('בתוקף')]
+    if zoning:return {'residential':True,'designations':[f"{p['number']} {p['name']}" for p in zoning],'basis':'plans_list','source':payload.get('source'),'mixed':False}
+    return {'residential':None,'designations':rows,'basis':None,'source':None,'mixed':False}
 
 def parse_building_file(record):
     tables=archive_tables(record['html']);parcels=[];requests=[];plans=[]

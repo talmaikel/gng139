@@ -213,12 +213,14 @@ class XPlanScreen:
         else:land_category="needs_verification"
         priority=["preservation","existing_renewal_plan","metro","urban_renewal_compound"]
         category=next((x for x in priority if x in tags),land_category)
+        # Code 995 defers to plans that are mostly absent from XPlan; flag it so archive metadata can resolve it.
+        ambiguous_only=land_category=="needs_verification" and bool(high_amb) and not high_res and not high_non
         if land_category=="filtered_landuse" and not tags:tags.append("filtered_landuse")
         if land_category=="needs_verification" and not tags:tags.append("needs_verification")
         if land_category=="primary_candidate" and not tags:tags.append("primary_candidate")
         props=parcel.get("properties",{});parcel_key=f"parcel:{props.get('GUSH_NUM')}:{props.get('GUSH_SUFFI',0)}:{props.get('PARCEL')}"
         return {"parcel_key":parcel_key,"snapshot_id":self.snapshot["id"],"category":category,"tags":tags,"queue_eligible":category in QUEUE_CATEGORIES,
-                "landuse_category":land_category,"threshold":XPLAN_OVERLAP_THRESHOLD,"special_threshold":XPLAN_SPECIAL_OVERLAP_THRESHOLD,
+                "landuse_category":land_category,"ambiguous_only":ambiguous_only,"threshold":XPLAN_OVERLAP_THRESHOLD,"special_threshold":XPLAN_SPECIAL_OVERLAP_THRESHOLD,
                 "metro_station_buffer_m":XPLAN_METRO_STATION_BUFFER_M,"metro_stations":sorted(metro_stations,key=lambda x:x["distance_m"]),
                 "matches":sorted(evidence_rows,key=lambda x:(str(x.get("pl_number")),str(x.get("objectid")))),"warnings":list(dict.fromkeys(warnings)),"screened_at":utcnow()}
 
@@ -231,6 +233,31 @@ def combine_screenings(screenings,scope_parcels,scope_buildings=None):
     category=next((x for x in priority if x in tags),"needs_verification")
     return {"category":category,"tags":list(dict.fromkeys(tags)),"queue_eligible":category in QUEUE_CATEGORIES,"parcels":screenings,
             "warnings":list(dict.fromkeys(w for row in screenings for w in row.get("warnings",[])))}
+
+
+def resolve_with_archive(combined,archive_files,archive_designation):
+    """Promote a 995-only result using the municipal archive's own designation; never demote on it."""
+    parcels=combined.get("parcels") or []
+    if not parcels or not all(p.get("ambiguous_only") for p in parcels):return combined
+    evidence=[]
+    for payload in archive_files:
+        verdict=archive_designation(payload)
+        if verdict["residential"] is None:continue
+        evidence.append({"file_number":payload.get("file_number"),"address":payload.get("address"),"residential":verdict["residential"],"designations":verdict["designations"],
+                         "basis":verdict["basis"],"mixed":verdict["mixed"],"source_url":(verdict["source"] or {}).get("url"),
+                         "evidence_location":"טבלת גוש וחלקה בדף הבקשה" if verdict["basis"]=="permit_page" else "רשימת התכניות בדף תיק הבניין",
+                         "certainty":"official","extraction_method":"structured public-page extraction"})
+    if not evidence:return combined
+    out=dict(combined);out["archive_resolution"]=evidence
+    # Special routes (metro, preservation, renewal, compound) keep their category; the evidence is still attached.
+    if combined["category"]!="needs_verification":return out
+    if all(x["residential"] for x in evidence):
+        out["category"]="primary_candidate";out["tags"]=list(dict.fromkeys(out["tags"]+["archive_resolved_995","primary_candidate"]));out["queue_eligible"]=True
+        out["warnings"]=list(dict.fromkeys(out.get("warnings",[])+["ייעוד המגורים נקבע מדף הבקשה בארכיון העירוני; XPlan מפנה לתכנית מאושרת אחרת (קוד 995)"]))
+        if any(x["mixed"] for x in evidence):out["warnings"].append("החלקה נושאת גם ייעוד שאינו מגורים (למשל רצועת דרך); היקפו דורש אימות")
+    else:
+        out["warnings"]=list(dict.fromkeys(out.get("warnings",[])+["דף הבקשה בארכיון מציין ייעוד שאינו מגורים; החלקה נשארת לאימות ולא נפסלה"]))
+    return out
 
 
 def snapshot_is_fresh(snapshot):
