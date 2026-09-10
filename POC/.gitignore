@@ -7,4 +7,7 @@ data/*.sqlite*
 data/pg/
 .env
 data/experiments/
+data/cities/tel-aviv/david-hamelech/*/documents/
+data/cities/tel-aviv/david-hamelech/*/ocr/
+data/cities/tel-aviv/david-hamelech/*/review/tiles/
 test-output/

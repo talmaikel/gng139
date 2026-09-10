@@ -1,0 +1,10 @@
+{
+  "city": "herzliya",
+  "migration": "legacy-paths-preserved",
+  "existing_outputs": [
+    "data/pilot-batch-01",
+    "data/verification/hashoshanim-4",
+    "data/experiments/timed-pilot-dossiers"
+  ],
+  "note": "Existing Herzliya evidence remains in place so saved references and demos continue to work."
+}

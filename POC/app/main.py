@@ -5,7 +5,7 @@ from fastapi import FastAPI,HTTPException
 from fastapi.responses import FileResponse,HTMLResponse,Response
 from fastapi.staticfiles import StaticFiles
 from shapely.geometry import shape
-from .config import ROOT,DATA,SAMPLE_POLYGON,MAX_AREA_M2,MAX_RADIUS_M,MAX_BUILDINGS,MAX_PARCELS,RULE_VERSION
+from .config import ROOT,DATA,SAMPLE_POLYGON,MAX_AREA_M2,MAX_RADIUS_M,MAX_BUILDINGS,MAX_PARCELS,RULE_VERSION,XPLAN_CACHE_SECONDS,XPLAN_OVERLAP_THRESHOLD
 from .store import Store
 from .sources import PublicClient,GovMap
 from .geo import wgs,validate_polygon,circle_polygon
@@ -44,7 +44,7 @@ def demo():
     body=(ROOT/'shaked-poc (3).html').read_text(encoding='utf8')
     return body.replace('<body style="margin:0">','<body style="margin:0"><div style="background:#fff0c2;padding:12px;text-align:center" dir="rtl">הדגמה נפרדת — כל הנכסים והמחירים במסך זה מדומים. <a href="/">חזרה לנתוני אמת</a></div>')
 @app.get('/api/config')
-def config():return {'sample_polygon':SAMPLE_POLYGON,'sample_center':{'lat':32.163,'lon':34.8395},'max_area_m2':MAX_AREA_M2,'max_radius_m':MAX_RADIUS_M,'max_buildings':MAX_BUILDINGS,'max_parcels':MAX_PARCELS,'rule_version':RULE_VERSION,'database':'postgresql-postgis' if store.pg else 'sqlite-local','payments':'simulated','company':'pilot','freshness':'pilot-configurable'}
+def config():return {'sample_polygon':SAMPLE_POLYGON,'sample_center':{'lat':32.163,'lon':34.8395},'max_area_m2':MAX_AREA_M2,'max_radius_m':MAX_RADIUS_M,'max_buildings':MAX_BUILDINGS,'max_parcels':MAX_PARCELS,'rule_version':RULE_VERSION,'database':'postgresql-postgis' if store.pg else 'sqlite-local','payments':'simulated','company':'pilot','freshness':'pilot-configurable','xplan_cache_seconds':XPLAN_CACHE_SECONDS,'xplan_overlap_threshold':XPLAN_OVERLAP_THRESHOLD}
 @app.get('/api/health')
 def health():return {'status':'ok','database':'postgresql-postgis' if store.pg else 'sqlite-local'}
 @app.get('/api/boundary')
@@ -65,6 +65,8 @@ def sources():
 def searches():return store.jobs()
 @app.get('/api/archive-sync')
 def archive_sync():return store.archive_status()
+@app.get('/api/xplan/status')
+def xplan_status():return store.xplan_status()
 @app.post('/api/searches',status_code=202)
 def create_search(request:SearchRequest):
     # Geometry preflight does not consume a package. Source outage is not a bad polygon.

@@ -1,0 +1,672 @@
+{
+  "address": "דוד המלך 23, תל אביב-יפו",
+  "stages": [
+    {
+      "name": "discovery_and_index",
+      "started_at": "2026-09-10T15:45:16.676218+00:00",
+      "documents_indexed": 121,
+      "pages": 4,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:45:30.404682+00:00",
+      "seconds": 13.728
+    },
+    {
+      "name": "downloads",
+      "started_at": "2026-09-10T15:45:30.420710+00:00",
+      "selected": 33,
+      "downloaded_or_cached": 33,
+      "failed": 0,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:30.574279+00:00",
+      "seconds": 60.155
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:32.958648+00:00",
+      "document_id": "F77F8630-DE2C-4968-9CC7-8284AF986C08",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\3-12-2024_F77F8630-DE2C-4968-9CC7-8284AF986C08_החלטת-ועדה.pdf",
+      "tiles": 12,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:34.701294+00:00",
+      "seconds": 1.742
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:34.701294+00:00",
+      "document_id": "F77F8630-DE2C-4968-9CC7-8284AF986C08",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\3-12-2024_F77F8630-DE2C-4968-9CC7-8284AF986C08_החלטת-ועדה.pdf",
+      "tiles": 12,
+      "characters": 21850,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:35.423631+00:00",
+      "seconds": 0.724
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:35.443684+00:00",
+      "document_id": "EE8C9D04-D138-422B-8964-1093070D85DE",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\26-11-2024_EE8C9D04-D138-422B-8964-1093070D85DE_טופס-1.pdf",
+      "tiles": 21,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:38.660990+00:00",
+      "seconds": 3.214
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:38.660990+00:00",
+      "document_id": "EE8C9D04-D138-422B-8964-1093070D85DE",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\26-11-2024_EE8C9D04-D138-422B-8964-1093070D85DE_טופס-1.pdf",
+      "tiles": 21,
+      "characters": 14923,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:38.756700+00:00",
+      "seconds": 0.095
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:38.763777+00:00",
+      "document_id": "CB3E49A6-81A7-4083-A0F8-CCEE4101D578",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\22-6-2023_CB3E49A6-81A7-4083-A0F8-CCEE4101D578_מסמכים-הנדסיים-תמא-38.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:38.909159+00:00",
+      "seconds": 0.142
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:38.909159+00:00",
+      "document_id": "CB3E49A6-81A7-4083-A0F8-CCEE4101D578",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\22-6-2023_CB3E49A6-81A7-4083-A0F8-CCEE4101D578_מסמכים-הנדסיים-תמא-38.pdf",
+      "tiles": 1,
+      "characters": 1799,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:38.943477+00:00",
+      "seconds": 0.035
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:38.944809+00:00",
+      "document_id": "CA4F5A55-A35D-4800-9ECF-8FF471B76D5B",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\22-6-2023_CA4F5A55-A35D-4800-9ECF-8FF471B76D5B_מסמכים-הנדסיים-תמא-38.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:39.061235+00:00",
+      "seconds": 0.116
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:39.061235+00:00",
+      "document_id": "CA4F5A55-A35D-4800-9ECF-8FF471B76D5B",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\22-6-2023_CA4F5A55-A35D-4800-9ECF-8FF471B76D5B_מסמכים-הנדסיים-תמא-38.pdf",
+      "tiles": 1,
+      "characters": 1235,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:39.093464+00:00",
+      "seconds": 0.036
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:39.093464+00:00",
+      "document_id": "01369417-B30F-4DF3-AC3A-9F744F9E39EC",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\11-6-2023_01369417-B30F-4DF3-AC3A-9F744F9E39EC_מסמכים-הנדסיים-תמא-38.pdf",
+      "tiles": 17,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:40.847907+00:00",
+      "seconds": 1.75
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:40.847907+00:00",
+      "document_id": "01369417-B30F-4DF3-AC3A-9F744F9E39EC",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\11-6-2023_01369417-B30F-4DF3-AC3A-9F744F9E39EC_מסמכים-הנדסיים-תמא-38.pdf",
+      "tiles": 17,
+      "characters": 29468,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:41.011358+00:00",
+      "seconds": 0.175
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:41.028019+00:00",
+      "document_id": "FC33B1CB-5BBA-402D-8A1D-09ECB2B3242B",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\11-6-2023_FC33B1CB-5BBA-402D-8A1D-09ECB2B3242B_מסמכים-הנדסיים-תמא-38.pdf",
+      "tiles": 11,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:42.403366+00:00",
+      "seconds": 1.369
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:42.403366+00:00",
+      "document_id": "FC33B1CB-5BBA-402D-8A1D-09ECB2B3242B",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\11-6-2023_FC33B1CB-5BBA-402D-8A1D-09ECB2B3242B_מסמכים-הנדסיים-תמא-38.pdf",
+      "tiles": 11,
+      "characters": 9231,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:42.476753+00:00",
+      "seconds": 0.074
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:42.477785+00:00",
+      "document_id": "5FEC7149-DE7B-44EC-8756-370278A0C003",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\11-6-2023_5FEC7149-DE7B-44EC-8756-370278A0C003_מסמכים-הנדסיים-תמא-38.pdf",
+      "state": "failed",
+      "error": "Document exceeds the 24-tile pilot limit",
+      "finished_at": "2026-09-10T15:46:44.826923+00:00",
+      "seconds": 2.346
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:44.829065+00:00",
+      "document_id": "AEFF917C-09CD-4530-9877-2E20A70A4EA3",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\25-6-2017_AEFF917C-09CD-4530-9877-2E20A70A4EA3_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 7,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:45.601953+00:00",
+      "seconds": 0.774
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:45.601953+00:00",
+      "document_id": "AEFF917C-09CD-4530-9877-2E20A70A4EA3",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\25-6-2017_AEFF917C-09CD-4530-9877-2E20A70A4EA3_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 7,
+      "characters": 8684,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:45.662448+00:00",
+      "seconds": 0.063
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:45.668304+00:00",
+      "document_id": "3FAF6EC8-D23E-40D4-B4A4-D7EDBA1C59AE",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\6-6-2017_3FAF6EC8-D23E-40D4-B4A4-D7EDBA1C59AE_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 3,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:46.007052+00:00",
+      "seconds": 0.338
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:46.007052+00:00",
+      "document_id": "3FAF6EC8-D23E-40D4-B4A4-D7EDBA1C59AE",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\6-6-2017_3FAF6EC8-D23E-40D4-B4A4-D7EDBA1C59AE_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 3,
+      "characters": 5555,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:46.044093+00:00",
+      "seconds": 0.043
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:46.044093+00:00",
+      "document_id": "0326F5A7-D8A8-47C4-B00F-940881E6D2E2",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\6-4-2017_0326F5A7-D8A8-47C4-B00F-940881E6D2E2_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 5,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:46.643083+00:00",
+      "seconds": 0.591
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:46.643083+00:00",
+      "document_id": "0326F5A7-D8A8-47C4-B00F-940881E6D2E2",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\6-4-2017_0326F5A7-D8A8-47C4-B00F-940881E6D2E2_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 5,
+      "characters": 13872,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:46.681214+00:00",
+      "seconds": 0.047
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:46.694132+00:00",
+      "document_id": "3E888AA3-9AB5-4B6D-828F-0970D1533B0C",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\21-2-2017_3E888AA3-9AB5-4B6D-828F-0970D1533B0C_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 7,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:47.630521+00:00",
+      "seconds": 0.936
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:47.630521+00:00",
+      "document_id": "3E888AA3-9AB5-4B6D-828F-0970D1533B0C",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\21-2-2017_3E888AA3-9AB5-4B6D-828F-0970D1533B0C_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 7,
+      "characters": 7359,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:47.699037+00:00",
+      "seconds": 0.068
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:47.699037+00:00",
+      "document_id": "7419135F-08E6-4834-AA5B-9F685B35041A",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\8-2-2017_7419135F-08E6-4834-AA5B-9F685B35041A_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 2,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:47.999688+00:00",
+      "seconds": 0.297
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:47.999688+00:00",
+      "document_id": "7419135F-08E6-4834-AA5B-9F685B35041A",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\8-2-2017_7419135F-08E6-4834-AA5B-9F685B35041A_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 2,
+      "characters": 3642,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:48.067341+00:00",
+      "seconds": 0.068
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:48.067341+00:00",
+      "document_id": "B1C3EE64-22C6-46D9-AA51-9C683D678CA2",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\23-1-2017_B1C3EE64-22C6-46D9-AA51-9C683D678CA2_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 7,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:49.528720+00:00",
+      "seconds": 1.459
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:49.528720+00:00",
+      "document_id": "B1C3EE64-22C6-46D9-AA51-9C683D678CA2",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\23-1-2017_B1C3EE64-22C6-46D9-AA51-9C683D678CA2_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 7,
+      "characters": 13119,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:49.592297+00:00",
+      "seconds": 0.064
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:49.593636+00:00",
+      "document_id": "729397C8-610E-47C2-94CE-343349798FAD",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\9-10-1957_729397C8-610E-47C2-94CE-343349798FAD_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 3,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:49.795664+00:00",
+      "seconds": 0.199
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:49.795664+00:00",
+      "document_id": "729397C8-610E-47C2-94CE-343349798FAD",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\9-10-1957_729397C8-610E-47C2-94CE-343349798FAD_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 3,
+      "characters": 2103,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:49.827425+00:00",
+      "seconds": 0.037
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:49.835143+00:00",
+      "document_id": "43CE512A-A1D0-47FC-BC73-E5BBD6715A4C",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\28-2-1969_43CE512A-A1D0-47FC-BC73-E5BBD6715A4C_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 4,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:50.161390+00:00",
+      "seconds": 0.329
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:50.161390+00:00",
+      "document_id": "43CE512A-A1D0-47FC-BC73-E5BBD6715A4C",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\28-2-1969_43CE512A-A1D0-47FC-BC73-E5BBD6715A4C_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 4,
+      "characters": 4151,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:50.194379+00:00",
+      "seconds": 0.035
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:50.200072+00:00",
+      "document_id": "14668472-817B-482D-BE72-790910A4F5B8",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\12-6-1970_14668472-817B-482D-BE72-790910A4F5B8_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:50.247089+00:00",
+      "seconds": 0.046
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:50.247089+00:00",
+      "document_id": "14668472-817B-482D-BE72-790910A4F5B8",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\12-6-1970_14668472-817B-482D-BE72-790910A4F5B8_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 1,
+      "characters": 257,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:50.276240+00:00",
+      "seconds": 0.035
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:50.281956+00:00",
+      "document_id": "60AD04FB-E78F-45EB-8F73-0A00235D34CE",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\12-11-1953_60AD04FB-E78F-45EB-8F73-0A00235D34CE_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 10,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:50.809438+00:00",
+      "seconds": 0.528
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:50.809438+00:00",
+      "document_id": "60AD04FB-E78F-45EB-8F73-0A00235D34CE",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\12-11-1953_60AD04FB-E78F-45EB-8F73-0A00235D34CE_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 10,
+      "characters": 4492,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:50.845794+00:00",
+      "seconds": 0.042
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:50.845794+00:00",
+      "document_id": "0C73D554-695F-41B4-BF81-1146D5CD5818",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_0C73D554-695F-41B4-BF81-1146D5CD5818_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:50.938111+00:00",
+      "seconds": 0.085
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:50.938111+00:00",
+      "document_id": "0C73D554-695F-41B4-BF81-1146D5CD5818",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_0C73D554-695F-41B4-BF81-1146D5CD5818_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 1,
+      "characters": 458,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:50.970422+00:00",
+      "seconds": 0.031
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:50.970422+00:00",
+      "document_id": "817EB108-746C-4D39-87AB-99FA1B476CEA",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\28-10-1954_817EB108-746C-4D39-87AB-99FA1B476CEA_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:51.011460+00:00",
+      "seconds": 0.041
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:51.011460+00:00",
+      "document_id": "817EB108-746C-4D39-87AB-99FA1B476CEA",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\28-10-1954_817EB108-746C-4D39-87AB-99FA1B476CEA_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 1,
+      "characters": 272,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:51.048567+00:00",
+      "seconds": 0.04
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:51.048567+00:00",
+      "document_id": "2B6D4674-A0F5-4290-BB78-8CA16FFA1207",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\14-3-1965_2B6D4674-A0F5-4290-BB78-8CA16FFA1207_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:51.159882+00:00",
+      "seconds": 0.107
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:51.159882+00:00",
+      "document_id": "2B6D4674-A0F5-4290-BB78-8CA16FFA1207",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\14-3-1965_2B6D4674-A0F5-4290-BB78-8CA16FFA1207_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 1,
+      "characters": 279,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:51.194037+00:00",
+      "seconds": 0.04
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:51.194037+00:00",
+      "document_id": "1327C190-773B-4796-BDAE-8DAB1EE89D57",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\15-1-1965_1327C190-773B-4796-BDAE-8DAB1EE89D57_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 4,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:51.495028+00:00",
+      "seconds": 0.302
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:51.495028+00:00",
+      "document_id": "1327C190-773B-4796-BDAE-8DAB1EE89D57",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\15-1-1965_1327C190-773B-4796-BDAE-8DAB1EE89D57_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 4,
+      "characters": 3074,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:51.536078+00:00",
+      "seconds": 0.035
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:51.536078+00:00",
+      "document_id": "ECA5B716-B2FF-46B7-B1DE-16397A111FB1",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-6-2016_ECA5B716-B2FF-46B7-B1DE-16397A111FB1_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 5,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.050451+00:00",
+      "seconds": 0.513
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:52.050451+00:00",
+      "document_id": "ECA5B716-B2FF-46B7-B1DE-16397A111FB1",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-6-2016_ECA5B716-B2FF-46B7-B1DE-16397A111FB1_ועדת-ערר-ועדת-משנה-רשות-רישוי-ועדה-מחוזית.pdf",
+      "tiles": 5,
+      "characters": 8742,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.076914+00:00",
+      "seconds": 0.035
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:52.076914+00:00",
+      "document_id": "E0A4435B-DBAD-47E0-AF74-B7AE53FA592E",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_E0A4435B-DBAD-47E0-AF74-B7AE53FA592E_חשבון-יציבות-תצהיר-מהנדס.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.152448+00:00",
+      "seconds": 0.064
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:52.152448+00:00",
+      "document_id": "E0A4435B-DBAD-47E0-AF74-B7AE53FA592E",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_E0A4435B-DBAD-47E0-AF74-B7AE53FA592E_חשבון-יציבות-תצהיר-מהנדס.pdf",
+      "tiles": 1,
+      "characters": 299,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.190013+00:00",
+      "seconds": 0.038
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:52.190013+00:00",
+      "document_id": "19C0865B-565E-42FA-A930-2342C75570BE",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_19C0865B-565E-42FA-A930-2342C75570BE_חשבון-יציבות-תצהיר-מהנדס.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.390598+00:00",
+      "seconds": 0.199
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:52.390598+00:00",
+      "document_id": "19C0865B-565E-42FA-A930-2342C75570BE",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_19C0865B-565E-42FA-A930-2342C75570BE_חשבון-יציבות-תצהיר-מהנדס.pdf",
+      "tiles": 1,
+      "characters": 1114,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.414544+00:00",
+      "seconds": 0.03
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:52.414544+00:00",
+      "document_id": "644CFB35-D536-4BB6-948A-A67C4129016F",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_644CFB35-D536-4BB6-948A-A67C4129016F_חשבון-יציבות-תצהיר-מהנדס.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.594237+00:00",
+      "seconds": 0.173
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:52.594237+00:00",
+      "document_id": "644CFB35-D536-4BB6-948A-A67C4129016F",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_644CFB35-D536-4BB6-948A-A67C4129016F_חשבון-יציבות-תצהיר-מהנדס.pdf",
+      "tiles": 1,
+      "characters": 819,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.626919+00:00",
+      "seconds": 0.035
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:52.626919+00:00",
+      "document_id": "13A0B010-8719-4F97-B37F-5242685818A7",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_13A0B010-8719-4F97-B37F-5242685818A7_חשבון-יציבות-תצהיר-מהנדס.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.794096+00:00",
+      "seconds": 0.169
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:52.794096+00:00",
+      "document_id": "13A0B010-8719-4F97-B37F-5242685818A7",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\1-1-1900_13A0B010-8719-4F97-B37F-5242685818A7_חשבון-יציבות-תצהיר-מהנדס.pdf",
+      "tiles": 1,
+      "characters": 155,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:52.832563+00:00",
+      "seconds": 0.034
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:52.833300+00:00",
+      "document_id": "1F9434AA-F5D3-43CC-9FCC-F1F2ADCF82F5",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\3-6-1954_1F9434AA-F5D3-43CC-9FCC-F1F2ADCF82F5_תיק-תעודת-גמר.pdf",
+      "tiles": 4,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:53.177815+00:00",
+      "seconds": 0.345
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:53.177815+00:00",
+      "document_id": "1F9434AA-F5D3-43CC-9FCC-F1F2ADCF82F5",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\3-6-1954_1F9434AA-F5D3-43CC-9FCC-F1F2ADCF82F5_תיק-תעודת-גמר.pdf",
+      "tiles": 4,
+      "characters": 4618,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:53.210895+00:00",
+      "seconds": 0.035
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:53.213396+00:00",
+      "document_id": "7D1D28CE-033C-4C80-B687-74DF1C267BCD",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\18-3-1954_7D1D28CE-033C-4C80-B687-74DF1C267BCD_תיק-תעודת-גמר.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:53.281618+00:00",
+      "seconds": 0.069
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:53.281618+00:00",
+      "document_id": "7D1D28CE-033C-4C80-B687-74DF1C267BCD",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\18-3-1954_7D1D28CE-033C-4C80-B687-74DF1C267BCD_תיק-תעודת-גמר.pdf",
+      "tiles": 1,
+      "characters": 1157,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:53.314961+00:00",
+      "seconds": 0.033
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:53.314961+00:00",
+      "document_id": "27B818AB-80B7-452B-8B31-85B52B3BDE69",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\31-3-1954_27B818AB-80B7-452B-8B31-85B52B3BDE69_תיק-תעודת-גמר.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:53.382243+00:00",
+      "seconds": 0.073
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:53.382243+00:00",
+      "document_id": "27B818AB-80B7-452B-8B31-85B52B3BDE69",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\31-3-1954_27B818AB-80B7-452B-8B31-85B52B3BDE69_תיק-תעודת-גמר.pdf",
+      "tiles": 1,
+      "characters": 1230,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:53.422611+00:00",
+      "seconds": 0.034
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:53.425513+00:00",
+      "document_id": "F5506368-FB15-4F15-9A8F-FFCDA27861D9",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\19-12-1954_F5506368-FB15-4F15-9A8F-FFCDA27861D9_תיק-תעודת-גמר.pdf",
+      "tiles": 1,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:53.533222+00:00",
+      "seconds": 0.113
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:46:53.533222+00:00",
+      "document_id": "F5506368-FB15-4F15-9A8F-FFCDA27861D9",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\19-12-1954_F5506368-FB15-4F15-9A8F-FFCDA27861D9_תיק-תעודת-גמר.pdf",
+      "tiles": 1,
+      "characters": 1462,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:46:53.570885+00:00",
+      "seconds": 0.032
+    },
+    {
+      "name": "render",
+      "started_at": "2026-09-10T15:46:53.570885+00:00",
+      "document_id": "6EE81B95-67B7-47FC-8A5B-6809F5A43A4C",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\30-5-2016_6EE81B95-67B7-47FC-8A5B-6809F5A43A4C_תכנית-הבקשה-להיתר.pdf",
+      "tiles": 24,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:47:20.162350+00:00",
+      "seconds": 26.591
+    },
+    {
+      "name": "ocr",
+      "started_at": "2026-09-10T15:47:20.162350+00:00",
+      "document_id": "6EE81B95-67B7-47FC-8A5B-6809F5A43A4C",
+      "input": "C:\\Users\\talma\\OneDrive\\Desktop\\gng139\\POC\\data\\cities\\tel-aviv\\david-hamelech\\23\\documents\\30-5-2016_6EE81B95-67B7-47FC-8A5B-6809F5A43A4C_תכנית-הבקשה-להיתר.pdf",
+      "tiles": 24,
+      "characters": 23117,
+      "state": "completed",
+      "finished_at": "2026-09-10T15:47:20.263501+00:00",
+      "seconds": 0.101
+    },
+    {
+      "name": "dossier_assembly",
+      "started_at": "2026-09-10T15:47:20.273746+00:00",
+      "state": "completed",
+      "finished_at": "2026-09-10T15:47:20.273746+00:00",
+      "seconds": 0.003
+    }
+  ],
+  "total_seconds": 121.1
+}

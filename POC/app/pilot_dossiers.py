@@ -53,12 +53,15 @@ def _core_summary(checks):
 
 
 def build_pilot_dossier(request_id, *, pipeline_run_id=None):
-    request_id=str(request_id); case=CASES[request_id]
-    source_record=_read(BASE/"source-records"/f"{request_id}.json")
+    return build_case_dossier(str(request_id), CASES[str(request_id)], BASE, pipeline_run_id=pipeline_run_id)
+
+
+def build_case_dossier(request_id, case, base, *, pipeline_run_id=None, selection_note=None):
+    source_record=_read(base/"source-records"/f"{request_id}.json")
     request_record=_read(DATA/"verification"/"permits"/f"{request_id}.json")
-    parcels=_read(BASE/"parcel-evidence.json")
+    parcels=_read(base/"parcel-evidence.json")
     parcel=parcels[f"{case['gush']}-{case['parcel']}"][0]
-    pdf_path=BASE/"input"/case["pdf"]
+    pdf_path=base/"input"/case["pdf"]
     pdf_source=dict(source_record["pdf"],local_evidence=str(pdf_path))
     archive_source=dict(source_record["request_page"],local_evidence=str(DATA/"verification"/"permits"/f"{request_id}.json"))
     parcel_source=dict(parcel["_source"],source_updated_at=parcel["properties"].get("SYS_DATE"))
@@ -74,16 +77,22 @@ def build_pilot_dossier(request_id, *, pipeline_run_id=None):
         "parcel_area":_field(parcel["properties"]["LEGAL_AREA"],parcel_source,"official",parcel["id"]+".LEGAL_AREA","GovMap WFS",note="נתון GovMap כולל הסתייגות ואינו תחליף לנסח רישום"),
         "permit_date":_field(case["permit_date"],archive_source,"official","פרטי היתר בבקשה הציבורית","structured public-page extraction"),
         "original_permit_number":_field(case["permit"],archive_source,"official","מספר היתר בבקשה הציבורית","structured public-page extraction"),
-        "residential_zoning":_field(True,archive_source,"official",f"ייעוד: {case['zoning']}","structured public-page extraction"),
+        "residential_zoning":_field("מגורים" in case["zoning"] if case.get("zoning") else None,archive_source,"official" if case.get("zoning") else "missing",f"ייעוד: {case['zoning']}","structured public-page extraction"),
         "zoning_designation":_field(case["zoning"],archive_source,"official","טבלת גוש וחלקה","structured public-page extraction"),
         "building_use":_field(case["use"],archive_source,"official","שימוש עיקרי","structured public-page extraction"),
         "scope_parcels":_field(1,parcel_source,"derived","שיוך התיק לגוש ולחלקה יחידים","record linkage"),
     })
+    extra_gaps=[]
+    if case.get("zoning") and "/" in case["zoning"] and "מגורים" in case["zoning"]:
+        extra_gaps.append(f"החלקה נושאת יותר מייעוד אחד בדף הבקשה ({case['zoning']}); היקף רצועת הדרך דורש אימות מול התכנית")
+    if case.get("units_requested"):
+        fields["units"]=_field(case["units_requested"],archive_source,"official","סך מספר יחידות דיור המבוקשות","structured public-page extraction",
+                               note="מספר היחידות שהתבקשו בבקשה; מספר הדירות שנבנו בפועל דורש אימות מול התכנית")
     for key,(value,tile,note) in case.get("ocr_candidates",{}).items():
         fields[key]=_field(value,pdf_source,"ocr_candidate",f"תכנית סרוקה, עמוד 1, tile {tile}","Tesseract OCR plus visual candidate review",note=note)
     checks=evaluate(fields,{})
     passed,total=_core_summary(checks)
-    gaps=[row["label"] for row in checks if row["status"]=="unknown"]
+    gaps=[row["label"] for row in checks if row["status"]=="unknown"]+extra_gaps
     gaps += [
         "נדרש אימות אנושי של כל ערכי ה-OCR לפני שימוש בתנאי הסף.",
         "טביעת המבנה המדויקת לא אותרה; נקודת המפה היא מרכז החלקה הרשמית.",
@@ -107,7 +116,7 @@ def build_pilot_dossier(request_id, *, pipeline_run_id=None):
         "documents":[{"id":f"{request_id}-plan","source":pdf_source,"pages":page_count,"path":str(pdf_path)}],
         "scenario":None,"rights_analysis":None,"rule_version":RULE_VERSION,"template_version":TEMPLATE_VERSION,
         "policy_source":POLICY_URL,"created_at":utcnow(),"building_source":parcel_source,
-        "selection_note":"תיק פיילוט שנבנה ממסמך ההיתר השמור, מטא-דאטה עירוני וחלקת GovMap. כל ממצא מהסריקה הוכנס כמועמד OCR הדורש אימות אנושי. נקודת המבנה נגזרה ממרכז החלקה.",
+        "selection_note":selection_note or "תיק פיילוט שנבנה ממסמך ההיתר השמור, מטא-דאטה עירוני וחלקת GovMap. כל ממצא מהסריקה הוכנס כמועמד OCR הדורש אימות אנושי. נקודת המבנה נגזרה ממרכז החלקה.",
         "pipeline_run_id":pipeline_run_id,
     }
     stable=dict(dossier);stable.pop("created_at");stable.pop("pipeline_run_id",None)

@@ -1,0 +1,95 @@
+{
+  "collected_at": "2026-09-10T16:18:18.000182+00:00",
+  "anchor": {
+    "label": "השושנים 4 הרצליה",
+    "gush": 6529,
+    "parcel": 167,
+    "itm": [
+      185019.62,
+      675065.69
+    ]
+  },
+  "radius_m": 160.0,
+  "parcels": [
+    {
+      "gush": 6529,
+      "parcel": 138,
+      "distance_m": 11.3,
+      "state": "completed",
+      "building_files": [
+        "5850"
+      ],
+      "request": 19650065,
+      "address": "השושנים 6 הרצליה",
+      "bytes": 10695829
+    },
+    {
+      "gush": 6529,
+      "parcel": 166,
+      "distance_m": 11.3,
+      "state": "completed",
+      "building_files": [
+        "5846"
+      ],
+      "request": 19700070,
+      "address": "השושנים 2 הרצליה",
+      "bytes": 10654363
+    },
+    {
+      "gush": 6529,
+      "parcel": 162,
+      "distance_m": 15.3,
+      "state": "completed",
+      "building_files": [
+        "4325"
+      ],
+      "request": 19610081,
+      "address": "הנדיב 19 הרצליה",
+      "bytes": 3920677
+    },
+    {
+      "gush": 6529,
+      "parcel": 141,
+      "distance_m": 16.4,
+      "state": "skipped",
+      "building_files": [],
+      "reason": "no single building file for the parcel"
+    },
+    {
+      "gush": 6529,
+      "parcel": 103,
+      "distance_m": 20.6,
+      "state": "skipped",
+      "building_files": [
+        "8339"
+      ],
+      "reason": "no issued permit request found",
+      "requests": []
+    },
+    {
+      "gush": 6529,
+      "parcel": 163,
+      "distance_m": 21.4,
+      "state": "completed",
+      "building_files": [
+        "4682"
+      ],
+      "request": 19690065,
+      "address": "הניצנים 14 הרצליה",
+      "bytes": 10944115
+    },
+    {
+      "gush": 6529,
+      "parcel": 100,
+      "distance_m": 24.8,
+      "state": "completed",
+      "building_files": [
+        "5847"
+      ],
+      "request": 19540032,
+      "address": "השושנים 3 הרצליה",
+      "bytes": 2183834
+    }
+  ],
+  "completed": 5
+}

@@ -1,0 +1,46 @@
+{
+  "collected_at": "2026-09-10T16:15:15.299915+00:00",
+  "building_file": 5850,
+  "gush": 6529,
+  "parcel": 138,
+  "request": 19650065,
+  "address": "השושנים 6 הרצליה",
+  "archive_search": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikimByGush&siteid=121&g=6529&h=138&m=&l=true&arguments=siteid%2Cg%2Ch%2Cm%2Cl",
+    "retrieved_at": "2026-09-10T16:14:35.332024+00:00",
+    "epoch": 1789056875.3320243,
+    "sha256": "0234a0df60eeb8c26925adfb1be5dbaa79c5346fda54991bf79572845ec31ad4",
+    "content_type": "text/html"
+  },
+  "building_file_page": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=5850&arguments=siteid%2Ct",
+    "retrieved_at": "2026-09-10T16:14:45.476066+00:00",
+    "epoch": 1789056885.476066,
+    "sha256": "9ad2a5a7eac10222bceb978281cd2f61fc7781e98b0aed75218416d86a3afd90",
+    "content_type": "text/html"
+  },
+  "request_page": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetBakashaFile&siteid=121&b=19650065&arguments=siteid%2Cb",
+    "retrieved_at": "2026-09-10T16:14:55.633099+00:00",
+    "epoch": 1789056895.6330993,
+    "sha256": "8da180f254ef802feab39cc90a1737ab7361f4b3a44328d07fde78be1b5a2f2b",
+    "content_type": "text/html"
+  },
+  "download_page": {
+    "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=ShowPhoto&siteid=121&ec=2&en=19650065&bn=0&m=1&arguments=siteid%2Cec%2Cen%2Cbn%2Cm",
+    "retrieved_at": "2026-09-10T16:15:05.215372+00:00",
+    "epoch": 1789056905.215372,
+    "sha256": "77be99abcb836e7276113ae7a6e2411acb3947f4392fcca280a0db47cdb3a153",
+    "content_type": "text/html"
+  },
+  "pdf": {
+    "url": "https://archive.gis-net.co.il/Herzeliya/files/scener/srika/archiv/1950-1969/19650065/19650065_20.pdf",
+    "retrieved_at": "2026-09-10T16:15:15.261591+00:00",
+    "epoch": 1789056915.261592,
+    "sha256": "c7871531b243e6ec096c10f6de5e12563cc057133ae4c9f971323df39d717eb3",
+    "content_type": "application/pdf"
+  },
+  "pdf_sha256": "c7871531b243e6ec096c10f6de5e12563cc057133ae4c9f971323df39d717eb3",
+  "pdf_bytes": 10695829,
+  "extraction_note": "Public archive metadata only; the request page is stored for table evidence and contains no private data beyond applicant names shown publicly."
+}
