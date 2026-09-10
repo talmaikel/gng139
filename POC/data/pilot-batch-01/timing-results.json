@@ -1,0 +1,53 @@
+{
+  "batch_id": "20260910T134430Z",
+  "prune": {
+    "building_id": "municipal-file:5848",
+    "kept": [
+      "a9fe53d1c52bbe003ab11907"
+    ],
+    "deleted": [
+      "adf9aff67d83b97282e54455",
+      "2c436f1ff27095fa85693d66",
+      "8e5eb22c3fa3a0dbf83d700d"
+    ]
+  },
+  "runs": [
+    {
+      "id": "0fa1fc94-fb7d-4724-bc07-fc4faf4cec05",
+      "batch_id": "20260910T134430Z",
+      "request_id": "19650106",
+      "building_id": "municipal-file:4461",
+      "dossier_id": "a25a5361270c4d88e8efa908",
+      "address": "הרב קוק 10, הרצליה",
+      "scan_seconds": 59.389,
+      "data_entry_seconds": 0.128,
+      "total_seconds": 59.517,
+      "ocr_tiles": 18,
+      "ocr_characters": 10486,
+      "raw_output": "data\\experiments\\timed-pilot-dossiers\\20260910T134430Z\\19650106",
+      "created_at": "2026-09-10T13:45:29.800133+00:00",
+      "measurement_scope": "scan includes local PDF rendering, Tesseract OCR and evidence-file writes; data entry includes dossier assembly and SQLite insert; network and operator review are excluded"
+    },
+    {
+      "id": "1df4704c-b2d1-4a52-bfc3-b31316df64b8",
+      "batch_id": "20260910T134430Z",
+      "request_id": "19610028",
+      "building_id": "municipal-file:1652",
+      "dossier_id": "030acb9402c3c7fff518777b",
+      "address": "בר-כוכבא 12, הרצליה",
+      "scan_seconds": 5.727,
+      "data_entry_seconds": 0.026,
+      "total_seconds": 5.753,
+      "ocr_tiles": 2,
+      "ocr_characters": 1537,
+      "raw_output": "data\\experiments\\timed-pilot-dossiers\\20260910T134430Z\\19610028",
+      "created_at": "2026-09-10T13:45:35.567349+00:00",
+      "measurement_scope": "scan includes local PDF rendering, Tesseract OCR and evidence-file writes; data entry includes dossier assembly and SQLite insert; network and operator review are excluded"
+    }
+  ],
+  "totals": {
+    "scan_seconds": 65.116,
+    "data_entry_seconds": 0.154,
+    "total_seconds": 65.27
+  }
+}

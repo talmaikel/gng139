@@ -104,6 +104,14 @@ def test_entitlement_atomic_dedup_and_pairs(store):
 def test_incomplete_never_consumes_and_snapshot_immutable(store):
     d=ready('x');d['gaps']=['missing apartments'];store.save_dossier(d);assert store.deliver([d])==[];assert store.balance()['remaining']==3
     replacement=copy.deepcopy(d);replacement['gaps']=[];store.save_dossier(replacement);assert store.dossier('x')['gaps'];assert store.deliver([replacement])==[]
+def test_explicit_snapshot_pruning_keeps_latest_and_records_pipeline_time(store):
+    older={'id':'old','building_id':'municipal-file:1','created_at':'2026-01-01','status':'needs_verification'}
+    newer={'id':'new','building_id':'municipal-file:1','created_at':'2026-01-02','status':'needs_verification'}
+    store.save_dossier(older);store.save_dossier(newer)
+    result=store.prune_dossier_versions('municipal-file:1')
+    assert result['kept']==['new'] and result['deleted']==['old'] and store.dossier('old') is None
+    run={'id':'run','building_id':'municipal-file:1','dossier_id':'new','scan_seconds':2.5,'data_entry_seconds':.1,'total_seconds':2.6,'created_at':utcnow()}
+    store.save_pipeline_run(run);assert store.pipeline_runs()[0]['total_seconds']==2.6
 def test_job_recovery_preserves_checkpoint(store):
     jid=store.create_job({'polygon':{}});store.update(jid,'running',40,{'candidates':[{'id':'x'}]});store.init();job=store.job(jid)
     assert job['state']=='queued' and job['progress']==40 and job['result']['candidates']==[{'id':'x'}]
@@ -145,6 +153,15 @@ def test_hashoshanim_calculation_and_source_match():
     assert d['rights_analysis']['indicative_whole_unit_range']==[17,19]
     assert d['fields']['strengthened']['value'] is False
     assert d['documents'][0]['source']['sha256']=='78b2f6d26b39326ec3dab3349c36a013b92411b3fe85e244c57c46c497223f40'
+
+def test_saved_pilot_dossier_keeps_ocr_candidates_unverified():
+    from app.pilot_dossiers import build_pilot_dossier
+    d=build_pilot_dossier('19650106')
+    assert d['fields']['parcel_area']['value']==793
+    assert d['fields']['units']['value']==7 and d['fields']['units']['certainty']=='ocr_candidate'
+    assert next(x for x in d['checks'] if x['id']=='units')['status']=='unknown'
+    assert d['status']=='needs_verification' and d['scenario'] is None
+    assert pdf_export(d).startswith(b'%PDF') and excel_export(d).startswith(b'PK')
 
 def test_openai_pipeline_preflights_budget_and_preserves_evidence(tmp_path,monkeypatch):
     import pymupdf

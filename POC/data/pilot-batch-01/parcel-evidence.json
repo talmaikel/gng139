@@ -1,0 +1,150 @@
+{
+  "6424-83": [
+    {
+      "type": "Feature",
+      "id": "Parcels_ITM.621289",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                184798.418,
+                674252.129
+              ],
+              [
+                184794.228,
+                674243.349
+              ],
+              [
+                184792.018,
+                674239.089
+              ],
+              [
+                184762.7649,
+                674256.6571
+              ],
+              [
+                184769.702,
+                674269.026
+              ],
+              [
+                184803.388,
+                674263.229
+              ],
+              [
+                184798.418,
+                674252.129
+              ]
+            ]
+          ]
+        ]
+      },
+      "geometry_name": "the_geom",
+      "properties": {
+        "PARCEL_ID": 625190,
+        "GUSH_NUM": 6424,
+        "GUSH_SUFFI": 0,
+        "PARCEL": 83,
+        "LEGAL_AREA": 685,
+        "PNUMTYPE": 0,
+        "PNUMTYPE_T": "",
+        "STATUS": 6,
+        "STATUS_TEX": "מוסדר",
+        "LOCALITY_I": 346,
+        "LOCALITY_N": "גליל ים",
+        "REG_MUN_ID": 19,
+        "REG_MUN_NA": "חוף השרון",
+        "COUNTY_ID": 51,
+        "COUNTY_NAM": "תל-אביב",
+        "REGION_ID": 5,
+        "REGION_NAM": "תל-אביב",
+        "WP": 6400,
+        "TALAR_NUMB": 0,
+        "TALAR_YEAR": 0,
+        "SYS_DATE": "2023-03-28 12:48:25",
+        "ID": "6424--83",
+        "NOTE": "הנתון שטח רשום כאן אינו מהווה אסמכתה. לאסמכתה חוקית לשטח הרשום של חלקה יש לפנות ללשכות המרשם במשרד המשפטים.",
+        "SHAPE_AREA": 685.28893255,
+        "SHAPE_LEN": 109.175174986
+      },
+      "_source": {
+        "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata%3AParcels_ITM&outputFormat=application%2Fjson&srsName=EPSG%3A2039&CQL_FILTER=GUSH_NUM%3D6424+AND+PARCEL%3D83&count=100&startIndex=0",
+        "retrieved_at": "2026-09-10T13:35:55.853153+00:00",
+        "epoch": 1789047355.853153,
+        "sha256": "340f7e4cff6d31660274f9905eafc97687abb357c44f2f768b35d408f963c0e6",
+        "content_type": "application/json;charset=UTF-8"
+      }
+    }
+  ],
+  "6538-206": [
+    {
+      "type": "Feature",
+      "id": "Parcels_ITM.798447",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                185235.3281,
+                674301.375
+              ],
+              [
+                185219.3281,
+                674258.4375
+              ],
+              [
+                185202.6563,
+                674265.0625
+              ],
+              [
+                185218.9531,
+                674306.8125
+              ],
+              [
+                185235.3281,
+                674301.375
+              ]
+            ]
+          ]
+        ]
+      },
+      "geometry_name": "the_geom",
+      "properties": {
+        "PARCEL_ID": 804768,
+        "GUSH_NUM": 6538,
+        "GUSH_SUFFI": 0,
+        "PARCEL": 206,
+        "LEGAL_AREA": 793,
+        "PNUMTYPE": 0,
+        "PNUMTYPE_T": "",
+        "STATUS": 6,
+        "STATUS_TEX": "מוסדר",
+        "LOCALITY_I": 6400,
+        "LOCALITY_N": "הרצלייה",
+        "REG_MUN_ID": 0,
+        "REG_MUN_NA": "",
+        "COUNTY_ID": 51,
+        "COUNTY_NAM": "תל-אביב",
+        "REGION_ID": 5,
+        "REGION_NAM": "תל-אביב",
+        "WP": 6400,
+        "TALAR_NUMB": 0,
+        "TALAR_YEAR": 0,
+        "SYS_DATE": "2024-03-18 08:20:19",
+        "ID": "6538--206",
+        "NOTE": "הנתון שטח רשום כאן אינו מהווה אסמכתה. לאסמכתה חוקית לשטח הרשום של חלקה יש לפנות ללשכות המרשם במשרד המשפטים.",
+        "SHAPE_AREA": 797.05775625,
+        "SHAPE_LEN": 125.833728418
+      },
+      "_source": {
+        "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata%3AParcels_ITM&outputFormat=application%2Fjson&srsName=EPSG%3A2039&CQL_FILTER=GUSH_NUM%3D6538+AND+PARCEL%3D206&count=100&startIndex=0",
+        "retrieved_at": "2026-09-10T13:36:04.865069+00:00",
+        "epoch": 1789047364.8650699,
+        "sha256": "b56a08fc404a8ae3b527750463004a2ad8300b5c5c79d9dd88ca89d5cb938448",
+        "content_type": "application/json;charset=UTF-8"
+      }
+    }
+  ]
+}

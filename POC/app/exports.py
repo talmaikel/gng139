@@ -2,8 +2,8 @@ import io,os,textwrap
 from xml.sax.saxutils import escape
 from .config import ROOT
 
-LABELS={'address':'כתובת','eligibility_summary':'מסקנת בדיקת הסף','building_file_number':'מספר תיק בניין','gush':'גוש','parcel':'חלקה','parcel_area':'שטח חלקה במ״ר','footprint_area':'שטח טביעת מבנה במ״ר','units':'דירות בהיתר','floors':'קומות לפי הגדרת המדיניות','floor_configuration':'תצורת קומות','permit_date':'מועד היתר מקורי','original_permit_number':'מספר היתר מקורי','strengthened':'נמצא היתר חיזוק סיסמי','residential_zoning':'ייעוד מגורים','zoning_designation':'ייעוד רשום בתיק','residential_share':'שיעור מגורים חוקי','planning_lot':'מגרש תכנוני','planning_basis':'בסיס תכנוני','overriding_plans_checked':'בדיקת תכניות גוברות','engineer_opinion':'חוות דעת מהנדס לתנאי הגיל','existing_legal_area':'בסיס שטח חוקי מעל הקרקע','main_residential_area':'שטח מגורים עיקרי','stair_area':'חדר מדרגות','open_pilotis_area':'קומת עמודים מפולשת','shelter_area':'מקלט','original_permitted_total_area':'סך שטחים בהיתר 1970','post_2005_addition_area':'תוספת שירות מ-2013','shaked_area_cap':'תקרת שטח ראשונית לפי 400%','indicative_unit_range':'טווח יחידות אינדיקטיבי','indicative_additional_units':'תוספת יחידות אינדיקטיבית','additional_balcony_area':'מרפסות נוספות — תקרה','tama70_zone':'סיווג תמ״א 70'}
-CERTAINTY={'official':'רשמי','manually_verified':'אומת ידנית','derived':'מחושב','community':'מקור קהילתי','missing':'חסר'}
+LABELS={'address':'כתובת','eligibility_summary':'מסקנת בדיקת הסף','building_file_number':'מספר תיק בניין','gush':'גוש','parcel':'חלקה','parcel_area':'שטח חלקה במ״ר','footprint_area':'שטח טביעת מבנה במ״ר','building_use':'שימוש עיקרי','units':'דירות בהיתר','floors':'קומות לפי הגדרת המדיניות','floor_configuration':'תצורת קומות','permit_date':'מועד היתר מקורי','original_permit_number':'מספר היתר מקורי','strengthened':'נמצא היתר חיזוק סיסמי','residential_zoning':'ייעוד מגורים','zoning_designation':'ייעוד רשום בתיק','residential_share':'שיעור מגורים חוקי','planning_lot':'מגרש תכנוני','planning_basis':'בסיס תכנוני','overriding_plans_checked':'בדיקת תכניות גוברות','engineer_opinion':'חוות דעת מהנדס לתנאי הגיל','existing_legal_area':'בסיס שטח חוקי מעל הקרקע','main_residential_area':'שטח מגורים עיקרי','service_area':'שטחי שירות','stair_area':'חדר מדרגות','open_pilotis_area':'קומת עמודים מפולשת','shelter_area':'מקלט','original_permitted_total_area':'סך שטחים בהיתר','post_2005_addition_area':'תוספת שירות מ-2013','shaked_area_cap':'תקרת שטח ראשונית לפי 400%','indicative_unit_range':'טווח יחידות אינדיקטיבי','indicative_additional_units':'תוספת יחידות אינדיקטיבית','additional_balcony_area':'מרפסות נוספות — תקרה','tama70_zone':'סיווג תמ״א 70'}
+CERTAINTY={'official':'רשמי','manually_verified':'אומת ידנית','derived':'מחושב','community':'מקור קהילתי','missing':'חסר','conflict':'סתירה','ocr_candidate':'מועמד OCR — דורש אימות'}
 CHECK_STATUS={'passed':'עבר','failed':'נכשל','unknown':'טרם אומת'}
 
 def display_value(key,value):
@@ -42,8 +42,10 @@ def pdf_export(d):
     for key,f in d['fields'].items():
         line(f"{LABELS.get(key,key)}: {display_value(key,f['value'])} [{CERTAINTY.get(f['certainty'],f['certainty'])}]")
     line('מפה וגבולות מבנה',13)
-    coords=d['geometry']['coordinates'][0]
-    if coords and isinstance(coords[0][0],(int,float)):
+    geometry=d['geometry'];coords=None
+    if geometry.get('type')=='Polygon':coords=geometry['coordinates'][0]
+    elif geometry.get('type')=='MultiPolygon':coords=geometry['coordinates'][0][0]
+    if coords:
         if y<230:c.showPage();page()
         xs=[p[0] for p in coords];ys=[p[1] for p in coords]
         scale=min(420/max(max(xs)-min(xs),.000001),130/max(max(ys)-min(ys),.000001))
@@ -53,6 +55,8 @@ def pdf_export(d):
             if i==0:path.moveTo(px,py)
             else:path.lineTo(px,py)
         path.close();c.setFillColorRGB(.92,.90,.97);c.setStrokeColorRGB(.33,.22,.56);c.drawPath(path,fill=1,stroke=1);y-=175
+    elif geometry.get('type')=='Point':
+        lon,lat=geometry['coordinates'];line(f'נקודת מרכז חלקה בלבד: {lat:.6f}, {lon:.6f}')
     line('מידע חסר ובדיקות שנותרו',14)
     for gap in d['gaps']:line('• '+gap,color=(.55,.28,.12))
     line('בדיקות מדיניות',14)

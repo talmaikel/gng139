@@ -34,7 +34,8 @@ class Store:
               'CREATE TABLE IF NOT EXISTS entities(id TEXT PRIMARY KEY,kind TEXT NOT NULL,payload TEXT NOT NULL)',
               'CREATE TABLE IF NOT EXISTS archive_files(id TEXT PRIMARY KEY,state TEXT NOT NULL,payload TEXT NOT NULL,updated_at TEXT NOT NULL)',
               'CREATE TABLE IF NOT EXISTS archive_streets(id TEXT PRIMARY KEY,name TEXT NOT NULL,state TEXT NOT NULL,file_count INTEGER NOT NULL,error TEXT,payload TEXT NOT NULL,updated_at TEXT NOT NULL)',
-              'CREATE TABLE IF NOT EXISTS scenarios(id TEXT PRIMARY KEY,dossier_id TEXT NOT NULL REFERENCES dossiers(id),payload TEXT NOT NULL,created_at TEXT NOT NULL)']:
+              'CREATE TABLE IF NOT EXISTS scenarios(id TEXT PRIMARY KEY,dossier_id TEXT NOT NULL REFERENCES dossiers(id),payload TEXT NOT NULL,created_at TEXT NOT NULL)',
+              'CREATE TABLE IF NOT EXISTS pipeline_runs(id TEXT PRIMARY KEY,building_id TEXT NOT NULL,dossier_id TEXT NOT NULL REFERENCES dossiers(id),scan_seconds REAL NOT NULL,data_entry_seconds REAL NOT NULL,total_seconds REAL NOT NULL,payload TEXT NOT NULL,created_at TEXT NOT NULL)']:
                 self.run(c,sql)
             if self.pg:
                 c.execute('CREATE EXTENSION IF NOT EXISTS postgis')
@@ -82,6 +83,29 @@ class Store:
         return json.loads(row['payload']) if row else None
     def dossiers(self):
         with self.connect() as c: rows=self.run(c,'SELECT payload FROM dossiers ORDER BY created_at DESC LIMIT 300').fetchall()
+        return [json.loads(x['payload']) for x in rows]
+    def prune_dossier_versions(self,building_id,keep=1):
+        """Explicit maintenance operation; delivered snapshots are never removed."""
+        keep=max(1,int(keep))
+        with self.connect(write=True) as c:
+            rows=self.run(c,'SELECT id,payload,created_at FROM dossiers ORDER BY created_at DESC').fetchall()
+            matches=[x for x in rows if json.loads(x['payload']).get('building_id')==building_id]
+            remove=matches[keep:]
+            for row in remove:
+                if self.run(c,'SELECT 1 FROM deliveries WHERE dossier_id=?',(row['id'],)).fetchone():
+                    raise ValueError(f"Cannot remove delivered dossier snapshot: {row['id']}")
+                self.run(c,'DELETE FROM scenarios WHERE dossier_id=?',(row['id'],))
+                self.run(c,'DELETE FROM pipeline_runs WHERE dossier_id=?',(row['id'],))
+                self.run(c,'DELETE FROM dossiers WHERE id=?',(row['id'],))
+        return {'building_id':building_id,'kept':[x['id'] for x in matches[:keep]],'deleted':[x['id'] for x in remove]}
+    def save_pipeline_run(self,run):
+        with self.connect(write=True) as c:
+            self.run(c,'INSERT INTO pipeline_runs VALUES(?,?,?,?,?,?,?,?)',(
+                run['id'],run['building_id'],run['dossier_id'],float(run['scan_seconds']),
+                float(run['data_entry_seconds']),float(run['total_seconds']),
+                json.dumps(run,ensure_ascii=False),run.get('created_at') or utcnow()))
+    def pipeline_runs(self):
+        with self.connect() as c:rows=self.run(c,'SELECT payload FROM pipeline_runs ORDER BY created_at DESC').fetchall()
         return [json.loads(x['payload']) for x in rows]
     def balance(self):
         with self.connect() as c:
