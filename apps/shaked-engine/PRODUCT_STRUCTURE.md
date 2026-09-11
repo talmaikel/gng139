@@ -21,6 +21,25 @@ Last updated: 2026-09-11 (local DB stood up, migration applied)
   the three `postgresql.ENUM` types were being created twice (once via the
   manual `.create(checkfirst=True)` call, once implicitly by `create_table`'s
   DDL events) — added `create_type=False` to each `ENUM(...)` declaration.
+- Backend boots with `uvicorn app.main:app` and verified end-to-end against
+  the real DB: register → JWT login → authenticated `filters/options`,
+  `economic/feasibility`, and `candidates/herzliya` all return correctly;
+  unauthenticated requests correctly get 401 instead of crashing.
+- Frontend: `npm install` on the original pinned `next@14.2.5` surfaced a
+  **critical** vulnerability (multiple advisories up through unauthenticated
+  RCE, only fixed at `next@15.5.24+`) — bumped to `next@15.5.25` (kept React
+  18, which 15.5.x still supports) and pinned `postcss` to `8.5.28` via an
+  `overrides` entry to clear a separate high-severity postcss advisory.
+  `npm audit` is now clean.
+- Frontend map crashed every mount with "Map container is already
+  initialized" — `react-leaflet` v4's `MapContainer` doesn't clean up its
+  Leaflet instance correctly under React 18 Strict Mode's dev-only
+  double-invoked effects. Fixed by setting `reactStrictMode: false` in
+  `next.config.js` (the standard fix for this specific library combo).
+  Verified clean in a fresh tab: login → dashboard → map renders, zero
+  console errors, `candidates/herzliya` call succeeds.
+- These frontend fixes (package.json, next.config.js) are **not yet
+  committed/pushed** — only applied locally during verification.
 
 ## What this is
 

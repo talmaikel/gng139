@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "14.2.5",
+    "next": "15.5.25",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "leaflet": "1.9.4",
@@ -21,5 +21,8 @@
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
     "typescript": "5.5.3"
+  },
+  "overrides": {
+    "postcss": "8.5.28"
   }
 }
