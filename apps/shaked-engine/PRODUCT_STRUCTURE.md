@@ -107,10 +107,26 @@ municipal systems, not mocks:
   (`heb+eng`) at confidence 61 — just above the 60 threshold — but found no
   regex-matching area field on this heavily handwritten cursive-Hebrew
   1960s form, so the code correctly fell through to the OpenAI fallback
-  path, which correctly raised because `OPENAI_API_KEY` isn't configured in
-  this environment. **This is the expected, designed behavior** — it just
-  wasn't run to full completion because no key is set. Set
-  `OPENAI_API_KEY` in `backend/.env` to test that last leg for real.
+  path.
+- **AI fallback path since tested for real with a live `OPENAI_API_KEY`**,
+  against the same 1961 scan. Found and fixed a real bug first: OpenAI's
+  strict structured-output mode requires *every* schema property to be
+  listed in `required`, including nullable ones — `EXTRACTION_JSON_SCHEMA`
+  in `extractor.py` only required 2 of its 4 properties, so every call
+  failed with a 400 until fixed. After the fix, `gpt-4o-mini` returned a
+  well-formed result (`total_building_area_sqm: 128`, `confidence: 0.9`).
+  **The number is very likely wrong**: comparing against the actual form,
+  128 is almost certainly the plot/lot number (`מגרש מס' 128`, "Plot No.
+  128"), not a building area — the model appears to have misread a label
+  as a measurement, confidently. The form's real building area isn't
+  cleanly printed at all; it would need to be derived from `שטח המגרש
+  ~750.2` (plot area) × a handwritten building-coverage percentage, which
+  the model didn't attempt. **This is a real, honest finding, not a wiring
+  problem**: it's exactly why `verification_level` distinguishes
+  `ai_assisted` from `human_verified` — an AI-extracted figure on a messy
+  historical scan needs human review before being treated as ground truth.
+  Nothing in the pipeline currently flags "this AI answer looks
+  suspicious" — that's a real gap (see known gaps).
 - **Full queue run tested live**: enqueued a dossier job for a real
   opportunity (gush 6424/parcel 83, plot area 750.2 sqm — the real figure
   read off the scanned form), worker claimed it via `SKIP LOCKED`, made the
@@ -164,7 +180,7 @@ domain context only, per the isolation rule):
 | Economic calculator ("Generic Report 0") | `backend/app/services/economic/calculator.py` | ✅ | Pure Python, no Excel. Tenant/developer sqm split is a simplified 1:1-replacement model — validate against the real PRD formula before relying on it |
 | Scraper (generic/JS fallback) | `backend/app/pipeline/scraper.py` | 🚧 | Playwright scaffolding for a city whose real archive needs browser rendering. Herzliya turned out not to need this — see `archive_client.py` |
 | Preprocessor | `backend/app/pipeline/preprocessor.py` | ✅ | OpenCV: CLAHE contrast + Otsu binarization + Hough-line legend-region crop. Live-tested on a real 1961 scan |
-| Extractor | `backend/app/pipeline/extractor.py` | ✅ | Tesseract (heb+eng) + regex first; falls back to OpenAI `gpt-4o-mini` structured output below a confidence threshold. Live-tested; AI fallback path confirmed to trigger correctly (not fully exercised — no `OPENAI_API_KEY` set) |
+| Extractor | `backend/app/pipeline/extractor.py` | ✅ | Tesseract (heb+eng) + regex first; falls back to OpenAI `gpt-4o-mini` structured output below a confidence threshold. Both paths live-tested end-to-end on a real scan; the AI answer itself was plausible-looking but wrong on that scan (see "Dossier pipeline" section) — no confidence/plausibility check exists yet |
 | Dossier generation | `backend/app/worker.py` (`generate_dossier_handler`) | ✅ | Real orchestration: DB → archive client → rasterize → preprocess → extract → economic calculator. Live-tested end-to-end via the queue — see "Dossier pipeline" section for what was and wasn't fully exercised |
 | API routers | `backend/app/api/v1/` | ✅ | `auth`, `candidates` (+ unify), `filters`, `dossiers` (generate + status), `economic` (feasibility) |
 | DB migrations | `backend/alembic/versions/0001_initial_schema.py` | ✅ | tenants, users, opportunities (+PostGIS/GiST index), packages, balances, reservations (+ partial-unique active-lock index), task_queue |
@@ -188,8 +204,14 @@ domain context only, per the isolation rule):
    PDFs live on `archive.gis-net.co.il` keyed by permit *request* number, not
    tik number, and no live enumeration from tik → request numbers has been
    found. Newer/digitized tiks may work via `GetTikDocs` already — untested.
-2. **No `OPENAI_API_KEY` configured**, so the AI-fallback extraction path has
-   only been confirmed to *trigger* correctly, not to actually complete.
+2. **The AI fallback has no plausibility/confidence check on its own answer.**
+   Live-tested on a real 1961 scan: `gpt-4o-mini` returned a confident,
+   well-formed but almost certainly *wrong* area (it read a plot/lot number
+   as a building area). Every AI-assisted extraction should probably be
+   forced to `verification_level = ai_assisted` (never treated as
+   `human_verified`) and surfaced for review rather than fed straight into
+   the economic calculator as fact — that distinction isn't enforced
+   anywhere yet.
 3. **Candidates API doesn't expose geometry**, so the frontend map has no real
    markers yet — either add a `GeoJSON`/lat-lng field to the candidates response
    or fetch geometry separately.
