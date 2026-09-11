@@ -36,12 +36,14 @@ EXTRACTION_JSON_SCHEMA = {
     "schema": {
         "type": "object",
         "properties": {
-            "total_building_area_sqm": {"type": "number"},
+            "total_building_area_sqm": {"type": ["number", "null"]},
             "unit_areas_sqm": {"type": "array", "items": {"type": "number"}},
-            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-            "notes": {"type": "string"},
+            "confidence": {"type": "number"},
+            "notes": {"type": ["string", "null"]},
         },
-        "required": ["total_building_area_sqm", "confidence"],
+        # OpenAI's strict structured-output mode requires every property to be
+        # listed here, even ones that are semantically optional/nullable above.
+        "required": ["total_building_area_sqm", "unit_areas_sqm", "confidence", "notes"],
         "additionalProperties": False,
     },
     "strict": True,
