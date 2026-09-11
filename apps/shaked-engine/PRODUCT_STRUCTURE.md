@@ -38,8 +38,27 @@ Last updated: 2026-09-11 (local DB stood up, migration applied)
   `next.config.js` (the standard fix for this specific library combo).
   Verified clean in a fresh tab: login → dashboard → map renders, zero
   console errors, `candidates/herzliya` call succeeds.
-- These frontend fixes (package.json, next.config.js) are **not yet
-  committed/pushed** — only applied locally during verification.
+- Frontend fixes (package.json, next.config.js, package-lock.json,
+  next-env.d.ts) are committed and pushed (`effe626`).
+- Tested the dossier task-queue mechanism end-to-end: `POST
+  /dossiers/{id}/generate` → row lands `pending` in `task_queue` → worker
+  (`python -m app.worker`) claims it via `FOR UPDATE SKIP LOCKED` → marks it
+  `done` with the handler's result → `GET /dossiers/status/{task_id}`
+  reflects it. **This only proves the queue plumbing works** — the handler
+  itself (`generate_dossier_handler` in `worker.py`) is still the documented
+  placeholder that returns `{"dossier": "not_yet_implemented"}`; the real
+  scraper→preprocessor→extractor→economic-calculator pipeline (known gap #1)
+  is still unwired.
+- Found and fixed a real bug surfaced by that test: `VerificationLevel`,
+  `ReservationStatus`, and `TaskStatus` are all `class X(str, enum.Enum)`
+  with lowercase values, but SQLAlchemy's `Enum(X, name=...)` column type
+  defaults to binding the member's uppercase `.name` (e.g. `"PENDING"`)
+  instead of its lowercase `.value` (`"pending"`) — every ORM-level write
+  through these three enum columns would have thrown
+  `InvalidTextRepresentationError` against the Postgres enum type. Fixed in
+  `app/models/task_queue.py`, `opportunity.py`, and `package.py` by adding
+  `values_callable=lambda enum_cls: [m.value for m in enum_cls]` to each
+  `Enum(...)` declaration. **Not yet committed/pushed.**
 
 ## What this is
 

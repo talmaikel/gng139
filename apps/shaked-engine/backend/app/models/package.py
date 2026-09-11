@@ -56,7 +56,13 @@ class Reservation(Base):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[ReservationStatus] = mapped_column(
-        Enum(ReservationStatus, name="reservation_status"), default=ReservationStatus.ACTIVE, nullable=False
+        Enum(
+            ReservationStatus,
+            name="reservation_status",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=ReservationStatus.ACTIVE,
+        nullable=False,
     )
     locked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

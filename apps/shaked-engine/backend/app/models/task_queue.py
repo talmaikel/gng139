@@ -34,7 +34,11 @@ class TaskQueue(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     task_type: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "generate_dossier"
     payload: Mapped[dict] = mapped_column(JSONB, default=dict)
-    status: Mapped[TaskStatus] = mapped_column(Enum(TaskStatus, name="task_status"), default=TaskStatus.PENDING, nullable=False)
+    status: Mapped[TaskStatus] = mapped_column(
+        Enum(TaskStatus, name="task_status", values_callable=lambda enum_cls: [member.value for member in enum_cls]),
+        default=TaskStatus.PENDING,
+        nullable=False,
+    )
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     result: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     error: Mapped[str | None] = mapped_column(String, nullable=True)

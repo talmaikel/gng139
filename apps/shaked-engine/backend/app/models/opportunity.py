@@ -34,7 +34,13 @@ class Opportunity(Base):
     area_sqm: Mapped[float | None] = mapped_column(Float)
 
     verification_level: Mapped[VerificationLevel] = mapped_column(
-        Enum(VerificationLevel, name="verification_level"), default=VerificationLevel.RAW, nullable=False
+        Enum(
+            VerificationLevel,
+            name="verification_level",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=VerificationLevel.RAW,
+        nullable=False,
     )
     metadata_json: Mapped[dict] = mapped_column(JSONB, default=dict)
 
