@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shaked
+      POSTGRES_PASSWORD: shaked
+      POSTGRES_DB: shaked_engine
+    ports:
+      - "5432:5432"
+    volumes:
+      - shaked_engine_pgdata:/var/lib/postgresql/data
+
+volumes:
+  shaked_engine_pgdata:
