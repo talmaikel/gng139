@@ -59,6 +59,73 @@ Last updated: 2026-09-11 (local DB stood up, migration applied)
   `app/models/task_queue.py`, `opportunity.py`, and `package.py` by adding
   `values_callable=lambda enum_cls: [m.value for m in enum_cls]` to each
   `Enum(...)` declaration. **Not yet committed/pushed.**
+- **Wired the dossier pipeline to real infrastructure and tested it live**
+  (see the new "Dossier pipeline" section below for details). Along the way,
+  installed Tesseract-OCR 5.5.3 (`heb`+`eng` data) natively on this machine
+  and pointed `.env`'s `TESSERACT_CMD` at it (the checked-in default was a
+  Linux path); added `pymupdf` to rasterize scraped PDFs for OCR; and fixed
+  a real bug in `preprocessor.py` — `cv2.HoughLinesP`'s output shape changed
+  between OpenCV versions (`(N,1,4)` vs `(N,4)`), and the installed OpenCV
+  5.0.0 uses the new shape, so the old indexing crashed on every real image.
+
+## Dossier pipeline (live-tested, not just wired)
+
+`backend/app/worker.py`'s `generate_dossier_handler` now really calls:
+DB lookup → municipal archive → PDF rasterize → OpenCV preprocess → OCR
+extract → economic calculator, and returns the assembled result as the
+task's `result` JSON. This was tested against the **real, live** Herzliya
+municipal systems, not mocks:
+
+- **Herzliya's real archive turned out to be a plain HTTP GET API**
+  (`https://handasi.complot.co.il/magicscripts/mgrqispi.dll`, legacy
+  CGI-style query params), not a JS-rendered page — so
+  `backend/app/cities/herzliya/archive_client.py` (`HerzliyaArchiveClient`)
+  talks to it directly with `httpx`, no browser needed. Confirmed live: gush
+  6424 / parcel 83 → real tik (building-file) id `1652`, matching a
+  known-good record from `POC/data/pilot-batch-01/manifest.csv`.
+  `backend/app/pipeline/scraper.py`'s Playwright scaffold is kept as the
+  fallback path for a city whose real archive does require a browser (Tel
+  Aviv's isn't confirmed either way yet).
+- **Important real-world finding**: the archive's `GetTikDocs` endpoint
+  (used to list a tik's attached PDFs) is real and correctly implemented,
+  but returns **zero results for pre-1970s tik files** — verified against
+  all three known-good addresses in `manifest.csv` (gush/parcel 6424/83,
+  6538/206, 6546/271). Those old scans live only on a separate legacy system
+  (`archive.gis-net.co.il`, e.g.
+  `.../archiv/1950-1969/19610028/19610028_20.pdf`), keyed by permit
+  *request* number rather than tik number — I have not found/enumerated the
+  lookup that maps a tik to its request numbers on that system. This is a
+  real gap for older addresses, not a code bug; newer digitized tiks may
+  well have documents attached via `GetTikDocs` — untested, since none of
+  the three known addresses are recent.
+- **OCR path independently validated against a real 1961 scanned permit
+  form** (downloaded directly from the `archive.gis-net.co.il` URL above,
+  bypassing the empty `GetTikDocs` step, purely to prove the pipeline code
+  works on genuine data): `preprocess_blueprint` ran real CLAHE contrast +
+  Otsu binarization + Hough-line legend cropping (this is where the OpenCV
+  5.0 shape bug was found and fixed); local Tesseract OCR ran for real
+  (`heb+eng`) at confidence 61 — just above the 60 threshold — but found no
+  regex-matching area field on this heavily handwritten cursive-Hebrew
+  1960s form, so the code correctly fell through to the OpenAI fallback
+  path, which correctly raised because `OPENAI_API_KEY` isn't configured in
+  this environment. **This is the expected, designed behavior** — it just
+  wasn't run to full completion because no key is set. Set
+  `OPENAI_API_KEY` in `backend/.env` to test that last leg for real.
+- **Full queue run tested live**: enqueued a dossier job for a real
+  opportunity (gush 6424/parcel 83, plot area 750.2 sqm — the real figure
+  read off the scanned form), worker claimed it via `SKIP LOCKED`, made the
+  real archive call, correctly found 0 attached documents, fell back to an
+  estimated buildable area (`plot_area_sqm * 0.6`), ran the real economic
+  calculator, and returned a complete result via `GET
+  /dossiers/status/{task_id}`.
+- **Feasibility assumptions are still hardcoded placeholders**
+  (`DEFAULT_SALE_PRICE_PER_SQM_ILS`, `DEFAULT_CONSTRUCTION_COST_PER_SQM_ILS`,
+  `DEFAULT_EXISTING_UNITS` in `worker.py`) — no per-city/per-opportunity
+  source for these exists yet. The dossier result labels them clearly
+  (`feasibility_assumptions`) rather than presenting them as real numbers.
+- **Not yet committed/pushed**: `worker.py`, `archive_client.py`,
+  `preprocessor.py` fix, `requirements.txt` (`pymupdf`), `.env.example`
+  (Tesseract path comment).
 
 ## What this is
 
@@ -92,12 +159,13 @@ domain context only, per the isolation rule):
 | Postgres job queue | `backend/app/core/queue.py` | ✅ | `FOR UPDATE SKIP LOCKED` claim; no Redis/RabbitMQ |
 | City strategy interface | `backend/app/cities/base.py` | ✅ | `BaseCityRules` ABC: screen_candidates, is_eligible_xplan_code, check_plot_unification, minimum_plot_area_sqm |
 | Herzliya strategy | `backend/app/cities/herzliya/` | ✅ | Real XPlan code vocabulary + `ST_Touches`/`ST_Union` unification query. Candidate screening queries real `opportunities` rows — needs real data loaded to be useful |
+| Herzliya archive client | `backend/app/cities/herzliya/archive_client.py` | ✅ | Live-tested `httpx` client for the real `handasi.complot.co.il` permit-file API — see "Dossier pipeline" section |
 | Tel Aviv strategy | `backend/app/cities/tel_aviv/` | 🚧 | Stub only — proves the pattern, every method raises `NotImplementedError` |
 | Economic calculator ("Generic Report 0") | `backend/app/services/economic/calculator.py` | ✅ | Pure Python, no Excel. Tenant/developer sqm split is a simplified 1:1-replacement model — validate against the real PRD formula before relying on it |
-| Scraper | `backend/app/pipeline/scraper.py` | 🚧 | Playwright scaffolding; form selectors are placeholders — wire up the real municipal archive site per city |
-| Preprocessor | `backend/app/pipeline/preprocessor.py` | ✅ | OpenCV: CLAHE contrast + Otsu binarization + Hough-line legend-region crop |
-| Extractor | `backend/app/pipeline/extractor.py` | ✅ | Tesseract (heb+eng) + regex first; falls back to OpenAI `gpt-4o-mini` structured output below a confidence threshold |
-| Dossier generation | `backend/app/worker.py` (`generate_dossier_handler`) | 🚧 | Placeholder — doesn't yet call the scraper/preprocessor/extractor/economic pipeline end-to-end |
+| Scraper (generic/JS fallback) | `backend/app/pipeline/scraper.py` | 🚧 | Playwright scaffolding for a city whose real archive needs browser rendering. Herzliya turned out not to need this — see `archive_client.py` |
+| Preprocessor | `backend/app/pipeline/preprocessor.py` | ✅ | OpenCV: CLAHE contrast + Otsu binarization + Hough-line legend-region crop. Live-tested on a real 1961 scan |
+| Extractor | `backend/app/pipeline/extractor.py` | ✅ | Tesseract (heb+eng) + regex first; falls back to OpenAI `gpt-4o-mini` structured output below a confidence threshold. Live-tested; AI fallback path confirmed to trigger correctly (not fully exercised — no `OPENAI_API_KEY` set) |
+| Dossier generation | `backend/app/worker.py` (`generate_dossier_handler`) | ✅ | Real orchestration: DB → archive client → rasterize → preprocess → extract → economic calculator. Live-tested end-to-end via the queue — see "Dossier pipeline" section for what was and wasn't fully exercised |
 | API routers | `backend/app/api/v1/` | ✅ | `auth`, `candidates` (+ unify), `filters`, `dossiers` (generate + status), `economic` (feasibility) |
 | DB migrations | `backend/alembic/versions/0001_initial_schema.py` | ✅ | tenants, users, opportunities (+PostGIS/GiST index), packages, balances, reservations (+ partial-unique active-lock index), task_queue |
 | Frontend auth | `frontend/src/app/login/page.tsx` | ✅ | Calls `/api/v1/auth/jwt/login`, stores JWT in `localStorage` |
@@ -116,19 +184,23 @@ domain context only, per the isolation rule):
 
 ## Known gaps / next steps
 
-1. **Dossier pipeline is not wired end-to-end.** `generate_dossier_handler` in
-   `backend/app/worker.py` is a placeholder — it needs to call the scraper →
-   preprocessor → extractor → economic calculator and assemble a real dossier.
-2. **Candidates API doesn't expose geometry**, so the frontend map has no real
+1. **Older Herzliya permit scans (pre-1970s) aren't reachable yet.** Their
+   PDFs live on `archive.gis-net.co.il` keyed by permit *request* number, not
+   tik number, and no live enumeration from tik → request numbers has been
+   found. Newer/digitized tiks may work via `GetTikDocs` already — untested.
+2. **No `OPENAI_API_KEY` configured**, so the AI-fallback extraction path has
+   only been confirmed to *trigger* correctly, not to actually complete.
+3. **Candidates API doesn't expose geometry**, so the frontend map has no real
    markers yet — either add a `GeoJSON`/lat-lng field to the candidates response
    or fetch geometry separately.
-3. **Economic calculator's tenant/developer sqm split is simplified** (1:1
-   replacement + flat compensation sqm). Validate it against the actual Shaked
-   PRD formula (Generic Report 0) before using it for real numbers.
-4. **Scraper selectors are placeholders.** Each municipality's real archive site
-   markup needs to be wired in (`backend/app/pipeline/scraper.py`), likely one
-   scraper subclass/config per city.
+4. **Economic calculator's tenant/developer sqm split is simplified** (1:1
+   replacement + flat compensation sqm), and `worker.py`'s market assumptions
+   (sale price, construction cost, existing units) are hardcoded placeholders
+   with no per-city/per-opportunity source. Validate against the actual Shaked
+   PRD formula (Generic Report 0) before using either for real numbers.
 5. **Tel Aviv is unimplemented** — proves the strategy pattern, nothing more.
+   Unknown whether its real archive is an API (like Herzliya) or needs the
+   Playwright scraper scaffold.
 6. **No tests yet.** Nothing under `backend/` or `frontend/` has automated
    coverage.
 7. **Reservation expiry isn't enforced anywhere** — the `expires_at` column

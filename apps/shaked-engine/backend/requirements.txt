@@ -25,6 +25,7 @@ pytesseract>=0.3.13
 opencv-python-headless>=4.10
 pillow>=10.3
 numpy>=1.26
+pymupdf>=1.24  # rasterizes scraped PDF permit files into page images for OCR
 
 # --- OpenAI fallback extraction (structured outputs) ---
 openai>=1.35

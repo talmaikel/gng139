@@ -40,8 +40,11 @@ def _find_legend_crop(gray: np.ndarray) -> np.ndarray:
     if lines is None:
         return gray
 
-    xs = np.concatenate([lines[:, 0, 0], lines[:, 0, 2]])
-    ys = np.concatenate([lines[:, 0, 1], lines[:, 0, 3]])
+    # HoughLinesP's output shape varies by OpenCV version (`(N, 1, 4)` vs `(N, 4)`);
+    # reshape to a flat `(N, 4)` array of (x1, y1, x2, y2) rows regardless.
+    lines = lines.reshape(-1, 4)
+    xs = np.concatenate([lines[:, 0], lines[:, 2]])
+    ys = np.concatenate([lines[:, 1], lines[:, 3]])
     x0, x1 = int(np.percentile(xs, 2)), int(np.percentile(xs, 98))
     y0, y1 = int(np.percentile(ys, 2)), int(np.percentile(ys, 98))
     if x1 <= x0 or y1 <= y0:
