@@ -1,0 +1,432 @@
+{
+  "6529-138": [
+    {
+      "type": "Feature",
+      "id": "Parcels_ITM.789784",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                185020.1563,
+                675045.5
+              ],
+              [
+                185001.9219,
+                675031.5
+              ],
+              [
+                184983.2656,
+                675057.375
+              ],
+              [
+                184998.4531,
+                675068.9375
+              ],
+              [
+                185001.75,
+                675071.3125
+              ],
+              [
+                185019.4063,
+                675046.5
+              ],
+              [
+                185020.1563,
+                675045.5
+              ]
+            ]
+          ]
+        ]
+      },
+      "geometry_name": "the_geom",
+      "properties": {
+        "PARCEL_ID": 790444,
+        "GUSH_NUM": 6529,
+        "GUSH_SUFFI": 0,
+        "PARCEL": 138,
+        "LEGAL_AREA": 750,
+        "PNUMTYPE": 0,
+        "PNUMTYPE_T": "",
+        "STATUS": 6,
+        "STATUS_TEX": "מוסדר",
+        "LOCALITY_I": 6400,
+        "LOCALITY_N": "הרצלייה",
+        "REG_MUN_ID": 0,
+        "REG_MUN_NA": "",
+        "COUNTY_ID": 51,
+        "COUNTY_NAM": "תל-אביב",
+        "REGION_ID": 5,
+        "REGION_NAM": "תל-אביב",
+        "WP": 6400,
+        "TALAR_NUMB": 0,
+        "TALAR_YEAR": 0,
+        "SYS_DATE": "2024-03-04 17:13:23",
+        "ID": "6529--138",
+        "NOTE": "הנתון שטח רשום כאן אינו מהווה אסמכתה. לאסמכתה חוקית לשטח הרשום של חלקה יש לפנות ללשכות המרשם במשרד המשפטים.",
+        "SHAPE_AREA": 733.88335,
+        "SHAPE_LEN": 109.742998584
+      },
+      "_source": {
+        "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata%3AParcels_ITM&outputFormat=application%2Fjson&srsName=EPSG%3A2039&CQL_FILTER=BBOX%28the_geom%2C184859.62%2C674905.69%2C185179.62%2C675225.69%2C%27EPSG%3A2039%27%29&count=100&startIndex=0",
+        "retrieved_at": "2026-09-10T16:12:04.172478+00:00",
+        "epoch": 1789056724.1724784,
+        "sha256": "89fa677f9dcf948b55691f26100c15c47e554439f84657f4d406766a21404e04",
+        "content_type": "application/json;charset=UTF-8"
+      }
+    }
+  ],
+  "6529-166": [
+    {
+      "type": "Feature",
+      "id": "Parcels_ITM.789606",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                185056.1875,
+                675074.25
+              ],
+              [
+                185037.5625,
+                675060.125
+              ],
+              [
+                185025.9688,
+                675076.1875
+              ],
+              [
+                185019.6406,
+                675084.875
+              ],
+              [
+                185027.3125,
+                675090.3125
+              ],
+              [
+                185038.0313,
+                675098.3125
+              ],
+              [
+                185051.0469,
+                675081
+              ],
+              [
+                185056.1875,
+                675074.25
+              ]
+            ]
+          ]
+        ]
+      },
+      "geometry_name": "the_geom",
+      "properties": {
+        "PARCEL_ID": 790436,
+        "GUSH_NUM": 6529,
+        "GUSH_SUFFI": 0,
+        "PARCEL": 166,
+        "LEGAL_AREA": 704,
+        "PNUMTYPE": 0,
+        "PNUMTYPE_T": "",
+        "STATUS": 6,
+        "STATUS_TEX": "מוסדר",
+        "LOCALITY_I": 6400,
+        "LOCALITY_N": "הרצלייה",
+        "REG_MUN_ID": 0,
+        "REG_MUN_NA": "",
+        "COUNTY_ID": 51,
+        "COUNTY_NAM": "תל-אביב",
+        "REGION_ID": 5,
+        "REGION_NAM": "תל-אביב",
+        "WP": 6400,
+        "TALAR_NUMB": 0,
+        "TALAR_YEAR": 0,
+        "SYS_DATE": "2024-03-04 17:13:23",
+        "ID": "6529--166",
+        "NOTE": "הנתון שטח רשום כאן אינו מהווה אסמכתה. לאסמכתה חוקית לשטח הרשום של חלקה יש לפנות ללשכות המרשם במשרד המשפטים.",
+        "SHAPE_AREA": 697.72811875,
+        "SHAPE_LEN": 106.85530681
+      },
+      "_source": {
+        "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata%3AParcels_ITM&outputFormat=application%2Fjson&srsName=EPSG%3A2039&CQL_FILTER=BBOX%28the_geom%2C184859.62%2C674905.69%2C185179.62%2C675225.69%2C%27EPSG%3A2039%27%29&count=100&startIndex=0",
+        "retrieved_at": "2026-09-10T16:12:04.172478+00:00",
+        "epoch": 1789056724.1724784,
+        "sha256": "89fa677f9dcf948b55691f26100c15c47e554439f84657f4d406766a21404e04",
+        "content_type": "application/json;charset=UTF-8"
+      }
+    }
+  ],
+  "6529-162": [
+    {
+      "type": "Feature",
+      "id": "Parcels_ITM.799849",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                185019.6406,
+                675084.875
+              ],
+              [
+                185001.75,
+                675071.3125
+              ],
+              [
+                184998.4531,
+                675068.9375
+              ],
+              [
+                184979.1875,
+                675099.3125
+              ],
+              [
+                184994.6406,
+                675110.875
+              ],
+              [
+                185009.7656,
+                675122.25
+              ],
+              [
+                185030.8906,
+                675137.875
+              ],
+              [
+                185039.8281,
+                675125.6875
+              ],
+              [
+                185031.1875,
+                675119.0625
+              ],
+              [
+                185015.0156,
+                675107.125
+              ],
+              [
+                185027.3125,
+                675090.3125
+              ],
+              [
+                185019.6406,
+                675084.875
+              ]
+            ]
+          ]
+        ]
+      },
+      "geometry_name": "the_geom",
+      "properties": {
+        "PARCEL_ID": 790423,
+        "GUSH_NUM": 6529,
+        "GUSH_SUFFI": 0,
+        "PARCEL": 162,
+        "LEGAL_AREA": 1730,
+        "PNUMTYPE": 0,
+        "PNUMTYPE_T": "",
+        "STATUS": 6,
+        "STATUS_TEX": "מוסדר",
+        "LOCALITY_I": 6400,
+        "LOCALITY_N": "הרצלייה",
+        "REG_MUN_ID": 0,
+        "REG_MUN_NA": "",
+        "COUNTY_ID": 51,
+        "COUNTY_NAM": "תל-אביב",
+        "REGION_ID": 5,
+        "REGION_NAM": "תל-אביב",
+        "WP": 6400,
+        "TALAR_NUMB": 0,
+        "TALAR_YEAR": 0,
+        "SYS_DATE": "2024-03-04 17:13:23",
+        "ID": "6529--162",
+        "NOTE": "הנתון שטח רשום כאן אינו מהווה אסמכתה. לאסמכתה חוקית לשטח הרשום של חלקה יש לפנות ללשכות המרשם במשרד המשפטים.",
+        "SHAPE_AREA": 1718.92938438,
+        "SHAPE_LEN": 203.31876661
+      },
+      "_source": {
+        "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata%3AParcels_ITM&outputFormat=application%2Fjson&srsName=EPSG%3A2039&CQL_FILTER=BBOX%28the_geom%2C184859.62%2C674905.69%2C185179.62%2C675225.69%2C%27EPSG%3A2039%27%29&count=100&startIndex=100",
+        "retrieved_at": "2026-09-10T16:12:04.396281+00:00",
+        "epoch": 1789056724.396281,
+        "sha256": "bd28e32737bcc73d40e402ab676511c5f4476235c70e02fd065f9dd3c783afbc",
+        "content_type": "application/json;charset=UTF-8"
+      }
+    }
+  ],
+  "6529-163": [
+    {
+      "type": "Feature",
+      "id": "Parcels_ITM.784282",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                184971.2344,
+                675048.125
+              ],
+              [
+                184965.5469,
+                675044
+              ],
+              [
+                184945.7969,
+                675074.3125
+              ],
+              [
+                184958.75,
+                675084.25
+              ],
+              [
+                184962.9063,
+                675086.9375
+              ],
+              [
+                184979.1875,
+                675099.3125
+              ],
+              [
+                184998.4531,
+                675068.9375
+              ],
+              [
+                184983.2656,
+                675057.375
+              ],
+              [
+                184974.2188,
+                675050.5625
+              ],
+              [
+                184971.2344,
+                675048.125
+              ]
+            ]
+          ]
+        ]
+      },
+      "geometry_name": "the_geom",
+      "properties": {
+        "PARCEL_ID": 790515,
+        "GUSH_NUM": 6529,
+        "GUSH_SUFFI": 0,
+        "PARCEL": 163,
+        "LEGAL_AREA": 1503,
+        "PNUMTYPE": 0,
+        "PNUMTYPE_T": "",
+        "STATUS": 6,
+        "STATUS_TEX": "מוסדר",
+        "LOCALITY_I": 6400,
+        "LOCALITY_N": "הרצלייה",
+        "REG_MUN_ID": 0,
+        "REG_MUN_NA": "",
+        "COUNTY_ID": 51,
+        "COUNTY_NAM": "תל-אביב",
+        "REGION_ID": 5,
+        "REGION_NAM": "תל-אביב",
+        "WP": 6400,
+        "TALAR_NUMB": 0,
+        "TALAR_YEAR": 0,
+        "SYS_DATE": "2024-03-04 17:13:23",
+        "ID": "6529--163",
+        "NOTE": "הנתון שטח רשום כאן אינו מהווה אסמכתה. לאסמכתה חוקית לשטח הרשום של חלקה יש לפנות ללשכות המרשם במשרד המשפטים.",
+        "SHAPE_AREA": 1494.58868438,
+        "SHAPE_LEN": 155.166350717
+      },
+      "_source": {
+        "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata%3AParcels_ITM&outputFormat=application%2Fjson&srsName=EPSG%3A2039&CQL_FILTER=BBOX%28the_geom%2C184859.62%2C674905.69%2C185179.62%2C675225.69%2C%27EPSG%3A2039%27%29&count=100&startIndex=0",
+        "retrieved_at": "2026-09-10T16:12:04.172478+00:00",
+        "epoch": 1789056724.1724784,
+        "sha256": "89fa677f9dcf948b55691f26100c15c47e554439f84657f4d406766a21404e04",
+        "content_type": "application/json;charset=UTF-8"
+      }
+    }
+  ],
+  "6529-100": [
+    {
+      "type": "Feature",
+      "id": "Parcels_ITM.789786",
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [
+                185058.2188,
+                675028.125
+              ],
+              [
+                185050.2188,
+                675022.0625
+              ],
+              [
+                185032.8125,
+                675044.5625
+              ],
+              [
+                185053.9688,
+                675060.875
+              ],
+              [
+                185060.4531,
+                675052.125
+              ],
+              [
+                185071.1719,
+                675038
+              ],
+              [
+                185070.1406,
+                675037.25
+              ],
+              [
+                185058.2188,
+                675028.125
+              ]
+            ]
+          ]
+        ]
+      },
+      "geometry_name": "the_geom",
+      "properties": {
+        "PARCEL_ID": 790446,
+        "GUSH_NUM": 6529,
+        "GUSH_SUFFI": 0,
+        "PARCEL": 100,
+        "LEGAL_AREA": 750,
+        "PNUMTYPE": 0,
+        "PNUMTYPE_T": "",
+        "STATUS": 6,
+        "STATUS_TEX": "מוסדר",
+        "LOCALITY_I": 6400,
+        "LOCALITY_N": "הרצלייה",
+        "REG_MUN_ID": 0,
+        "REG_MUN_NA": "",
+        "COUNTY_ID": 51,
+        "COUNTY_NAM": "תל-אביב",
+        "REGION_ID": 5,
+        "REGION_NAM": "תל-אביב",
+        "WP": 6400,
+        "TALAR_NUMB": 0,
+        "TALAR_YEAR": 0,
+        "SYS_DATE": "2024-03-04 17:13:23",
+        "ID": "6529--100",
+        "NOTE": "הנתון שטח רשום כאן אינו מהווה אסמכתה. לאסמכתה חוקית לשטח הרשום של חלקה יש לפנות ללשכות המרשם במשרד המשפטים.",
+        "SHAPE_AREA": 755.618696875,
+        "SHAPE_LEN": 110.110154217
+      },
+      "_source": {
+        "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata%3AParcels_ITM&outputFormat=application%2Fjson&srsName=EPSG%3A2039&CQL_FILTER=BBOX%28the_geom%2C184859.62%2C674905.69%2C185179.62%2C675225.69%2C%27EPSG%3A2039%27%29&count=100&startIndex=0",
+        "retrieved_at": "2026-09-10T16:12:04.172478+00:00",
+        "epoch": 1789056724.1724784,
+        "sha256": "89fa677f9dcf948b55691f26100c15c47e554439f84657f4d406766a21404e04",
+        "content_type": "application/json;charset=UTF-8"
+      }
+    }
+  ]
+}

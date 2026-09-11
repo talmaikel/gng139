@@ -1,0 +1,90 @@
+{
+  "batch_id": "20260910T162108Z",
+  "runs": [
+    {
+      "id": "14d40482-2590-48dd-8ed9-d6c01aacce68",
+      "batch_id": "20260910T162108Z",
+      "request_id": "19650065",
+      "building_id": "municipal-file:5850",
+      "dossier_id": "a79cecf4e2171eae6bd7042f",
+      "address": "השושנים 6 הרצליה",
+      "scan_seconds": 29.014,
+      "data_entry_seconds": 0.048,
+      "total_seconds": 29.062,
+      "ocr_tiles": 11,
+      "ocr_characters": 10337,
+      "raw_output": "data\\experiments\\timed-pilot-dossiers\\20260910T162108Z\\19650065",
+      "created_at": "2026-09-10T16:21:38.092430+00:00",
+      "measurement_scope": "scan includes local PDF rendering, Tesseract OCR and evidence-file writes; data entry includes dossier assembly and SQLite insert; network and operator review are excluded"
+    },
+    {
+      "id": "ae2d0aae-ff5b-44e6-b2ca-8ffb4064f5a3",
+      "batch_id": "20260910T162108Z",
+      "request_id": "19700070",
+      "building_id": "municipal-file:5846",
+      "dossier_id": "c5a80a2f3cbe0256f01d0ead",
+      "address": "השושנים 2 הרצליה",
+      "scan_seconds": 24.517,
+      "data_entry_seconds": 0.012,
+      "total_seconds": 24.529,
+      "ocr_tiles": 9,
+      "ocr_characters": 8103,
+      "raw_output": "data\\experiments\\timed-pilot-dossiers\\20260910T162108Z\\19700070",
+      "created_at": "2026-09-10T16:22:02.668472+00:00",
+      "measurement_scope": "scan includes local PDF rendering, Tesseract OCR and evidence-file writes; data entry includes dossier assembly and SQLite insert; network and operator review are excluded"
+    },
+    {
+      "id": "9d2f3358-a272-4766-ad8b-6b41c019bb08",
+      "batch_id": "20260910T162108Z",
+      "request_id": "19610081",
+      "building_id": "municipal-file:4325",
+      "dossier_id": "83776b35deae2c7f9c045b02",
+      "address": "הנדיב 19 הרצליה",
+      "scan_seconds": 6.55,
+      "data_entry_seconds": 0.044,
+      "total_seconds": 6.594,
+      "ocr_tiles": 3,
+      "ocr_characters": 1439,
+      "raw_output": "data\\experiments\\timed-pilot-dossiers\\20260910T162108Z\\19610081",
+      "created_at": "2026-09-10T16:22:09.306894+00:00",
+      "measurement_scope": "scan includes local PDF rendering, Tesseract OCR and evidence-file writes; data entry includes dossier assembly and SQLite insert; network and operator review are excluded"
+    },
+    {
+      "id": "f1c5d308-346a-4b44-adf6-3065d799f68d",
+      "batch_id": "20260910T162108Z",
+      "request_id": "19690065",
+      "building_id": "municipal-file:4682",
+      "dossier_id": "1b8001bbe50d5cf3db4086a6",
+      "address": "הניצנים 14 הרצליה",
+      "scan_seconds": 21.638,
+      "data_entry_seconds": 0.01,
+      "total_seconds": 21.648,
+      "ocr_tiles": 10,
+      "ocr_characters": 8104,
+      "raw_output": "data\\experiments\\timed-pilot-dossiers\\20260910T162108Z\\19690065",
+      "created_at": "2026-09-10T16:22:30.989749+00:00",
+      "measurement_scope": "scan includes local PDF rendering, Tesseract OCR and evidence-file writes; data entry includes dossier assembly and SQLite insert; network and operator review are excluded"
+    },
+    {
+      "id": "209ba480-d3a1-4cd0-b19e-1d2e9bf18753",
+      "batch_id": "20260910T162108Z",
+      "request_id": "19540032",
+      "building_id": "municipal-file:5847",
+      "dossier_id": "10940982b6c21c5080c80ed9",
+      "address": "השושנים 3 הרצליה",
+      "scan_seconds": 3.938,
+      "data_entry_seconds": 0.013,
+      "total_seconds": 3.951,
+      "ocr_tiles": 2,
+      "ocr_characters": 1379,
+      "raw_output": "data\\experiments\\timed-pilot-dossiers\\20260910T162108Z\\19540032",
+      "created_at": "2026-09-10T16:22:35.002613+00:00",
+      "measurement_scope": "scan includes local PDF rendering, Tesseract OCR and evidence-file writes; data entry includes dossier assembly and SQLite insert; network and operator review are excluded"
+    }
+  ],
+  "totals": {
+    "scan_seconds": 85.657,
+    "data_entry_seconds": 0.127,
+    "total_seconds": 85.784
+  }
+}

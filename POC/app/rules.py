@@ -45,8 +45,15 @@ def evaluate(fields,filters):
     check('strengthened','לא חוזק בהיתר לפי תקן רעידות אדמה',lambda x:x is False,3)
     check('floors','לפחות שתי קומות לפי הגדרת המדיניות',lambda x:x>=2,3)
     check('units','לפחות ארבע דירות שנבנו בהיתר',lambda x:x>=4,3)
-    check('scope_parcels','חלקת מגורים אחת או שתי חלקות לכל היותר',lambda x:1<=x<=2,2)
-    check('scope_buildings','מבנה אחד או שני מבנים לכל היותר',lambda x:1<=x<=2,2)
+    def scope_check(key,label):
+        field=fields.get(key)
+        if not usable(field):status='unknown'
+        elif field['value']<1:status='failed'
+        elif field['value']<=2:status='passed'
+        else:status='routed'
+        checks.append({'id':key,'label':label,'status':status,'source_url':POLICY_URL,'page':2,'field_evidence':field})
+    scope_check('scope_parcels','חלקה אחת או שתיים במסלול המגרשי; 3 ומעלה למסלול מתחמי')
+    scope_check('scope_buildings','מבנה אחד או שניים במסלול המגרשי; 3 ומעלה למסלול מתחמי')
     check('renewal_policy_category','מיקום באזור המאפשר התחדשות מגרשית',lambda x:x in (
         'התחדשות מגרשית מוטת מגורים','התחדשות עירונית מוטת מגורים נמוכה'),5)
     for key,label in [('planning_lot','זיהוי מגרש תכנוני'),('planning_basis','בסיס תכנוני מבוסס לתרחיש'),('overriding_plans_checked','בדיקת תכניות ומדיניות גוברות')]:
@@ -60,6 +67,7 @@ def evaluate(fields,filters):
 
 def eligibility_status(checks):
     if any(x['status']=='failed' for x in checks):return 'ineligible'
+    if any(x['status']=='routed' for x in checks):return 'urban_renewal_compound'
     if checks and all(x['status']=='passed' for x in checks):return 'eligible'
     return 'needs_verification'
 

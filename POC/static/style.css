@@ -861,3 +861,14 @@ details.history #history-list{margin-top:10px}
   .src-attrib{grid-template-columns:1fr}
   .gap-rank li{grid-template-columns:minmax(0,1fr) 56px auto;gap:10px}
 }
+
+/* --- XPlan (merged from main) ------------------------------------------------ */
+.xplan-status{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:12px 14px;margin:0 0 var(--s2)}
+.xplan-status h5{margin:6px 0 4px;font-size:13.5px;font-weight:700}
+.xplan-status p{margin:0 0 4px;font-size:12.5px;color:var(--fg-muted)}
+.xplan-status small{font-family:var(--f-mono);font-size:10px;color:var(--fg-faint)}
+/* Screened out by XPlan is neither a pass nor a rule failure: it is parked. */
+.badge.screened_out,.badge.filtered_landuse,.badge.metro,.badge.preservation,
+.badge.existing_renewal_plan,.badge.urban_renewal_compound{color:var(--fg-muted);background:var(--surface-2)}
+.badge.primary_candidate{color:var(--go);background:var(--go-soft)}

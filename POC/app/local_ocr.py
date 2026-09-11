@@ -29,22 +29,23 @@ def _languages(command: str):
     return {line.strip() for line in completed.stdout.splitlines() if line.strip() and not line.startswith("List of")}
 
 
-def extract_local(pdf_path: Path, output_dir: Path, *, language: str = "heb+eng", psm: int = 11,
-                  max_tiles: int = 24):
-    """Render a permit to tiles and retain every raw OCR output as evidence."""
+def prepare_tesseract(language: str = "heb+eng"):
+    """Return a validated local Tesseract command for the requested languages."""
     command = _tesseract_command()
     available = _languages(command)
-    needed = set(language.split("+"))
-    missing = needed - available
+    missing = set(language.split("+")) - available
     if missing:
         raise PipelineError(f"Tesseract is installed but missing language data: {', '.join(sorted(missing))}")
+    return command
 
-    tiles = render_tiles(pdf_path, output_dir / "tiles", max_tiles=max_tiles)
-    text_dir = output_dir / "ocr"
-    text_dir.mkdir(parents=True, exist_ok=True)
+
+def ocr_rendered_tiles(tiles, output_dir: Path, *, language: str = "heb+eng", psm: int = 11):
+    """OCR already-rendered tiles so render and OCR time can be measured separately."""
+    command = prepare_tesseract(language)
+    output_dir.mkdir(parents=True, exist_ok=True)
     records = []
     for tile in tiles:
-        text_path = text_dir / f"{tile['id']}.txt"
+        text_path = output_dir / f"{tile['id']}.txt"
         if not text_path.exists():
             completed = subprocess.run(
                 [command, str(tile["path"]), "stdout", "-l", language, "--psm", str(psm)],
@@ -58,6 +59,15 @@ def extract_local(pdf_path: Path, output_dir: Path, *, language: str = "heb+eng"
             "id": tile["id"], "page": tile["page"], "image": str(tile["path"]),
             "text": str(text_path), "characters": len(text),
         })
+    return records
+
+
+def extract_local(pdf_path: Path, output_dir: Path, *, language: str = "heb+eng", psm: int = 11,
+                  max_tiles: int = 24):
+    """Render a permit to tiles and retain every raw OCR output as evidence."""
+    tiles = render_tiles(pdf_path, output_dir / "tiles", max_tiles=max_tiles)
+    text_dir = output_dir / "ocr"
+    records = ocr_rendered_tiles(tiles, text_dir, language=language, psm=psm)
 
     result = {
         "provider": "tesseract",

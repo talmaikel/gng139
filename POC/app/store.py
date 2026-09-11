@@ -37,6 +37,10 @@ class Store:
               'CREATE TABLE IF NOT EXISTS scenarios(id TEXT PRIMARY KEY,dossier_id TEXT NOT NULL REFERENCES dossiers(id),payload TEXT NOT NULL,created_at TEXT NOT NULL)',
               'CREATE TABLE IF NOT EXISTS pipeline_runs(id TEXT PRIMARY KEY,building_id TEXT NOT NULL,dossier_id TEXT NOT NULL REFERENCES dossiers(id),scan_seconds REAL NOT NULL,data_entry_seconds REAL NOT NULL,total_seconds REAL NOT NULL,payload TEXT NOT NULL,created_at TEXT NOT NULL)']:
                 self.run(c,sql)
+            for sql in [
+              'CREATE TABLE IF NOT EXISTS xplan_snapshots(id TEXT PRIMARY KEY,payload TEXT NOT NULL,created_at TEXT NOT NULL)',
+              'CREATE TABLE IF NOT EXISTS parcel_screenings(parcel_key TEXT PRIMARY KEY,snapshot_id TEXT NOT NULL,category TEXT NOT NULL,payload TEXT NOT NULL,updated_at TEXT NOT NULL)']:
+                self.run(c,sql)
             if self.pg:
                 c.execute('CREATE EXTENSION IF NOT EXISTS postgis')
                 c.execute('ALTER TABLE entities ADD COLUMN IF NOT EXISTS geom geometry(Geometry,2039)')
@@ -74,6 +78,28 @@ class Store:
             self.run(c,'INSERT INTO entities(id,kind,payload) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload',(entity['id'],kind,json.dumps(entity,ensure_ascii=False)))
             if self.pg and entity.get('geometry'):
                 self.run(c,'UPDATE entities SET geom=ST_SetSRID(ST_GeomFromGeoJSON(?),2039) WHERE id=?',(json.dumps(entity['geometry']),entity['id']))
+    def entities(self,kind):
+        with self.connect() as c:rows=self.run(c,'SELECT payload FROM entities WHERE kind=? ORDER BY id',(kind,)).fetchall()
+        return [json.loads(x['payload']) for x in rows]
+    def save_xplan_snapshot(self,snapshot):
+        with self.connect(write=True) as c:
+            self.run(c,'INSERT INTO xplan_snapshots VALUES(?,?,?) ON CONFLICT(id) DO NOTHING',
+                     (snapshot['id'],json.dumps(snapshot,ensure_ascii=False),snapshot['created_at']))
+    def latest_xplan_snapshot(self):
+        with self.connect() as c:row=self.run(c,'SELECT payload FROM xplan_snapshots ORDER BY created_at DESC LIMIT 1').fetchone()
+        return json.loads(row['payload']) if row else None
+    def save_parcel_screening(self,screening):
+        with self.connect(write=True) as c:
+            self.run(c,'INSERT INTO parcel_screenings VALUES(?,?,?,?,?) ON CONFLICT(parcel_key) DO UPDATE SET snapshot_id=excluded.snapshot_id,category=excluded.category,payload=excluded.payload,updated_at=excluded.updated_at',
+                     (screening['parcel_key'],screening['snapshot_id'],screening['category'],json.dumps(screening,ensure_ascii=False),utcnow()))
+    def parcel_screening(self,parcel_key):
+        with self.connect() as c:row=self.run(c,'SELECT payload FROM parcel_screenings WHERE parcel_key=?',(parcel_key,)).fetchone()
+        return json.loads(row['payload']) if row else None
+    def xplan_status(self):
+        with self.connect() as c:
+            snapshot=self.run(c,'SELECT id,created_at FROM xplan_snapshots ORDER BY created_at DESC LIMIT 1').fetchone()
+            rows=self.run(c,'SELECT category,COUNT(*) n FROM parcel_screenings GROUP BY category').fetchall()
+        return {'snapshot':dict(snapshot) if snapshot else None,'categories':{x['category']:x['n'] for x in rows},'screened_parcels':sum(x['n'] for x in rows)}
     def save_dossier(self,d):
         # Snapshot identifiers are content addressed and never overwritten.
         with self.connect(write=True) as c:

@@ -32,6 +32,7 @@ Docker/PostgreSQL are not installed on the development host. The Windows launch 
 ## What works
 
 - WFS discovery and schema checks; official Herzliya boundary and paginated parcel collection.
+- Cached citywide XPlan ArcGIS snapshot, schema validation, object-ID pagination and parcel-polygon land-use screening before document download.
 - GISNET public configuration discovery and ArcGIS object-ID pagination connector. When its service fails, OSM footprints are explicitly community-sourced discovery data.
 - Public Complot parcel search and building-file tables. Sources and gaps persist in dossiers; permit history is never mislabeled as original construction evidence.
 - Bounded document download, PDF text extraction and optional Hebrew/English OCR with page references. OCR never automatically verifies critical facts.
@@ -62,6 +63,14 @@ This local pilot has one company, no authentication, no real payments and no enf
 The live audit performs public read-only queries and saves evidence; it may encounter source rate limits. Its requests are cached. `scripts/probe_sources.py` preserves source catalog responses. Optional OCR needs Tesseract plus `heb` and `eng` data (bundled in Docker); otherwise scanned pages explicitly report `ocr_unavailable`.
 
 Pilot settings: `MAX_AREA_M2` (250000), `MAX_RADIUS_M` (250), `MAX_BUILDINGS` (500), `MAX_PARCELS` (1000), `ARCHIVE_INTERVAL_SECONDS` (10), `CACHE_SECONDS` (86400), `SOURCE_MAX_AGE_DAYS` (30), `SHAKED_DATA`. These are operational defaults, not approved commercial thresholds. The 30-day gate measures retrieval recency, not assurance of source currency; source dates are preserved separately.
+
+Download or refresh the XPlan city snapshot and screen every cadastral parcel already stored locally:
+
+```powershell
+.venv/Scripts/python.exe -X utf8 scripts/sync_xplan.py
+```
+
+The snapshot is reused for seven days. Use `--force` only when an immediate refresh is needed. Pilot settings are `XPLAN_CACHE_SECONDS` (604800), `XPLAN_OVERLAP_THRESHOLD` (0.90), and `XPLAN_SPECIAL_OVERLAP_THRESHOLD` (0.02). The run report lists each category, the building-file candidates, and the estimated document pipelines avoided.
 
 API documentation: `/docs`. No API accepts arbitrary source URLs. User-controlled evidence and archive HTML are escaped in the interface. Original HTML is never executed. The server stores raw evidence under `data/cache` and extracted documents under `data/documents`.
 
