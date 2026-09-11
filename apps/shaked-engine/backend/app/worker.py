@@ -86,6 +86,8 @@ async def generate_dossier_handler(payload: dict) -> dict:
             "city_code": opportunity.city_code,
         }
 
+        plot_area_sqm = float(opportunity.area_sqm) if opportunity.area_sqm else DEFAULT_PLOT_AREA_SQM
+
         pdf_documents = await _fetch_permit_pdfs(opportunity)
         dossier["documents_found"] = len(pdf_documents)
 
@@ -93,21 +95,43 @@ async def generate_dossier_handler(payload: dict) -> dict:
         for pdf_bytes in pdf_documents:
             for page_bytes in _rasterize_pdf(pdf_bytes):
                 preprocessed = preprocess_blueprint(page_bytes)
-                extraction = await extract_total_building_area(preprocessed.legend_crop, page_bytes)
+                extraction = await extract_total_building_area(preprocessed.legend_crop, page_bytes, plot_area_sqm)
                 extraction_results.append(
                     {
                         "total_building_area_sqm": extraction.total_building_area_sqm,
                         "confidence": extraction.confidence,
                         "method": extraction.method,
+                        "is_plausible": extraction.is_plausible,
+                        "plausibility_reason": extraction.plausibility_reason,
+                        "requires_human_review": extraction.requires_human_review,
                     }
                 )
         dossier["extraction_results"] = extraction_results
 
-        confident_areas = [
-            r["total_building_area_sqm"] for r in extraction_results if r["total_building_area_sqm"]
+        # Never treat an AI-fallback figure as verified fact, even when it
+        # passes the bounds check (see extractor.py: gpt-4o-mini has been
+        # observed to confidently misread a plot number as a building area,
+        # a plausible-looking number the bounds check can't catch). Local
+        # OCR matches that pass the bounds check are the only ones trusted
+        # for the calculator; everything else only informs a human reviewer.
+        trusted_local = [
+            r for r in extraction_results
+            if r["is_plausible"] and not r["requires_human_review"] and r["total_building_area_sqm"]
         ]
-        plot_area_sqm = float(opportunity.area_sqm) if opportunity.area_sqm else DEFAULT_PLOT_AREA_SQM
-        buildable_area_sqm = max(confident_areas) if confident_areas else plot_area_sqm * 0.6
+        reviewable_ai = [
+            r for r in extraction_results
+            if r["is_plausible"] and r["requires_human_review"] and r["total_building_area_sqm"]
+        ]
+
+        if trusted_local:
+            buildable_area_sqm = max(r["total_building_area_sqm"] for r in trusted_local)
+            buildable_area_source = "local_ocr"
+        elif reviewable_ai:
+            buildable_area_sqm = max(r["total_building_area_sqm"] for r in reviewable_ai)
+            buildable_area_source = "ai_assisted_unverified"
+        else:
+            buildable_area_sqm = plot_area_sqm * 0.6
+            buildable_area_source = "estimated_from_plot_area"
 
         feasibility = calculate_feasibility(
             FeasibilityInput(
@@ -121,11 +145,17 @@ async def generate_dossier_handler(payload: dict) -> dict:
         dossier["feasibility"] = feasibility.model_dump()
         dossier["feasibility_assumptions"] = {
             "note": "Placeholder market assumptions, not sourced per-opportunity yet -- see PRODUCT_STRUCTURE.md",
-            "buildable_area_source": "ocr" if confident_areas else "estimated_from_plot_area",
+            "buildable_area_source": buildable_area_source,
             "sale_price_per_sqm_ils": DEFAULT_SALE_PRICE_PER_SQM_ILS,
             "construction_cost_per_sqm_ils": DEFAULT_CONSTRUCTION_COST_PER_SQM_ILS,
             "existing_units_assumed": DEFAULT_EXISTING_UNITS,
         }
+        # True whenever a human needs to confirm a figure before this dossier
+        # is relied on: an unverified AI-derived buildable area, or any
+        # extraction attempt that failed the bounds check outright.
+        dossier["requires_human_review"] = buildable_area_source == "ai_assisted_unverified" or any(
+            not r["is_plausible"] for r in extraction_results
+        )
 
     return dossier
 

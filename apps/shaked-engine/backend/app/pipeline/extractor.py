@@ -31,6 +31,28 @@ AREA_ROW_PATTERN = re.compile(
 
 MIN_OCR_CONFIDENCE = 60.0
 
+# Bounds-based sanity check on an extracted area, independent of how it was
+# read. Catches grossly wrong values (e.g. a gush/tik number mistaken for an
+# area) -- it will NOT catch a plausible-looking wrong number (e.g. a plot
+# number that happens to fall in a normal building-size range), which is why
+# the AI fallback's result is never trusted as fact regardless of whether it
+# passes this check; see `requires_human_review` below.
+MIN_PLAUSIBLE_AREA_SQM = 20.0
+MAX_PLAUSIBLE_AREA_SQM = 5000.0
+MAX_AREA_TO_PLOT_RATIO = 3.0  # generous allowance for a multi-floor building on a small plot
+
+
+def _check_plausibility(area_sqm: float | None, plot_area_sqm: float | None) -> tuple[bool, str | None]:
+    if area_sqm is None:
+        return False, "No area was extracted"
+    if area_sqm < MIN_PLAUSIBLE_AREA_SQM:
+        return False, f"{area_sqm} sqm is implausibly small for a building"
+    if area_sqm > MAX_PLAUSIBLE_AREA_SQM:
+        return False, f"{area_sqm} sqm exceeds the {MAX_PLAUSIBLE_AREA_SQM} sqm ceiling for this archive's typical low-rise permits"
+    if plot_area_sqm and area_sqm > plot_area_sqm * MAX_AREA_TO_PLOT_RATIO:
+        return False, f"{area_sqm} sqm exceeds {MAX_AREA_TO_PLOT_RATIO}x the plot area ({plot_area_sqm} sqm)"
+    return True, None
+
 EXTRACTION_JSON_SCHEMA = {
     "name": "building_area_extraction",
     "schema": {
@@ -55,11 +77,18 @@ class ExtractionResult:
     total_building_area_sqm: float | None
     confidence: float
     method: str  # "tesseract_regex" | "openai_gpt4o_mini"
+    is_plausible: bool
+    plausibility_reason: str | None
+    # True whenever this figure should never be treated as verified fact:
+    # every AI-fallback result (regardless of how plausible it looks -- see
+    # _check_plausibility's docstring), plus any result that failed the
+    # bounds check outright.
+    requires_human_review: bool
     raw_text: str | None = None
     notes: str | None = None
 
 
-def _extract_via_tesseract(legend_crop: np.ndarray) -> ExtractionResult:
+def _extract_via_tesseract(legend_crop: np.ndarray, plot_area_sqm: float | None) -> ExtractionResult:
     image = Image.fromarray(legend_crop)
     ocr_data = pytesseract.image_to_data(
         image, lang=settings.tesseract_lang, output_type=pytesseract.Output.DICT
@@ -77,15 +106,19 @@ def _extract_via_tesseract(legend_crop: np.ndarray) -> ExtractionResult:
         values = [float(m[2].replace(",", "")) for m in (totals or matches)]
         total_area = sum(values) if not totals else values[0]
 
+    is_plausible, plausibility_reason = _check_plausibility(total_area, plot_area_sqm)
     return ExtractionResult(
         total_building_area_sqm=total_area,
         confidence=mean_confidence,
         method="tesseract_regex",
+        is_plausible=is_plausible,
+        plausibility_reason=plausibility_reason,
+        requires_human_review=not is_plausible,
         raw_text=text,
     )
 
 
-async def _extract_via_openai(image_bytes: bytes) -> ExtractionResult:
+async def _extract_via_openai(image_bytes: bytes, plot_area_sqm: float | None) -> ExtractionResult:
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY is not configured; cannot use the AI fallback extractor")
 
@@ -117,17 +150,32 @@ async def _extract_via_openai(image_bytes: bytes) -> ExtractionResult:
     )
 
     payload = json.loads(response.choices[0].message.content)
+    area = payload.get("total_building_area_sqm")
+    is_plausible, plausibility_reason = _check_plausibility(area, plot_area_sqm)
     return ExtractionResult(
-        total_building_area_sqm=payload.get("total_building_area_sqm"),
+        total_building_area_sqm=area,
         confidence=payload.get("confidence", 0.0),
         method="openai_gpt4o_mini",
+        is_plausible=is_plausible,
+        plausibility_reason=plausibility_reason,
+        # Always True: an AI-read figure is never auto-trusted as verified
+        # fact, even when it clears the bounds check -- the live test showed
+        # gpt-4o-mini confidently misread a plot number as a building area,
+        # a plausible-looking number this check can't catch.
+        requires_human_review=True,
         notes=payload.get("notes"),
     )
 
 
-async def extract_total_building_area(legend_crop: np.ndarray, original_image_bytes: bytes) -> ExtractionResult:
-    local_result = _extract_via_tesseract(legend_crop)
-    if local_result.total_building_area_sqm is not None and local_result.confidence >= MIN_OCR_CONFIDENCE:
+async def extract_total_building_area(
+    legend_crop: np.ndarray, original_image_bytes: bytes, plot_area_sqm: float | None = None
+) -> ExtractionResult:
+    local_result = _extract_via_tesseract(legend_crop, plot_area_sqm)
+    if (
+        local_result.total_building_area_sqm is not None
+        and local_result.confidence >= MIN_OCR_CONFIDENCE
+        and local_result.is_plausible
+    ):
         return local_result
 
-    return await _extract_via_openai(original_image_bytes)
+    return await _extract_via_openai(original_image_bytes, plot_area_sqm)

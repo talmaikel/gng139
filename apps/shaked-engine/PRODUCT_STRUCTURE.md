@@ -127,6 +127,25 @@ municipal systems, not mocks:
   historical scan needs human review before being treated as ground truth.
   Nothing in the pipeline currently flags "this AI answer looks
   suspicious" — that's a real gap (see known gaps).
+- **AI plausibility check implemented and live-tested against the same
+  case.** `extractor.py` now has `_check_plausibility(area, plot_area_sqm)`:
+  a bounds check (20–5000 sqm, and at most 3x the plot area) applied to
+  *every* extraction, local or AI. Verified it correctly rejects grossly
+  wrong values (a gush number, a value 4x the plot area, etc.) — but, as
+  expected, it does **not** catch the 128-sqm plot-number misread above,
+  since 128 is a perfectly normal building size for a 750 sqm plot. That
+  confirms the bounds check alone was never going to be the real fix.
+  The actual fix is policy, not math: `ExtractionResult.requires_human_review`
+  is unconditionally `True` for every AI-fallback result regardless of
+  plausibility, and `worker.py`'s `generate_dossier_handler` now only feeds
+  the economic calculator a *local*-OCR figure that passed the bounds
+  check; an AI-derived figure is used only as a last resort before the
+  plot-area estimate, and always labeled
+  `feasibility_assumptions.buildable_area_source = "ai_assisted_unverified"`
+  with a dossier-level `requires_human_review: true` flag. Re-ran the exact
+  128-sqm case through the real `generate_dossier_handler` (real OCR, real
+  OpenAI call, real economic calculator) and confirmed the dossier now
+  correctly surfaces both flags instead of silently using 128 as fact.
 - **Full queue run tested live**: enqueued a dossier job for a real
   opportunity (gush 6424/parcel 83, plot area 750.2 sqm — the real figure
   read off the scanned form), worker claimed it via `SKIP LOCKED`, made the
@@ -180,7 +199,7 @@ domain context only, per the isolation rule):
 | Economic calculator ("Generic Report 0") | `backend/app/services/economic/calculator.py` | ✅ | Pure Python, no Excel. Tenant/developer sqm split is a simplified 1:1-replacement model — validate against the real PRD formula before relying on it |
 | Scraper (generic/JS fallback) | `backend/app/pipeline/scraper.py` | 🚧 | Playwright scaffolding for a city whose real archive needs browser rendering. Herzliya turned out not to need this — see `archive_client.py` |
 | Preprocessor | `backend/app/pipeline/preprocessor.py` | ✅ | OpenCV: CLAHE contrast + Otsu binarization + Hough-line legend-region crop. Live-tested on a real 1961 scan |
-| Extractor | `backend/app/pipeline/extractor.py` | ✅ | Tesseract (heb+eng) + regex first; falls back to OpenAI `gpt-4o-mini` structured output below a confidence threshold. Both paths live-tested end-to-end on a real scan; the AI answer itself was plausible-looking but wrong on that scan (see "Dossier pipeline" section) — no confidence/plausibility check exists yet |
+| Extractor | `backend/app/pipeline/extractor.py` | ✅ | Tesseract (heb+eng) + regex first; falls back to OpenAI `gpt-4o-mini` structured output below a confidence threshold. Both paths run every result through `_check_plausibility` (bounds check) and mark AI-fallback results `requires_human_review=True` unconditionally — live-tested, see "Dossier pipeline" section |
 | Dossier generation | `backend/app/worker.py` (`generate_dossier_handler`) | ✅ | Real orchestration: DB → archive client → rasterize → preprocess → extract → economic calculator. Live-tested end-to-end via the queue — see "Dossier pipeline" section for what was and wasn't fully exercised |
 | API routers | `backend/app/api/v1/` | ✅ | `auth`, `candidates` (+ unify), `filters`, `dossiers` (generate + status), `economic` (feasibility) |
 | DB migrations | `backend/alembic/versions/0001_initial_schema.py` | ✅ | tenants, users, opportunities (+PostGIS/GiST index), packages, balances, reservations (+ partial-unique active-lock index), task_queue |
@@ -204,14 +223,19 @@ domain context only, per the isolation rule):
    PDFs live on `archive.gis-net.co.il` keyed by permit *request* number, not
    tik number, and no live enumeration from tik → request numbers has been
    found. Newer/digitized tiks may work via `GetTikDocs` already — untested.
-2. **The AI fallback has no plausibility/confidence check on its own answer.**
-   Live-tested on a real 1961 scan: `gpt-4o-mini` returned a confident,
-   well-formed but almost certainly *wrong* area (it read a plot/lot number
-   as a building area). Every AI-assisted extraction should probably be
-   forced to `verification_level = ai_assisted` (never treated as
-   `human_verified`) and surfaced for review rather than fed straight into
-   the economic calculator as fact — that distinction isn't enforced
-   anywhere yet.
+2. ~~The AI fallback has no plausibility/confidence check on its own
+   answer.~~ **Done.** `extractor.py._check_plausibility` bounds-checks
+   every extraction; every AI-fallback result is unconditionally flagged
+   `requires_human_review`; `worker.py` only trusts local-OCR figures for
+   the calculator and labels an AI-derived one
+   `buildable_area_source: "ai_assisted_unverified"` with a dossier-level
+   `requires_human_review: true`. **Not yet committed/pushed.** Remaining
+   related gap: `Opportunity.verification_level` (the DB column) is never
+   actually updated by any of this — the new flags exist only in the
+   per-dossier JSON result, not persisted against the opportunity itself.
+   There's also no UI/workflow yet for a human to act on
+   `requires_human_review` — it's surfaced in the data, not consumed
+   anywhere.
 3. **Candidates API doesn't expose geometry**, so the frontend map has no real
    markers yet — either add a `GeoJSON`/lat-lng field to the candidates response
    or fetch geometry separately.
