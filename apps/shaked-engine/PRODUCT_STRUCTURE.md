@@ -4,7 +4,7 @@ Living document. Update this whenever a module is added, a stub is filled in, or
 an architectural decision changes. This is the map of the product, not a
 changelog — keep it current, not chronological.
 
-Last updated: 2026-09-11 (local DB stood up, migration applied)
+Last updated: 2026-09-12 (economic calculator validated against the real PRD and a structural bug fixed)
 
 ## Local environment status
 
@@ -162,6 +162,69 @@ municipal systems, not mocks:
   `preprocessor.py` fix, `requirements.txt` (`pymupdf`), `.env.example`
   (Tesseract path comment).
 
+## Economic calculator, validated against the real PRD
+
+This bootstrap was built from an inferred understanding of "Generic Report
+0" -- the actual PRD (`POC/PRD_Shaked_Herzliya_v2.docx`, section 6.4,
+requirements ECO-01/02/03) was never read until now. It's far more specific
+than assumed, and reading it surfaced two real, previously-undetected bugs
+plus a concrete design requirement:
+
+- **Structural bug (the calculator NEVER gave the developer any area):**
+  the original formula sized each tenant's replacement as
+  `buildable_area_sqm / existing_units` -- their *share of the new
+  building*. Summing that over all `existing_units` algebraically recovers
+  exactly 100% of `buildable_area_sqm`, identically, regardless of how
+  large the new building is. `developer_allocation_sqm` and
+  `total_revenue_ils` were therefore mathematically guaranteed to be zero
+  whenever per-unit compensation was zero -- which explains why every
+  single feasibility number produced anywhere in this project's testing,
+  from the very first smoke test onward, showed zero revenue. Fixed by
+  adding a real, separate input, `average_existing_unit_sqm` (default 70
+  sqm, an explicit assumption -- see below), and sizing tenant
+  compensation off the *old* building instead of the new one. Verified:
+  1500 sqm buildable / 2 existing units / 70 sqm assumed existing size now
+  correctly yields 140 sqm to tenants and 1360 sqm to the developer,
+  instead of 1500/0.
+- **Formula bug**: PRD ECO-01 defines the profit metric as "the difference
+  divided by expenses" (profit ÷ **cost**), not profit ÷ revenue as
+  originally implemented. Renamed `profit_margin_ratio` →
+  `profit_margin_on_cost_ratio` and fixed the math to match (verified
+  against a manual calculation).
+- **ECO-02 requires a real "assumptions library"**: every commercial input
+  must be tagged data/estimate/missing, versioned, and dated -- not a bare
+  constant. New `app/services/economic/assumptions.py` implements this
+  (`EconomicAssumptionSet`, per-city, currently only `HERZLIYA_2026_V1`,
+  every entry honestly marked `ESTIMATE` since none are sourced yet).
+  `worker.py` now reads from this library instead of hardcoded
+  `DEFAULT_*` constants, and the dossier's `feasibility_assumptions` output
+  surfaces the version, date, and per-field status.
+- **PRD 6.4 ("the system does not invent rights... does not count the
+  result as ready" when there's no sufficient planning basis) changes
+  worker.py's behavior**: it previously fabricated a buildable-area guess
+  (`plot_area_sqm * 0.6`) when no OCR/AI figure existed, and ran the
+  calculator on it anyway. That's gone. `generate_dossier_handler` now
+  requires three real "property inputs" -- `plot_area_sqm`,
+  `existing_units`, and a substantiated `buildable_area_sqm` -- and if any
+  is missing, `feasibility` is `null` with an explicit `scenario_note`
+  explaining which input is missing and citing the PRD, rather than
+  presenting a guessed number as a scenario.
+- **`existing_units` is now a real DB column** (`opportunities.existing_units`,
+  nullable, migration `0002_add_existing_units`), not a hardcoded worker.py
+  constant -- per PRD DOS-02, "existing dwelling-unit count from a
+  sufficient source" is a required minimum input, and `NULL` genuinely
+  means unknown rather than defaulting to a fabricated `1`. Also exposed in
+  the candidates API response.
+- **Live-tested both branches** via the real `generate_dossier_handler`
+  (real archive lookup, real OCR/AI extraction, real calculator) against
+  two real opportunities: one with `existing_units` set (produced a
+  complete, correctly-labeled scenario) and one without (correctly
+  produced `feasibility: null` with the expected `scenario_note`, no
+  invented number).
+- **Not yet committed/pushed**: `calculator.py`, `schemas.py`,
+  `assumptions.py` (new), `worker.py`, `models/opportunity.py`,
+  `cities/herzliya/candidates.py`, migration `0002_add_existing_units.py`.
+
 ## What this is
 
 A B2B PropTech system that screens, packages, and sells urban-renewal
@@ -196,7 +259,8 @@ domain context only, per the isolation rule):
 | Herzliya strategy | `backend/app/cities/herzliya/` | ✅ | Real XPlan code vocabulary + `ST_Touches`/`ST_Union` unification query. Candidate screening queries real `opportunities` rows — needs real data loaded to be useful |
 | Herzliya archive client | `backend/app/cities/herzliya/archive_client.py` | ✅ | Live-tested `httpx` client for the real `handasi.complot.co.il` permit-file API — see "Dossier pipeline" section |
 | Tel Aviv strategy | `backend/app/cities/tel_aviv/` | 🚧 | Stub only — proves the pattern, every method raises `NotImplementedError` |
-| Economic calculator ("Generic Report 0") | `backend/app/services/economic/calculator.py` | ✅ | Pure Python, no Excel. Tenant/developer sqm split is a simplified 1:1-replacement model — validate against the real PRD formula before relying on it |
+| Economic calculator ("Generic Report 0") | `backend/app/services/economic/calculator.py` | ✅ | Pure Python, no Excel. Validated against the real PRD (6.4, ECO-01/02/03); fixed a structural bug that made developer allocation always zero — see "Economic calculator" section |
+| Economic assumptions library | `backend/app/services/economic/assumptions.py` | ✅ | Versioned, dated, per-city assumption sets with data/estimate/missing status per PRD ECO-02. Only `HERZLIYA_2026_V1` exists, every entry honestly `ESTIMATE` |
 | Scraper (generic/JS fallback) | `backend/app/pipeline/scraper.py` | 🚧 | Playwright scaffolding for a city whose real archive needs browser rendering. Herzliya turned out not to need this — see `archive_client.py` |
 | Preprocessor | `backend/app/pipeline/preprocessor.py` | ✅ | OpenCV: CLAHE contrast + Otsu binarization + Hough-line legend-region crop. Live-tested on a real 1961 scan |
 | Extractor | `backend/app/pipeline/extractor.py` | ✅ | Tesseract (heb+eng) + regex first; falls back to OpenAI `gpt-4o-mini` structured output below a confidence threshold. Both paths run every result through `_check_plausibility` (bounds check) and mark AI-fallback results `requires_human_review=True` unconditionally — live-tested, see "Dossier pipeline" section |
@@ -211,7 +275,7 @@ domain context only, per the isolation rule):
 
 - **tenants** — companies (the paying customers)
 - **users** — FastAPI-Users compatible, `company_id` FK scopes every query
-- **opportunities** — GIS parcels (PostGIS `MULTIPOLYGON`), XPlan code, verification level, freeform `metadata_json` (holds the XPlan screening `category`/`tags`)
+- **opportunities** — GIS parcels (PostGIS `MULTIPOLYGON`), XPlan code, verification level, `existing_units` (nullable — a required PRD DOS-02 input, `NULL` means genuinely unknown), freeform `metadata_json` (holds the XPlan screening `category`/`tags`)
 - **packages** — purchasable credit bundles
 - **balances** — remaining credits per tenant
 - **reservations** — competitive lock on one opportunity; **only one `active` reservation may exist per `opportunity_id`** (partial unique index) — this is the mechanism that prevents the same parcel being served to two competing tenants at once
@@ -229,7 +293,7 @@ domain context only, per the isolation rule):
    `requires_human_review`; `worker.py` only trusts local-OCR figures for
    the calculator and labels an AI-derived one
    `buildable_area_source: "ai_assisted_unverified"` with a dossier-level
-   `requires_human_review: true`. **Not yet committed/pushed.** Remaining
+   `requires_human_review: true`. Committed and pushed (`7da7fcb`). Remaining
    related gap: `Opportunity.verification_level` (the DB column) is never
    actually updated by any of this — the new flags exist only in the
    per-dossier JSON result, not persisted against the opportunity itself.
@@ -247,13 +311,16 @@ domain context only, per the isolation rule):
    them to `<OpportunityMap>` — the map has been dead code since the
    bootstrap commit. Browser-verified against two real inserted parcels:
    both polygons render at the correct location, popup shows correct
-   address/block/parcel/area, zero console errors. **Not yet
-   committed/pushed.**
-4. **Economic calculator's tenant/developer sqm split is simplified** (1:1
-   replacement + flat compensation sqm), and `worker.py`'s market assumptions
-   (sale price, construction cost, existing units) are hardcoded placeholders
-   with no per-city/per-opportunity source. Validate against the actual Shaked
-   PRD formula (Generic Report 0) before using either for real numbers.
+   address/block/parcel/area, zero console errors. Committed and pushed
+   (`805605a`).
+4. ~~Economic calculator's tenant/developer sqm split is simplified, and
+   worker.py's market assumptions are hardcoded placeholders with no
+   per-city/per-opportunity source.~~ **Done — and it was worse than
+   "simplified": a real structural bug made developer allocation always
+   zero.** See the "Economic calculator" section above for the full
+   writeup. Remaining: every assumption in `assumptions.py` is still
+   `ESTIMATE`, not sourced `DATA` — real market/construction figures for
+   Herzliya still need to come from somewhere. **Not yet committed/pushed.**
 5. **Tel Aviv is unimplemented** — proves the strategy pattern, nothing more.
    Unknown whether its real archive is an API (like Herzliya) or needs the
    Playwright scraper scaffold.

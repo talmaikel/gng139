@@ -45,6 +45,7 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
             "parcel": opp.parcel,
             "xplan_code": opp.xplan_code,
             "area_sqm": opp.area_sqm,
+            "existing_units": opp.existing_units,
             "verification_level": opp.verification_level,
             "category": opp.metadata_json.get("category"),
             "geometry": json.loads(geojson) if geojson else None,

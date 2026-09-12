@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, String, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -32,6 +32,10 @@ class Opportunity(Base):
 
     geom: Mapped[str] = mapped_column(Geometry(geometry_type="MULTIPOLYGON", srid=4326), nullable=False)
     area_sqm: Mapped[float | None] = mapped_column(Float)
+    # Existing dwelling-unit count "from a sufficient source" (Shaked PRD
+    # DOS-02) -- a required minimum input before a dossier counts as ready.
+    # NULL means genuinely unknown, not zero.
+    existing_units: Mapped[int | None] = mapped_column(Integer)
 
     verification_level: Mapped[VerificationLevel] = mapped_column(
         Enum(
