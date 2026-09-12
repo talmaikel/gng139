@@ -4,7 +4,7 @@ Living document. Update this whenever a module is added, a stub is filled in, or
 an architectural decision changes. This is the map of the product, not a
 changelog — keep it current, not chronological.
 
-Last updated: 2026-09-11 (local DB stood up, migration applied)
+Last updated: 2026-09-11 (POC port, phase 1: per-field evidence, public-data client, ITM geometry, first backend tests)
 
 ## Local environment status
 
@@ -67,6 +67,18 @@ Last updated: 2026-09-11 (local DB stood up, migration applied)
   a real bug in `preprocessor.py` — `cv2.HoughLinesP`'s output shape changed
   between OpenCV versions (`(N,1,4)` vs `(N,4)`), and the installed OpenCV
   5.0.0 uses the new shape, so the old indexing crashed on every real image.
+
+### macOS (Boaz)
+
+- **PostgreSQL 17.11 + PostGIS 3.6.4 via Homebrew**, not 16 as on the Windows
+  machine: Homebrew's PostGIS is built only for Postgres 17 and 18. Nothing the
+  Engine uses differs between 16 and 17 (PostGIS geometry, GiST, partial unique
+  index, `SKIP LOCKED`, enums); flag any 17-only feature in review.
+- Started with `pg_ctl` (not a login service). Role `shaked`/`shaked`, database
+  `shaked_engine`, `postgis` extension created by the superuser beforehand
+  because the migration role cannot create it.
+- `alembic upgrade head` → `0002_field_evidence`; downgrade to `0001` and
+  upgrade again verified clean.
 
 ## Dossier pipeline (live-tested, not just wired)
 
@@ -202,7 +214,11 @@ domain context only, per the isolation rule):
 | Extractor | `backend/app/pipeline/extractor.py` | ✅ | Tesseract (heb+eng) + regex first; falls back to OpenAI `gpt-4o-mini` structured output below a confidence threshold. Both paths run every result through `_check_plausibility` (bounds check) and mark AI-fallback results `requires_human_review=True` unconditionally — live-tested, see "Dossier pipeline" section |
 | Dossier generation | `backend/app/worker.py` (`generate_dossier_handler`) | ✅ | Real orchestration: DB → archive client → rasterize → preprocess → extract → economic calculator. Live-tested end-to-end via the queue — see "Dossier pipeline" section for what was and wasn't fully exercised |
 | API routers | `backend/app/api/v1/` | ✅ | `auth`, `candidates` (+ unify), `filters`, `dossiers` (generate + status), `economic` (feasibility) |
-| DB migrations | `backend/alembic/versions/0001_initial_schema.py` | ✅ | tenants, users, opportunities (+PostGIS/GiST index), packages, balances, reservations (+ partial-unique active-lock index), task_queue |
+| DB migrations | `backend/alembic/versions/` | ✅ | `0001`: tenants, users, opportunities (+PostGIS/GiST index), packages, balances, reservations (+ partial-unique active-lock index), task_queue. `0002`: field_evidence + `evidence_certainty` enum (upgrade/downgrade/upgrade verified on Postgres 17) |
+| Per-field evidence | `backend/app/evidence.py`, `backend/app/models/evidence.py` | ✅ | Ported from `POC/app/rules.py`. One observation per row (value, source URL, retrieval time, SHA-256, location, method, certainty). `resolve_evidence` keeps disagreeing sources as a conflict instead of overwriting; `usable` lets only official/derived/manually-verified, sourced, located evidence under 30 days old decide a check. OCR and AI readings are `ocr_candidate` / `ai_candidate` and never decide until a person verifies them |
+| Public-data client | `backend/app/sources/client.py` | ✅ | Async rewrite of `POC/app/sources.py` `PublicClient`: on-disk cache that keeps the original retrieval time and hash, replayable URLs, retry on 429/5xx honouring `Retry-After`, HTML-with-200 rejected as JSON, 25 MB cap, per-host pacing (archive 10 s; Overpass 15 s backoff). Connectors (GovMap, ArcGIS, Overpass, archive) move onto it in phase 2 |
+| Geometry (ITM) | `backend/app/geo.py` | ✅ | Ported from `POC/app/geo.py`: EPSG:2039 ↔ 4326, search-area validation against the official boundary, building→parcel attribution by overlap share (not nearest neighbour), verified parcel pairing |
+| Backend tests | `backend/tests/` | ✅ | 30 tests: POC tests for the ported modules, assertions unchanged, plus new ones for the async client and the evidence table. `test_evidence_db.py` runs against a migrated Postgres in a rolled-back transaction and skips when none is reachable. Run: `pip install -r requirements-dev.txt && pytest` |
 | Frontend auth | `frontend/src/app/login/page.tsx` | ✅ | Calls `/api/v1/auth/jwt/login`, stores JWT in `localStorage` |
 | Frontend map | `frontend/src/components/Map.tsx` | ✅ | react-leaflet: renders each candidate's real parcel polygon (not just a point marker), auto-fits bounds to whatever's loaded, popup with address/block/parcel/area. Browser-verified against two real parcels |
 | Frontend dashboard | `frontend/src/app/dashboard/page.tsx` | ✅ | Lists candidates in a table and now actually passes them to the map (previously fetched `candidates` but never passed them to `<OpportunityMap>` at all — a real disconnect, now fixed) |
@@ -216,6 +232,7 @@ domain context only, per the isolation rule):
 - **balances** — remaining credits per tenant
 - **reservations** — competitive lock on one opportunity; **only one `active` reservation may exist per `opportunity_id`** (partial unique index) — this is the mechanism that prevents the same parcel being served to two competing tenants at once
 - **task_queue** — async job rows for the `SKIP LOCKED` worker
+- **field_evidence** — one row per observed value of one field of one opportunity, with its source URL, retrieval time, SHA-256, location in the source, method and certainty. Several rows per field are expected; they are resolved in code, so a conflict between sources is kept rather than overwritten
 
 ## Known gaps / next steps
 
@@ -257,8 +274,9 @@ domain context only, per the isolation rule):
 5. **Tel Aviv is unimplemented** — proves the strategy pattern, nothing more.
    Unknown whether its real archive is an API (like Herzliya) or needs the
    Playwright scraper scaffold.
-6. **No tests yet.** Nothing under `backend/` or `frontend/` has automated
-   coverage.
+6. **Test coverage is partial.** `backend/tests/` covers the modules ported in
+   phase 1 (30 tests). Older backend modules (queue, cities, pipeline, worker,
+   API) and the whole `frontend/` still have none.
 7. **Reservation expiry isn't enforced anywhere** — the `expires_at` column
    exists but nothing currently sweeps/releases expired locks back to
    `released` status.

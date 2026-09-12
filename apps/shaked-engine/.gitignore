@@ -12,5 +12,8 @@ node_modules/
 .next/
 *.tsbuildinfo
 
+# Public-source response cache
+backend/.cache/
+
 # Playwright
 backend/.playwright-cache/

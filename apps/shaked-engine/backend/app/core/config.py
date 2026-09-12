@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     tesseract_cmd: str = "/usr/bin/tesseract"
     tesseract_lang: str = "heb+eng"
 
+    # Public data sources (see app/sources/client.py and app/evidence.py)
+    source_cache_dir: str = ".cache/sources"
+    source_cache_ttl_seconds: int = 86400
+    source_max_age_days: int = 30  # evidence older than this cannot decide an eligibility check
+
     cors_origins: str = "http://localhost:3000"
 
     @property
