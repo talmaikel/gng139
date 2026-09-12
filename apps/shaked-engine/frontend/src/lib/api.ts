@@ -49,6 +49,11 @@ export async function login(email: string, password: string): Promise<LoginRespo
   return response.json() as Promise<LoginResponse>;
 }
 
+export interface MultiPolygonGeometry {
+  type: "MultiPolygon";
+  coordinates: number[][][][]; // GeoJSON order: [lng, lat] per position
+}
+
 export interface Candidate {
   id: string;
   address: string;
@@ -58,6 +63,8 @@ export interface Candidate {
   area_sqm: number | null;
   verification_level: string;
   category: string | null;
+  geometry: MultiPolygonGeometry | null;
+  centroid: { lat: number; lng: number } | null;
 }
 
 export function getCandidates(cityCode: string): Promise<Candidate[]> {

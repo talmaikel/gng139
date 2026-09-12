@@ -204,8 +204,8 @@ domain context only, per the isolation rule):
 | API routers | `backend/app/api/v1/` | ✅ | `auth`, `candidates` (+ unify), `filters`, `dossiers` (generate + status), `economic` (feasibility) |
 | DB migrations | `backend/alembic/versions/0001_initial_schema.py` | ✅ | tenants, users, opportunities (+PostGIS/GiST index), packages, balances, reservations (+ partial-unique active-lock index), task_queue |
 | Frontend auth | `frontend/src/app/login/page.tsx` | ✅ | Calls `/api/v1/auth/jwt/login`, stores JWT in `localStorage` |
-| Frontend map | `frontend/src/components/Map.tsx` | ✅ | react-leaflet, OSM tiles, centered on Herzliya. Markers need real lat/lng — `candidates` API doesn't expose geometry yet |
-| Frontend dashboard | `frontend/src/app/dashboard/page.tsx` | ✅ | Lists candidates for Herzliya in a table; map is not yet wired to real candidate coordinates |
+| Frontend map | `frontend/src/components/Map.tsx` | ✅ | react-leaflet: renders each candidate's real parcel polygon (not just a point marker), auto-fits bounds to whatever's loaded, popup with address/block/parcel/area. Browser-verified against two real parcels |
+| Frontend dashboard | `frontend/src/app/dashboard/page.tsx` | ✅ | Lists candidates in a table and now actually passes them to the map (previously fetched `candidates` but never passed them to `<OpportunityMap>` at all — a real disconnect, now fixed) |
 
 ## Data model (see `backend/alembic/versions/0001_initial_schema.py` for the source of truth)
 
@@ -236,9 +236,19 @@ domain context only, per the isolation rule):
    There's also no UI/workflow yet for a human to act on
    `requires_human_review` — it's surfaced in the data, not consumed
    anywhere.
-3. **Candidates API doesn't expose geometry**, so the frontend map has no real
-   markers yet — either add a `GeoJSON`/lat-lng field to the candidates response
-   or fetch geometry separately.
+3. ~~Candidates API doesn't expose geometry, so the frontend map has no real
+   markers.~~ **Done.** `screen_herzliya_candidates` now returns `geometry`
+   (GeoJSON `MultiPolygon`, via `ST_AsGeoJSON`) and `centroid` (`{lat, lng}`,
+   via `ST_Centroid`/`ST_X`/`ST_Y`) per candidate, computed in PostGIS rather
+   than pulling geometry into Python. `Map.tsx` now renders each candidate's
+   real parcel polygon (not just a point) and auto-fits the map to whatever's
+   loaded. Also fixed a real disconnect while wiring this up:
+   `dashboard/page.tsx` was fetching `candidates` but never actually passing
+   them to `<OpportunityMap>` — the map has been dead code since the
+   bootstrap commit. Browser-verified against two real inserted parcels:
+   both polygons render at the correct location, popup shows correct
+   address/block/parcel/area, zero console errors. **Not yet
+   committed/pushed.**
 4. **Economic calculator's tenant/developer sqm split is simplified** (1:1
    replacement + flat compensation sqm), and `worker.py`'s market assumptions
    (sale price, construction cost, existing units) are hardcoded placeholders

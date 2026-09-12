@@ -1,8 +1,9 @@
 """Pre-filtered candidate screening for Herzliya opportunities."""
 
+import json
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cities.herzliya.xplan_schema import QUEUE_ELIGIBLE_CATEGORIES
@@ -15,7 +16,14 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
     opportunities whose XPlan screening category is queue-eligible
     (`primary_candidate` / `needs_verification`) unless the caller overrides it.
     """
-    stmt = select(Opportunity).where(Opportunity.city_code == "herzliya")
+    geometry_geojson = func.ST_AsGeoJSON(Opportunity.geom)
+    centroid = func.ST_Centroid(Opportunity.geom)
+    centroid_lat = func.ST_Y(centroid)
+    centroid_lng = func.ST_X(centroid)
+
+    stmt = select(Opportunity, geometry_geojson, centroid_lat, centroid_lng).where(
+        Opportunity.city_code == "herzliya"
+    )
 
     categories = filters.get("categories") or list(QUEUE_ELIGIBLE_CATEGORIES)
     stmt = stmt.where(Opportunity.metadata_json["category"].astext.in_(categories))
@@ -29,7 +37,6 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
     stmt = stmt.limit(int(filters.get("limit", 100)))
 
     result = await session.execute(stmt)
-    opportunities = result.scalars().all()
     return [
         {
             "id": str(opp.id),
@@ -40,6 +47,8 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
             "area_sqm": opp.area_sqm,
             "verification_level": opp.verification_level,
             "category": opp.metadata_json.get("category"),
+            "geometry": json.loads(geojson) if geojson else None,
+            "centroid": {"lat": lat, "lng": lng} if lat is not None and lng is not None else None,
         }
-        for opp in opportunities
+        for opp, geojson, lat, lng in result.all()
     ]

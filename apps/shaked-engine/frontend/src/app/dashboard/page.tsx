@@ -23,7 +23,7 @@ export default function DashboardPage() {
       <h1>Candidate opportunities — Herzliya</h1>
 
       <div className="card" style={{ marginBottom: "1.5rem" }}>
-        <OpportunityMap />
+        <OpportunityMap candidates={candidates} />
       </div>
 
       {error && <p style={{ color: "#b3261e" }}>{error}</p>}
