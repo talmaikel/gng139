@@ -2,7 +2,7 @@
 import hashlib
 import json
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from shapely.geometry import shape
 
@@ -44,7 +44,11 @@ def build_hashoshanim_dossier():
     archive = _json("archive.json")
     parcel = _json("current-parcel.json")[0]
     building = _json("current-buildings.json")[0]
-    documents = {Path(item["path"]).stem: item for item in _json("document-manifest.json")}
+    # The manifest is written on Windows, so its paths carry "\\" separators that
+    # Path() does not split on POSIX. Normalise before taking the stem, or every
+    # document key comes out as the whole path and the dossier cannot be built.
+    documents = {PurePosixPath(item["path"].replace("\\", "/")).stem: item
+                 for item in _json("document-manifest.json")}
 
     archive_source = archive["files"][0]["source"]
     parcel_source = parcel["_source"]

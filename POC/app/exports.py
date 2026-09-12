@@ -19,8 +19,13 @@ def pdf_export(d):
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.lib.utils import simpleSplit
     from bidi.algorithm import get_display
+    # Linux and Windows locations were listed; macOS was not, so PDF export
+    # raised on every Mac. Arial Unicode and Arial both carry Hebrew there.
     candidates=[ROOT/'static'/'fonts'/'DejaVuSans.ttf',ROOT/'static'/'fonts'/'Arial.ttf',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','C:/Windows/Fonts/arial.ttf']
+        '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf','C:/Windows/Fonts/arial.ttf',
+        '/System/Library/Fonts/Supplemental/Arial Unicode.ttf',
+        '/Library/Fonts/Arial Unicode.ttf',
+        '/System/Library/Fonts/Supplemental/Arial.ttf']
     font=next((str(p) for p in candidates if os.path.exists(p)),None)
     if not font:raise RuntimeError('Hebrew PDF font missing; install DejaVu Sans')
     if 'Shaked' not in pdfmetrics.getRegisteredFontNames():pdfmetrics.registerFont(TTFont('Shaked',font))
