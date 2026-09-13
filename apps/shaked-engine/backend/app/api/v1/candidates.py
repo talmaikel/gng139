@@ -9,7 +9,8 @@ from app.cities import get_city_rules as _get_city_rules
 from app.core.database import get_async_session
 from app.core.security import current_active_user
 from app.models.tenant import User
-from app.cities.herzliya.archive_facts import fetch_for_delivery
+from app.cities.herzliya.archive_facts import (ArchiveUnavailable, NoBuildingFile,
+                                               fetch_for_delivery)
 from app.cities.herzliya import exports
 from app.cities.herzliya.dossier import NotEntitled, build as build_dossier
 from app.services.deliveries import (NoCredits, NotDeliverable, deliver, delivered_ids,
@@ -169,6 +170,13 @@ async def deliver_opportunity(
             row.rules_version, row.data_version, row.why_selected = (
                 p["rules_version"], p["data_version"], p["why"])
             await session.flush()
+    # שלוש סיבות שונות, שלושה קודים. ‏409 אומר ״המועמד הזה לא״; ‏503 אומר
+    # ״נסה שוב״. להחזיר את שתיהן כ-409 פירושו שלקוח שהארכיון סירב לו יוותר
+    # על מועמד תקין לחלוטין.
+    except ArchiveUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except NoBuildingFile as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except NotDeliverable as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except NoCredits as e:

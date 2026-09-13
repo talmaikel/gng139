@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import {
   ApiError,
+  isRetryable,
   deliverOpportunity,
   getBalance,
   getCandidates,
@@ -94,6 +95,8 @@ export default function DashboardPage() {
   const [mine, setMine] = useState<DeliveredOpportunity[]>([]);
   const [delivering, setDelivering] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /** מועמד שנכשל על תקלה חיצונית — ראוי לכפתור ״נסה שוב״ ולא לוויתור */
+  const [retryable, setRetryable] = useState<Candidate | null>(null);
 
   const [drawing, setDrawing] = useState(false);
   const [searchArea, setSearchArea] = useState<object | null>(null);
@@ -129,6 +132,7 @@ export default function DashboardPage() {
     setDelivering(candidate.id);
     setNotice(null);
     setError(null);
+    setRetryable(null);
     try {
       const result = await deliverOpportunity(DEFAULT_CITY, candidate.id);
       // ‏ACC-02: תוצאה שכבר נמסרה אינה מחייבת שוב. ההודעה אומרת את זה
@@ -150,6 +154,9 @@ export default function DashboardPage() {
             ? `${e.detail} יש לרכוש חבילה כדי להמשיך.`
             : localiseGates(e.detail)
         );
+        // ‏503 אינו תשובה על המועמד. בלי ההבחנה הזו הלקוח מוותר על מגרש
+        // תקין לחלוטין כי הארכיון היה עסוק לרגע.
+        if (isRetryable(e)) setRetryable(candidate);
       } else {
         setError("המסירה נכשלה.");
       }
@@ -312,8 +319,16 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <div className="card" style={{ marginBottom: "1rem", borderColor: "#e6c9c2", background: "#fdf6f4" }}>
+        <div className="card" style={{ marginBottom: "1rem", borderColor: "#e6c9c2",
+                                       background: "#fdf6f4", display: "flex", gap: ".8rem",
+                                       alignItems: "center", flexWrap: "wrap" }}>
           <strong style={{ color: "#a8321e" }}>{error}</strong>
+          {retryable && (
+            <button onClick={() => deliver(retryable)} disabled={delivering !== null}
+                    style={{ padding: ".35rem .8rem", fontSize: ".82rem" }}>
+              נסה שוב · {retryable.address}
+            </button>
+          )}
         </div>
       )}
 
@@ -376,6 +391,10 @@ export default function DashboardPage() {
                     // הרגיש ביותר שיש לנו — לחיצה שידוע שתיכשל לא תיגע בו.
                     const blocked = candidate.assessment?.screenable === false;
                     const owned = deliveredIds.has(candidate.id);
+                    // ‏684 מ-699 יגררו שליפת תיק חיה, שלוקחת עד 20 שניות.
+                    // כפתור שכתוב עליו ״מוסר…״ ואינו זז נראה תקוע; כאן
+                    // כתוב מה באמת קורה.
+                    const willFetch = candidate.assessment?.deliverable === false;
                     if (owned) {
                       return (
                         <Link href={`/dossier/${candidate.id}`}
@@ -388,12 +407,15 @@ export default function DashboardPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); deliver(candidate); }}
                         disabled={delivering !== null || owned || blocked}
-                        title={blocked ? "אינו במסלול המגרשי — אינו נמסר" : undefined}
+                        title={blocked ? "אינו במסלול המגרשי — אינו נמסר"
+                          : willFetch ? "תיק הבניין ייושלף מהארכיון — עד 20 שניות"
+                          : undefined}
                         style={{ padding: ".35rem .7rem", fontSize: ".82rem" }}
                       >
                         {blocked ? "לא במסלול"
-                          : delivering === candidate.id ? "מוסר…"
-                          : "מסור לי"}
+                          : delivering === candidate.id
+                            ? (willFetch ? "שולף תיק בניין…" : "מוסר…")
+                            : "מסור לי"}
                       </button>
                     );
                   })()}

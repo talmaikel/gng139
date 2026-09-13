@@ -41,7 +41,12 @@ const FALLBACK: Record<number, string> = {
   404: "לא נמצא.",
   409: "המועמד אינו מוכן למסירה.",
   422: "הבקשה אינה תקינה.",
+  503: "שירות חיצוני אינו זמין כרגע. אפשר לנסות שוב בעוד כמה דקות.",
 };
+
+/** האם כדאי לנסות שוב. ‏503 הוא ״נסה שוב״; ‏409 הוא ״לא המועמד הזה״,
+ *  ולהציג אותם אותו דבר פירושו לקוח שמוותר על מועמד תקין. */
+export const isRetryable = (e: unknown) => e instanceof ApiError && e.status === 503;
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();

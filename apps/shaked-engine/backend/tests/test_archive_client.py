@@ -5,6 +5,10 @@ from app.cities.herzliya.archive_client import ArchiveDocument, HerzliyaArchiveC
 from app.sources.client import AsyncPublicClient
 from tests.conftest import no_wait
 
+# המודול הזה בודק את הלקוח עצמו, עם transport מדומה משלו, ולכן הוא
+# פטור מהשומר שאוסר על הסוויטה לפנות לארכיון.
+pytestmark = pytest.mark.archive_client
+
 FOUND = "<a href=\"#building/1652\">1652</a> <script>getBuilding('1653')</script>"
 NO_RESULTS = "<div>ERR_NO_RESULTS</div>"
 UNRECOGNISED = "<html>maintenance</html>"

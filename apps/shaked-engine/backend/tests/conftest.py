@@ -9,6 +9,40 @@ async def no_wait(_seconds: float) -> None:
     """Stand-in for asyncio.sleep, so tests assert on pacing without waiting for it."""
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "archive_client: בודק את לקוח הארכיון עצמו, עם תעבורה מדומה משלו",
+    )
+
+
+@pytest.fixture(autouse=True)
+def never_reach_the_archive(request, monkeypatch):
+    """**הסוויטה אינה פונה לארכיון העירוני.**
+
+    זה לא סגנון אלא מדיניות: ‏`POC/layer_a/data/DATA_LAW.md` קובע שעמודי
+    תיק נשלפים ״לפי בקשת לקוח, קומץ בכל פעם״. ‏`fetch_for_delivery` נכנס
+    למסלול המסירה, ומאותו רגע **כל הרצה של הסוויטה שלחה בקשות אמיתיות
+    לארכיון** — בלי שאיש התכוון, ובלי שזה נראה בפלט.
+
+    כל בדיקה שרוצה התנהגות ארכיון מדמה אותה בעצמה; ה-patch שלה נכנס
+    פנימה יותר וגובר על זה.
+    """
+    if request.node.get_closest_marker("archive_client"):
+        return                                  # בודק את הלקוח, עם transport משלו
+
+    from app.cities.herzliya.archive_client import HerzliyaArchiveClient
+
+    async def refuse(*_args, **_kwargs):
+        raise AssertionError(
+            "בדיקה ניסתה לפנות לארכיון העירוני. יש לדמות את "
+            "HerzliyaArchiveClient במפורש."
+        )
+
+    monkeypatch.setattr(HerzliyaArchiveClient, "find_tik_ids", refuse)
+    monkeypatch.setattr(HerzliyaArchiveClient, "file", refuse)
+
+
 @pytest.fixture
 async def session():
     """

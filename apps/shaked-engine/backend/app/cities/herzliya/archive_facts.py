@@ -32,6 +32,19 @@ REQUEST_NO = re.compile(r"^(19|20)\d{6}$")
 STRENGTHENING = re.compile(r'תמ["״]?א\s*38|חיזוק|רעידות אדמה')
 
 MAX_SHORTLIST = 25          # לא סריקה. מעבר לזה — לעצור ולשאול.
+
+
+class ArchiveUnavailable(Exception):
+    """הארכיון לא השיב — ‏CAPTCHA, ‏429, או תקלת רשת.
+
+    **זו אינה תשובה על המועמד.** הגרסה הראשונה החזירה כאן את אותה הודעה
+    כמו ״לא נשאל״, והלקוח קרא שלא טרחנו לבדוק — ויצא לחפש את הבעיה
+    אצלנו במקום לנסות שוב בעוד חמש דקות.
+    """
+
+
+class NoBuildingFile(Exception):
+    """לא נמצא תיק בניין לחלקה. זה **כן** ממצא על המועמד, ואין טעם לנסות שוב."""
 CUTOFF_2005 = date(2005, 5, 18)     # §70ב(א)(1)(ב)
 
 
@@ -97,7 +110,11 @@ async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveCl
         )
     own = client is None
     client = client or HerzliyaArchiveClient()
-    result = {"fetched": 0, "no_tik": 0, "failed": 0, "requests": 0}
+    # ‏`empty` הופרד מ-`failed`: עמוד תיק שנמשך בהצלחה ואין בו שורות בקשה
+    # אינו תקלת תקשורת אלא **ממצא על החלקה**. הן נספרו יחד, ולכן תיק ריק
+    # דווח ללקוח כ״הארכיון לא השיב, נסה שוב״ — והוא היה מנסה לנצח.
+    result = {"fetched": 0, "no_tik": 0, "empty": 0, "failed": 0,
+              "requests": 0, "last_error": None}
     try:
         for oid in opportunity_ids:
             opp = await session.get(Opportunity, oid)
@@ -112,14 +129,17 @@ async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveCl
                 page = await client.file(tik_ids[0])
                 reqs = parse_requests(page["html"])
                 if not reqs:
-                    result["failed"] += 1
+                    result["empty"] += 1
                     continue
                 f = facts(reqs)
                 await _write(session, oid, f, page, tik_ids[0])
                 result["fetched"] += 1
                 result["requests"] += len(reqs)
-            except Exception:                       # תקלה בתיק אחד אינה מפילה את השאר
+            except Exception as exc:                # תקלה בתיק אחד אינה מפילה את השאר
                 result["failed"] += 1
+                # הסיבה נשמרת: במסלול המסירה היא ההבדל בין ״נסה שוב״
+                # לבין ״אין מה לעשות״, ובלעדיה שתיהן נראות אותו דבר.
+                result["last_error"] = f"{type(exc).__name__}: {exc}"[:200]
         # ‏flush ולא commit: הבעלות על הטרנזקציה היא של הקורא. במסלול
         # המסירה השליפה, ההערכה מחדש והמסירה חייבות להיות עסקה אחת —
         # commit כאן היה מקבע תיק שנשלף גם אם המסירה נכשלה אחריו.
@@ -182,8 +202,21 @@ async def fetch_for_delivery(session, opportunity_id: UUID, client=None) -> bool
         return False
 
     out = await enrich(session, [opportunity_id], client)
-    if not out.get("fetched"):
-        return False
+    if out.get("no_tik"):
+        raise NoBuildingFile(
+            "לא נמצא תיק בניין לחלקה זו בארכיון העירוני. "
+            "מועד ההיתר והיסטוריית החיזוק אינם ניתנים לאימות ממקור אחר."
+        )
+    if out.get("empty"):
+        raise NoBuildingFile(
+            "תיק הבניין נמצא ואין בו שורות בקשה. מועד ההיתר והיסטוריית "
+            "החיזוק אינם ניתנים לאימות ממנו."
+        )
+    if out.get("failed") or not out.get("fetched"):
+        raise ArchiveUnavailable(
+            "הארכיון העירוני לא השיב כרגע. הבקשה לא בוצעה ולא נוכתה זכאות — "
+            "אפשר לנסות שוב בעוד כמה דקות."
+        )
     await refresh_one(session, HerzliyaCityRules(), opportunity_id)
     return True
 

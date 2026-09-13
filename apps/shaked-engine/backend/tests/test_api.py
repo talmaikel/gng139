@@ -249,9 +249,13 @@ async def test_an_unready_candidate_is_refused_with_409_and_costs_nothing(client
     session.add(Balance(company_id=client.user.company_id, credits_remaining=3))
     await session.flush()
 
-    r = await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")
+    # הארכיון מדומה: הבדיקה על מה שהלקוח רואה, לא על מה שהעירייה משיבה.
+    from unittest.mock import AsyncMock, patch
+    with patch("app.cities.herzliya.archive_client.HerzliyaArchiveClient.find_tik_ids",
+               new=AsyncMock(return_value=[])):
+        r = await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")
     assert r.status_code == 409
-    assert "permit_date" in r.json()["detail"]
+    assert "תיק בניין" in r.json()["detail"]
 
     balance = (await session.execute(
         select(Balance).where(Balance.company_id == client.user.company_id))).scalar_one()
