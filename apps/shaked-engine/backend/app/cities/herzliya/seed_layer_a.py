@@ -43,7 +43,14 @@ LAYER_A = Path(__file__).resolve().parents[6] / "POC" / "layer_a" / "data"
 CATEGORY = {"9": "התחדשות מגרשית מוטת מגורים",
             "5.5": "התחדשות מגרשית מוטת מגורים נמוכה"}
 CEILING = {"9": 9.0, "5.5": 5.5}
-K = 0.669  # מקדם ההמרה מברוטו לשטח נספר. נקודת כיול אחת.
+K = 0.669                 # מקדם ההמרה מברוטו לשטח נספר. נקודת כיול אחת.
+
+# ערך זקיף בשכבת הכתובות — ספירה שלא נעשתה, לא בניין בן 999 דירות.
+UNITS_SENTINEL = 999
+
+# תקרת סבירות לאומדן השטח הקיים, במ״ר לדירה. החציון במלאי הוא 94 ואחוזון
+# 90 הוא 166; 200 הוא פי שניים מהחציון, והוא חוסם רק את מה שבאמת שבור.
+MAX_SQM_PER_UNIT = 200.0
 STRENGTHENING = re.compile(r'תמ["״]?א\s*38|חיזוק|רעידות אדמה')
 
 
@@ -74,10 +81,29 @@ def _rows(key, surv, front, geo, sources, archive):
                                        if source_id == "govmap_parcels" else None),
                     location=location, method=method)
 
+    # ── שני קלטים שמנפחים את המספר הראשי, ושניהם התגלו בריצת הקבלה ──
+    #
+    # ‏`apt = 999` הוא ערך זקיף בשכבת המקור ולא ספירה. ‏999 × 2.8 = 2,797
+    # יחידות בתמהיל, ו-999 חניות.
+    units = surv.get("apt")
+    if units is not None and units >= UNITS_SENTINEL:
+        units = None
+
+    # ‏`gross` הוא טביעת הרגל **הכוללת** של החלקה כפול **מקסימום** הקומות
+    # שבה. בחלקה עם מבנה בן 9 קומות ומבנה בן 2, הקטן מוכפל גם הוא בתשע.
+    # התוצאה: הנדיב 3 — 7 דירות, 2,303 מ״ר מגרש, ותקרת 400% של 30,632
+    # מ״ר. אי אפשר לתקן את זה מכאן, אבל אפשר לזהות אותו: אומדן שמשתמע
+    # ממנו יותר מ-`MAX_SQM_PER_UNIT` לדירה קיימת נשען על קלט שבור,
+    # ו**אינו נכתב**. התקרה יוצאת ״לא ידועה״ במקום שגויה — 38 חלקות.
+    gross = surv.get("gross")
+    estimate = round(gross * K, 1) if gross else None
+    if estimate and units and estimate / units > MAX_SQM_PER_UNIT:
+        estimate = None
+
     cat = str(surv.get("cat"))
     out = [
         ev("parcel_area", surv.get("lot"), "govmap_parcels", f"{at} · LEGAL_AREA", method="WFS"),
-        ev("units", surv.get("apt"), "agol_addresses",
+        ev("units", units, "agol_addresses",
            f'{at} · {surv.get("entrances")} כניסות', method="סכום num_aprt בנקודות הכתובת בחלקה"),
         ev("floors", surv.get("floors"), "agol_buildings", at,
            method="מקסימום Num_floors על המבנים בחלקה"),
@@ -103,8 +129,8 @@ def _rows(key, surv, front, geo, sources, archive):
         # ‏k=0.669 כויל על נקודת אמת אחת, ולכן ESTIMATE ולא DERIVED. ההבדל אינו
         # סמנטי: הערך מוכפל פי ארבע כדי להגיע לתקרת הזכויות, ו-ESTIMATE נשאר
         # מחוץ ל-DECIDING כך שאפשר להציג אותו ואי אפשר להכריע לפיו.
-        ev("existing_area", round(surv["gross"] * K, 1) if surv.get("gross") else None,
-           "agol_buildings", f'{at} · ברוטו {surv.get("gross")} מ"ר', Certainty.ESTIMATE,
+        ev("existing_area", estimate,
+           "agol_buildings", f'{at} · ברוטו {gross} מ"ר', Certainty.ESTIMATE,
            f"טביעת רגל × קומות × k={K} · k כויל על היתר 19780028, נקודת אמת אחת"),
     ]
 

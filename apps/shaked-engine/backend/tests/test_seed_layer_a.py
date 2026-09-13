@@ -106,3 +106,44 @@ def test_the_permit_date_cites_the_archive_it_came_from():
     for field in ("permit_date", "strengthened", "occupied"):
         assert "complot" in rows[field]["source_url"], field
         assert "govmap" not in rows[field]["source_url"], field
+
+
+# ── קלטים שבורים שמנפחים את המספר הראשי ──
+
+def test_the_999_sentinel_is_not_read_as_a_unit_count():
+    """‏999 הוא ספירה שלא נעשתה. כערך אמיתי הוא מייצר 2,797 יחידות
+    בתמהיל ו-999 חניות."""
+    sources = _load("source_fetched.json")
+    rows = {r["field"]: r for r in
+            _rows("x/1", {**SURV, "apt": 999}, {}, {}, sources, [])}
+    assert rows["units"]["certainty"] == Certainty.MISSING.value
+    assert rows["units"]["value"] is None
+    # ומספר אמיתי כן עובר
+    ok = {r["field"]: r for r in _rows("x/1", {**SURV, "apt": 28}, {}, {}, sources, [])}
+    assert ok["units"]["value"] == 28
+
+
+def test_an_estimate_that_implies_a_thousand_metres_per_flat_is_withheld():
+    """‏`gross` הוא טביעת הרגל הכוללת כפול **מקסימום** הקומות בחלקה, ולכן
+    מבנה נמוך לצד גבוה מוכפל גם הוא בגובה הגבוה. הנדיב 3: 7 דירות, מגרש
+    2,303 מ״ר, ותקרת 400% של 30,632 מ״ר.
+
+    אי אפשר לתקן את האומדן מכאן — אפשר לזהות שהוא שבור ולא לכתוב אותו.
+    ״לא ידוע״ עדיף על 30,632."""
+    sources = _load("source_fetched.json")
+
+    def area(gross, apt):
+        rows = {r["field"]: r for r in
+                _rows("x/1", {**SURV, "gross": gross, "apt": apt}, {}, {}, sources, [])}
+        return rows["existing_area"]["value"]
+
+    assert area(2000, 28) is not None          # 48 מ"ר לדירה — סביר
+    assert area(11447, 7) is None              # 1,094 מ"ר לדירה — שבור
+
+
+def test_a_plot_with_no_unit_count_still_gets_its_area_estimate():
+    """הסינון הוא על **היחס**. בלי מספר דירות אין יחס, ואין מה לפסול."""
+    sources = _load("source_fetched.json")
+    rows = {r["field"]: r for r in
+            _rows("x/1", {**SURV, "apt": 999, "gross": 11447}, {}, {}, sources, [])}
+    assert rows["existing_area"]["value"] is not None
