@@ -17,6 +17,8 @@ import {
   type DeliveredOpportunity,
   type SearchOptions,
 } from "@/lib/api";
+import Link from "next/link";
+
 import Balance from "@/components/Balance";
 import DeliveredTable from "@/components/DeliveredTable";
 import SearchControls from "@/components/SearchControls";
@@ -374,6 +376,14 @@ export default function DashboardPage() {
                     // הרגיש ביותר שיש לנו — לחיצה שידוע שתיכשל לא תיגע בו.
                     const blocked = candidate.assessment?.screenable === false;
                     const owned = deliveredIds.has(candidate.id);
+                    if (owned) {
+                      return (
+                        <Link href={`/dossier/${candidate.id}`}
+                              style={{ color: "#1f6f4f", fontWeight: 600, fontSize: ".82rem" }}>
+                          פתח תיק ←
+                        </Link>
+                      );
+                    }
                     return (
                       <button
                         onClick={(e) => { e.stopPropagation(); deliver(candidate); }}
@@ -381,8 +391,7 @@ export default function DashboardPage() {
                         title={blocked ? "אינו במסלול המגרשי — אינו נמסר" : undefined}
                         style={{ padding: ".35rem .7rem", fontSize: ".82rem" }}
                       >
-                        {owned ? "במאגר"
-                          : blocked ? "לא במסלול"
+                        {blocked ? "לא במסלול"
                           : delivering === candidate.id ? "מוסר…"
                           : "מסור לי"}
                       </button>

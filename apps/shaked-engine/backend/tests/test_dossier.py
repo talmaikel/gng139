@@ -206,3 +206,14 @@ async def test_the_dossier_carries_all_three_versions(session):
     assert d["versions"] == {"rules_version": "herzliya-policy-2026-02",
                              "data_version": "2026-09-13",
                              "template_version": TEMPLATE_VERSION}
+
+
+@pytest.mark.asyncio
+async def test_a_gate_appears_in_one_gap_category_only(session):
+    """שדה שאין לו מקור פתוח הופיע גם כ״מעולם לא נשאל״ — וזה קורא כמו
+    רשלנות. הוא נשאל; אין ממי לקבל תשובה."""
+    c, _, opp = await _delivered(session)
+    g = (await build(session, HerzliyaCityRules(), opp.id, c.id))["gaps"]
+    assert "residential_share" in g["unobtainable"]
+    assert "residential_share" not in g["never_asked"]
+    assert not set(g["never_asked"]) & set(g["unobtainable"])

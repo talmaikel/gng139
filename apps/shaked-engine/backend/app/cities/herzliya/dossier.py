@@ -78,7 +78,10 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
     unknown = [{"id": c["id"], "label": c["label"], "detail": c.get("detail")}
                for c in assessment["checks"] if c["status"] == "unknown"]
     missing = [n for n, f in fields.items() if f.get("certainty") == Certainty.MISSING.value]
-    never_asked = sorted(set(rights.THRESHOLD_IDS) - set(fields))
+    # ״מעולם לא נשאל״ ו״אין לו מקור פתוח״ הופיעו שניהם על אותו שדה, וזה
+    # קורא כמו רשלנות: שער שאין לו מקור לא ״לא נשאל״ — הוא נשאל ואין
+    # ממי לקבל תשובה. כל שדה מופיע בקטגוריה אחת בלבד.
+    never_asked = sorted(set(rights.THRESHOLD_IDS) - set(fields) - set(rights.UNOBTAINABLE))
     return {
         "unknown_gates": unknown,
         # שער שאין לו מקור פתוח — גבול הנתונים, לא עבודה חסרה.

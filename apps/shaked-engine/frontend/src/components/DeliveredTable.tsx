@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import type { DeliveredOpportunity } from "@/lib/api";
 
 const fmtDate = (iso: string | null) =>
@@ -31,6 +33,7 @@ export default function DeliveredTable({ rows }: { rows: DeliveredOpportunity[] 
           <th>נמסר</th>
           <th>חויב</th>
           <th>גרסאות</th>
+          <th />
         </tr>
       </thead>
       <tbody>
@@ -45,6 +48,12 @@ export default function DeliveredTable({ rows }: { rows: DeliveredOpportunity[] 
             <td style={{ color: "#6b655c", fontSize: ".82rem" }}>
               {row.rules_version || "—"}
               {row.data_version ? ` · ${row.data_version}` : ""}
+            </td>
+            <td style={{ textAlign: "end" }}>
+              <Link href={`/dossier/${row.opportunity_id}`}
+                    style={{ color: "#1f6f4f", fontWeight: 600, fontSize: ".85rem" }}>
+                פתח תיק ←
+              </Link>
             </td>
           </tr>
         ))}

@@ -56,14 +56,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     let detail = FALLBACK[response.status] ?? `השרת החזיר ${response.status}.`;
-    try {
-      const body = await response.json();
-      // FastAPI puts a string in `detail` for HTTPException, and a list of
-      // field errors there for a validation failure. Only the first is meant
-      // for a person.
-      if (typeof body?.detail === "string") detail = body.detail;
-    } catch {
-      /* לא JSON — נשארים עם המשפט הכללי */
+    // ‏401 מגיע מ-FastAPI-Users כ-"Unauthorized" — מילה שנכתבה למפתח, לא
+    // למשתמש, והיא הופיעה על המסך כמו שהיא. שם ההודעה שלנו מנצחת תמיד.
+    if (response.status !== 401) {
+      try {
+        const body = await response.json();
+        // FastAPI puts a string in `detail` for HTTPException, and a list of
+        // field errors there for a validation failure. Only the first is meant
+        // for a person.
+        if (typeof body?.detail === "string") detail = body.detail;
+      } catch {
+        /* לא JSON — נשארים עם המשפט הכללי */
+      }
     }
     throw new ApiError(response.status, detail);
   }
@@ -273,4 +277,88 @@ export function purchasePackage(packageId: string): Promise<{
   credits_remaining: number;
 }> {
   return request(`/api/v1/account/packages/${packageId}/purchase`, { method: "POST" });
+}
+
+
+// ── התיק ──
+
+export interface Gate {
+  id: string;
+  label: string;
+  /** passed · failed · unknown · routed · undefined · needs_measurement */
+  status: string;
+  source_url: string;
+  page: number | null;
+  detail: string | null;
+}
+
+export interface EvidenceRow {
+  field: string;
+  value: unknown;
+  certainty: string;
+  /** האם התצפית רשאית להכריע שער — ודאות, מקור, מיקום וגיל, כולם יחד */
+  decides: boolean;
+  source_url: string | null;
+  retrieved_at: string | null;
+  location: string | null;
+  method: string | null;
+}
+
+export interface Dossier {
+  identity: {
+    opportunity_id: string;
+    address: string;
+    block: string | null;
+    parcel: string | null;
+    city_code: string;
+    area_sqm: number | null;
+    existing_units: number | null;
+  };
+  rights: {
+    checks: Gate[];
+    status: Assessment["status"];
+    floors: { low: number | null; high: number | null; certain: boolean; case_by_case: boolean };
+    cap_400_sqm: number | null;
+    cap_400_basis: string | null;
+    cap_400_certainty: string | null;
+    cap_400_reliable?: boolean;
+    unit_mix?: Record<string, number>;
+    parking?: Record<string, unknown>;
+    balconies_sqm?: number;
+    balconies_why?: string;
+    allocation_sqm?: number | null;
+    allocation_why?: string;
+    notes: string[];
+    stale_fields: string[];
+  };
+  evidence: EvidenceRow[];
+  economics: {
+    scenario: Record<string, number | boolean | string[]> | null;
+    assumptions: Record<string, { value: number; status: string; unit: string; source: string | null }>;
+    assumptions_version: string;
+    assumptions_effective_date: string;
+    inputs_missing: string[];
+    is_deliverable: boolean;
+    disclaimer: string;
+    buildable_basis?: string | null;
+    buildable_certainty?: string | null;
+    why?: string;
+  };
+  gaps: {
+    unknown_gates: { id: string; label: string; detail: string | null }[];
+    unobtainable: string[];
+    checked_and_not_found: string[];
+    never_asked: string[];
+    stale_sources: string[];
+    economic_inputs_missing: string[];
+    note: string;
+  };
+  versions: { rules_version: string; data_version: string; template_version: string };
+  delivery: { delivered_at: string | null; why_selected: Record<string, unknown> | null };
+  stale_fields: string[];
+}
+
+/** התיק המלא. ‏404 גם למי שאינו רשאי וגם למזהה שאינו קיים — ACC-08. */
+export function getDossier(cityCode: string, opportunityId: string): Promise<Dossier> {
+  return request<Dossier>(`/api/v1/candidates/${cityCode}/${opportunityId}/dossier`);
 }
