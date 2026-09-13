@@ -4,11 +4,20 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import {
   ApiError,
+  deliverOpportunity,
+  getBalance,
   getCandidates,
+  getMyDeliveries,
+  getPackages,
   searchCandidates,
+  type AccountBalance,
   type Assessment,
   type Candidate,
+  type CreditPackage,
+  type DeliveredOpportunity,
 } from "@/lib/api";
+import Balance from "@/components/Balance";
+import DeliveredTable from "@/components/DeliveredTable";
 // מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
 // לחבילת ה-SSR, שם אין `window`, והדף מחזיר 500 בטעינה נקייה.
 import { MAX_AREA_SQM } from "@/lib/searchArea";
@@ -44,6 +53,14 @@ const GATE_LABEL: Record<string, string> = {
 
 const gateText = (ids: string[]) => ids.map((id) => GATE_LABEL[id] ?? id).join(", ");
 
+/** מזהי שערים שמגיעים בתוך משפט מהשרת. הוא כותב אותם באנגלית כי הם מזהים
+ *  בקוד — ומה שמוצג לאדם צריך להיות בשפה שלו. */
+const localiseGates = (text: string) =>
+  Object.entries(GATE_LABEL).reduce(
+    (out, [id, label]) => out.replace(new RegExp(`\\b${id}\\b`, "g"), label),
+    text
+  );
+
 /** The floor figure as it may honestly be written: a number only when the whole
  *  tolerance band agrees, a range when it does not, and never a number at all
  *  when the street width was not measured. */
@@ -67,6 +84,13 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [tab, setTab] = useState<"search" | "mine">("search");
+  const [balance, setBalance] = useState<AccountBalance | null>(null);
+  const [packages, setPackages] = useState<CreditPackage[]>([]);
+  const [mine, setMine] = useState<DeliveredOpportunity[]>([]);
+  const [delivering, setDelivering] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
   const [drawing, setDrawing] = useState(false);
   const [searchArea, setSearchArea] = useState<object | null>(null);
   const [liveArea, setLiveArea] = useState<{ points: number; sqm: number } | null>(null);
@@ -81,7 +105,52 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  /** יתרה ומאגר נטענים יחד: שניהם משתנים בכל מסירה, ושניהם של החברה. */
+  const loadAccount = useCallback(() => {
+    getBalance().then(setBalance).catch(() => setBalance(null));
+    getMyDeliveries(DEFAULT_CITY).then(setMine).catch(() => setMine([]));
+  }, []);
+
   useEffect(loadAll, [loadAll]);
+  useEffect(() => {
+    loadAccount();
+    getPackages().then(setPackages).catch(() => setPackages([]));
+  }, [loadAccount]);
+
+  const deliveredIds = new Set(mine.map((m) => m.opportunity_id));
+
+  async function deliver(candidate: Candidate) {
+    setDelivering(candidate.id);
+    setNotice(null);
+    setError(null);
+    try {
+      const result = await deliverOpportunity(DEFAULT_CITY, candidate.id);
+      // ‏ACC-02: תוצאה שכבר נמסרה אינה מחייבת שוב. ההודעה אומרת את זה
+      // במפורש, אחרת יתרה שלא זזה נראית כמו תקלה.
+      setNotice(
+        result.charged
+          ? `${candidate.address} נמסר. נוכתה זכאות אחת.`
+          : `${candidate.address} כבר נמסר לחברה — ללא חיוב נוסף.`
+      );
+      loadAccount();
+      // המגרש יוצא מרשימת ההצעות: SEL-02, "מוצג במאגר החברה בלבד".
+      setCandidates((prev) => prev.filter((c) => c.id !== candidate.id));
+    } catch (e) {
+      if (e instanceof ApiError) {
+        // ‏409 אינו 402. ״אינו מוכן״ ו״אין יתרה״ מובילים לפעולות שונות,
+        // ולכן אסור להם להיראות כאותה הודעה.
+        setError(
+          e.status === 402
+            ? `${e.detail} יש לרכוש חבילה כדי להמשיך.`
+            : localiseGates(e.detail)
+        );
+      } else {
+        setError("המסירה נכשלה.");
+      }
+    } finally {
+      setDelivering(null);
+    }
+  }
 
   function onPolygon(polygon: object, areaSqm: number) {
     setDrawing(false);
@@ -111,8 +180,42 @@ export default function DashboardPage() {
 
   return (
     <main className="page" style={{ maxWidth: 1100 }}>
-      <h1>מועמדים · הרצליה</h1>
+      <h1 style={{ marginBottom: "1rem" }}>חלופת שקד · הרצליה</h1>
 
+      <div style={{ marginBottom: "1rem" }}>
+        <Balance balance={balance} packages={packages} onChanged={loadAccount} />
+      </div>
+
+      <div style={{ display: "flex", gap: ".4rem", marginBottom: "1rem" }}>
+        {([["search", "חיפוש"], ["mine", `המאגר שלי${mine.length ? ` · ${mine.length}` : ""}`]] as const).map(
+          ([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              style={{
+                background: tab === key ? "#1f6f4f" : "transparent",
+                color: tab === key ? "#fff" : "#1a1a1a",
+                border: tab === key ? "none" : "1px solid #d8d8d3",
+              }}
+            >
+              {label}
+            </button>
+          )
+        )}
+      </div>
+
+      {notice && (
+        <div className="card" style={{ marginBottom: "1rem", borderColor: "#c8ddd2", background: "#f3f9f6" }}>
+          <strong style={{ color: "#1f5f55" }}>{notice}</strong>
+        </div>
+      )}
+
+      {tab === "mine" ? (
+        <div className="card">
+          <DeliveredTable rows={mine} />
+        </div>
+      ) : (
+      <>
       <div className="card" style={{ marginBottom: "1rem", padding: "0.9rem 1.1rem" }}>
         <div style={{ display: "flex", gap: ".6rem", alignItems: "center", flexWrap: "wrap" }}>
           {!drawing ? (
@@ -180,6 +283,7 @@ export default function DashboardPage() {
               <th>שטח (מ״ר)</th>
               <th>קומות</th>
               <th>מצב</th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -212,11 +316,24 @@ export default function DashboardPage() {
                     "—"
                   )}
                 </td>
+                <td style={{ textAlign: "end" }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deliver(candidate); }}
+                    disabled={delivering !== null || deliveredIds.has(candidate.id)}
+                    style={{ padding: ".35rem .7rem", fontSize: ".82rem" }}
+                  >
+                    {deliveredIds.has(candidate.id)
+                      ? "במאגר"
+                      : delivering === candidate.id
+                        ? "מוסר…"
+                        : "מסור לי"}
+                  </button>
+                </td>
               </tr>
             ))}
             {!loading && candidates.length === 0 && !error && (
               <tr>
-                <td colSpan={5} style={{ color: "#6b655c" }}>
+                <td colSpan={6} style={{ color: "#6b655c" }}>
                   אין מועמדים באזור שסומן.
                 </td>
               </tr>
@@ -224,6 +341,8 @@ export default function DashboardPage() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </main>
   );
 }

@@ -11,7 +11,7 @@ from app.core.security import current_active_user
 from app.models.tenant import User
 from app.cities.herzliya.archive_facts import fetch_for_delivery
 from app.services.deliveries import (NoCredits, NotDeliverable, deliver, delivered_ids,
-                                     for_company)
+                                     for_company, provenance)
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -85,8 +85,18 @@ async def deliver_opportunity(
     """
     get_city_rules(city_code)
     try:
+        # ‏SEL-01: הגרסאות והנימוק נקראים **אחרי** שהמועמד הוכן — אם התיק
+        # נשלף בבקשה הזו, גרסת הנתונים חייבת לכלול אותו.
+        async def prepare(s, oid):
+            return await fetch_for_delivery(s, oid)
+
         row, charged = await deliver(session, opportunity_id, user.company_id, user.id,
-                                     on_unready=fetch_for_delivery)
+                                     on_unready=prepare)
+        if charged:
+            p = await provenance(session, opportunity_id)
+            row.rules_version, row.data_version, row.why_selected = (
+                p["rules_version"], p["data_version"], p["why"])
+            await session.flush()
     except NotDeliverable as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except NoCredits as e:

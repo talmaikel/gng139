@@ -294,3 +294,36 @@ async def test_the_company_repository_shows_what_was_delivered(session):
     assert mine[0]["rules_version"] == "policy-2026-02"
     # ובידוד: חברה אחרת אינה רואה דבר
     assert await for_company(session, b.id) == []
+
+
+# ── הסירוב מאשים את הצד הנכון ──
+
+@pytest.mark.asyncio
+async def test_an_unobtainable_gate_is_not_blamed_for_the_refusal(session):
+    """המסך הציג ״שער סף פתוח: residential_share״ למועמד שכל בעייתו הייתה
+    שלא נקבע לו מספר קומות. המשתמש יצא לחפש נתון שאינו קיים לאיש."""
+    c, (u, _) = await _company(session)
+    opp = await _opportunity(session, "9317", deliverable=False,
+                             open_gates=("residential_share",))
+    opp.metadata_json = {**opp.metadata_json,
+                         "assessment": {**opp.metadata_json["assessment"],
+                                        "screenable": False, "floors_low": None,
+                                        "status": "needs_verification"}}
+    await session.flush()
+    with pytest.raises(NotDeliverable) as e:
+        await deliver(session, opp.id, c.id, u.id)
+    assert "residential_share" not in str(e.value)
+    assert "רוחב הרחוב" in str(e.value)
+
+
+@pytest.mark.asyncio
+async def test_a_routed_compound_says_it_was_routed_and_not_that_it_failed(session):
+    c, (u, _) = await _company(session)
+    opp = await _opportunity(session, "9318", deliverable=False)
+    opp.metadata_json = {**opp.metadata_json,
+                         "assessment": {"deliverable": False, "screenable": False,
+                                        "threshold_open": [],
+                                        "status": "urban_renewal_compound"}}
+    await session.flush()
+    with pytest.raises(NotDeliverable, match="מסלול המתחמים"):
+        await deliver(session, opp.id, c.id, u.id)

@@ -175,7 +175,9 @@ async def fetch_for_delivery(session, opportunity_id: UUID, client=None) -> bool
     if opp is None:
         return False
     assessment = (opp.metadata_json or {}).get("assessment") or {}
-    open_gates = set(assessment.get("threshold_open") or assessment.get("blocking") or [])
+    # ‏`threshold_open` בלבד: ‏`blocking` כולל גם רוחב רחוב וקטגוריה, שאין
+    # לתיק הבניין מה לומר עליהם, ופנייה בשבילם היא בקשה מיותרת.
+    open_gates = set(assessment.get("threshold_open") or [])
     if not (open_gates & ARCHIVE_ANSWERS):
         return False
 

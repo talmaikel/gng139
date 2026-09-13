@@ -57,8 +57,34 @@ def _is_deliverable(opp: Opportunity) -> bool:
 
 
 def _open_gates(opp: Opportunity) -> list[str]:
+    """רק שערים שאפשר לענות עליהם, ולכן באמת חוסמים.
+
+    ‏`threshold_open` כולל גם שערים שאין להם מקור פתוח, ואלה **אינם**
+    חוסמים מסירה. שמם בהודעת הסירוב היה מאשים את הצד הלא נכון: המשתמש
+    קרא ״שער סף פתוח: residential_share״ ויצא לחפש נתון שלא קיים, בעוד
+    שהסיבה האמיתית הייתה שלא נקבע מספר קומות.
+    """
+    from app.cities.herzliya import rights
+    return [g for g in (_assessment(opp).get("threshold_open") or [])
+            if g not in rights.UNOBTAINABLE]
+
+
+def _why_not(opp: Opportunity) -> str:
+    """הסיבה בפועל, ולא הרשימה שנמצאת ראשונה."""
     a = _assessment(opp)
-    return a.get("threshold_open") or a.get("blocking") or []
+    if not a:
+        return "טרם חושבה הערכה למועמד"
+    if open_gates := _open_gates(opp):
+        return f"שערי סף שטרם נענו: {', '.join(open_gates)}"
+    if not a.get("screenable"):
+        status = a.get("status")
+        if status == "urban_renewal_compound":
+            return "המגרש נותב למסלול המתחמים, שכללי הזכויות שלו אחרים"
+        if status == "ineligible":
+            return "המועמד נפסל בתנאי הסף"
+        if a.get("floors_low") is None:
+            return "לא נקבע מספר קומות — רוחב הרחוב טרם נמדד"
+    return "ההערכה אינה מסומנת כניתנת למסירה"
 
 
 async def delivered_ids(session, company_id: UUID) -> set[UUID]:
@@ -66,6 +92,35 @@ async def delivered_ids(session, company_id: UUID) -> set[UUID]:
     return set((await session.execute(
         select(Delivery.opportunity_id).where(Delivery.company_id == company_id)
     )).scalars().all())
+
+
+async def provenance(session, opportunity_id: UUID) -> dict[str, Any]:
+    """גרסת הכללים, גרסת הנתונים והנימוק — ‏SEL-01.
+
+    *״נשמרים גרסת הנתונים, גרסת הכללים והנימוק לכל בחירה״*. בלי אלה אין
+    תשובה ללקוח ששואל בעוד חצי שנה למה דווקא המגרש הזה, ושתי הגרסאות הן
+    מה שמבדיל בין ״המדיניות השתנתה״ לבין ״טעינו״.
+
+    גרסת הנתונים אינה קבוע אלא **התצפית הטרייה ביותר שהכריעה בפועל** על
+    המועמד הזה. שתי חלקות שנזרעו בהרצות שונות אינן על אותם נתונים, וקבוע
+    אחד היה מטשטש את זה.
+    """
+    from app.cities.herzliya import rights
+    from app.services.evidence_store import fields_for
+
+    opp = await session.get(Opportunity, opportunity_id)
+    fields = await fields_for(session, opportunity_id)
+    stamps = [f["source"]["retrieved_at"] for f in fields.values()
+              if (f.get("source") or {}).get("retrieved_at")]
+    a = (opp.metadata_json or {}).get("assessment") or {} if opp else {}
+    return {
+        "rules_version": rights.RULES_VERSION,
+        "data_version": max(stamps)[:10] if stamps else "",
+        "why": {k: a.get(k) for k in
+                ("status", "floors_low", "floors_high", "floors_certain",
+                 "case_by_case", "cap_400_sqm", "cap_400_certainty", "threshold_open")
+                if a.get(k) is not None},
+    }
 
 
 async def for_company(session, company_id: UUID) -> list[dict[str, Any]]:
@@ -128,11 +183,8 @@ async def deliver(session, opportunity_id: UUID, company_id: UUID,
         if await on_unready(session, opportunity_id):
             await session.refresh(opp)
     if not _is_deliverable(opp):
-        open_gates = _open_gates(opp)
         raise NotDeliverable(
-            "המועמד אינו מוכן למסירה ולכן אינו צורך יתרה (ACC-05). "
-            + (f"שערי סף פתוחים: {', '.join(open_gates)}" if open_gates
-               else "ההערכה אינה מסומנת כניתנת למסירה")
+            f"המועמד אינו מוכן למסירה ולכן אינו צורך יתרה (ACC-05). {_why_not(opp)}"
         )
 
     balance = (await session.execute(

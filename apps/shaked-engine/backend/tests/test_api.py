@@ -339,3 +339,21 @@ async def test_what_the_company_bought_is_visible_afterwards(client, session):
     assert [m["opportunity_id"] for m in mine] == [str(opp.id)]
     assert mine[0]["address"] == "רחוב החפיפה 9404"
     assert mine[0]["assessment"]["deliverable"] is True
+
+
+@pytest.mark.asyncio
+async def test_a_delivery_records_which_rules_and_which_data_it_rested_on(client, session):
+    """‏SEL-01: *״נשמרים גרסת הנתונים, גרסת הכללים והנימוק לכל בחירה״*.
+    בלעדיהם אין תשובה ללקוח ששואל בעוד חצי שנה למה דווקא המגרש הזה, ואין
+    דרך להבדיל בין ״המדיניות השתנתה״ לבין ״טעינו״."""
+    from app.cities.herzliya import rights
+    from app.models.package import Balance
+    opp = await _deliverable_parcel(session, "9405")
+    session.add(Balance(company_id=client.user.company_id, credits_remaining=3))
+    await session.flush()
+
+    assert (await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")).status_code == 200
+    row = (await client.get("/api/v1/candidates/herzliya/mine")).json()[0]
+    assert row["rules_version"] == rights.RULES_VERSION
+    assert row["why_selected"]["status"] == "needs_verification"
+    assert row["why_selected"]["floors_low"] == 8
