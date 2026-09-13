@@ -172,6 +172,18 @@ metadata_json.fields[name] = {     # מועבר מה-POC
       <p>זמן שליפה אמיתי לכל שדה. מפתח לפי גוש/חלקה — ב-engine זה <span class="m">block</span>+<span class="m">parcel</span>, וה-<span class="m">UNIQUE</span> עליהם הוא מה שמונע מסירה כפולה.</p>
       <span class="done"><b>נגמר כש:</b> זריעה חוזרת אינה יוצרת כפילות, ואף שדה לא נופל על גיל.</span></div>
 
+    <div class="task a new"><span class="tid">A2</span><h3>סינון פוליגון בשרת</h3><span class="added">13.09 · חסר</span>
+      <p><strong>נשמט בכתיבה מחדש ל-engine.</strong> ‏<code>screen_herzliya_candidates</code> מסננת לפי עיר, קטגוריה, שטח ו-<span class="m">verification_level</span> — <strong>ואין בה סינון גאומטרי בכלל</strong>. ‏C12 רק מצייר; בלי זה הציור לא עושה כלום.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">ST_Intersects</span> על הפוליגון מחזיר רק את המועמדים שבתוכו, ופוליגון מחוץ להרצליה נדחה.</span>
+      <span class="blocks">חוסם את C12 ואת A7</span></div>
+    <div class="task a new"><span class="tid">A12</span><h3>ארבעת השדות שהכללים דורשים ואינם נזרעים</h3><span class="added">13.09 · חסר</span>
+      <p>‏<code>rights.py</code> דורש ארבעה שדות שאין ב-<span class="m">field_evidence</span>:</p>
+      <p style="margin-top:.3rem"><strong><span class="m">existing_area</span></strong> — הקלט של תקרת 400%, כלומר של כל חישוב הזכויות. שכבה א׳ מחשבת ברוטו × k.<br>
+      <strong><span class="m">registration_area</span></strong> — שלב 6 בלעדיו תמיד unknown. הקובץ קיים בשכבה א׳.<br>
+      <strong><span class="m">in_tama70</span></strong> — שלב 9 דורש אותו במפורש ומסרב לנחש. 72% בפנים, 28% בחוץ.<br>
+      <strong><span class="m">scope_buildings</span></strong> — שער מסלול מגרשים מול מתחמים.</p>
+      <span class="done"><b>נגמר כש:</b> ארבעתם ב-<span class="m">field_evidence</span> עם מקור, ושלבים 2, 6 ו-9 מפסיקים להחזיר unknown.</span>
+      <span class="blocks">חוסם את A4 ואת B5</span></div>
     <div class="task b"><span class="tid">B1</span><h3>מקור מחירי עסקאות</h3><span class="added">13.09</span>
       <p>כיסוי עירוני לפי כתובת. נכנס כ-<span class="m">AssumptionStatus.DATA</span> במקום <span class="m">ESTIMATE</span>.</p>
       <span class="done"><b>נגמר כש:</b> ‏<span class="m">lat/lon</span> → ₪ למ״ר עם URL ותאריך.</span>
@@ -215,6 +227,9 @@ metadata_json.fields[name] = {     # מועבר מה-POC
       <p><strong>פער מספר 6 של ה-engine: אין בו בדיקות כלל.</strong> להתחיל מהגשר ומהשערים.</p>
       <span class="done"><b>נגמר כש:</b> שדה שהופשט ממקורו מפיל בדיקה.</span></div>
 
+    <div class="task a new"><span class="tid">A13</span><h3>טבלת מסירות — <span class="m">SEL-02</span> אין לו איפה לחיות</h3><span class="added">13.09 · חסר</span>
+      <p>ל-engine יש <span class="m">packages</span>, <span class="m">balances</span> ו-<span class="m">reservations</span> — <strong>ואין טבלת מסירות</strong>. ה-PRD דורש שאותו מגרש לא יימסר פעמיים לאותה חברה (<span class="m">SEL-02</span> · <span class="m">ACC-04</span>), ובלי רישום מסירה הדרישה חסרת משמעות וגם היתרה כן.</p>
+      <span class="done"><b>נגמר כש:</b> שתי סריקות חופפות מוסרות את החלקה פעם אחת, ומיגרציה חדשה תומכת בכך.</span></div>
     <div class="task b new"><span class="tid">B4</span><h3>‏<span class="m">assumptions.py</span> מ-ESTIMATE ל-DATA</h3><span class="added">13.09 · engine</span>
       <p>המבנה קיים ונכון — <span class="m">DATA/ESTIMATE/MISSING</span>, גרסה, תאריך. <strong>הקובץ מודה בעצמו:</strong> ״none of these figures have been sourced״. למלא מ-B1 ו-B2.</p>
       <span class="done"><b>נגמר כש:</b> מחיר ועלות הם <span class="m">DATA</span>, והגרסה עלתה.</span></div>
@@ -225,6 +240,9 @@ metadata_json.fields[name] = {     # מועבר מה-POC
       <p><code>generate_dossier_handler</code> מפיק שטח בנוי מ-OCR על PDF סרוק, וה-engine תיעד טעות של 128 מ״ר שנקראה ממספר מגרש. <strong>‏<span class="m">layer_a</span> נותן את אותו נתון לכל 700 מהשכבות הרשמיות.</strong> ה-OCR נשאר לגרמושקה בלבד.</p>
       <span class="done"><b>נגמר כש:</b> התיק מציג מקור רשמי לשטח, לא <span class="m">ai_assisted_unverified</span>.</span></div>
 
+    <div class="task c new"><span class="tid">C13</span><h3>חבילות, יתרה ומסירה — אין API</h3><span class="added">13.09 · חסר</span>
+      <p>הטבלאות קיימות, <strong>ואין להן אף נתיב</strong>. שנים-עשר הנתיבים של ה-engine הם auth, candidates, dossiers, economic ו-filters בלבד. ‏C5 מניחה מסך יתרה שאין מי שמשרת אותו.</p>
+      <span class="done"><b>נגמר כש:</b> רכישה מדומה יוצרת חבילה, מסירה מקטינה יתרה, ו-<span class="m">ACC-03</span> עובר — סריקה ריקה אינה מקטינה.</span></div>
     <div class="task c new"><span class="tid">C4</span><h3>סידור העדפות</h3><span class="added">13.09</span>
       <p>גרירה לסדר, כיוון מיון, הפרדה בין חובה להעדפה.</p>
       <span class="done"><b>נגמר כש:</b> שינוי הסדר משנה תוצאות בפועל.</span></div>
