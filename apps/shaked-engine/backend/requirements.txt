@@ -37,3 +37,12 @@ openai>=1.35
 # --- Utilities ---
 python-dotenv>=1.0
 httpx>=0.27
+
+# --- ייצוא התיק (DOS-04) ---
+# ‏xlsxwriter כותב נוסחאות חיות ולא תוצאות, כדי שהיזם יוכל לשנות הנחה
+# ולראות את המרווח זז. ‏reportlab + python-bidi מייצרים PDF עברי אמיתי;
+# הגופן אינו נכלל בחבילה — נדרש DejaVu Sans או Arial Unicode על המכונה
+# (‏apt install fonts-dejavu-core), אחרת הייצוא מחזיר 503 עם הסבר.
+xlsxwriter>=3.2,<4
+reportlab>=4
+python-bidi>=0.6

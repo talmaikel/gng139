@@ -294,8 +294,11 @@ export interface Gate {
 
 export interface EvidenceRow {
   field: string;
+  /** התווית בעברית — מגיעה מהשרת, כדי שה-PDF, ה-Excel והמסך יאמרו אותו דבר */
+  label?: string;
   value: unknown;
   certainty: string;
+  certainty_label?: string;
   /** האם התצפית רשאית להכריע שער — ודאות, מקור, מיקום וגיל, כולם יחד */
   decides: boolean;
   source_url: string | null;
@@ -346,10 +349,10 @@ export interface Dossier {
   };
   gaps: {
     unknown_gates: { id: string; label: string; detail: string | null }[];
-    unobtainable: string[];
-    checked_and_not_found: string[];
-    never_asked: string[];
-    stale_sources: string[];
+    unobtainable: { id: string; label: string }[];
+    checked_and_not_found: { id: string; label: string }[];
+    never_asked: { id: string; label: string }[];
+    stale_sources: { id: string; label: string }[];
     economic_inputs_missing: string[];
     note: string;
   };
@@ -361,4 +364,45 @@ export interface Dossier {
 /** התיק המלא. ‏404 גם למי שאינו רשאי וגם למזהה שאינו קיים — ACC-08. */
 export function getDossier(cityCode: string, opportunityId: string): Promise<Dossier> {
   return request<Dossier>(`/api/v1/candidates/${cityCode}/${opportunityId}/dossier`);
+}
+
+
+/**
+ * מוריד את התיק כקובץ.
+ *
+ * לא `<a href>` פשוט: ההורדה חייבת לשאת את טוקן ההרשאה, אחרת השרת מחזיר
+ * ‏401 — ו-ACC-08 דורש שגם הייצוא יעבור את אותה בדיקת בעלות כמו התיק.
+ * לכן fetch עם הכותרת, ואז blob שמוגש להורדה.
+ */
+export async function downloadDossier(
+  cityCode: string,
+  opportunityId: string,
+  fmt: "pdf" | "xlsx",
+): Promise<void> {
+  const token = getToken();
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/candidates/${cityCode}/${opportunityId}/dossier.${fmt}`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+  if (!response.ok) {
+    let detail = FALLBACK[response.status] ?? `השרת החזיר ${response.status}.`;
+    if (response.status !== 401) {
+      try {
+        const body = await response.json();
+        if (typeof body?.detail === "string") detail = body.detail;
+      } catch { /* לא JSON */ }
+    }
+    throw new ApiError(response.status, detail);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  // שם הקובץ מגיע מהשרת ב-Content-Disposition; כאן רק גיבוי קריא.
+  a.download = `shakdan-${opportunityId.slice(0, 8)}.${fmt}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }

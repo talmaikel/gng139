@@ -36,6 +36,36 @@ from app.services.evidence_store import fields_for, stale_fields
 
 TEMPLATE_VERSION = "dossier-1"
 
+# שמות השדות בעברית, **בשרת ולא בדפדפן**. הגרסה הראשונה החזיקה אותם
+# ב-`labels.ts` בלבד, וה-PDF — המסמך שהלקוח באמת מקבל ביד — הדפיס
+# ‏`renewal_policy_category` ו-`scope_buildings`. כל צרכן של התיק מקבל
+# עכשיו את התווית מאותו מקום.
+FIELD_LABEL = {
+    "parcel_area": "שטח המגרש",
+    "units": "מספר דירות קיים",
+    "floors": "מספר קומות קיים",
+    "existing_area": "שטח בנוי קיים",
+    "street_width": "רוחב הרחוב",
+    "pilotis": "קומת עמודים",
+    "registration_area": "אזור רישום",
+    "in_tama70": 'בתחום תמ"א 70',
+    "scope_buildings": "מספר מבנים בחלקה",
+    "renewal_policy_category": "קטגוריה במפת המדיניות",
+    "category_ceiling": "תקרת הקטגוריה",
+    "residential_zoning": "ייעוד למגורים",
+    "residential_share": "שיעור השימוש למגורים",
+    "permit_date": "מועד ההיתר",
+    "strengthened": "בוצע חיזוק בהיתר",
+    "occupied": "יוזמה פעילה של אחר",
+    "post_2005_permit": "היתר אחרי 18.5.2005",
+}
+
+CERTAINTY_LABEL = {
+    "official": "רשמי", "derived": "נגזר", "manually_verified": "אומת ידנית",
+    "community": "קהילתי", "ocr_candidate": "קריאת OCR", "ai_candidate": "קריאת מודל",
+    "estimate": "אומדן", "missing": "נבדק ולא נמצא", "conflict": "סתירה בין מקורות",
+}
+
 
 class NotEntitled(Exception):
     """אין לחברה רישום מסירה על ההזדמנות. ‏ACC-08."""
@@ -62,8 +92,10 @@ def _evidence_rows(fields: dict[str, dict]) -> list[dict[str, Any]]:
         source = f.get("source") or {}
         out.append({
             "field": name,
+            "label": FIELD_LABEL.get(name, name),
             "value": f.get("value"),
             "certainty": f.get("certainty"),
+            "certainty_label": CERTAINTY_LABEL.get(f.get("certainty"), f.get("certainty")),
             "decides": f.get("certainty") in DECIDING,
             "source_url": source.get("url"),
             "retrieved_at": source.get("retrieved_at"),
@@ -71,6 +103,10 @@ def _evidence_rows(fields: dict[str, dict]) -> list[dict[str, Any]]:
             "method": f.get("method"),
         })
     return out
+
+
+def _named(ids) -> list[dict[str, str]]:
+    return [{"id": i, "label": FIELD_LABEL.get(i, i)} for i in ids]
 
 
 def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[str, Any]:
@@ -85,11 +121,14 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
     return {
         "unknown_gates": unknown,
         # שער שאין לו מקור פתוח — גבול הנתונים, לא עבודה חסרה.
-        "unobtainable": sorted(set(rights.UNOBTAINABLE)
-                               & {c["id"] for c in assessment["checks"] if c["status"] == "unknown"}),
-        "checked_and_not_found": sorted(missing),
-        "never_asked": never_asked,
-        "stale_sources": assessment.get("stale_fields", []),
+        # ‏`{id, label}` ולא אחד מהם: התווית היא מה שמודפס, והמזהה הוא מה
+        # שאפשר לסנן ולבדוק לפיו. רשימה של תוויות בלבד אינה ניתנת לבדיקה.
+        "unobtainable": _named(sorted(set(rights.UNOBTAINABLE)
+                                      & {c["id"] for c in assessment["checks"]
+                                         if c["status"] == "unknown"})),
+        "checked_and_not_found": _named(sorted(missing)),
+        "never_asked": _named(never_asked),
+        "stale_sources": _named(assessment.get("stale_fields", [])),
         "economic_inputs_missing": economics.get("inputs_missing", []),
         # ‏DOS-03: התיק אינו מציג את עצמו כארכיון מלא.
         "note": ("התיק מבוסס על מקורות ציבוריים ועל תיק הבניין העירוני. "

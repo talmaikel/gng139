@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { use } from "react";
-import { ApiError, getDossier, type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
+import { ApiError, downloadDossier, getDossier,
+         type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
 import {
   ASSUMPTION_LABEL, ASSUMPTION_STATUS, CERTAINTY_LABEL, FIELD_LABEL, GATE_STATUS, label,
 } from "@/lib/labels";
@@ -68,12 +69,14 @@ function EvidenceTable({ rows }: { rows: EvidenceRow[] }) {
       <tbody>
         {rows.map((r) => (
           <tr key={r.field}>
-            <td style={{ fontWeight: 600 }}>{label(FIELD_LABEL, r.field)}</td>
+            {/* התווית מגיעה מהשרת — מקור אמת אחד ל-PDF, ל-Excel ולמסך.
+                המפה המקומית נשארת כגיבוי לשדה שנוסף ולא תורגם עדיין. */}
+            <td style={{ fontWeight: 600 }}>{r.label ?? label(FIELD_LABEL, r.field)}</td>
             <td>{r.value === null || r.value === undefined ? "—"
               : typeof r.value === "boolean" ? (r.value ? "כן" : "לא")
               : typeof r.value === "number" ? r.value.toLocaleString("he-IL")
               : String(r.value)}</td>
-            <td>{label(CERTAINTY_LABEL, r.certainty)}</td>
+            <td>{r.certainty_label ?? label(CERTAINTY_LABEL, r.certainty)}</td>
             <td style={{ color: r.decides ? "#1f5f55" : "#8a6100", fontWeight: 600 }}>
               {r.decides ? "כן" : "לא"}
             </td>
@@ -97,6 +100,20 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const [d, setD] = useState<Dossier | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<"pdf" | "xlsx" | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  async function download(fmt: "pdf" | "xlsx") {
+    setDownloading(fmt);
+    setDownloadError(null);
+    try {
+      await downloadDossier(CITY, id, fmt);
+    } catch (e) {
+      setDownloadError(e instanceof ApiError ? e.detail : "ההורדה נכשלה.");
+    } finally {
+      setDownloading(null);
+    }
+  }
 
   useEffect(() => {
     getDossier(CITY, id)
@@ -128,7 +145,9 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
         <Link href="/dashboard" style={{ color: "#6b655c", fontSize: ".85rem" }}>← חזרה</Link>
       </p>
 
-      <header style={{ marginBottom: "1.1rem" }}>
+      <header style={{ marginBottom: "1.1rem", display: "flex", gap: "1rem",
+                       alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: "16rem" }}>
         <h1 style={{ margin: 0 }}>{d.identity.address}</h1>
         <p style={{ margin: ".2rem 0 0", color: "#6b655c" }}>
           גוש {d.identity.block ?? "—"} · חלקה {d.identity.parcel ?? "—"}
@@ -136,7 +155,25 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
           {d.identity.existing_units ? ` · ${d.identity.existing_units} דירות קיימות` : ""}
           {" · נמסר ב-"}{date(d.delivery.delivered_at)}
         </p>
+        </div>
+        <div style={{ display: "flex", gap: ".45rem", flexWrap: "wrap" }}>
+          <button onClick={() => download("pdf")} disabled={downloading !== null}
+                  style={{ padding: ".45rem .9rem", fontSize: ".85rem" }}>
+            {downloading === "pdf" ? "מפיק…" : "הורד PDF"}
+          </button>
+          <button onClick={() => download("xlsx")} disabled={downloading !== null}
+                  style={{ padding: ".45rem .9rem", fontSize: ".85rem", background: "#1d4e89" }}>
+            {downloading === "xlsx" ? "מפיק…" : "הורד Excel"}
+          </button>
+        </div>
       </header>
+
+      {downloadError && (
+        <div className="card" style={{ marginBottom: "1rem", borderColor: "#e6c9c2",
+                                       background: "#fdf6f4" }}>
+          <strong style={{ color: "#a8321e" }}>{downloadError}</strong>
+        </div>
+      )}
 
       <Section
         title="שרשרת הזכויות"
@@ -284,10 +321,10 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
       <Section title="פערים" note={d.gaps.note}>
         {[
           ["שערים שלא נענו", d.gaps.unknown_gates.map((g) => g.label)],
-          ["אין להם מקור פתוח", d.gaps.unobtainable.map((x) => label(FIELD_LABEL, x))],
-          ["נבדק ולא נמצא", d.gaps.checked_and_not_found.map((x) => label(FIELD_LABEL, x))],
-          ["מעולם לא נשאל", d.gaps.never_asked.map((x) => label(FIELD_LABEL, x))],
-          ["מקורות שהתיישנו", d.gaps.stale_sources.map((x) => label(FIELD_LABEL, x))],
+          ["אין להם מקור פתוח", d.gaps.unobtainable.map((x) => x.label)],
+          ["נבדק ולא נמצא", d.gaps.checked_and_not_found.map((x) => x.label)],
+          ["מעולם לא נשאל", d.gaps.never_asked.map((x) => x.label)],
+          ["מקורות שהתיישנו", d.gaps.stale_sources.map((x) => x.label)],
         ].map(([title, items]) => (
           <div key={title as string} style={{ marginBottom: ".55rem" }}>
             <strong style={{ fontSize: ".87rem" }}>{title}: </strong>

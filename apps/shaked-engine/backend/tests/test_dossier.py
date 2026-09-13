@@ -142,7 +142,7 @@ async def test_the_gaps_section_is_a_chapter_and_not_a_footnote(session):
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
     gaps = d["gaps"]
     # מבחן ה-70% אין לו מקור פתוח, והתיק מפריד בין ״לא נבדק״ ל״אין מקור״
-    assert "residential_share" in gaps["unobtainable"]
+    assert "residential_share" in {g["id"] for g in gaps["unobtainable"]}
     assert "residential_share" in {g["id"] for g in gaps["unknown_gates"]}
     assert "ארכיון מלא" in gaps["note"]
 
@@ -214,6 +214,10 @@ async def test_a_gate_appears_in_one_gap_category_only(session):
     רשלנות. הוא נשאל; אין ממי לקבל תשובה."""
     c, _, opp = await _delivered(session)
     g = (await build(session, HerzliyaCityRules(), opp.id, c.id))["gaps"]
-    assert "residential_share" in g["unobtainable"]
-    assert "residential_share" not in g["never_asked"]
-    assert not set(g["never_asked"]) & set(g["unobtainable"])
+    unobtainable = {x["id"] for x in g["unobtainable"]}
+    never_asked = {x["id"] for x in g["never_asked"]}
+    assert "residential_share" in unobtainable
+    assert "residential_share" not in never_asked
+    assert not never_asked & unobtainable
+    # והתווית בעברית נוסעת יחד עם המזהה, כדי שה-PDF לא ידפיס שם שדה
+    assert all(x["label"] and not x["label"].isascii() for x in g["unobtainable"])

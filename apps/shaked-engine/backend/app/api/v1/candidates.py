@@ -1,7 +1,7 @@
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,7 @@ from app.core.database import get_async_session
 from app.core.security import current_active_user
 from app.models.tenant import User
 from app.cities.herzliya.archive_facts import fetch_for_delivery
+from app.cities.herzliya import exports
 from app.cities.herzliya.dossier import NotEntitled, build as build_dossier
 from app.services.deliveries import (NoCredits, NotDeliverable, deliver, delivered_ids,
                                      for_company, provenance)
@@ -98,6 +99,47 @@ async def get_dossier(
         return await build_dossier(session, rules, opportunity_id, user.company_id)
     except NotEntitled as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+# ‏DOS-04: *״ייצוא PDF של התיק ו-Excel של נתוני התרחיש נכללים בגרסה
+# הראשונה״*. שני הנתיבים עוברים דרך אותה בדיקת בעלות כמו התיק עצמו —
+# ‏ACC-08 אומר במפורש שחלקה אינה נמסרת ״דרך צמד, קישור, **ייצוא**, מטמון
+# או API״, וייצוא שעוקף את הבדיקה הוא בדיוק הדלת האחורית הזו.
+EXPORTS = {
+    "pdf": (exports.pdf, "application/pdf"),
+    "xlsx": (exports.excel,
+             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+}
+
+
+@router.get("/{city_code}/{opportunity_id}/dossier.{fmt}")
+async def export_dossier(
+    city_code: str,
+    opportunity_id: UUID,
+    fmt: str,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> Response:
+    """התיק כקובץ. ‏`pdf` למסמך, ‏`xlsx` לתרחיש עם נוסחאות חיות."""
+    if fmt not in EXPORTS:
+        raise HTTPException(status_code=404, detail=f"פורמט {fmt} אינו נתמך")
+    rules = get_city_rules(city_code)
+    try:
+        dossier = await build_dossier(session, rules, opportunity_id, user.company_id)
+    except NotEntitled as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    render, media_type = EXPORTS[fmt]
+    try:
+        payload = render(dossier)
+    except RuntimeError as e:            # גופן חסר — שגיאת התקנה, לא של המשתמש
+        raise HTTPException(status_code=503, detail=str(e)) from e
+
+    stem = f'{dossier["identity"]["block"]}-{dossier["identity"]["parcel"]}'
+    return Response(
+        content=payload, media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="shakdan-{stem}.{fmt}"'},
+    )
 
 
 @router.post("/{city_code}/{opportunity_id}/deliver")
