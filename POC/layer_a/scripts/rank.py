@@ -16,10 +16,23 @@
    משפטית הבניין כשיר; מעשית הוא לא זמין. שער קשיח, לא הורדה בדירוג.
 
 4. מועמד שדירוגו נשען על קלט לא מדוד מסומן במפורש ולא מוצג כוודאי.
+
+5. חלקה שכל חזיתה על ציר ראשי מסומנת — לא נפסלת.
+   תקן החניה 2025 ס׳א.2 אוסר כניסות חדשות לרכבים בתשעת הצירים הראשיים,
+   למעט חלקות כלואות באישור הוועדה. חלקה עם חזית נוספת פשוט תמקם שם את
+   הכניסה, ולכן הדגל הוא **ציר ראשי בלבד** (29 מ-700) ולא "נוגע בציר"
+   (72). זו אותה הבחנה שנדרשה בין "יש רחוב" ל"מה רוחבו": השאלה אינה אם
+   הצומת נגועה אלא אם יש חלופה.
+
+הקשר שאינו נכנס לניקוד אבל חייב להיאמר בכל תיק: התכנית האסטרטגית קובעת
+**מכסה של 40 מבנים בשנה** במסלול המגרשים, "כפוף לתנאי סף, העדפה על בסיס
+מצוינות". מול 700 מועמדים זה תור של 17 שנה. כשירות אינה אישור, והדירוג
+שלנו מודד כדאיות ולא סיכוי לאישור — אין לנו דרך למדוד "מצוינות".
 """
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from street_rule import floors_for_parcel, Undefined
+from street_rule import parcel_report, Undefined
+from stages_6_9 import MAIN_AXES
 
 K_NOMINAL = 0.669          # כויל מול היתר 19780028
 K_RANGE   = (0.60, 0.74)   # הנחה, לא מדידה — n=1 אינו מאפשר רווח סמך אמיתי
@@ -67,13 +80,30 @@ def score(c):
     else:
         out['flags'].append('היסטוריית היתרים לא נבדקה')
 
-    # גובה — רק אם רוחב הרחוב ידוע והטבלה נותנת מספר
-    floors, why = (None, 'רוחב רחוב לא נמדד')
+    # גובה — תקרת הקטגוריה מוקטנת לפי רוחב הרחוב; מעל 15 מ׳ הרחוב אינו מגביל
+    floors, why = None, 'רוחב רחוב לא נמדד'
     if c.get('frontages'):
-        floors, why = floors_for_parcel(c['frontages'], c['map_cap'])
+        r = parcel_report(c['frontages'], c['map_cap'])
+        floors, why = r['floors_low'], r['why']
+        out['floors_high'] = r['floors_high']
+        out['floors_certain'] = r['certain']
+        if r['needs_measurement']:
+            out['flags'].append('מספר הקומות טווח — תלוי במדידת רוחב')
+        if r.get('case_by_case'):
+            out['flags'].append('מעל 15 מ׳ — תקרת הקטגוריה, נתון לבחינה נקודתית')
     out['floors'], out['floors_why'] = floors, why
     if floors is None:
         out['flags'].append(f'גובה לא נקבע · {why}')
+
+    # ציר ראשי — רק כשאין חזית חלופית
+    streets = c.get('street_names') or []
+    if streets:
+        axis = [n for n in streets if any(a in n for a in MAIN_AXES)]
+        if axis and len(axis) == len(streets):
+            out['flags'].append(
+                f'כל החזיתות על ציר ראשי ({", ".join(sorted(set(axis)))}) — '
+                'כניסה חדשה לרכבים אינה מובטחת')
+            out['main_axis_only'] = True
 
     env = envelope(c['rect'], floors) if c.get('rect') else None
     if env is None:
@@ -98,13 +128,27 @@ def score(c):
         out['flags'].append('מעטפת חוסמת — נשען על מרווחים שלא נמדדו')
     return out
 
+def tier(r):
+    """שכבת ביטחון. ערך גדול שאי אפשר להגן עליו אינו עדיף על ערך קטן שכן.
+
+    מיון לפי ערך בלבד מערבב חסם שמרני עם חסם עליון, ואז מועמד שלא ידוע
+    עליו די מטפס למעלה דווקא משום שלא ידוע עליו די.
+    """
+    if r['floors'] is None or r.get('is_upper_bound'):
+        return 2                      # חסם עליון בלבד — אין מה להשוות
+    if r['bound_by'] == '400%' and r['stable']:
+        return 0                      # 400% חוסם בכל טווח k — מספר יציב
+    return 1                          # המעטפת חוסמת, או שהחסם מתהפך
+
+
 def rank(cands):
-    """מסלק מודרים, ואז ממיין: ערך שמרני ↓, יציבות ↓, מספר סימונים ↑."""
+    """מסלק מודרים, ואז ממיין: שכבת ביטחון ↑, ערך שמרני ↓, סימונים ↑."""
     live = []
     for c in cands:
         s = score(c)
         if s['excluded']: continue
-        live.append({**c, **s})
-    live.sort(key=lambda r: (-r['value_lo'], not r['stable'],
-                             r['bound_by'] != '400%', len(r['flags'])))
+        r = {**c, **s}
+        r['tier'] = tier(r)
+        live.append(r)
+    live.sort(key=lambda r: (r['tier'], -r['value_lo'], len(r['flags'])))
     return live
