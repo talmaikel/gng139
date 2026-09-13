@@ -47,8 +47,16 @@ TOLERANCE_M = 1.0        # הנחה, לא מדידה. ראה validation/street_w
 RELIABLE_MAX_M = 15.0    # מעליו מדידת הפער אינה אמינה — וגם אינה נדרשת
 UNBOUND = float("inf")   # הרחוב אינו מגביל; תקרת הקטגוריה קובעת
 
-# מדיניות §5, "גובה אל מול חתך הרחוב". (גבול עליון, מקסימום קומות)
-STREET_TABLE = [(8.0, None), (9.0, "undefined"), (10.0, 7), (12.0, 8), (15.0, 9)]
+# מדיניות §5, "גובה אל מול חתך הרחוב" (עמ׳ 8). (גבול עליון כולל, מקסימום קומות)
+#
+# הטבלה אינה רציפה, ולכן שני הגבולות הראשונים אינם בטבלה אלא בקוד:
+# "עד 8 מ׳ **כולל**" → אין תוספת, והשורה הבאה מתחילה ב-"9-10 מ׳". התחום
+# שבין 8 ל-9 אינו מופיע בטבלה כלל. **9.0 עצמו שייך לשורת ה-9–10**, ולכן
+# הפער הוא 8 &lt; w &lt; 9 ולא 8 &lt; w ≤ 9 — הגבול שעליו כתוב ב-README שהוא
+# ההבדל בין פרויקט לכלום.
+STREET_TABLE = [(10.0, 7), (12.0, 8), (15.0, 9)]
+NO_ADDITION_MAX = 8.0
+UNDEFINED_BELOW = 9.0
 
 CATEGORY_CEILING = {"התחדשות מגרשית מוטת מגורים": 9.0,
                     "התחדשות מגרשית מוטת מגורים נמוכה": 5.5}
@@ -135,6 +143,10 @@ def floors_for_width(width_m: float | None):
     'undefined' (הפער 8–9), או UNBOUND (מעל 15 — הרחוב אינו מגביל)."""
     if width_m is None:
         return "unknown"
+    if width_m <= NO_ADDITION_MAX:
+        return None
+    if width_m < UNDEFINED_BELOW:          # 9.0 עצמו כבר בשורת 9–10
+        return "undefined"
     for upper, result in STREET_TABLE:
         if width_m <= upper:
             return result

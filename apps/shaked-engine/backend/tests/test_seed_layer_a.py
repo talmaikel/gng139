@@ -45,3 +45,17 @@ def test_a_field_without_a_known_source_is_not_written_at_all():
 def test_policy_categories_match_the_plans_wording():
     # עמ' 8 בהר/2323: שתיהן "מגרשית". "עירונית" אינו מופיע שם.
     assert all("מגרשית" in v for v in CATEGORY.values())
+
+
+def test_the_permit_date_cites_the_archive_it_came_from():
+    """מועד ההיתר נגזר משורות תיק הבניין. לצטט עליו את שכבת החלקות של
+    GovMap פירושו ששעון ההתיישנות של השדה המכריע ביותר ב-§70א עוקב אחרי
+    השליפה הלא נכונה, והקורא מופנה לשכבה שאין בה היתרים כלל."""
+    sources = _load("source_fetched.json")
+    archive = [dict(req=19780028, submitted="12/03/1978", action="פתיחת בקשה להיתר",
+                    permit="1", permit_date="23/07/1978")]
+    rows = {r["field"]: r for r in
+            _rows("6537/222", SURV, {"width": 15.5}, {}, sources, archive)}
+    for field in ("permit_date", "strengthened", "occupied"):
+        assert "complot" in rows[field]["source_url"], field
+        assert "govmap" not in rows[field]["source_url"], field

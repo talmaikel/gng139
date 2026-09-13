@@ -33,6 +33,36 @@ def test_an_unknown_permit_date_is_not_a_pass():
 
 # ── שלב 4 · הרחוב ──
 
+def test_every_boundary_of_the_street_table():
+    """כל גבול בטבלה, ולא דגימה. הקודם החזיר ״לא מוגדר״ ב-9.0 בדיוק, בעוד
+    שהמדיניות כותבת ״9-10 מ׳״ — כלומר 9.0 שייך לשורה ומקבל 7 קומות."""
+    assert R.floors_for_width(8.0) is None          # "עד 8 מ' כולל"
+    assert R.floors_for_width(8.01) == "undefined"  # הפער שאינו בטבלה
+    assert R.floors_for_width(8.99) == "undefined"
+    assert R.floors_for_width(9.0) == 7             # ← הגבול שהיה שגוי
+    assert R.floors_for_width(10.0) == 7
+    assert R.floors_for_width(10.01) == 8
+    assert R.floors_for_width(12.0) == 8
+    assert R.floors_for_width(12.01) == 9
+    assert R.floors_for_width(15.0) == 9
+    assert R.floors_for_width(15.01) == R.UNBOUND   # הרחוב מפסיק להגביל
+    assert R.floors_for_width(None) == "unknown"
+
+
+def test_a_band_spanning_two_floor_counts_is_never_reported_certain():
+    """‏11.0 ± 1 חוצה את גבול ה-12 מ׳ ולכן 7–8. לדווח אותו כוודאי זה בדיוק
+    מה שתחום הסבילות נועד למנוע."""
+    r = R.floors(11.0, CAT)
+    assert (r.floors_low, r.floors_high) == (7, 8)
+    assert r.floors_certain is False
+    assert any(c.id == "street_width" and c.status == "undefined" for c in r.checks)
+
+
+def test_the_category_ceiling_caps_the_street_table():
+    """קטגוריה נמוכה חוסמת מתחת לכל שורה בטבלה — 5.5 ולא 9."""
+    r = R.floors(14.0, "התחדשות מגרשית מוטת מגורים נמוכה")
+    assert r.floors_high == 5.5
+
 CAT = "התחדשות מגרשית מוטת מגורים"
 
 
