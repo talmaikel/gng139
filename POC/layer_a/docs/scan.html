@@ -1,0 +1,1223 @@
+<title>סריקה מדורגת</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#E9ECF0; --surface:#FFFFFF; --sunk:#F3F5F8;
+    --ink:#151E2B; --soft:#55637A; --faint:#7A869B;
+    --rule:#CBD3DE; --rule-soft:#DFE4EC;
+    --accent:#1D4E6F; --good:#2C6A4E; --warn:#8C6310; --bad:#A33A2A;
+    --display:"Frank Ruhl Libre",'Times New Roman',serif;
+    --body:"IBM Plex Sans Hebrew","Arial Hebrew",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ground:#111722; --surface:#18202C; --sunk:#141B25;
+    --ink:#E3E9F1; --soft:#9AA7BB; --faint:#75829a;
+    --rule:#2E3A4B; --rule-soft:#232D3B;
+    --accent:#74A9CC; --good:#68B18B; --warn:#D0A34A; --bad:#DE8171;}}
+  :root[data-theme="dark"]{
+    --ground:#111722; --surface:#18202C; --sunk:#141B25;
+    --ink:#E3E9F1; --soft:#9AA7BB; --faint:#75829a;
+    --rule:#2E3A4B; --rule-soft:#232D3B;
+    --accent:#74A9CC; --good:#68B18B; --warn:#D0A34A; --bad:#DE8171;}
+
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.65;direction:rtl}
+  .wrap{max-width:62rem;margin:0 auto;padding:2.5rem 1.25rem 4rem;display:flex;flex-direction:column;gap:1.9rem}
+  .head{border-bottom:2px solid var(--ink);padding-bottom:1rem;display:flex;flex-direction:column;gap:.6rem}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(1.9rem,4.5vw,2.6rem);margin:0;line-height:1.15;text-wrap:balance}
+  .stand{margin:0;color:var(--soft);max-width:58ch}
+  h2{font-family:var(--display);font-size:1.32rem;margin:0 0 .3rem;font-weight:700}
+  .panel{background:var(--surface);border:1px solid var(--rule-soft);padding:1.25rem}
+  .lead{margin:0 0 1rem;color:var(--soft)}
+  .revised{border-inline-start:3px solid var(--good);background:var(--sunk)}
+  .revised h2{color:var(--good)}
+
+  .tw{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:32rem;font-size:.9rem}
+  th,td{text-align:right;padding:.55rem .8rem;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+  thead th{font-size:.75rem;letter-spacing:.04em;color:var(--soft);border-bottom:1px solid var(--rule);font-weight:600}
+  td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;direction:ltr;text-align:right;white-space:nowrap}
+  tr.win td{background:color-mix(in srgb,var(--good) 9%,transparent);font-weight:600}
+  tr.lose td{color:var(--soft)}
+  .tag{font-size:.72rem;font-weight:600;color:var(--bad)}
+  .tag.ok{color:var(--good)}
+  .ok{color:var(--good);font-weight:600}
+  .caution{color:var(--warn);font-weight:600}
+  .stop{color:var(--bad);font-weight:600}
+
+  .funnel{display:flex;flex-direction:column;gap:.5rem}
+  .step{display:grid;grid-template-columns:7.5rem 1fr auto;align-items:center;gap:.9rem}
+  .step .lbl{font-size:.85rem;color:var(--soft)}
+  .bar{height:1.6rem;background:var(--accent);opacity:.85;border-radius:1px}
+  .step .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.85rem;min-width:3.2rem;text-align:left;direction:ltr}
+  .step.final .bar{background:var(--good);opacity:1}
+
+  .tiers{display:flex;flex-direction:column}
+  .tier{display:grid;grid-template-columns:1fr;gap:.2rem .9rem;padding:.95rem 0;border-bottom:1px solid var(--rule-soft)}
+  @media(min-width:46rem){.tier{grid-template-columns:8rem 1fr 7.5rem}}
+  .tier:last-child{border-bottom:none}
+  .tier h3{margin:0;font-size:1rem;font-weight:600}
+  .tier p{margin:0;color:var(--soft);font-size:.92rem}
+  .cost{font-family:var(--mono);font-size:.78rem;color:var(--accent);white-space:nowrap}
+  .cost.free{color:var(--good)}
+
+  ol.algo{margin:0;padding-inline-start:1.3rem;display:flex;flex-direction:column;gap:.55rem}
+  ol.algo li::marker{font-family:var(--mono);color:var(--faint);font-size:.85em}
+  code{font-family:var(--mono);font-size:.86em;background:var(--sunk);padding:.1em .35em;border:1px solid var(--rule-soft)}
+  .formula{font-family:var(--mono);font-size:.84rem;background:var(--sunk);border-inline-start:3px solid var(--accent);padding:.7rem .9rem;direction:ltr;text-align:left;overflow-x:auto;margin:.6rem 0}
+
+  .cols{display:grid;grid-template-columns:1fr;gap:1rem}
+  @media(min-width:46rem){.cols{grid-template-columns:1fr 1fr}}
+  .note{border-inline-start:2px solid var(--warn);padding-inline-start:.9rem;color:var(--soft);font-size:.92rem;margin:0}
+  ul.tight{margin:0;padding-inline-start:1.1rem;display:flex;flex-direction:column;gap:.35rem}
+  .colophon{font-size:.8rem;color:var(--faint);border-top:1px solid var(--rule);padding-top:1rem}
+  .m{font-family:var(--mono);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate;color:var(--accent);font-weight:500;font-size:.9em}
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+  <header class="head">
+    <div class="eyebrow">Shakdan · scan architecture · rev 35 · 13.09.2026</div>
+    <h1>סריקה מדורגת</h1>
+    <p class="stand">המשתמש מקבל שלוש הזדמנויות, ולכן אין צורך לנתח את כל החלקות ברדיוס. נמדד על 227 החלקות האמיתיות סביב השושנים 4.</p>
+  </header>
+
+  <section class="panel revised"><h2>הדירוג רץ על העיר — ושני באגים בו נמצאו תוך כדי</h2>
+    <p class="lead">הרצה ראשונה של הדירוג המלא על 699 מועמדים. התוצאה אינה "שלוש הזדמנויות" אלא <strong>311 מועמדים בשכבה 0</strong> — מלאי שאפשר להגן על המספר שלו. אבל שתי תקלות בדירוג עצמו התגלו רק כשהסתכלתי על הפלט.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">באג 1 — מי שידענו עליו פחות טיפס גבוה יותר</h3>
+    <p>חלקה <span class="m">6531/152</span> הגיעה למקום השביעי <strong>בלי מספר קומות כלל</strong>. הערך שלה הוא חסם <em>עליון</em> — תקרת 400% בלבד, בלי מעטפת — והמיון השווה אותו לחסמים <em>שמרניים</em> של האחרים. כלומר היא טיפסה דווקא משום שלא ידענו עליה די. <strong>שתי כמויות שאינן בנות השוואה מוינו באותו סולם.</strong> התיקון: שכבות ביטחון, וערך ממיין רק בתוכן.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">באג 2 — דגל הציר הראשי היה רחב פי שניים ממה שצריך</h3>
+    <p>72 חלקות נוגעות באחד מתשעת הצירים הראשיים. אבל האיסור הוא על <strong>כניסה חדשה לרכבים</strong>, ולחלקה עם חזית שנייה פשוט תמוקם שם הכניסה. <strong>ל-43 מהן יש חזית כזו.</strong> הסיכון האמיתי הוא 29 חלקות שכל חזיתן על ציר.</p>
+    <p class="note">זו אותה הבחנה בדיוק שנדרשה קודם בין "יש רחוב" ל"מה רוחבו", ובין "אזור לשימור" ל"מבנה לשימור". <strong>התבנית חוזרת: שער שנשמע נכון ומסומן גס פוסל פי-שניים ממה שצריך.</strong></p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">והמגבלה שמשנה את סדר הצעדים</h3>
+    <p class="note lose"><strong>683 מתוך 697 נושאים "היסטוריית היתרים לא נבדקה".</strong> נתוני ארכיון יש ל-16 חלקות בלבד, ולכן שער ה"תפוס" — יזם אחר שכבר עובד מול הדיירים — אינו מופעל על 98% מהרשימה. כל אחד מהמובילים עלול להיות תפוס.</p>
+    <p>זו אינה תקלה אלא מגבלה אמיתית: הנתון קיים רק בארכיון. <strong>וזה בדיוק מה שקובע את סדר האלגוריתם:</strong> לא להפיק תיקים ואז לבדוק, אלא לדרג → לבדוק ארכיון על עשרת המובילים → להפיק מהנותרים. הבדיקה זולה על עשר חלקות ובלתי אפשרית על 700.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ומה שבמכוון אינו נכנס לניקוד</h3>
+    <p>התכנית האסטרטגית קובעת <strong>מכסה של 40 מבנים בשנה</strong> במסלול המגרשים, "כפוף לתנאי סף, העדפה על בסיס מצוינות". מול 700 מועמדים זה <strong>תור של 17 שנה</strong>. פיתוי לתרגם את זה לניקוד — ואין לנו שום דרך למדוד "מצוינות". <strong>הדירוג מודד כדאיות, לא סיכוי לאישור</strong>, וזה נאמר במפורש ב-docstring של המודול כדי שאיש לא יקרא אותו אחרת.</p>
+  </section>
+
+  <section class="panel revised"><h2>סריקת המסמכים — כי שני הממצאים הגדולים של היום היו מקריים</h2>
+    <p class="lead">כלל "מעל 15 מ׳" היה מונח בתכנית האסטרטגית שכבר החזקנו. תקן החניה הוחלף בספטמבר 2025 בלי שידענו. <strong>ארכיטקטורה שנשענת על מסמכים שהתגלו במקרה אינה יציבה</strong>, ולכן נסרק אתר ההנדסה שיטתית מה-sitemap. כל המסמכים הקובעים נמצאים עכשיו ב-<code>data/</code> עם מרשם ב-<code>data/DOCUMENTS.md</code>.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">אומת: המדיניות שלנו עדכנית</h3>
+    <p>באתר מתפרסם מסמך <strong>"מדיניות בנייה — חלופת שקד, אפריל 2026"</strong>, חדש יותר מהעותק שלנו (17.02.2026). הורדתי והשוויתי: <strong>זהה אות-באות בטקסט</strong> — 14 עמודים, 13,838 תווים, אותו hash. טבלת רוחב הרחוב לא השתנתה. זה אימות, לא הנחה.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ונמצא תנאי סף שהיה פוסל כמעט את כל המלאי</h3>
+    <p>הנוהל לקידום חלופת שקד (מרץ 2025) קובע: <em>"מבנים זכאים לתמ"א 38 בתחום הרצליה, כלומר כפופים להר/2213, <strong>אינם יכולים ליישם את תיקון 139</strong> כל עוד הר/2213 ותמ"א 38 חלות על החלקה."</em></p>
+    <p>המלאי שלנו הוא בדיוק מבני 1960–1980 — כלומר בדיוק מה שתמ"א 38 חלה עליו. <strong>התנאי הזה היה מוחק את כל 700 המועמדים.</strong></p>
+    <p class="note win"><strong>הוא כבר לא חל.</strong> מסמך המדיניות עצמו פותח: "לאור תום תוקפן של תכניות תמ"א 38 והר/2213 שיחולו ב-<strong>04.01.2026</strong> בהרצליה, חל ריבוי פניות". הר/2213 פגה בינואר, וזו בדיוק הסיבה שהמדיניות נכתבה.</p>
+    <p class="note lose"><strong>אבל הנוהל עדיין מפורסם באתר ללא תיקון.</strong> מי שיבנה מוצר מקריאת הנוהל לבדו — כולל מתחרה — יפסול את כל המלאי בטעות. זה בדיוק סוג הסיכון שהסריקה השיטתית נועדה לתפוס.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">שלושה דברים נוספים שלא היו אצלנו</h3>
+    <ul class="tight">
+      <li><strong>צירים ראשיים ללא כניסות חדשות לרכבים.</strong> תקן החניה ס׳א.2: בדרך ירושלים, העצמאות, הרב קוק, ארלוזורוב, סוקולוב, ויצמן, בן גוריון, הבריגדה היהודית וז'בוטינסקי "לא יותרו כניסות חדשות לרכבים, אלא רק לחלקות כלואות באישור הוועדה". <strong>72 מהניצולים (11%) פונים לאחד מהם</strong>, 34 על העצמאות לבדה. יש כאן אירוניה: אלה בדיוק הרחובות הרחבים שמקבלים את מספר הקומות הגבוה ביותר.</li>
+      <li><strong>דיור מכליל 15% — מעל 100 יח"ד.</strong> החציון אצלנו הוא 7 דירות קיימות → כ-22 חדשות, ורק 34 חלקות (5%) יכולות לעבור 100. <strong>כמעט לא נוגע למסלול המגרשים</strong>; זו שאלה של מסלול המתחמים.</li>
+      <li><strong>"זכות דרך במצב המאושר" היא קריטריון בחינה מפורש</strong> בנוהל. המדידה שאנחנו בונים אינה נוחות פנימית — היא פרמטר שהוועדה שוקלת בפועל.</li>
+    </ul>
+  </section>
+
+  <section class="panel revised"><h2>מעל 15 מ׳ אינו "לא ידוע" — שני המסמכים מרכיבים כלל אחד</h2>
+    <p class="lead">טבלת המדיניות נעצרת ב-15 מ׳ וכותבת "יבחן נקודתית בהתאם למדיניות להתחדשות מרכז העיר ותמ"א 70". התייחסתי לזה כאל חוסר נתון, ו-<strong>55% מהמלאי נשאר בלי מספר קומות.</strong> זו הייתה קריאה חסרה.</p>
+    <p>"המדיניות להתחדשות מרכז העיר" היא התכנית האסטרטגית הר/2323 — <strong>שכבר ישבה בריפו</strong>. עמ׳ 8 שלה נותן תקרה לכל קטגוריה במפה:</p>
+    <div class="tw"><table><thead><tr><th>קטגוריה</th><th>תקרה</th></tr></thead><tbody>
+      <tr class="win"><td>התחדשות מגרשית מוטת מגורים</td><td><strong>עד 9 קומות</strong> (בכפוף לחתכים)</td></tr>
+      <tr class="win"><td>התחדשות מגרשית מוטת מגורים נמוכה</td><td><strong>עד 5.5 קומות</strong> (בכפוף לחתכים)</td></tr>
+      <tr><td>מע"ר היסטורי</td><td>עד 14 · בצמתים ראשיים עד 17</td></tr>
+      <tr><td>מתחמים עירוניים</td><td>עד 15 · להעצמה עד 25</td></tr>
+      <tr><td>מרקם לשימור</td><td>על פי הקיים</td></tr>
+    </tbody></table></div>
+    <p>ו"בכפוף לחתכים" היא ההפניה <strong>חזרה</strong> לטבלת רוחב הרחוב. שני המסמכים מרכיבים כלל אחד: <strong>תקרת הקטגוריה, מוקטנת לפי רוחב הרחוב.</strong> מעל 15 מ׳ ההקטנה מתאפסת והתקרה קובעת — כמו מגבלת מהירות שהיא הנמוך מבין התמרור ל-90: בלי תמרור התשובה אינה "לא ידוע".</p>
+    <div class="tw"><table><thead><tr><th>מצב המלאי</th><th>לפני</th><th>אחרי</th></tr></thead><tbody>
+      <tr class="win"><td>חלקות עם מספר קומות</td><td class="n">258 (37%)</td><td class="n"><strong>644 (92%)</strong></td></tr>
+    </tbody></table></div>
+    <p class="note">351 מקבלות את תקרת הקטגוריה, 275 טווח שתלוי במדידה, ורק 18 מספר ודאי — כי <code>TOLERANCE_M=1.0</code> הופך כמעט הכל לטווח. <strong>אם המדידה הידנית תראה דיוק טוב יותר, רוב ה-275 יהפכו לוודאיות.</strong> זה הקישור הישיר בין 15 המדידות הידניות לערך המוצר.</p>
+    <p class="note lose"><strong>הסייג שחייב להופיע בכל תיק:</strong> הערה 1 לאותה טבלה — "התכנית הינה מדיניות בלבד. הוועדה המקומית רשאית לקבוע מס׳ קומות ונפחים שונים לפי שיקול דעתה". והנוהל חוזר על כך. <strong>כל מספר שאנחנו מפיקים הוא תקרה, לא זכות.</strong></p>
+  </section>
+
+  <section class="panel revised"><h2>תקרת אמינות למדידה — 15 מ׳, ולמה זה לא מזיק</h2>
+    <p class="lead">בדקתי את מדידת הפער מול מיקום ציר הרחוב ב-OSM: חלקה שיושבת בקצה זכות הדרך אמורה לקבל רוחב של כפליים המרחק לציר.</p>
+    <div class="tw"><table><thead><tr><th>רוחב שנמדד</th><th>עודף מעל הצפוי</th></tr></thead><tbody>
+      <tr><td>8–12 מ׳</td><td class="n">+3.2</td></tr>
+      <tr><td>12–15 מ׳</td><td class="n">+3.6</td></tr>
+      <tr class="lose"><td>15–20 מ׳</td><td class="n"><strong>+8.0</strong></td></tr>
+      <tr class="lose"><td>20–25 מ׳</td><td class="n"><strong>+11.9</strong></td></tr>
+      <tr class="lose"><td>מעל 25 מ׳</td><td class="n"><strong>+19.1</strong></td></tr>
+    </tbody></table></div>
+    <p>עד 15 מ׳ העודף קבוע וקטן — בדיוק מה שמצופה מאי-סימטריה של מדרכות. מעליו הוא מתפוצץ: הקרן בורחת מעבר לרחוב, לחניון או לשטח פתוח. ראיה שנייה חותכת: <strong>רחובות <code>primary</code> יוצאים בחציון 16.5 מ׳ ורחובות <code>residential</code> 16.2</strong>. מדידה שאינה מבחינה בין עורק לרחוב מגורים אינה מודדת רחוב.</p>
+    <p class="note win"><strong>והנזק מוכל, במקרה משמח.</strong> כל המדידות השבורות מעל 15 מ׳ — בדיוק התחום שבו התקרה נקבעת מהקטגוריה ולא מהרחוב. התחום שקובע החלטות, 8–15 מ׳, הוא זה שיוצא עקבי. מה שנאסר מעתה הוא רק להציג את המספר: <code>display_width()</code> מחזיר "מעל 15 מ׳".</p>
+  </section>
+
+  <section class="panel revised"><h2>הדגל האדום נסגר — והשיטה שנועדה לסגור אותו נפסלה</h2>
+    <p class="lead">שני תיקים נשארו פתוחים: הצנחנים 191, שלא היה ברור אם דרך השירות ממערב לו היא זכות דרך ציבורית; ו-33 חלקות שיצאו "יש רחוב, הרוחב לא נמדד". הראשון נסגר. השני נשאר פתוח — <strong>אחרי ששיטה שנראתה עובדת נפסלה במבחן.</strong></p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">הצנחנים 191 — נפסלה, שני מקורות בלתי תלויים</h3>
+    <p>אמרתי קודם שזו "שאלה לוועדה המקומית". זה היה ויתור מוקדם מדי; הנתונים כן עונים.</p>
+    <ul class="tight">
+      <li><strong>OSM</strong> — כל דרך בטווח 45 מ' מהחלקה מתויגת <code>footway</code>. הרחוב הקרוב ביותר רחוק מזה. החלקה משורתת בשבילי הולכי רגל בלבד.</li>
+      <li><strong>קדסטר + XPlan</strong> — הרצועה ממערב אינה שטח מפולש אלא חלקה רשומה: <span class="m">7291/168</span>, 1,716 מ"ר, 182×17 מ'. ב-12 נקודות דגימה, 2–11 מ' ממערב ולכל אורך החלקה, תכנית <span class="m">504-0336685</span> מייעדת <strong>"מגורים ב'"</strong>.</li>
+    </ul>
+    <p class="note">מה שהופך את זה למכריע: <strong>אותה תכנית כן מייעדת "דרך מאושרת" 131 מ' צפונה, על אותה חלקה 168.</strong> כלומר היא מבחינה בין השתיים בדיוק במקום הזה — ובחרה. זו שלילה שמשמעותה בחירה של התכנית, לא היעדר מידע.</p>
+    <p>ללא חזית רחוב אין תוספת קומות לפי טבלת המדיניות. שלושת תנאי הסף של §70א עצמם אינם מזכירים רחוב — ייתכן שהחלקה עומדת בהם — <strong>אבל היא אינה הזדמנות.</strong></p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">שכבת "דרך מאושרת" — חיובית בלבד, אינה שער</h3>
+    <p>בדרך נבדק אם אפשר להשתמש בייעוד הדרך כשער עירוני. <strong>לא.</strong> מתוך 667 חלקות עם רוחב רחוב מדוד בפועל, רק <strong>225 (34%)</strong> גובלות בדרך מאושרת. השכבה מחזיקה דרכים מתכניות חדשות בלבד (<span class="m">תתל/101/ג</span>, <span class="m">תמל/3006</span>, <span class="m">504-0336685</span>); רשת הרחובות הישנה של הרצליה יועדה בתכניות שלא עברו דיגיטציה, ו-XPlan מודה בכך בעצמו — כל נקודה שם נושאת גם את התווית "יעוד עפ"י תכנית מאושרת אחרת".</p>
+    <p class="note"><strong>חיוב = ראיה חזקה. שלילה = חסרת משמעות</strong> — אלא אם אותה תכנית ממפה דרכים בסביבה הקרובה ובכל זאת לא ייעדה את הרצועה הנדונה, כמו בהצנחנים 191.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">מדידת פרוזדור מהקדסטר — נבנתה, נבדקה, נמחקה</h3>
+    <p>מדידת הפער בין חלקות נכשלת כשהכביש עובר <em>בתוך</em> חלקה רשומה. נבנתה שיטה חלופית: לקחת את ציר הרחוב מ-OSM ולירות אנך לשני הצדדים עד גבול החלקה הראשונה — בדיוק ההגדרה שהתכנית האסטרטגית דורשת, זכות דרך ולא כביש סלול. היא החזירה 17 מספרים שנראו סבירים.</p>
+    <p><strong>מול 58 חלקות שכבר נמדדו בשיטת הפער: חציון שגיאה מוחלטת 7.3 מ',</strong> וכמעט תמיד כלפי מטה — על גודל שספי המדיניות בו מרוחקים 1–2 מ' זה חסר ערך.</p>
+    <div class="tw"><table><thead><tr><th>למה</th><th>הראיה</th></tr></thead><tbody>
+      <tr class="lose"><td>רצועות סרק בתוך הפרוזדור</td><td>חלקות של 125–190 מ"ר (מדרכות, שאריות הפקעה) עוצרות את האנך. בן יהודה: 32 מ' נמדדו כ-4.8</td></tr>
+      <tr class="lose"><td>ציר OSM לא מיושר לקדסטר</td><td>ב-<span class="m">7291/146</span> האנך חזר <strong>לתוך החלקה הנמדדת עצמה</strong> ב-30 מתוך 46 דגימות</td></tr>
+    </tbody></table></div>
+    <p class="note lose">סינון לפי פיזור לא עזר (7.1 מ' במקום 7.3) — <strong>התוצאות השגויות עקביות לאורך הרחוב, ולכן נראות כמו מדידה טובה.</strong> זו הסכנה המדויקת: מספר שנראה כמו מדידה. המודול נמחק ולא נשלח, ו-33 החלקות נשארות ללא רוחב — וזה הדיווח הנכון.</p>
+    <p class="note">נגזרת: <strong>גם ה-8.2 מ' שחישבתי להצנחנים 15 בשיטה הזו נמשך בחזרה.</strong> רוחב הרחוב שלו עדיין לא ידוע.</p>
+  </section>
+
+  <section class="panel revised"><h2>גרסה 28 נמשכה בחזרה — רוחב הרחוב אינו נפתר בקנה מידה</h2>
+    <p class="lead">בגרסה 28 כתבתי ששלוש הנחות נפלו: שהרחוב מסנן 71% ולא 6%, ש-19% נופלים בשער ה-8 מ', ושהמעטפת חוסמת ב-37%. <strong>כל השלוש נשענו על מדידה פגומה ואני מושך אותן בחזרה.</strong></p>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.2rem 0 .5rem">מה התגלה</h3>
+    <div class="tw"><table><thead><tr><th>חלקה</th><th>מדידה זהירה</th><th>ריצה עירונית</th></tr></thead><tbody>
+      <tr><td>הצנחנים 191</td><td class="n">14.6</td><td class="n">14.4</td></tr>
+      <tr class="lose"><td>הצנחנים 15</td><td class="n">20.4</td><td class="n"><strong>7.3</strong></td></tr>
+      <tr class="lose"><td>בר-כוכבא 105</td><td class="n">15.8</td><td class="n"><strong>23.2</strong></td></tr>
+    </tbody></table></div>
+    <p><strong>שתיים משלוש חלוקות קשות</strong>, ו-7.3 מ' היה מפיל את הצנחנים 15 בשער ה-8 מ'. שורש הבעיה: בריצה העירונית לקחתי <code>max</code> על פני כל החזיתות, כך שחלקה שגבה פונה לשטח פתוח מקבלת את הרוחב ההוא.</p>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.2rem 0 .5rem">ושתי שיטות חלופיות נכשלו גם הן</h3>
+    <ul class="tight">
+      <li class="no"><strong>הוצאת כל הצמודים מהיעדים</strong> — מדדה את כל 89 ה-MultiPolygon שנכשלו, אבל הקרניים נוסעות רחוק ומנפחות: הצנחנים 191 קפץ ל-35.7 מ'.</li>
+      <li class="no"><strong>מדידת פוליגון הדרך מ-XPlan</strong> — מחזירה None לשתיים מארבע, ו-26.8/26.9 מ' לרחובות שנמדדו ב-15.8 ו-14.0. פוליגוני הדרך הם ככל הנראה הפקעות תכנוניות רחבות מהכביש הסלול.</li>
+    </ul>
+    <p class="note lose"><strong>המצב האמיתי: רוחב הרחוב נמדד באמינות רק בשיטה הזהירה על קומץ חלקות, מכוילת מול נקודת אמת אחת — והיא נותנת טווח קומות ולא מספר.</strong> אין לנו מדידה עירונית שאפשר לסמוך עליה, ולכן אין לנו את שער הרחוב בשכבה א' ואין לנו את התפלגות הקומות בעיר.</p>
+    <p class="note"><strong>מה שנדרש כדי לסגור:</strong> עוד נקודות אמת — רוחב רחוב מוצהר בתכנית או מדידה בשטח — וכלל ברור איזו חזית קובעת כשיש כמה. בלי שתיהן זה נשאר שדה של דרגה 4, לא של שכבה א'.</p>
+  </section>
+
+  <section class="panel revised"><h2>זיהוי חזיתות רחוב — OSM הוא המקור</h2>
+    <p class="lead">גרסה 29 השאירה את רוחב הרחוב פתוח. מה שחסם לא היה דיוק המדידה ולא בחירת החזית — <strong>שום דבר לא זיהה מה בכלל רחוב</strong>, והמדידה מדדה שבילים.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:0 0 .5rem">מה הוכיח את זה</h3>
+    <p>תצלום אוויר עירוני ברזולוציה <strong>13 ס"מ לפיקסל</strong> (<code>orto_042022_agol</code>, שירות ציבורי בפורטל). הגבול הצפוני של הצנחנים 15 גובל ב<strong>שביל של 2.4 מ'</strong>. שתי שיטות קודמות החזירו לו 8.0 ו-20.4 מ' — <strong>שתיהן מדדו את הדבר הלא נכון</strong>, ומהמספר לבדו אי אפשר היה לדעת.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">והמקור שפותר זאת כבר קיים</h3>
+    <p>OpenStreetMap מתייג כל דרך. במרכז הרצליה:</p>
+    <div class="tw"><table><thead><tr><th>רחוב</th><th></th><th>לא רחוב</th><th></th></tr></thead><tbody>
+      <tr><td><code>residential</code></td><td class="n">422</td><td><code>footway</code></td><td class="n">801</td></tr>
+      <tr><td><code>tertiary</code></td><td class="n">118</td><td><code>service</code></td><td class="n">362</td></tr>
+      <tr><td><code>living_street</code> · <code>secondary</code> · <code>primary</code></td><td class="n">82</td><td><code>path</code> · <code>steps</code> · <code>track</code></td><td class="n">194</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>והתיוג נושא משקל משפטי ולא רק טכני:</strong> התכנית האסטרטגית דורשת "רח' ברוחב של מעל 8 מ' <strong>זכות דרך</strong>". דרך שירות בתוך שיכון אינה זכות דרך ציבורית.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">ובדקנו אם יש מקור פשוט יותר — אין</h3>
+    <p>לשכבות הרחובות של העירייה יש היררכיה, והן סמכותיות יותר לכאורה. <strong>בפועל הן גרועות יותר:</strong> מפספסות את החזית האמיתית של בר-כוכבא 105 (16.1 מ') ושל הר מירון 1 (15.0 מ'), ומסמנות חצר חניה כ"רחוב". אין בהן הבחנת שביל/שירות.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">ובאג שנתפס רק כי המספר נראה חשוד</h3>
+    <p>הריצה הראשונה נתנה <strong>391 מתוך 700</strong> עם חזית רחוב. 37% בלי חזית נשמע גבוה מדי לחלקות עירוניות, ובדיקה גילתה ש<strong>29 מתוך 30 רווחים מעל 8 מ' דיווחו "אין דרך חוצה"</strong> — לא כי אין, אלא כי הקרן נסעה לכיוון הלא נכון. סיווגתי לפי <em>הנורמל הממוצע</em> של החזית; בחזית מעוקלת הממוצע מצביע לאן שאף נקודה לא פונה.</p>
+    <p class="note lose"><strong>391 היה מספר שגוי ונמשך בחזרה.</strong> אחרי תיקון לנורמל פר-נקודה: <strong>667</strong>.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">התוצאה על כל 700</h3>
+    <div class="tw"><table><thead><tr><th>טווח רוחב</th><th>חלקות</th><th></th></tr></thead><tbody>
+      <tr class="lose"><td>8–9 מ' — <strong>לא מוגדר בטבלה</strong></td><td class="n">23</td><td class="n">3.4%</td></tr>
+      <tr><td>9–10 → 7 קומות</td><td class="n">45</td><td class="n">6.7%</td></tr>
+      <tr><td>10–12 → 8 קומות</td><td class="n">143</td><td class="n">21.4%</td></tr>
+      <tr><td>12–15 → 9 קומות</td><td class="n">67</td><td class="n">10.0%</td></tr>
+      <tr class="lose"><td>מעל 15 — <strong>נקודתית</strong></td><td class="n"><strong>389</strong></td><td class="n"><strong>58.3%</strong></td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>הגובה נקבע במדויק ב-255 מתוך 700 בלבד.</strong> 389 נופלים מעל 15 מ', שם המדיניות כותבת "יבחן נקודתית" ולא נותנת מספר. <strong>זו אינה מגבלה של השיטה אלא של המדיניות</strong> — ולרוב המועמדים שאלת הגובה היא הכרעת ועדה, לא חישוב.</p>
+  </section>
+
+  <section class="panel revised"><h2>הפרדת "יש רחוב" מ"מה רוחבו"</h2>
+    <p class="lead">גרסה 31 סימנה דגל אדום: הצנחנים 15 והצנחנים 191, שניים משלושת התיקים, בלי חזית רחוב כשירה. הבדיקה מצאה ש<strong>אחד הדגלים היה אמיתי והשני היה באג שלי</strong>.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:0 0 .5rem">מה הבדיקה הראתה</h3>
+    <p>שרטטנו את קווי OSM על תצלום האוויר, בצבע לפי תיוג:</p>
+    <ul class="tight">
+      <li class="ok"><strong>הצנחנים 15 — יש רחוב.</strong> קו רחוב רץ לאורך הגבול המזרחי <em>ונוגע בו</em>. דגל שווא.</li>
+      <li class="no"><strong>הצנחנים 191 — אין.</strong> הרחוב הקרוב אינו מגיע אליה; הגישה דרך דרך שירות במערב, שהיא חצר חניה. דגל אמיתי.</li>
+    </ul>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">השורש: שתי שאלות שמוזגו לאחת</h3>
+    <p>מדידת הרוחב <strong>מדלגת בכוונה על חלקות צמודות</strong> — היא מחפשת את המגרש שמעבר לרווח, כדי לא למדוד את גדר השכן. אבל כשהכביש עצמו הוא חלקה רשומה שנוגעת במגרש, <strong>אין רווח למדוד</strong>. וקראתי את היעדר הרווח כהיעדר רחוב.</p>
+    <div class="tw"><table><thead><tr><th>מצב</th><th>משמעות</th></tr></thead><tbody>
+      <tr class="win"><td class="n">(רוחב, True)</td><td>יש רחוב והרוחב נמדד</td></tr>
+      <tr><td class="n">(None, True)</td><td>יש רחוב אך הרוחב לא נמדד — כביש צמוד. <strong>אינו נופל</strong></td></tr>
+      <tr class="lose"><td class="n">(None, False)</td><td>אין קו רחוב בסביבה — <strong>נופל בתנאי הסף</strong></td></tr>
+    </tbody></table></div>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">ומה זה עשה למספרים</h3>
+    <div class="tw"><table><thead><tr><th></th><th>גרסה 31</th><th>גרסה 32</th></tr></thead><tbody>
+      <tr><td>רוחב נמדד</td><td class="n">667</td><td class="n">667</td></tr>
+      <tr><td>יש רחוב · רוחב לא נמדד</td><td class="n">—</td><td class="n">28</td></tr>
+      <tr class="win"><td><strong>נופלים בתנאי הסף</strong></td><td class="n">33</td><td class="n"><strong>5</strong></td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>מ-33 חשודים ל-5.</strong> רובם המכריע היו כבישים צמודים ולא חלקות בלי גישה. <strong>הצנחנים 15 חוזר להיות כשיר.</strong></p>
+    <p class="note lose"><strong>ומה שנשאר לאדם ולא לקוד:</strong> האם דרך השירות שמערבית להצנחנים 191 היא זכות דרך ציבורית. אם כן — הוא כשיר; אם לא — הוא יוצא. זו שאלה לוועדה המקומית.</p>
+    <p class="note"><strong>דפוס שחוזר היום בשלישית:</strong> מספר שנראה חשוד — 391 מתוך 700 בלי חזית, ואז 33 נופלים — הוביל לבדיקה שחשפה באג. <strong>שלוש פעמים היום המספר החשוד היה שלי ולא של המציאות.</strong></p>
+  </section>
+
+  <section class="panel revised" id="arch27"><h2>הארכיטקטורה המעודכנת — שלוש שכבות, לא מפל</h2>
+    <p class="lead">התכנון המקורי היה <strong>מפל מדורג שרץ לפי סריקה</strong>: משתמש מבקש רדיוס, והמערכת יורדת דרגה-דרגה ומושכת מהארכיון. הריצה העירונית שוברת את ההנחה שבבסיסו — <strong>כל שערי הכשירות למעט שניים רצים בלי אף פנייה לארכיון.</strong> הצורה הנכונה אינה מפל אלא שלוש שכבות שנבנות בקצב שונה.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.15rem;margin:1.4rem 0 .6rem">שכבה א' · כשירות גיאומטרית — נבנית פעם אחת, מתרעננת חודשית</h3>
+    <div class="tw"><table><thead><tr><th>מקור</th><th>שדה</th><th>שער</th></tr></thead><tbody>
+      <tr><td>GovMap WFS</td><td>גיאומטריית חלקה, שטח רשום</td><td>בסיס</td></tr>
+      <tr><td>ArcGIS העירייה · <code>buildings_reka</code></td><td><code>Num_floors</code>, טביעת רגל, <code>status</code></td><td>≥2 קומות · לא הרוס/בבנייה · ברוטו ≥250</td></tr>
+      <tr><td>XPlan שכבה 4</td><td>ייעוד + <code>station_desc</code></td><td>מגורים בייעוד מאושר</td></tr>
+      <tr><td>Shimour שכבה 2</td><td><code>mavat_name</code></td><td><strong>רק "מבנה לשימור" פוסל</strong>; אזורי עתיקות מסומנים ולא נפסלים</td></tr>
+      <tr><td>הר/2323 עמ' 7 · ראסטר מגאו-רפרנס</td><td>צבע · דגימת דיסק ורוב</td><td>מסלול מגרשים בלבד</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>עלות: אפס פניות לארכיון, אפס כסף, כשעה.</strong> תוצאה שנמדדה: <strong>904 חלקות</strong> מתוך 19,066.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.15rem;margin:1.4rem 0 .6rem">שכבה ב' · היסטוריית היתרים — לפי גוש, מתרעננת שבועית</h3>
+    <ul class="tight">
+      <li><code>GetTikimByGush</code> עם <code>l=false</code> — <strong>21 פניות</strong> כיסו את כל הגושים שמחזיקים שורדים (מפת המדיניות מרוכזת במרכז). מחזיר תיק ↔ חלקה ↔ כתובת: <strong>3,410 שורות, 3,326 תיקים</strong>, ומסלק 29% מהשורדים שאין להם תיק כלל</li>
+      <li class="no"><strong>שער השנה אינו חינם.</strong> רשימת הגוש מחזירה מספרי <em>תיקים</em> בלבד — אפס מספרי בקשה (נבדק). השנה מקודדת במספר הבקשה, שמופיע רק בעמוד התיק. <strong>העלות: פנייה אחת לתיק</strong> — 674 לשורדי שכבה א'</li>
+      <li><code>GetTikFile</code> — פנייה אחת לתיק, רק לשורדי שכבה א'. נותנת את תיאורי הבקשות → <strong>שער החיזוק</strong></li>
+      <li>בקשה אחרי 1999 עם <code>main_area &gt; 500</code> או <code>units ≥ 4</code> → <strong>בקשה של בניין שלם</strong> = שטחים מובנים בחינם</li>
+    </ul>
+
+    <h3 style="font-family:var(--display);font-size:1.15rem;margin:1.4rem 0 .6rem">שכבה ג' · דירות ושטח קיים — לפי לקוח, יזום אדם</h3>
+    <p><code>archive.gis-net</code> אומר <code>Disallow: /</code>. שלושה מסמכים לדוח, לא זחילה. מהמפרט: <strong>שדה 9 "מהות הבנין"</strong> → מספר דירות. מתכנית בניין שלם (סימן: ≥10 MB) → שטח קיים ברמת היתר. אם אין — האומדן המדוד.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.15rem;margin:1.6rem 0 .6rem">האלגוריתם</h3>
+    <pre dir="ltr" style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem;overflow-x:auto;font-size:.82rem;line-height:1.55"># זמן שאילתה — אפס פניות חיצוניות
+cand = LayerA.within(center, radius).join(LayerB)
+cand = [c for c in cand
+        if c.permit_year &lt; 1980              # שער חוק
+        and not c.strengthened_by_permit]     # שער חוק
+
+# דירוג — התקרה חוסמת תמיד, ולכן הברוטו הוא הערך
+for c in cand:
+    c.existing = c.gross * 0.669              # אומדן · כויל n=1
+    c.envelope = polygon_setback_envelope(c)   # רגיש: 3 מ' מול 4 מ' = 24% מול 38%
+    c.value    = min(4*c.existing, c.envelope) - c.allocation
+    c.bound_by = '400%' if 4*c.existing <= c.envelope else 'מעטפת'  # השני = ביטחון נמוך
+    c.conf     = 'היתר'  if c.whole_building_plan else \
+                 'מובנה' if c.post99_whole_building else 'אומדן'
+    c.pairs    = adjacent_same_street_no_public_land(c)
+
+rank    = sort(cand, key=(-value, conf_rank, -pairs))
+deliver = next_3_not_in(delivery_ledger[user])   # סריקה חוזרת = עומק
+
+# שכבה ג' — רק על השלושה, יזום אדם
+for c in deliver:
+    c.units    = mifrat_field9(c)             # שער ≥4 + שלב 3
+    c.existing = whole_building_plan(c) or c.existing</pre>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">שלוש הנחות שהאלגוריתם נשען עליהן — וכולן נמדדו</h3>
+    <ul class="tight">
+      <li class="no"><strong>בוטל:</strong> "תקרת ה-400% חוסמת תמיד (7 מתוך 7), ולכן <code>value ∝ gross</code>". נמדד על שכונה אחת. המעטפת <em>כן</em> חוסמת בחלק מהמקרים, והשיעור תלוי בהנחת מרווח שלא נמדדה — היסט 3 מ' מול 4 מ' מזיז אותו מ-24% ל-38%. <strong>שלב 5 קובע, ו-<code>value</code> חייב את שני האיברים.</strong></li>
+      <li class="ok"><strong>שער המפה חותך 83%</strong> ורץ בחינם — החזק והזול ביותר, ונמדד על כל 19,066 החלקות.</li>
+      <li class="ok"><strong>שכבת המבנים העירונית</strong> נותנת קומות וטביעת רגל לכל העיר באפס פניות לארכיון.</li>
+    </ul>
+    <p class="note lose"><strong>ומה שאינו מדוד:</strong> המקדם 0.669 מנקודת כיול אחת; שער ≥4 דירות דורש מסמך; ושיעור המעבר בשערי הארכיון נאמד מ-47 תיקים בשכונה אחת (60% עוברים שנה, 57% מהם נקיים) — <strong>אקסטרפולציה ל-~310, לא תחזית.</strong></p>
+  </section>
+
+  <section class="panel revised">
+    <h2>מה השתנה אחרי הביקורת</h2>
+    <p class="lead">שלוש בדיקות מול הארכיון שינו את התכנון מהיסוד, ושתי החלטות קודמות נפסלו.</p>
+    <ul class="tight">
+      <li><strong>שואלים גוש שלם, לא חלקה.</strong> 227 החלקות יושבות על <span class="m">6</span> גושים בלבד. פנייה אחת עם <code>l=false</code> החזירה את כל <span class="m">129</span> התיקים בגוש 6529 — עם כתובת, חלקה, מגרש ודגל ארכיב לכל תיק.</li>
+      <li><strong>שנת הבנייה חינם.</strong> מספר הבקשה מקודד את השנה: <code>19540032</code> → 1954. נבדק על <span class="m">33</span> מספרים, וכל <span class="m">5</span> שיש להם תאריך היתר מאומת — תואמים במדויק.</li>
+      <li class="stop"><strong>נפסל: סורק רקע שממפה את העיר מראש.</strong> זו בדיוק ההצטברות שתנאי השימוש אוסרים. מושכים רק אזור שמשתמש ביקש.</li>
+      <li class="stop"><strong>נפסלה: עצירה אדפטיבית <em>לא-מותנית</em>.</strong> ירדה ל-<span class="m">5</span> פניות ומצאה רק <span class="m">55%</span> מהשלישייה. מה שנשאר הוא עצירה <strong>מותנית במעבר שערים</strong>, וזה כלל אחר.</li>
+      <li><strong>תוקן: צמד חלקות כן אפשרי.</strong> ערבבתי בין שני סעיפים. תכנית על <strong>שתי חלקות</strong> מותרת במפורש; מה שאסור ככלל הוא <strong>מיזוגן למגרש אחד</strong>. השלשות אכן יוצאות מהמסלול, אבל הצמדים לא.</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>העלות של סריקה אחת</h2>
+    <div class="tw">
+      <table>
+        <thead><tr><th>גישה</th><th>פניות</th><th>זמן</th><th>כיסוי האזור</th></tr></thead>
+        <tbody>
+          <tr class="lose"><td>סריקה מלאה, חלקה-חלקה</td><td class="n">681</td><td class="n">114 דק'</td><td class="n">100%</td></tr>
+          <tr class="lose"><td>כלל 37% <span class="tag">לא מתאים</span></td><td class="n">636</td><td class="n">106 דק'</td><td class="n">93% — פותח 212 חלקות</td></tr>
+          <tr class="lose"><td>תכנון קודם: 30 חלקות מדורגות</td><td class="n">90</td><td class="n">15 דק'</td><td class="n">30 מתוך 227</td></tr>
+          <tr class="win"><td>סריקה מדורגת <span class="tag ok">מומלץ</span></td><td class="n">~32 †</td><td class="n">~6 דק' †</td><td class="n">100% מהתיקים</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:1rem">† <strong>המספרים האלה קדמו לתנאי העצירה המותנה.</strong> מרגע שהעצירה דורשת שלוש שעברו שערים, מספר הפניות תלוי בשיעור המעבר ואינו נגזר מאף נתון שבידינו. צריך או תקרת תקציב קשיחה (למשל 40 פניות, ואז להחזיר את מה שעבר ולומר "התקציב מוצה"), או סימולציה של הכלל המותנה על 227 החלקות. <strong>וגם הכיסוי אינו 100% מהחלקות אלא מהתיקים המדוגמים</strong> — חלקה בלי תיק דיגיטלי אינה נספרת.</p>
+  </section>
+
+  <section class="panel">
+    <h2>המשפך</h2>
+    <div class="funnel">
+      <div class="step"><span class="lbl">חלקות ברדיוס</span><span class="bar" style="width:100%"></span><span class="v">320</span></div>
+      <div class="step"><span class="lbl">אחרי סינון ארצי</span><span class="bar" style="width:71%"></span><span class="v">227</span></div>
+      <div class="step"><span class="lbl">תיקי בניין באזור</span><span class="bar" style="width:82%"></span><span class="v">~260</span></div>
+      <div class="step"><span class="lbl">נבדקות לעומק</span><span class="bar" style="width:8%"></span><span class="v">~20</span></div>
+      <div class="step final"><span class="lbl">נמסרות ללקוח</span><span class="bar" style="width:2%"></span><span class="v">3</span></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>חמש דרגות</h2>
+    <p class="lead">אף פעם לא לשלם על מידע יקר לפני שמיצינו את הזול.</p>
+    <div class="tiers">
+      <div class="tier">
+        <h3>0 · גיאומטריה</h3>
+        <p>חלקות מ-GovMap, ייעודים ושימור ממינהל התכנון. מגדיר את קבוצת המועמדים ומוריד כבישים ושטחים ציבוריים.</p>
+        <span class="cost free">חינם</span>
+      </div>
+      <div class="tier">
+        <h3>1 · ניקוד מוקדם</h3>
+        <p>שטח מגרש, ייעוד, דגל מתחם שימור, וראיות משכנים שכבר במסד הנתונים.</p>
+        <span class="cost free">חינם</span>
+      </div>
+      <div class="tier">
+        <h3>2 · סריקת גושים</h3>
+        <p><strong>פנייה אחת לכל גוש.</strong> מחזירה את כל תיקי הבניין באזור, ולכל אחד: כתובת, חלקה, <strong>מגרש</strong> ודגל ארכיב מסמכים. כאן נגמר הניחוש — יש לנו מפה מלאה.</p>
+        <span class="cost">6 פניות</span>
+      </div>
+      <div class="tier">
+        <h3>3 · דף התיק</h3>
+        <p>רק למדורגים גבוה. מחזיר את מספרי הבקשות — ומהם <strong>שנת הבנייה</strong> — את כל החלקות שהתיק חולש עליהן, ואת התוכניות החלות.</p>
+        <span class="cost">~20 פניות</span>
+      </div>
+      <div class="tier">
+        <h3>4 · תיק מלא</h3>
+        <p>רק לשלושת הנבחרים: דף הבקשה, התוכנית הסרוקה, <strong>טבלת השטחים שבהיתר על פירוקה לפי שימוש</strong> (זה הקלט של שלב 1 ושל מבחן ה-70%, ואף דרגה לא חילצה אותו עד כה), קריאת קומות ודירות לפי כלל הספירה שבחוק, ואימות אנושי.</p>
+        <span class="cost">~6 + OCR</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>האלגוריתם</h2>
+    <p class="lead">הניסוח הקודם כאן תיאר זחילה ברדיוס לפי דרגות, דירוג <code>μ+κ·σ</code>, והארכיון בלב התהליך. <strong>זה כבר לא מה שרץ.</strong> הסינון העירוני החליף את הזחילה, והארכיון ירד מ<em>שלב איסוף</em> ל<em>שלב אימות על רשימה קצרה</em>. להלן מה שפועל בפועל.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">א · סינון עירוני — חינם, מחושב מראש</h3>
+    <pre style="direction:ltr;text-align:left;overflow-x:auto;background:var(--rule-2,#f4f1ea);padding:.9rem;border-radius:.4rem;font-size:.85rem">19,066 parcels
+  → 904   policy-map category ∈ {plot renewal 9, plot renewal 5.5}
+          AND not a listed building (מבנה לשימור, not the 375-dunam area layer)
+          AND ≥2 floors above ground
+  → 700   AND ≥4 dwellings built under permit   (num_aprt, 999 = sentinel)</pre>
+    <p>אפס פניות לארכיון. כל המקורות ציבוריים: GovMap, פורטל ArcGIS העירוני, iplan, ומפת המדיניות שגאו-רפרנסה.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ב · לכל חלקה — גובה, חינם</h3>
+    <pre style="direction:ltr;text-align:left;overflow-x:auto;background:var(--rule-2,#f4f1ea);padding:.9rem;border-radius:.4rem;font-size:.85rem">has_street(parcel)        OSM highway tags — street vs footway
+width(parcel)             cadastral gap, narrowest frontage governs
+                          trusted only below 15 m (see reliability ceiling)
+floors = min( category_ceiling , street_table(width ± 1.0 m) )
+                          above 15 m the street does not bind → ceiling governs
+main_axis_only            every frontage on one of the nine axes → entrance at risk</pre>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ג · דירוג — שכבת ביטחון קודמת לערך</h3>
+    <p>ערך גדול שאי אפשר להגן עליו אינו עדיף על ערך קטן שכן. הערך ממיין <strong>בתוך</strong> שכבה, לעולם לא בין שכבות.</p>
+    <div class="tw"><table><thead><tr><th>שכבה</th><th>מה זה אומר</th><th>n</th></tr></thead><tbody>
+      <tr class="win"><td><strong>0</strong></td><td>400% חוסם, והחסם מחזיק בכל טווח k</td><td class="n"><strong>311</strong></td></tr>
+      <tr><td><strong>1</strong></td><td>המעטפת חוסמת, או שהחסם מתהפך בתוך טווח k</td><td class="n">330</td></tr>
+      <tr class="lose"><td><strong>2</strong></td><td>חסם עליון בלבד — לא נקבע מספר קומות</td><td class="n">56</td></tr>
+    </tbody></table></div>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ד · ארכיון — רק על הרשימה הקצרה</h3>
+    <p><strong>זה השינוי הארכיטקטוני האמיתי.</strong> הארכיון אינו שלב איסוף אלא שלב אימות, והוא נוגע בכ-10 חלקות ולא ב-700:</p>
+    <pre style="direction:ltr;text-align:left;overflow-x:auto;background:var(--rule-2,#f4f1ea);padding:.9rem;border-radius:.4rem;font-size:.85rem">for candidate in ranked[:10]:
+    strengthened(requests)  → §70א(2) disqualification   (permit issued)
+    occupied(requests)      → another developer present   (no permit)
+stop at three survivors; if fewer than three exist, say so — do not pad</pre>
+    <p class="note">שתי הבדיקות האלה קיימות <strong>רק</strong> בארכיון, ולכן אין דרך להריץ אותן על כל העיר. הן זולות על עשר חלקות ובלתי אפשריות על 700 — וזה בדיוק למה הן בסוף ולא בהתחלה.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ה · תיק — לשלושה ששרדו</h3>
+    <p>שרשרת הזכויות המלאה, כולל חניה (1.0 בתמ"א 70 / 1.5 מחוץ), הפרשות שב"צ, תמהיל ומרפסות. כל מספר נושא את הסייג של הערה 1: <strong>תקרה נתונה לבחינה, לא זכות.</strong></p>
+</section>
+
+
+  <section class="panel">
+    <h2>ארבעה שערים</h2>
+    <p class="lead">הזדמנות נפסלת בכל אחד מהם, וכולם נמדדים לפני שמציגים משהו ללקוח.</p>
+    <div class="tiers">
+      <div class="tier">
+        <h3>שער החוק</h3>
+        <p>סעיף 70א — לכל <strong>בניין</strong> בנפרד. ראשית, <strong>המגרש חייב להיות מיועד בתכנית גם למגורים</strong> — תנאי שמינהל התכנון עונה עליו בחינם בדרגה 0, ולא היה אצלי. ואז: לפחות <span class="m">70%</span> משטח הבנייה הקיים משמש כדין למגורים — <strong>ובכלל זה שטחי שירות למגורים</strong>; היתר לפני <span class="m">1.1.1980</span> (או 1980–1984 עם חוות דעת מהנדס מבנים); לא חוזק בהיתר; לפחות <span class="m">2</span> קומות; ולפחות <span class="m">4</span> יחידות דיור שנבנו בהיתר. <strong>ובספירה: קומת עמודים נספרת, וקומה עליונה ששטחה פחות ממחצית הקומה שמתחתיה אינה נספרת</strong> — בדיוק המקרה הגבולי שהשער אמור להכריע.</p>
+        <span class="cost">per בניין</span>
+      </div>
+      <div class="tier">
+        <h3>שער המסלול</h3>
+        <p>מסמך המדיניות חל רק על <strong>עד שתי חלקות</strong> ברישוי מהיר. <strong>3 חלקות או 3 מבנים ומעלה</strong> יוצאים ממנו ונבחנים כמתחם להתחדשות עירונית, עם נוהל היזמים.</p>
+        <span class="cost">per הזדמנות</span>
+      </div>
+      <div class="tier">
+        <h3>שער המיקום</h3>
+        <p>שלושה מצבים, לא שניים. <strong>מחוץ לתחום התכנית</strong> המפה לא חלה כלל — והתחום הוא 5,843 דונם, כ-26% מהעיר, כלומר <strong>מחוץ לו נמצאים כ-74%</strong>. <strong>בתוך התחום, אזור מתחמי</strong> — אי אפשר לקדם מגרש בודד או צמד. <strong>בתוך התחום, לא צבוע</strong> — אין פוטנציאל התחדשות. מרקם לשימור הוא פסילה ולא ציון.</p>
+        <span class="cost">per הזדמנות</span>
+      </div>
+      <div class="tier">
+        <h3>שער הרחוב</h3>
+        <p>תנאי סף: הפרויקט בקטגוריית מגרשים <strong>וברחוב ברוחב של מעל 8 מ' זכות דרך</strong>. רוחב הרחוב חוזר בהפרשה הציבורית — שב"צ מבונה ימוקם "ככל הניתן" ברחוב שלא יפחת מ-<strong>12 מ'</strong>. תנאי הסף השני, מוכנות מוסדות חינוך, <strong>מדיד מטבלת הקיבולת</strong>. הרוחב עצמו נמדד (ראו להלן), אבל ברזולוציית טווח בלבד.</p>
+        <span class="cost">per הזדמנות</span>
+      </div>
+      <div class="tier">
+        <h3>שתי חלקות</h3>
+        <p><strong>תכנית שמכסה שתי חלקות — מותרת</strong> ("תכניות הכוללות חלקת מגורים אחת ועד מקסימום שתי חלקות ברישוי מהיר", עמ' 2). כל חלקה שומרת על הפרצלציה ועל המבנה שלה, וסך המבנים נשאר 2. <strong>זו הזדמנות לגיטימית ונפוצה</strong>: ברדיוס שנבדק יש <span class="m">420</span> צמדי חלקות מועמדות גובלות.</p>
+        <span class="cost">מותר</span>
+      </div>
+      <div class="tier">
+        <h3>מיזוג למגרש אחד</h3>
+        <p>שונה לגמרי: "ככלל <strong>לא יתאפשר איחוד חלקות</strong>" (עמ' 6). החריג היחיד — מבנים שכבר מאוחדים בהיתר קיים, כלומר <strong>תיק בניין אחד שחולש על כמה חלקות</strong>, ואז הבינוי חייב לשמר מופע של שני מבנים כלפי הרחוב.</p>
+        <span class="cost">חריג, נדיר</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>דוח האפס: שני מצבי אמון</h2>
+    <p class="lead">אותם סעיפים בדוח, אבל המנוע שמייצר את הזכויות שונה לגמרי — ואסור שהלקוח יבלבל ביניהם.</p>
+    <div class="cols">
+      <div>
+        <h3 style="font-size:1rem;margin:0 0 .4rem">מגרשי — מחושב</h3>
+        <p class="formula">שטח בנוי ≤ 400% מהשטח הקיים  (סעיף 70ב)
+יח"ד ≤ מצב קיים × 2.8–3.18  (מדיניות §4)</p>
+        <p style="margin:.5rem 0 0;color:var(--soft);font-size:.92rem">שני הגבולות נגזרים מ<strong>המצב הקיים בהיתר</strong> — שטח בנוי ומספר דירות, שיושבים רק בתוך הסריקה. אלה רק שלבים 2–3; השרשרת המלאה בת תשעה שלבים מופיעה למטה.</p>
+      </div>
+      <div>
+        <h3 style="font-size:1rem;margin:0 0 .4rem">מתחמי — תרחיש</h3>
+        <p style="margin:0;color:var(--soft);font-size:.92rem">אין סל זכויות. הן נקבעות בתכנון מתחמי שעדיין לא קיים. לוח הזמנים ארוך יותר ולכן המימון יקר יותר, ומספר הבעלים לארגון גדול בהרבה.</p>
+        <p class="note" style="margin-top:.7rem">הדוח חייב לשאת תווית נפרדת: <strong>"תרחיש בהנחות שלנו"</strong> ולא "חושב לפי המדיניות". לערבב ביניהם זו טעות שתחזור אלינו.</p>
+      </div>
+    </div>
+    <p class="note" style="margin-top:1rem">מסמך המדיניות עצמו כולל דוגמאות עבודה עם כתובות אמיתיות — הדר 40 (<span class="m">971</span> מ"ר), חובות הלבבות 7 (<span class="m">782</span> מ"ר) והשושנים 9 (<span class="m">744</span> מ"ר, 2 יח"ד לקומה). <strong>ואלה אינן אמות מידה לחישוב הזכויות</strong>: הן נותנות <em>שטח מגרש</em> ולא שטח בנוי קיים, ושניים מהשלושה כבר נבנו מחדש מכוח תמ"א 38 — כלומר לא היו עומדים היום בסעיף 70א. אמת המידה היחידה במסמכים היא פירוק 730.45 מ"ר.</p>
+  </section>
+
+  <div class="cols">
+    <section class="panel">
+      <h2>מתג המסלול בחיפוש</h2>
+      <p class="lead">סיווג המסלול נגזר ממילא מספירת החלקות והמבנים, ולכן זה מתג ולא מנוע שני.</p>
+      <ul class="tight">
+        <li><strong>ברירת מחדל כבוי.</strong> ליבת המוצר היא הרישוי המהיר.</li>
+        <li><strong>כשדולק</strong> — הזדמנויות מתחמיות נכנסות לתוצאות, מסומנות בבירור ועם דוח תרחיש.</li>
+        <li><strong>עסקאות גדולות בהרבה</strong> נמצאות שם, אבל הלקוח שלהן אחר ותהליך הרכש אחר.</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>אזהרת העדפה מתחמית</h2>
+      <p class="lead">עיגון ישיר במדיניות: "לועדה המקומית נשמרת הסמכות לדחות תכנית... אם מצאה כי יש להעדיף תכנון מתחמי".</p>
+      <ul class="tight">
+        <li><strong>חייבת להיות מדורגת, לא בינארית.</strong> מדדתי <span class="m">420</span> צמדים גובלים (לפחות 6 מ' גבול משותף) מתוך <span class="m">227</span>, מהם <span class="m">149</span> קומפקטיים דיים למגרש אחד; חציון 3–4 שכנים לחלקה. אזהרה בינארית תידלק על הכול ותהפוך לרעש.</li>
+        <li><strong>הציון</strong> נגזר מגודל הרצף הצמוד של מועמדים סביב ההזדמנות, ומסיווג האזור במפת המדיניות.</li>
+        <li class="ok"><strong>נפתר:</strong> מפת המדיניות נמצאת בתוך מסמך המדיניות עצמו, שכבר ברשותנו. לא נדרש ה-GIS החסום.</li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="cols">
+    <section class="panel">
+      <h2>כללי המסירה</h2>
+      <p class="lead">ניקוד גבוה לא מספיק. שלוש הזדמנויות חייבות להיות שלוש אפשרויות אמיתיות.</p>
+      <ul class="tight">
+        <li><strong>שער קשיח קודם כול.</strong> פחות מ-3 חלקות <em>ופחות מ-3 מבנים</em>. ספירת המבנים היא תנאי נפרד, ולכן טבלת הבניינים היא שער ולא נתון נלווה.</li>
+        <li><strong>גיוון.</strong> שלוש חלקות צמודות באותו רחוב אינן שלוש אפשרויות — והן גם מדליקות את אזהרת ההעדפה המתחמית.</li>
+        <li><strong>זמינות.</strong> חלקה שכבר שמורה או נמסרה ללקוח אחר יורדת מהרשימה. ל-Engine כבר יש טבלת שמירות עם שמירה פעילה אחת לכל הזדמנות.</li>
+        <li><strong>ניתנות לאספקה — כמסנן, לא ככלל בדיעבד.</strong> ניקוד אופטימי מתגמל <em>חוסר ידיעה</em>, ולכן בלי מסנן מוקדם התקציב נשרף על חלקות שייפסלו בסוף. דגל ארכיב המסמכים מדרגה 2 מסנן אותן לפני הדירוג.</li><li><strong>חלקות ללא תיק אינן נעלמות.</strong> סריקת הגושים מונה <em>תיקים</em>. חלקה עם מבנה ישן שתיקו לא עבר דיגיטציה לא תופיע — והיעדר דיגיטציה מתואם עם גיל, שהוא קריטריון הכשירות. הן נשמרות כקבוצת "לא ידוע" עם מספר מוצג ללקוח.</li>
+      </ul>
+    </section>
+
+  <section class="panel revised">
+    <h2>שני פערי הנתונים — צומצמו</h2>
+    <p class="lead">אחד הפך לאות מדיד אך ברזולוציית טווח בלבד, והשני הצטמצם — לא נסגר.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:.2rem 0 .5rem">1 · רוחב זכות דרך — נמדד ומכויל</h3>
+    <p style="margin:0 0 .7rem;color:var(--soft);font-size:.93rem">נדרשו ארבע שיטות. שלוש נכשלו: פוליגוני "דרך מאושרת" הארציים הם גוש מחובר של <span class="m">2,002</span> דונם ובדיקה ניצבת דולפת דרכו (שגיאה <span class="m">+113%</span>); מרחק לשפה מחסיר כי ציר הרחוב אינו במרכז (<span class="m">-38%</span>); ומינימום סביב היקף החלקה מודד גבול צד לשכן ולא רחוב. <strong>מה שעובד: המרחק מחלקת בנייה אחת לחלקה שממול, בתנאי שהקו חוצה רצועת דרך.</strong></p>
+    <p class="formula">calibration
+  Mandelblat        stated 12.0 m      measured 12.7     +0.7 m  (+6%)   OK
+  Hovot Halevavot   band   10-12 m     measured 10.2     in band          OK
+  Hadar             band    9-10 m     measured 15.4     FAILED - bad inference, see below
+
+  scored by BAND agreement, not metres:
+    Hovot Halevavot IS admissible - the source says "AL PI HA-MEDINIYUT"
+    (what the POLICY dictates), not what exists.  measured 10.2 -> band 10-12  OK
+    Hadar is descriptive -> disqualified, so it leaves the denominator entirely
+    Mandelblat 12.0 sits on an edge shared by two rows -> not a discriminator
+
+    => ONE usable calibration point, which passes.  n=1 supports no error bar.</p>
+    <p style="margin:.4rem 0 .7rem;color:var(--soft);font-size:.93rem">אמת המידה השנייה נגזרת מהמדיניות עצמה: על חובות הלבבות היא כותבת שבמבנה בן 8 קומות הנסיגה צריכה לחול מקומה 7, וזה בדיוק תיאור הטווח 10–12 מ' בטבלה. <strong>הדר נכשל, אבל זו הסקה שגויה שלי ולא כשל של המדידה</strong> — "מבנים בני 7 קומות ברחוב הדר" מתאר מבנים <em>קיימים</em>, לא את המותר. בנוסף 12.0 מ' במנדלבלט הוא בדיוק גבול טווח שמופיע בשתי שורות, ולכן הוא אינו מבחין חד לשום כיוון. <strong>הכיול נשען על נקודה אחת שמישה, והיא עוברת.</strong> "1 מתוך 2" שכתבתי היה מטעה: הדר נפסל כאמת מידה, ולכן הוא יוצא מהמכנה ולא נספר ככישלון. בגרסה הקודמת פסלתי גם את חובות הלבבות — <strong>וזו הייתה פסילת יתר שלי</strong>. המקור שם אומר "<em>על פי המדיניות</em> ההמלצה הינה כי במבנה זה הנסיגה תחול מקומה 7", כלומר מה שהמדיניות מכתיבה ולא מה שקיים. הדר לעומת זאת תיאורי, ונשאר פסול. ומנדלבלט יושב על 12.0 — גבול שמופיע בשתי שורות בטבלה, ולכן אינו מבחין חד לשום כיוון. יש גם הסבר חלופי שראוי לבדוק לפני שפוסלים את השיטה: השער מנוסח ב"זכות דרך" והטבלה ב"רוחב רחוב", וייתכן ששני המונחים אינם אותו דבר — ואז 0.7 המטרים הם הפרש שיטתי ולא שגיאה.</p>
+    <p style="margin:.4rem 0 .7rem;color:var(--soft);font-size:.93rem">בדיקת שפיות: רחובות מגורים יוצאים 9–11 מ\' (השושנים 9.3, הניצנים 9.3), עורקים 18–21 (סוקולוב 18.0, בן גוריון 19.0, ארלוזורוב 20.6) וירושלים 35.9. ההיררכיה נכונה.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>רוחב הרחוב שבחזית</th><th>מקסימום קומות לפי המדיניות</th><th>מ-211 החלקות</th></tr></thead>
+        <tbody>
+          <tr class="lose"><td class="n">עד 8 מ'</td><td><strong>לא תותר תוספת כלל</strong></td><td class="n">13 (6%)</td></tr>
+          <tr><td class="n">9–10 מ'</td><td>7 קומות</td><td class="n">52 (25%)</td></tr>
+          <tr class="win"><td class="n">10–12 מ'</td><td>8 קומות</td><td class="n">76 (36%)</td></tr>
+          <tr><td class="n">12–15 מ'</td><td>9 קומות</td><td class="n">34 (16%)</td></tr>
+          <tr><td class="n">מעל 15 מ'</td><td>נקודתית, לפי מדיניות מרכז העיר ותמ"א 70</td><td class="n">36 (17%)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:.8rem"><p class="note lose" style="margin:0 0 .8rem"><strong>עודכן בגרסה 30:</strong> המספרים בטבלה הזאת נמדדו על 227 חלקות בשכונה אחת. <strong>ניסיון למדוד את כל העיר נכשל ונמשך בחזרה</strong> — ראה "גרסה 28 נמשכה בחזרה". נכון להיום <strong>אין מדידת רוחב רחוב עירונית שאפשר לסמוך עליה</strong>, ולכן ה-6% כאן תקפים לשכונה שנדגמה ולא לעיר. ושתי נקודות האמת שיש סותרות בכיוון (‎+0.7 ו-‎−0.3), כך שתיקון ההטיה עצמו אינו מבוסס.</p><strong>התיקון החשוב: רוחב הרחוב כמעט לא מסנן — הוא מכפיל זכויות.</strong> רק <span class="m">6%</span> נופלים בשער, אבל הרוחב קובע אם מותרות 7 או 9 קומות, וזה הפרש של כ-30% בשטח הנמכר. הוא נכנס לשרשרת הזכויות כשלב, לא לשער.</p>
+    <p class="note" style="margin-top:.6rem">הערכים שפורסמו כאן בגרסה 7 — 65% עוברים, 35% נופלים — <strong>היו שגויים ונמשכו בחזרה</strong>.</p>
+    <p class="note" style="margin-top:.6rem"><strong>ומגבלה שצריכה להישאר גלויה: 79% מהחלקות יושבות במרחק של פחות ממטר מגבול טווח</strong> (24 ליד 8 מ', 65 ליד 10, 63 ליד 12, 14 ליד 15). סטיית 0.7 מ' נמדדה על נקודת אמת אחת, ולכן היא אינה "שגיאה מוכחת" — מ-n=1 לא נגזר רווח סמך. המשמעות: <strong>המדידה קובעת טווח קומות, לא מספר קומות.</strong> דוח האפס יציג "7–8 קומות" ולא "8", ובשלוש ההזדמנויות הסופיות הרוחב יאומת מהתכנית או בבדיקה בשטח.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.3rem 0 .5rem">2 · אזורי הרישום — נדרשים, ובשני תפקידים</h3>
+    <p style="margin:0 0 .6rem;color:var(--soft);font-size:.93rem">האזור קובע רק אם רצפת ההפרשה היא 300 או 400 מ"ר. אבל ההפרשה עצמה נגזרת מהשטח הקיים:</p>
+    <p class="formula">allocation = up to 10% x REALISED total    (NOT 10% x 400% x existing)</p>
+    <p style="margin:0 0 .6rem;color:var(--soft);font-size:.93rem">הזהות שהופיעה כאן — <code>0.40 × הקיים</code> — הניחה שהפרויקט ממצה תמיד 400%. הוא לא: שלבים 4–5 חוסמים לפני כן. הכלל <strong>"מעל 1,000 מ"ר תמיד יש הפרשה" בוטל</strong> — מגרש חסום גובה יכול לרדת מתחת לרצפה ולא לחוב דבר. מה שנשאר תקף הוא הכיוון הבטוח בלבד:</p>
+    <div class="tw"><table><thead><tr><th>מצב</th><th>מסקנה</th></tr></thead><tbody>
+      <tr class="win"><td class="n">שטח קיים &lt; 750 מ"ר</td><td>ההפרשה קטנה מ-300 בכל תרחיש — אין הפרשה, בכל אזור</td></tr>
+      <tr><td class="n">קיים &ge; 750 מ"ר</td><td>לחשב על השטח בפועל אחרי שלבים 4–5, ואז להשוות לרצפה — <strong>וצריך לדעת את אזור הרישום</strong></td></tr>
+    </tbody></table></div>
+    <p class="note" style="margin-top:.8rem">הדוגמה של המדיניות עצמה — <span class="m">730.45</span> מ"ר — מתחת ל-750, ולכן פטורה <strong>בכל אזור</strong>. הדוגמה במקור אינה נושאת כתובת, וייחוסה קודם לאזור הנדיב היה שלי ולא שלה. <strong>מעל 750 מ"ר צריך את הגבולות</strong> — הרצועה העליונה בוטלה יחד עם כלל ה-1,000. מתחת ל-750 פטור בכל מקרה. המקור מונה <strong>תשעה</strong> בתי ספר יסודיים קיימים במרכז העיר, מול 13 <em>אזורי רישום</em> במדיניות — שני דברים שונים שספרתי כאחד עם מיקום, אבל אזורי רישום אינם חלוקה גיאומטרית לפי מרחק, ולכן זה רמז ולא תשובה.</p>
+  </section>
+
+  <section class="panel">
+    <h2>חישוב הזכויות — השרשרת המלאה</h2>
+    <p class="lead">תשעה שלבים מ"המצב הקיים בהיתר" עד שטח נמכר נטו. שישה מחשבים שטח (1, 2, 4, 5, 6, 7), אחד מחשב דירות (3), ושניים אינם חישוב שטח כלל — תמהיל (8) וחניה (9).</p>
+    <div class="tiers"><div class="tier"><h3>1 · המצב הקיים</h3><p><strong>טבלת השטחים שבהיתר</strong>, שכוללת לפי §2ב גם שטחי שירות (מקלט, חדר מדרגות, חדרים טכניים), <strong>מרפסות שנבנו בהיתר</strong>, ושימושים נלווים כמו מסחר. <strong>הניכוי היחיד: תוספת בנייה שהותרה אחרי 18.5.2005.</strong> <strong>מוציאים כל שורה שההיתר אינו מונה במניין השטחים</strong> — ובמפורש גג מרוצף וקומת עמודים מפולשת (פרט לחדר מדרגות). המדיניות ניסחה זאת כ"למען הסר ספק" דווקא משום שהיתרים כן מפרטים לפעמים את השטחים האלה במ"ר. <strong>אם ההיתר לא חד-משמעי אם שורה נמנתה — החלקה עוברת למצב "אי אפשר לחשב בסיס", לא לפרשנות הנוחה.</strong> הכול מוכפל פי 4, ולכן טעות כאן היא טעות פי ארבע.</p><span class="cost">מהסריקה</span></div><div class="tier"><h3>2 · תקרת שטח</h3><p>סעיף 70ב(א)(1): השטח הכולל מעל הקרקע לא יעלה על <strong>400%</strong> מהשטח הקיים.</p><span class="cost">חוק</span></div><div class="tier"><h3>3 · תקרת דירות</h3><p>מדיניות §4: מספר הדירות לא יעלה על הקיים כפול <strong>2.8–3.18</strong>.</p><span class="cost">מדיניות</span></div><div class="tier"><h3>4 · תקרת גובה</h3><p><strong>floors = min(מפה, רוחב רחוב)</strong>. המפה: צהוב עד <strong>9</strong>, צהוב בהיר עד <strong>5.5</strong> — שניהם עם הסייג "בכפוף לחתכים". הרחוב: עד 8 מ' אין תוספת, 9–10 → 7, 10–12 → 8, 12–15 → 9. <strong>בצהוב בהיר המפה חוסמת ב-5.5 מתחת לכל שורה בטבלה</strong>, ולכן חישוב לפי הרחוב לבדו מנפח בכ-40%. תוספת קומה בצומת היא <em>אפשרות לבחינה בכפוף לנימוקים</em>, לא זכות.</p><span class="cost">מפה + רחוב</span></div><div class="tier"><h3>5 · טביעת רגל</h3><p>מרווחים לפי גובה: צידי 3–4 מ', אחורי 5–6, אחורי למרפסות 4–5. <strong>המרווחים מוגדרים כמרחק נטו מקו הבניין של השכן, בהנחה שגם הוא יתחדש</strong> — לא כהיסט פשוט. ב<strong>מגרש</strong> (שטח קרקע) קטן מ-750 מ"ר אפשר לרדת מתחת ל-4 מ' אך לא מתחת ל-3.5. <strong>אין לבלבל עם סף ה-750 שבהפרשה לשב"צ, שהוא שטח בנוי קיים</strong> — שני גדלים שונים לגמרי שבמקרה חולקים מספר.</p><span class="cost">מדיניות §6–7</span></div><div class="tier"><h3>6 · הפרשה לשב"צ</h3><p><strong>עד 10%</strong>, "לדרישת הועדה" — ומחושב על <strong>השטח שיצא בפועל</strong> אחרי שלבים 4–5, לא על תקרת ה-400%. רצפה 300 מ"ר (אלון, ברנר, גן רש"ל, הנדיב, יוחנני, נוף ים, שז"ר) או 400 (בן צבי, ברנדיס, ויצמן, יצחק נבון, לב טוב, הירוק); מתחת לרצפה — אין הפרשה.</p><span class="cost">מדיניות §8</span></div><div class="tier"><h3>7 · מרפסות</h3><p><strong>השלב היחיד שמוסיף</strong>: "שטחי המרפסות יהיו <strong>בנוסף</strong> לשטח הנ"ל, כאשר ממוצע שטח המרפסות המקסימלי יהיה 12 מ"ר".</p><span class="cost">מדיניות §2ו</span></div><div class="tier"><h3>8 · תמהיל ושטח פתוח</h3><p>בעיקר 3–4 חדרים; לפחות <strong>25%</strong> דירות קטנות 56–80 מ"ר, מתוכן עד 10% מיקרו עד 55; <strong>10%</strong> נגישות. ובנוסף <strong>שטח פתוח לרווחת הדיירים במפלס הקרקע שאינו צמוד לאף דירה</strong>, והרחבות דרך והפקעות לקישוריות ככל הנדרש.</p><span class="cost">מדיניות §4, §8</span></div><div class="tier"><h3>9 · חניה</h3><p>לפי מדיניות החניה העירונית; בגבולות תמ"א 70 לפי התכנית הארצית.</p><span class="cost">מדיניות §9</span></div></div>
+    <p class="formula" style="margin-top:1.1rem">the only rights benchmark in either source
+  permit area schedule: the SUM reproduces exactly
+  8.28 + 8.65 + 548.73 + 164.79 = 730.45 m2
+
+  BUT the source names five components (flats, balconies, shelter,
+  service room, boiler room) against four numbers - so the per-use
+  split does NOT exist in the corpus, and stage 1 and the 70% test
+  cannot be validated against it.
+
+  730.45 &lt; 750  =&gt;  0.40 x existing = 292.18  &lt; 300
+
+  BUT stage 7 says balconies are ADDITIONAL.  If they count in
+  "sach ha-shtachim le-achar hagdalatam", then
+      allocation = 292.18 + 0.10 x balconies  &gt;= 300  at ~78 m2 of balcony
+  i.e. about 7 units - well inside what this base supports.
+  => the exemption is NOT proven; it turns on whether balconies
+     enter the allocation base, which neither source settles.</p>
+    <p class="note">המדרגה עדיין חדה סביב הרצפה, אבל היא נבדקת רק אחרי שלבים 4–5. החישוב הישן שהופיע כאן — 292 מ"ר מתוך תקרת 400% — הוסר, כי הוא בדיוק השיטה שבוטלה. מה שנשאר תקף: הפרשה של הכול. <strong>פער של 3% בשטח הקיים מזיז עשרות אלפי שקלים</strong>, ולכן שטח הבנוי הקיים חייב להיקרא מהסריקה בדיוק ולא בהערכה.</p>
+  </section>
+
+  <section class="panel">
+    <h2>המכסה: כשירות אינה אישור</h2>
+    <p class="lead">הממצא שמשנה את הגדרת המוצר. מתוך התכנית האסטרטגית, מסלול מגרשים:</p>
+    <p class="formula" style="direction:rtl;text-align:right">"מכסה שנתית של מתן היתרי בניה לעד 40 מבנים בשנה (הערכת תוספת של כ-420 יח"ד בשנה)... פרויקטים יקודמו לאישור על פי מידת הצטיינותם ותרומתם לאיכות העירונית והמרחב הציבורי. בכפוף לתנאי סף ולמכסה שנתית."</p>
+    <ul class="tight">
+      <li><strong>זו תחרות עם תקרה, לא תור.</strong> במרכז העיר מאושרים עד <span class="m">40</span> מבנים בשנה, והבחירה ביניהם היא לפי מצוינות.</li>
+      <li><strong>מבנה מסוכן הוא מסלול עוקף.</strong> "המכסה אינה כוללת מבנים שהוכרזו כמסוכנים — מבנים אלו יקודמו בנוסף למסלול זה". הכרזת מסוכנות היא נתון בעל ערך גבוה במיוחד.</li>
+      <li><strong>מה זה אומר ללקוח:</strong> תיק הזדמנות חייב להציג לא רק "עומד בתנאים" אלא <strong>מיקום תחרותי</strong>. אחרת מכרנו כרטיס להגרלה בלי להגיד שזו הגרלה.</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>מדדי ההערכה — ומה מהם אנחנו יכולים לחשב</h2>
+    <p class="lead">נדרשים לפחות <strong>שלושה</strong> היבטים תכנוניים ולפחות <strong>אחד</strong> חברתי. הריסה ובנייה מועדפת על חיזוק.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>מדד</th><th>סוג</th><th>מקור אצלנו</th></tr></thead>
+        <tbody>
+          <tr><td>אזור מתחדש — סמוך לפינוי-בינוי או רחוב שרובו התחדש</td><td>תכנוני</td><td class="ok">מחושב — תכניות מתחם מ-XPlan ונתוני הסריקה שלנו</td></tr>
+          <tr><td>שמירה על פרצלציה קיימת</td><td>תכנוני</td><td class="ok">מחושב — נגזר מכך שאיננו מציעים איחוד</td></tr>
+          <tr><td>ריבוי דיירים מבוגרים</td><td>חברתי</td><td class="stop">לא מבחין — אזור סטטיסטי הוא כ-325 דונם, וסריקה שלמה היא 196. כל המועמדים יקבלו אותו ערך</td></tr>
+          <tr><td>שמירה על עצים בוגרים</td><td>תכנוני</td><td class="caution">חלקי — שכבת העצים העירונית חסומה; ב-OSM חלקי</td></tr>
+          <tr><td>ניהול מי נגר — לפחות 15% שטחי חילחול</td><td>תכנוני</td><td class="stop">שלב תכנון — לא נתון קיים</td></tr>
+          <tr><td>תמורות ציבוריות — מעברים, הרחבת דרך, שטח ציבורי</td><td>תכנוני</td><td class="stop">שלב תכנון</td></tr>
+          <tr><td>תמהיל דיור מגוון ודיור מכליל</td><td>תכנוני</td><td class="stop">שלב תכנון</td></tr>
+          <tr><td>אחוז גבוה של בעלים המתגוררים בבניין</td><td>חברתי</td><td class="stop">לא ציבורי — נאסף מהדיירים</td></tr>
+          <tr><td>בעיות נגישות במבנה</td><td>חברתי</td><td class="stop">מהסקר או מתיק הבניין</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:1rem">רוב המדדים הם החלטות תכנון ועובדות על הדיירים, לא נתונים שניתן לשלוף. לכן הציון שאנחנו מפיקים הוא <strong>סינון מוקדם של תחרותיות</strong> ולא תחזית אישור, והוא חייב להיות מוצג ככזה.</p>
+  </section>
+
+  <section class="panel">
+    <h2>מפת המדיניות — מקור פתוח שכבר ברשותנו</h2>
+    <p class="lead">סעיף 3 של המדיניות הופך את המיקום לשער ולא להמלצה: <strong>"באזורים שהוגדרו להתחדשות מתחמית או לאזורי מתחמים עירוניים, לא ניתן לקדם תכניות למגרשים בודדים או לצמד מגרשים"</strong> — אלא אם הוכח למהנדסת העיר שאי אפשר אחרת. המפה עצמה מודפסת בעמוד 5 של מסמך המדיניות, ולכן אינה דורשת את ה-GIS החסום.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>אזור</th><th>מסלול</th><th>שיעור מגורים</th><th>קומות</th></tr></thead>
+        <tbody>
+          <tr class="lose"><td>אדום — מתחמים עירוניים לתעסוקה ומגורים</td><td>מתחמי</td><td class="n">~70%</td><td class="n">עד 25</td></tr>
+          <tr class="lose"><td>כתום — מתחמים עירוניים</td><td>מתחמי</td><td class="n">~85%</td><td class="n">עד 15</td></tr>
+          <tr class="lose"><td>אפור — מע"ר היסטורי</td><td>מתחמי</td><td class="n">~85%</td><td class="n">14 / 17</td></tr>
+          <tr class="win"><td>צהוב — התחדשות מגרשית מוטת מגורים</td><td>מגרשי</td><td class="n">~90%</td><td class="n">עד 9</td></tr>
+          <tr class="win"><td>צהוב בהיר — מוטת מגורים נמוכה</td><td>מגרשי</td><td class="n">~100%</td><td class="n">עד 5.5</td></tr>
+          <tr><td>מרקם לשימור תבנית הבנייה</td><td>—</td><td class="n">—</td><td class="n">על פי הקיים</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="tight" style="margin-top:1rem">
+      <li><strong>היעדר צבע הוא תשובה.</strong> במפה כתוב ש"האזורים שאינם צבועים אינם מהווים חלק מפוטנציאל ההתחדשות".</li>
+      <li><strong>גובה הקומות המותר הוא קלט ישיר לדוח האפס</strong>, לצד תקרת 400% ומכפיל הדירות.</li>
+      <li class="stop"><strong>מיצוב אוטומטי נכשל.</strong> שני ניסיונות: על המפה מהמדיניות (7.4 מ'/פיקסל) הציון היה <span class="m">0.632</span> מול רקע <span class="m">0.663</span> — אפס אות; על גרסת המקור (כ-3 מ'/פיקסל, רחובות כקווים כחולים) <span class="m">0.148</span> מול רקע <span class="m">0.080</span>, פי 1.9 בלבד.</li>
+      <li class="ok"><strong>הפתרון:</strong> הסיווג הופך ל<strong>בדיקה אנושית על שלוש ההזדמנויות הסופיות</strong> — שלוש הצצות במפה במקום 227 דגימות. מתלבש על שלב האימות האנושי שכבר קיים.</li>
+      <li>מיצוב אמיתי דורש כלי GIS עם נקודות בקרה ידניות — עבודה של חצי שעה, לא סקריפט.</li>
+      <li class="caution"><strong>רמת ודאות: נגזרת, לא רשמית.</strong> המפה עצמה מצהירה שהיא מדיניות בלבד ושהוועדה רשאית לקבוע אחרת, ודגימת צבע בגבולות אזורים אינה חדה. חלקות על קו התפר מסומנות לבדיקה אנושית.</li>
+    </ul>
+  </section>
+
+    <section class="panel">
+      <h2>תור אחד, לא סריקה לכל משתמש</h2>
+      <p class="lead">הארכיון מרשה פנייה אחת כל 10 שניות. זה משאב גלובלי.</p>
+      <ul class="tight">
+        <li><strong>עובד יחיד</strong> מול הארכיון, מושך מתור עדיפויות ב-Postgres.</li>
+        <li><strong>העדיפות היא הניקוד</strong>, חוצה משתמשים: כל 10 שניות הולכות לפנייה המועילה ביותר במערכת.</li>
+        <li><strong>התוצאות זורמות למסך</strong> תוך כדי, במקום להמתין לסיום.</li>
+        <li><strong>סריקת הגושים ראשונה</strong> — היא זולה ומשנה את כל הדירוג שאחריה.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>מעבר חוקי, דרגה אחר דרגה</h2>
+    <div class="tw">
+      <table>
+        <thead><tr><th>דרגה</th><th>מעמד</th><th>מה מבטיח אותו</th></tr></thead>
+        <tbody>
+          <tr><td>0 · GovMap ומינהל התכנון</td><td class="ok">תקין</td><td>שירותים שפורסמו מפורשות למשיכה תכנותית, בלי מפתח ובלי סשן</td></tr>
+          <tr><td>1 · ניקוד מקומי</td><td class="ok">תקין</td><td>חישוב שלנו על נתונים שכבר בידינו</td></tr>
+          <tr><td>2 · סריקת גושים</td><td class="caution">דורש זהירות</td><td><span class="m">6</span> פניות במקום <span class="m">227</span> — עומס נמוך משמעותית על העירייה. לשמור עובדות נגזרות, לא מראה של הארכיון</td></tr>
+          <tr><td>3 · דף התיק</td><td class="caution">דורש זהירות</td><td>רק לפי בקשת משתמש על אזור מסוים, בקצב אנושי, עם זיהוי עצמי ברור</td></tr>
+          <tr><td>4 · תוכנית סרוקה</td><td class="stop">חסום עד חוות דעת</td><td>robots.txt מוגדר לפי נתיב — אם הוא אוסר, הוא אוסר גם על דרגות 2–3 באותו שרת, וצריך לצטט את הכללים בפועל. ולקוח אינו יכול להעניק הרשאה על זכויות אדריכל או על תנאי שימוש</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="tight" style="margin-top:1rem">
+      <li><strong>לא בונים אינדקס עירוני.</strong> אין סורק רקע ואין מיפוי מראש של העיר — רק אזורים שמשתמש ביקש.</li>
+      <li><strong>שמות אנשים לא נשמרים.</strong> דפי הבקשה כוללים שם מבקש, והוא נמחק בקליטה.</li>
+      <li><strong>ה-GIS של הרצליה לא בשרשרת.</strong> הוא חסום לקוד, והדרך היחידה להיכנס אליו היא התחזות לאתר שלהם.</li>
+    </ul>
+  </section>
+
+  <section class="panel"><h2>מוכנות חינוך — תנאי סף שאמרתי שאי אפשר למדוד</h2>
+    <p class="lead">תנאי הסף השני במסלול מגרשים הוא "מוכנות הסביבה עם מענה פרוגרמתי הולם מבחינת מוסדות חינוך". כתבתי שזה שיקול לא מדיד — <strong>וטעיתי</strong>. יש טבלה, אך <strong>ל-9 מתוך 13 אזורי הרישום בלבד</strong>: לגן רש"ל, נוף ים וברנדיס אין שורה, ו"ירוק" מופיע ברשימת בתי הספר המתוכננים. לארבעה אלה מצב השער הוא <em>לא ידוע</em>, לא <em>עובר</em>.</p>
+    <div class="tw"><table><thead><tr><th>אזור רישום</th><th>כיתות 2020</th><th>קיבולת אחרי 2025</th><th>מרווח</th><th>מצב השער</th></tr></thead><tbody>
+      <tr class="lose"><td>הנדיב</td><td class="n">16</td><td class="n">22</td><td class="n">+6</td><td class="caution">מוקצה</td></tr>
+      <tr class="lose"><td>ברנר</td><td class="n">17</td><td class="n">23</td><td class="n">+6</td><td class="caution">מוקצה</td></tr>
+      <tr class="lose"><td>שז"ר</td><td class="n">17</td><td class="n">23</td><td class="n">+6</td><td class="caution">מוקצה</td></tr>
+      <tr class="lose"><td>בן צבי</td><td class="n">15</td><td class="n">21</td><td class="n">+6</td><td class="caution">מוקצה</td></tr>
+      <tr class="lose"><td>יוחנני</td><td class="n">23</td><td class="n">29</td><td class="n">+6</td><td class="caution">מוקצה</td></tr>
+      <tr class="lose"><td>ויצמן</td><td class="n">19</td><td class="n">25</td><td class="n">+6</td><td class="caution">מוקצה</td></tr>
+      <tr class="lose"><td>יגאל אלון</td><td class="n">20</td><td class="n">20</td><td class="n">0</td><td class="stop">אין</td></tr>
+      <tr class="lose"><td>יצחק נבון</td><td class="n">19</td><td class="n">19</td><td class="n">0</td><td class="stop">אין</td></tr>
+      <tr class="lose"><td>לב טוב</td><td class="n">25</td><td class="n">23</td><td class="n">&minus;2</td><td class="stop">אין</td></tr>
+    </tbody></table></div>
+    <ul class="tight" style="margin-top:1rem">
+      <li><strong>אזורי הרישום הופכים לשכבת חובה</strong>, לא לפרט שנדרש רק ברצועת 750&ndash;1,000 מ"ר — הם מכריעים תנאי סף.</li>
+      <li><strong>לב טוב במינוס, יגאל אלון ויצחק נבון באפס</strong> — סימן אזהרה מוקדם וחינמי.</li><li class="caution"><strong>אין שורה אחת שהיא "עובר".</strong> המקור קובע שלמימוש מנות ההתחדשות נדרש "<strong>מיצוי מלא של בתי הספר הקיימים</strong>" ובנוסף ארבעה איתורים לבתי ספר חדשים, ושבמרכז העיר יש "מצאי של <strong>23 כיתות פנויות</strong>". כלומר המרווח מוקצה מראש לתכנית עצמה, וחלקו נשען על מוסדות שטרם נבנו. הטבלה נצבעה מחדש כדי שמי שמקודד אותה לא יקרא "+6" כ"פנוי".</li>
+      <li>מתוך 13 שמות אזורי הרישום שבמדיניות, <strong>"ירוק" מופיע ברשימת בתי הספר <em>המתוכננים</em></strong> ולא הקיימים.</li>
+    </ul></section>
+
+  <section class="panel"><h2>הרקורד ההיסטורי</h2>
+    <p class="formula" style="direction:rtl;text-align:right">"בין השנים 2007-2021, הוגשו 2,778 בקשות לתמ"א 38 באזור התכנון. מתוך כלל הבקשות במרכז העיר כבר אושרו 120 בקשות"</p>
+    <p style="margin:.2rem 0 0;color:var(--soft)"><strong>ויותר מזה — ייתכן שהטיעון הפוך.</strong> מהמקורות: כ-185 יח"ד תמ"א 38 הוגשו בשנה בממוצע (2,778 ל-15 שנה) וכ-63 הושלמו, מול מכסה של כ-420 יח"ד בשנה (40 מבנים). כלומר <strong>המכסה גבוהה פי 2.3 מההגשות ההיסטוריות ופי 7 מההשלמות — ואולי אינה מגבילה כלל.</strong> זה מערער את "תחרות עם תקרה" שכתבתי, וצריך להיבדק מול קצב ההגשות בפועל בחמש השנים האחרונות. ובנוסף: <strong>אי אפשר לחשב מזה שיעור.</strong> הפרוזה סופרת 2,778 <em>בקשות</em>, אבל טבלת המקור מתפרקת ל-942 + 527 + 925 + 384 = <strong>2,778 יחידות דיור</strong> בדיוק. אותו מספר בשתי יחידות שונות — ולכן חלוקה של 120 בקשות ב-2,778 מערבבת יחידות. מחקתי את "4.3%" ששני ניסוחיי הקודמים נשענו עליו. <strong>טיעון התחרותיות נשען מעכשיו על המכסה בלבד — 40 מבנים בשנה — והיא מספיקה לו.</strong></p></section>
+
+  <section class="panel revised"><h2>מה הביקורת החיצונית מצאה</h2>
+    <p class="lead">סוכן עצמאי בדק את המסמך מול מסמכי המקור והעלה 36 ממצאים. אימתתי את הכבדים מול הטקסט — כולם התאמתו. מה שתוקן:</p>
+    <ul class="tight">
+      <li><strong>בסיס השטח היה מנופח</strong> — חסרו שלושה ניכויים מפורשים: תוספות שהותרו אחרי 18.5.2005, גג מרוצף, וקומת עמודים.</li>
+      <li><strong>הגובה חושב מהמפה בלבד</strong> ולא כמינימום מול רוחב הרחוב — ניפוח בצהוב בהיר: 27% בטווח 9–10, <strong>45% בטווח 10–12 שהוא הנפוץ ביותר</strong>, ו-64% בטווח 12–15.</li>
+      <li><strong>ההפרשה לשב"צ</strong> חושבה על תקרת 400% במקום על השטח בפועל, והוצגה כחובה ולא כ"עד 10% לדרישת הועדה".</li>
+      <li><strong>מרפסות</strong> — שלב שלם שהיה חסר, והיחיד שמוסיף שטח.</li>
+      <li><strong>כלל ספירת הקומות</strong> שבחוק — חסר בשער ובדרגת האימות.</li>
+      <li><strong>תחום התכנית</strong> — המפה והמכסה חלות על 26% מהעיר, לא על כולה.</li>
+      <li><strong>מוכנות חינוך</strong> — הוכרזה כלא מדידה, ובפועל יש טבלה.</li>
+      <li><strong>עצירה אדפטיבית</strong> נפסלה בסעיף אחד והוחזרה כשלב באלגוריתם; עכשיו היא גם מותנית במעבר שערים.</li>
+      <li><strong>כותרות וספירות</strong> — "שני שערים" שהיו ארבעה, "שלושה כללים" שהיו ארבעה, 190 תיקים מול יחס מדוד של 260, ותווית כיסוי שגויה בשורת כלל ה-37%.</li>
+    </ul>
+    <p class="note" style="margin-top:1rem"><strong>נדחה במודע לשלב הבא:</strong> תקרת התפוקה (כ-11 סריקות בשעה בתור גלובלי אחד), שנת בקשה מול תאריך היתר בגבול 1975&ndash;1987, הפער בטבלה בין 8 ל-9 מ', ההבחנה בין מגרש לחלקה, והאמביוולנטיות בין §2ז ל-§8ה לגבי משמעות ה-10%. רשומים, ואף אחד לא נסגר.</p></section>
+
+  <section class="panel"><h2>מה קורה כשמשהו נשבר</h2>
+    <p class="lead">הפרק הזה היה חסר לגמרי, וזה ליקוי בפני עצמו.</p>
+    <ul class="tight">
+      <li><strong>עימוד בשאילתת הגוש.</strong> גוש 6529 החזיר 129 תיקים בפנייה אחת — <strong>ולא בדקנו אם זה כל הגוש או העמוד הראשון</strong>. חובה לדפדף עד מיצוי ולאמת מול המספר המוצהר, אחרת כל תקציב הפניות מתמוטט בגוש גדול.</li>
+      <li><strong>הארכיון לא זמין.</strong> נסיגה מעריכית, וחוזה תוצאה חלקית: מה שכבר נמשך נשמר ומוצג, והשאר מסומן כלא הושלם.</li>
+      <li><strong>פחות משלוש הזדמנויות ברדיוס.</strong> מחזירים את מה שיש ואומרים זאת מפורשות, ומציעים הרחבת רדיוס. לא ממלאים את המכסה בתוצאה חלשה.</li>
+      <li><strong>רעב בתור.</strong> תור עדיפויות גלובלי לפי ניקוד מרעיב אזורים חלשים לנצח. נדרש רכיב הזדקנות.</li>
+    </ul></section>
+
+  <section class="panel"><h2>תיקון בנימוק המשפטי</h2>
+    <p style="margin:0;color:var(--soft)">כתבתי שדרגה 4 מותרת "לפי הזמנת לקוח ובהרשאתו". <strong>זה לא מחזיק.</strong> robots.txt מוגדר לפי נתיב ולא לפי רגישות — אם הוא אוסר, הוא אוסר גם על דרגות 2 ו-3 באותו שרת, וצריך לצטט את הכללים בפועל לכל נתיב. וחשוב מזה: <strong>לקוח אינו יכול להעניק הרשאה על זכויות היוצרים של אדריכל או על תנאי השימוש של העירייה.</strong> הבסיס צריך להיות אחר — או שדרגה 4 חסומה עד חוות דעת.</p></section>
+
+  <section class="panel revised"><h2>ומה אם "שלוש" היא היחידה הלא נכונה</h2>
+    <p class="lead">הביקורת השלישית העלתה טיעון מבני שלא קשור לבאג, ואני חושב שהוא נכון.</p>
+    <p style="margin:0 0 .8rem;color:var(--soft)">בקצב של כ-11 סריקות בשעה, המוצר מייצר <strong>33 "הזדמנויות" בשעה</strong> — מול מכסה עירונית של <strong>40 היתרים בשנה</strong>. שמונים דקות הפעלה מייצרות שנה שלמה של ההיצע המאושר של העיר. וטבלת השמירות ("שמירה פעילה אחת לכל הזדמנות") הופכת את ההתנגשות הזאת למפורשת. <strong>שלוש היא מספר ממשק שמתחזה לשוק.</strong></p>
+    <ul class="tight">
+      <li><strong>הפלט הנכון הוא פנקס כשירות מדורג לרדיוס</strong> — כל חלקה עם מצב שער (עובר / נכשל / לא ידוע), טווח קומות ולא מספר, תווית "תקרה סטטוטורית" ולא "צפי", ומיקום תחרותי מול המכסה.</li>
+      <li><strong>אימות דרגה 4 נמכר פר חלקה</strong>, ושם גם מתומחר הזמן האנושי שהיום אינו מתומחר כלל: הצצה במפה, אימות רוחב, וקריאת הסריקה.</li>
+      <li><strong>זה גם מייתר את בעיית הריפוד</strong> — אין צורך "להשלים לשלוש" כשאין שלוש.</li>
+    </ul>
+    <p class="note" style="margin-top:1rem">הסריקה המדורגת עצמה נשארת כפי שהיא — היא בדיוק מה שמייצר את הפנקס. מה שמשתנה הוא מה מוכרים ואיפה עובר גבול האימות.</p></section>
+
+  <section class="panel revised"><h2>ריצה מלאה על אזור חדש — 13.09</h2>
+    <p class="lead">לא ביקורת מסמכים. ריצה אמיתית מקצה לקצה על <strong>בר-כוכבא</strong>, 1,189 מ' מהשושנים, בשלושה גושים שלא נגענו בהם (7291, 6424, 6546) — בדיוק כדי להימנע מאימות על האזור שעליו נבנתה הארכיטקטורה.</p>
+    <div class="tw"><table>
+      <thead><tr><th>דרגה</th><th>פניות לארכיון</th><th>תוצאה</th></tr></thead>
+      <tbody>
+        <tr><td>0–1 · גיאומטריה וניקוד</td><td class="n">0</td><td>189 חלקות בעיגול → <strong>149 מועמדים</strong>; רוחב רחוב נמדד ל-136, חציון 14.8 מ', 10 נופלים בשער 8 מ'</td></tr>
+        <tr class="win"><td>2 · סריקת גושים</td><td class="n">3</td><td><strong>750 תיקי בניין</strong> על 636 חלקות. אף גוש לא החזיר הודעת קיצוץ — כולל גוש עם 457 שורות</td></tr>
+        <tr><td>3 · דפי תיק</td><td class="n">10</td><td><strong>7 עברו את שער השנה</strong> (1958, 1962, 1965, 1966, 1974, 1978, 1978)</td></tr>
+        <tr><td>4 · דפי בקשה</td><td class="n">3</td><td>מספר היתר, תאריך, שימוש וייעוד — <strong>3 מתוך 3</strong></td></tr>
+        <tr class="win"><td><strong>סה"כ</strong></td><td class="n"><strong>16</strong></td><td><strong>כ-2.7 דקות</strong> מול הערכה של 32 פניות ו-6 דקות</td></tr>
+      </tbody></table></div>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.2rem 0 .5rem">שלושה מספרים שהיו הנחות והפכו למדידות</h3>
+    <ul class="tight">
+      <li class="ok"><strong>שיעור המעבר בדרגה 3: p = 0.70</strong> (7 מתוך 10). זה המספר שכל תקציב הפניות תלוי בו, ושהביקורת קבעה שאי אפשר לחשב. ב-p כזה שלושה עוברים מגיעים אחרי ארבע-חמש פתיחות, והתקציב מתברר כנדיב.</li>
+      <li class="stop"><strong>ל-40% מהמועמדים אין תיק דיגיטלי כלל</strong> — 59 מתוך 149. קבוצת ה"לא ידוע" גדולה בהרבה ממה שהנחתי, והיא נוטה לכיוון המבנים הישנים, שהם בדיוק קהל היעד.</li>
+      <li><strong>יחס תיק-לחלקה: 1.08.</strong> שבע חלקות עם שני תיקים, <strong>אף אחת עם שלושה</strong> — כלומר שער שלושת המבנים כמעט לא פוסל כאן.</li>
+    </ul>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.2rem 0 .5rem">והכשל, והוא מהותי</h3>
+    <p style="margin:0 0 .6rem;color:var(--soft)"><strong>שטח עיקרי, שטח שירות ומספר יחידות דיור חזרו ריקים בשלושה מתוך שלושה.</strong> לא בעיית פענוח: השדות מופיעים בדף ככותרות בלי ערך, והמחרוזת "מ"ר" אינה מופיעה בדף אפילו פעם אחת. תיאור הבקשה הוא <strong>"קליטה היסטורית"</strong> — רישום לאחור של היתר ישן, בלי נתונים מספריים.</p>
+    <p class="note"><strong>המשמעות: אין דרך קצרה לבסיס הזכויות.</strong> כל שרשרת ה"מחושב" — 400%, מכפיל הדירות, ההפרשה לשב"צ ומבחן ה-70% — תלויה בשטח הבנוי הקיים, והוא קיים רק בתוך <strong>התוכנית החתומה (גרמושקה)</strong>, שמופיעה בטבלת המסמכים של הבקשה. בדיוק המבנים שעוברים את שער השנה הם אלה שנרשמו כ"קליטה היסטורית" ואין להם נתונים. <strong>קריאת הסריקה אינה שלב אופציונלי — היא התנאי לקיומו של דוח האפס.</strong></p>
+    <p class="note" style="margin-top:.7rem">מה שכן התקבל בחינם מדף הבקשה: טבלת <strong>גוש / חלקה / מגרש / ייעוד</strong> — כולל <strong>מספר המגרש התכנוני</strong>, שהוא אחד משדות הכשירות שחיפשנו.</p>
+  </section>
+
+  <section class="panel revised"><h2>הגרמושקה — הפער האחרון נסגר</h2>
+    <p class="lead">הורדנו מסמך אחד (בקשה 19780028, בר-כוכבא 25) ובדקנו אם טבלת השטחים ניתנת לחילוץ. <strong>כן.</strong></p>
+    <p style="margin:0 0 .8rem;color:var(--soft)">הגרמושקה אינה שרטוט בכתב יד אלא <strong>טופס סטטוטורי מודפס</strong> — טופס 2 לפי תקנות התכנון והבנייה תש"ל-1970 — ובו בלוק כותרת עם טבלאות מודפסות. מה שנקרא ממנו ישירות:</p>
+    <div class="tw"><table>
+      <thead><tr><th>שדה</th><th>ערך</th><th>למה זה משמש</th></tr></thead>
+      <tbody>
+        <tr class="win"><td>שטח בנוי <strong>קיים</strong></td><td class="n">2,133.88 מ"ר</td><td>בסיס שלב 1 — הקלט שהכול מוכפל ממנו</td></tr>
+        <tr><td>מוצע</td><td class="n">626.76 מ"ר</td><td>תוספת הקומה שבבקשה</td></tr>
+        <tr><td>סך הכל</td><td class="n">2,760.64 מ"ר</td><td></td></tr>
+        <tr class="win"><td>יחידות דיור</td><td class="n">8</td><td>שלב 3 — מכפיל 2.8–3.18</td></tr>
+        <tr><td>תמהיל</td><td class="n">6 × 3 חד' · 2 × 4 חד'</td><td>413.56 ו-177.28 מ"ר</td></tr>
+        <tr><td>חדרים</td><td class="n">26</td><td></td></tr>
+        <tr><td>גוש / חלקה / תכנית / מגרש</td><td class="n">6424 · 122 · הר/1461 · 3</td><td>זיהוי ושער המגרש התכנוני</td></tr>
+      </tbody></table></div>
+    <p class="note" style="margin-top:1rem"><strong>הטבלה מאמתת את עצמה: 2,133.88 + 626.76 = 2,760.64, ו-6+2 = 8 דירות.</strong> זה לא פרט טכני — זה אומר שאפשר לבדוק כל חילוץ אוטומטית מול הסכומים של הטופס עצמו, ולפסול חילוץ שלא מסתדר. בדיוק מה שחסר לנו כדי לסמוך על קריאה ממוחשבת.</p>
+    <ul class="tight" style="margin-top:.9rem">
+      <li><strong>Tesseract לא מותקן כאן</strong>, והפיילוט הקודם מצא שהוא נכשל על טופס בכתב יד מ-1961. החילוץ שהדגמנו נעשה בקריאה חזותית של מודל — ועל טופס מודפס משנות ה-70 זה עבד במלואו.</li>
+      <li class="caution"><strong>סייג שצריך לזכור:</strong> ההיתר הזה הוא <em>תוספת קומה</em> למבנה קיים בן 3 קומות על עמודים. לכן "קיים 2,133.88" הוא המצב שלפני 1978, ולא בהכרח המצב היום. הבסיס לשקד דורש הרכבה של כל ההיתרים בתיק, ובניכוי תוספות שאחרי 18.5.2005 — בדיוק כפי ששלב 1 דורש.</li>
+      <li class="caution">הטופס רושם <strong>חלקה 122</strong> בעוד אינדקס הארכיון רושם 144 לאותו תיק. מספרי חלקות משתנים עם הזמן, והזיהוי חייב להישען על התיק ולא על המספר בטופס.</li>
+    </ul>
+  </section>
+
+  <section class="panel revised"><h2>היתרי הבניין — ופסילה אמיתית בדרגה 4</h2>
+    <p class="lead">הרכבנו את היסטוריית ההיתרים המלאה של תיק 475 (הר מירון 1), המועמד שדורג שלישי. <strong>הוא נפסל.</strong></p>
+    <div class="tw"><table>
+      <thead><tr><th>בקשה</th><th>היתר</th><th>תיאור</th><th>שטח עיקרי</th></tr></thead>
+      <tbody>
+        <tr><td class="n">19780028</td><td class="n">1978</td><td>קליטה היסטורית — תוספת קומה</td><td class="n">מהגרמושקה</td></tr>
+        <tr><td class="n">19780029</td><td class="n">1978</td><td>קליטה היסטורית</td><td class="n">—</td></tr>
+        <tr><td class="n">19900016 · 19920012 · 19930016</td><td class="n">1990–93</td><td>קליטה היסטורית</td><td class="n">—</td></tr>
+        <tr><td class="n">19990438</td><td class="n">2002</td><td>תוכ' שינויים — תוס' שטח</td><td class="n">34.72</td></tr>
+        <tr><td class="n">20190115</td><td class="n">לא הופק</td><td>תיאום מקדים תמ"א 38</td><td class="n">—</td></tr>
+        <tr class="lose"><td class="n">20190442</td><td class="n">24.7.2024</td><td><strong>תמ"א 38 — תוספת וחיזוק</strong></td><td class="n">2,916 + 1,802 · 25 יח"ד</td></tr>
+      </tbody></table></div>
+    <p class="note" style="margin-top:1rem"><strong>הבניין כבר חוזק בהיתר, ולכן נופל בסעיף 70א(2).</strong> הוא עבר את שער השנה (1978), דורג שלישי, והפסילה התגלתה רק כשפתחנו את היסטוריית ההיתרים. <strong>זה בדיוק תרחיש ההחלפה ששלוש ביקורות דרשו להגדיר — והוא קרה במציאות בריצה הראשונה.</strong></p>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.2rem 0 .5rem">שלושה דברים שהריצה לימדה</h3>
+    <ul class="tight">
+      <li class="ok"><strong>שער החיזוק זול לבדיקה כשהוא נכשל.</strong> תיאור הבקשה אומר במפורש "תמ"א 38 — תוספת וחיזוק". <em>נוכחות</em> של חיזוק מתגלה בפנייה אחת; היעדרו עדיין אינו הוכחה.</li>
+      <li class="ok"><strong>סינון מקדים חינמי:</strong> מספרי הבקשות שכבר בידינו מדרגה 3 מקודדים שנים, ולכן אפשר לדעת בלי אף פנייה למי יש בקשה אחרי 2005 — ורק אותם לבדוק. מתוך 7 עוברי שער השנה, <strong>2 נקיים לגמרי</strong> (אין להם אף בקשה אחרי 2000) ו-5 דורשים בדיקה.</li>
+      <li class="ok"><strong>סוג המסמך ידוע לפני ההורדה.</strong> סיומת הקובץ מקודדת אותו: <code>_20</code> הוא המפרט (טופס 2) שבו טבלת השטחים, <code>_22</code> הוא תעודת ההיתר (טופס 3). ShowPhoto מחזיר את הכתובת בתגובה של 1.5KB — כך שאפשר לדלג על מסמכים שאינם המפרט בלי להוריד אותם.</li>
+    </ul>
+    <p class="note" style="margin-top:1rem"><strong>ושני סייגים:</strong> הטפסים רושמים מספרי חלקה שונים מהאינדקס (122 מול 144 בתיק אחד, 143 מול 146 באחר) — מספרי חלקות משתנים עם השנים, והזיהוי חייב להישען על מספר התיק. ובר-כוכבא 95, שדורג ראשון, נושא בקשה מ-2007 ל<strong>בנייה חדשה של 84 יחידות</strong> בייעוד "אזור מיוחד למסחר ומגורים" — אתר גדול, לא הזדמנות שקד קלאסית. הדירוג לפי שטח מגרש בלבד מושך למעלה בדיוק את המגרשים החריגים.</p>
+  </section>
+
+  <section class="panel revised"><h2>הרצת השרשרת על מצב קיים אמיתי</h2>
+    <p class="lead">בר-כוכבא 25, גוש 6424 חלקה 144 (בהיתר 122 — מספור ישן), מגרש 2,265 מ"ר. המצב הקיים חולץ מהגרמושקה של בקשה 19780028 — <strong>לא מהאינדקס</strong>, כי האינדקס לא מחזיק אותו.</p>
+    <div class="tw"><table>
+      <thead><tr><th>שלב</th><th>תוצאה</th><th>מקור</th></tr></thead>
+      <tbody>
+        <tr><td>1 · מצב קיים</td><td class="n"><strong>2,795.36 מ"ר</strong><br><span class="note">2,133.88 קיים + 626.76 תוספת 1978 + 34.72 מ-2002</span></td><td>גרמושקה + עמוד בקשה</td></tr>
+        <tr><td>2 · תקרת 400%</td><td class="n">11,181.44 מ"ר</td><td>70ב(א)(1)</td></tr>
+        <tr class="lose"><td>3 · תקרת דירות</td><td>לא נסגר — מספר הדירות הקיים אינו בגרמושקה בבירור</td><td>—</td></tr>
+        <tr><td>4 · גובה</td><td class="n">רחוב 13.3–14.3 מ' → 9 קומות<br><span class="note">חלקת פינה, שתי חזיתות 15.0 ו-14.0 לפני תיקון הטיה</span></td><td>מדידה גיאומטרית</td></tr>
+        <tr><td>5 · טביעת רגל</td><td class="n">43.8 × 55.5 מ' → ~1,595 מ"ר ב-9 קומות</td><td>מלבן חוסם + מרווחי המדיניות</td></tr>
+      </tbody></table></div>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.2rem 0 .5rem">מה שהחישוב חושף</h3>
+    <p><strong>צבע המפה, ולא החוק, הוא שקובע את התשובה כאן:</strong></p>
+    <ul class="tight">
+      <li><strong>צהוב (9 קומות):</strong> מעטפת ~14,352 מ"ר &gt; תקרת 400% של 11,181 → <strong>החוק חוסם.</strong> התשובה 11,181 מ"ר.</li>
+      <li><strong>צהוב בהיר (5.5):</strong> מעטפת ~9,468 מ"ר &lt; 11,181 → <strong>המעטפת חוסמת.</strong> התשובה ~9,468 מ"ר.</li>
+    </ul>
+    <p class="note" style="margin-top:.8rem">הפרש של כ-1,700 מ"ר — 15% — מקלט צבע יחיד במפה שלא הצלחנו לגאו-רפרנס. זה הופך את מבט האדם על המפה מ"שלב ידני מטריד" ל<strong>שלב שקובע את גודל העסקה</strong>. במגרש שכבר מנוצל ב-123%, תקרת ה-400% נדיבה מספיק כדי שלא תמיד תהיה החוסמת.</p>
+    <p class="note"><strong>סייג:</strong> הבניין הזה עצמו נפסל (היתר תמ"א 38 מ-2024). הריצה כאן בדקה את המכונה, לא את הנכס.</p>
+  </section>
+
+  <section class="panel revised"><h2>שלב 4 נסגר — המפה גאו-רפרנסה</h2>
+    <p class="lead">שלושת הניסיונות הקודמים נכשלו כי ניסו להתאים תמונה לתמונה. <strong>המפה נושאת שכבת טקסט וקטורית עם שמות רחובות</strong> — 11 תוויות עם קואורדינטות PDF מדויקות. אלה נקודות בקרה סמנטיות.</p>
+    <p>האלגוריתם: התאמת אפיין איטרטיבית, שבה כל תווית נצמדת לנקודה הקרובה ביותר על גיאומטריית הרחוב שלה מ-OpenStreetMap, ואז התמרה נלמדת מחדש עד התכנסות.</p>
+    <div class="tw"><table><thead><tr><th>רחוב</th><th>שארית</th><th>רחוב</th><th>שארית</th></tr></thead><tbody>
+      <tr><td>הדר</td><td class="n">5.7 מ'</td><td>סוקולוב</td><td class="n">9.7 מ'</td></tr>
+      <tr><td>העצמאות</td><td class="n">7.3 מ'</td><td>בר-כוכבא</td><td class="n">21.3 מ'</td></tr>
+      <tr><td>רבי עקיבא</td><td class="n">7.7 מ'</td><td>ויצמן</td><td class="n">21.3 מ'</td></tr>
+      <tr><td>כיבוש העבודה</td><td class="n">29.9 מ'</td><td>אליהו גולומב</td><td class="n">37.1 מ'</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>RMS 20.7 מ', חציון 15.5 מ'.</strong> קנה מידה 8.6 מ' ליחידת PDF. השארית כוללת את מיקום התווית לאורך הרחוב, ולכן היא חסם עליון לשגיאת ההתמרה ולא השגיאה עצמה.</p>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.2rem 0 .5rem">פענוח מלא של המקרא</h3>
+    <p>הצבעים נדגמו מתאי המקרא עצמם — התאמת RGB מדויקת, לא הערכת גוון:</p>
+    <div class="tw"><table><thead><tr><th>RGB</th><th>קטגוריה</th><th>מסלול מגרשים?</th></tr></thead><tbody>
+      <tr class="win"><td class="n">230,230,0</td><td>התחדשות מגרשית מוטת מגורים — עד 9 קומות</td><td><strong>כן</strong></td></tr>
+      <tr class="win"><td class="n">255,255,190</td><td>התחדשות מגרשית מוטת מגורים נמוכה — עד 5.5</td><td><strong>כן</strong></td></tr>
+      <tr class="lose"><td class="n">181,53,53</td><td>מתחם עירוני להעצמה</td><td>לא — מסלול מתחמים</td></tr>
+      <tr class="lose"><td class="n">230,152,0</td><td>מתחם עירוני</td><td>לא — מסלול מתחמים</td></tr>
+      <tr class="lose"><td class="n">156,156,156</td><td>מע"ר היסטורי</td><td>לא</td></tr>
+      <tr class="lose"><td class="n">243,237,211</td><td>מרקם לשימור</td><td>לא</td></tr>
+      <tr class="lose"><td class="n">255,255,255</td><td>לא צבוע — מחוץ לפוטנציאל ההתחדשות</td><td>לא</td></tr>
+    </tbody></table></div>
+    <p class="note" style="margin-top:1rem"><strong>המפה אינה רק מחפשת גובה — היא שער.</strong> רק שני הצהובים הם מסלול מגרשים. זה שער שאפשר להריץ על כל מועמד בדרגה 0, בחינם, בלי אף פנייה לרשת — והוא מסלק את רוב העיר לפני שנגענו בארכיון.</p>
+    <p class="note"><strong>וממצא שצריך לומר במפורש: השושנים 4 — כתובת העוגן של הסריקה — יושבת ב-181,53,53, "מתחם עירוני להעצמה".</strong> 62.8% מהשטח ברדיוס 60 מ' סביבה הוא הצבע הזה, הרבה מעבר לשגיאת ההתמרה. היא אינה הזדמנות שקד במסלול מגרשים. בר-כוכבא 25, לעומתה, יושבת ב-60.3% צהוב מלא.</p>
+  </section>
+
+  <section class="panel revised"><h2>שלב 1 ושלב 3 — חילוץ מהגרמושקה</h2>
+    <p class="lead">בגרמושקה של 1978 אין שכבת טקסט ואין טבלה סטטוטורית מודפסת. יש <strong>חישוב שטחים בכתב ידו של האדריכל</strong> על גיליון השרטוט. תיקון למה שנכתב כאן קודם.</p>
+    <p>Vision של macOS לא תומך בעברית — אבל <strong>המספרים הם ספרות לטיניות</strong>, והם נקראו בביטחון 1.00. הפענוח אינו מסתמך על קריאת המילים אלא על <strong>סגירת האריתמטיקה</strong>:</p>
+    <div class="tw"><table><thead><tr><th>זהות</th><th>מחושב</th><th>בגיליון</th></tr></thead><tbody>
+      <tr class="win"><td>20.06 × 17.06</td><td class="n">342.22</td><td class="n">342.22</td></tr>
+      <tr class="lose"><td>2×0.90×11.74 + 2×3.34×3.98</td><td class="n">47.72</td><td class="n">47.75</td></tr>
+      <tr class="win"><td>342.22 − 47.75</td><td class="n">294.47</td><td class="n">294.47</td></tr>
+      <tr class="win"><td>21.26 × 19.16</td><td class="n">407.34</td><td class="n">407.34</td></tr>
+      <tr class="lose"><td>2×4.24×3.98 + 2×1.20×6.90 + …</td><td class="n">74.20</td><td class="n">74.23</td></tr>
+      <tr class="win"><td>407.34 − 74.23</td><td class="n">333.11</td><td class="n">333.11</td></tr>
+      <tr class="win"><td>294.47 + 333.11</td><td class="n">627.58</td><td class="n">627.58</td></tr>
+      <tr class="win"><td>627.58 − 0.82</td><td class="n">626.76</td><td class="n">626.76</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>7 מתוך 9 נסגרות בדיוק; השתיים שלא סוגרות חורגות ב-0.03 — ספרה אחת שנקראה לא נכון.</strong> זו בדיוק ההתנהגות הרצויה: המנגנון מסמן שתי שורות לבדיקת אדם ומאשר את השבע האחרות. אין צורך במודל שקורא עברית כדי לדעת שהמספרים נכונים.</p>
+    <p class="note lose" style="margin-top:1rem"><strong>והבדיקה תפסה טעות שלי.</strong> כתבתי כאן ש"2,133.88 קיים + 626.76 מוצע = 2,760.64". בפועל 626.76 הוא <em>שטח קומה טיפוסית</em>, ו-253.60 + 3×626.76 = 2,133.88 בדיוק. ספרתי את הקומה פעמיים. המצב הקיים הנכון: <strong>2,168.60 מ"ר</strong> (כולל 34.72 מ-2002).</p>
+    <p><strong>שלב 3 — מספר הדירות.</strong> חיפשנו מקור מובנה ולא קיים כזה בנתונים הפתוחים: ל-WFS של GovMap יש 7 שכבות בלבד, אף אחת מהן אינה מבנים או תתי-חלקות, ו-nadlan.gov.il מחזיר 302 ודורש session. <strong>המסקנה הארכיטקטונית: מספר הדירות הוא שדה של דרגה 4, לא של הסריקה.</strong> הוא נקרא מתכניות הקומות של אותה גרמושקה שנפתחת ממילא לשלב 1 — שלושה מסמכים לדוח, לא 150. פנקס הבתים המשותפים הוא אימות-צד שדורש גישה מורשית.</p>
+  </section>
+
+  <section class="panel revised"><h2>השרשרת המלאה — בר-כוכבא 25</h2>
+    <div class="tw"><table><thead><tr><th>שלב</th><th>תוצאה</th><th>מקור</th></tr></thead><tbody>
+      <tr><td>1 · מצב קיים</td><td class="n"><strong>2,168.60 מ"ר</strong></td><td>גרמושקה + בקשה 19990438</td></tr>
+      <tr><td>2 · תקרת 400%</td><td class="n">8,674.40 מ"ר</td><td>70ב(א)(1)</td></tr>
+      <tr><td>3 · תקרת דירות</td><td class="n">22–25</td><td>8 דירות קיימות</td></tr>
+      <tr><td>4 · גובה</td><td class="n">9 קומות</td><td><strong>מפה 9 · רחוב 9 — מסכימים</strong></td></tr>
+      <tr><td>5 · מעטפת</td><td class="n">14,355 מ"ר</td><td>1,595 × 9</td></tr>
+      <tr class="win"><td>החוסם</td><td class="n"><strong>תקרת 400% → 8,674 מ"ר</strong></td><td>המעטפת רחבה יותר</td></tr>
+      <tr><td>6 · הפרשה ציבורית</td><td class="n">‎−867 מ"ר</td><td>10% מהממומש</td></tr>
+      <tr class="win"><td>נטו לפני 7–9</td><td class="n"><strong>7,807 מ"ר</strong> · ×3.60 מהקיים</td><td>—</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>הבניין עצמו פסול</strong> (היתר תמ"א 38 מ-2024). השרשרת רצה כאן כדי לבדוק את המכונה. אבל שני המקורות לגובה — המפה והרחוב — הגיעו ל-9 באופן בלתי תלוי, וזו האינדיקציה הראשונה שיש כאן יתירות אמיתית ולא שני ניחושים.</p>
+  </section>
+
+  <section class="panel revised"><h2>מה מותר לשמור — וכיצד זה מעצב את הארכיטקטורה</h2>
+    <p class="note" style="margin-bottom:1rem">אני לא עורך דין, וזה לא ייעוץ משפטי. זו מפת סיכונים מבוססת על מה שנבדק בפועל, שנועדה להיות מוצגת ליועץ ולא להחליף אותו.</p>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:0 0 .5rem">הממצא שמפצל את המערכת לשניים</h3>
+    <p>שני המארחים אומרים דברים שונים:</p>
+    <div class="tw"><table><thead><tr><th>מארח</th><th>robots.txt</th><th>מה יושב שם</th></tr></thead><tbody>
+      <tr class="win"><td class="n">handasi.complot.co.il</td><td>אין קובץ כלל</td><td>אינדקס גושים, תיקים, בקשות — דרגות 0–3</td></tr>
+      <tr class="lose"><td class="n">archive.gis-net.co.il</td><td><code>User-agent: *</code><br><code>Disallow: /</code></td><td>קובצי ה-PDF — דרגה 4</td></tr>
+    </tbody></table></div>
+    <p><strong>robots.txt אינו חוק בישראל</strong>, אבל הוא הצהרת רצון מפורשת של המפעיל, והוא ראיה במחלוקת. המסקנה התכנונית ברורה ונוחה: <strong>דרגות 0–3 אוטומטיות, דרגה 4 יזומה-אדם.</strong> זה מתלבש בדיוק על הארכיטקטורה — דרגה 4 רצה על כשלושה מסמכים לדוח, וזה אינו זחילה אלא אנליסט שפותח שלושה מסמכים.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">מה החוק הישראלי מגן עליו בפועל</h3>
+    <ul class="tight">
+      <li><strong>אין בישראל זכות <em>sui generis</em> במאגרי מידע</strong> — בשונה מהדירקטיבה האירופית. אין "זכות יוצר מאגר" שאפשר להפר בעצם ההעתקה.</li>
+      <li><strong>עובדות אינן מוגנות בזכות יוצרים.</strong> שטח, מספר דירות, תאריך היתר, מספר חלקה — כולן עובדות. <em>חילוץ המספר ואחסונו אינו הפרה.</em> זה הבסיס המשפטי לכל המוצר.</li>
+      <li><strong>הגרמושקה עצמה היא יצירה אדריכלית מוגנת.</strong> זכות היוצרים היא של האדריכל, לא של העירייה, ותכנית מ-1962 או 1978 כמעט בוודאי עדיין בתוקף הגנה. אחסון הקובץ הוא העתקה; הצגתו למשתמש היא פרסום.</li>
+      <li><strong>עשיית עושר ולא במשפט</strong> (הלכת א.ש.י.ר) היא החשיפה האמיתית — לא על חילוץ עובדות, אלא על שכפול סיטונאי שמייתר את המקור.</li>
+      <li><strong>חוק הגנת הפרטיות, תיקון 13</strong> (בתוקף מאוגוסט 2025) הרחיב חובות וסנקציות. עמודי הבקשה נושאים שמות מבקשים ולעתים פרטים מזהים נוספים.</li>
+    </ul>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">סיווג נתונים — הכלל המעשי</h3>
+    <div class="tw"><table><thead><tr><th>שכבה</th><th>דוגמאות</th><th>מדיניות</th></tr></thead><tbody>
+      <tr class="win"><td><strong>לשמור בלי הגבלה</strong></td><td>גוש/חלקה, שטח מגרש, ייעוד, רוחב רחוב, קטגוריית מפה, שטח קיים, מספר דירות, תאריכי היתר, מספרי בקשה, כל תוצר החישוב שלך</td><td>עובדות ותוצרי עבודה עצמיים. זה הנכס.</td></tr>
+      <tr><td><strong>לשמור כראיה, לא להגיש</strong></td><td>HTML של עמוד בקשה, hash + חותמת זמן של מסמך</td><td>נחוץ לביקורת ולשחזור. אחסון פנימי, TTL מוגדר, לא מוצג למשתמש.</td></tr>
+      <tr class="lose"><td><strong>לא לשמור</strong></td><td>קובץ הגרמושקה אחרי החילוץ · שמות מבקשים · חתימות · מספרי זהות · פרטי אדריכל</td><td>העתקה של יצירה מוגנת, ומידע אישי תחת תיקון 13. <strong>לחלץ ולמחוק את המקור.</strong></td></tr>
+    </tbody></table></div>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ולשאלה הישירה — חיפוש חוזר באותו מקום</h3>
+    <p><strong>כן, ובאופן ברור.</strong> אם משתמש סורק את אותו רדיוס פעמיים, להגיש לו את אותן שלוש ההזדמנויות מהמטמון הוא <em>המהלך הנכון</em>, ומשלוש סיבות:</p>
+    <ul class="tight">
+      <li class="ok">מה שמוצג הוא <strong>הניתוח שלך</strong> — דירוג, שרשרת זכויות, דוח אפס. זה לא המאגר שלהם; זה מוצר שנגזר מעובדות ציבוריות.</li>
+      <li class="ok">המטמון <strong>מקטין</strong> את העומס על המקור. זה משפר את עמדתך, לא מחליש אותה — במיוחד מול מגבלת קצב של פנייה ל-10 שניות.</li>
+      <li class="ok">חילוץ העובדה כבר קרה כדין בפעם הראשונה. אין חובה משפטית לחזור עליו.</li>
+    </ul>
+    <p class="note" style="margin-top:.8rem"><strong>אבל שים TTL — מסיבה עסקית, לא משפטית.</strong> הזדמנות שקיבלה היתר חיזוק בחודש שעבר הופכת לפסולה, בדיוק כפי שקרה לתיק 475. הצעה של הזדמנות מתה מזיקה יותר מאשר פנייה נוספת לארכיון. ההמלצה: עובדות מגרש (שטח, ייעוד, רוחב) יציבות לחודשים; <strong>היסטוריית היתרים צריכה אימות מחדש לפני כל הגשה ללקוח.</strong></p>
+    <p class="note"><strong>הקו שאסור לחצות:</strong> ההבדל בין "מטמון לחיפושי המשתמשים שלי" לבין "עותק של ארכיון הרצליה" אינו טכני אלא כמותי. סריקות לפי ביקוש מצטברות לכיסוי חלקי ומפוזר — זה מטמון. סריקה יזומה של כל גוש בעיר יוצרת את העותק. <strong>אותו קוד, סיכון אחר לגמרי.</strong> ההמלצה: לא לאסוף מראש, רק לפי בקשת משתמש.</p>
+  </section>
+
+  <section class="panel revised"><h2>הריצה המלאה — 149 מועמדים לשלושה תיקים</h2>
+    <div class="tw"><table><thead><tr><th>שלב</th><th>נשארו</th><th>פניות</th></tr></thead><tbody>
+      <tr><td>דרגה 0 · מועמדים ברדיוס</td><td class="n">149</td><td class="n">0</td></tr>
+      <tr class="win"><td>דרגה 0 · <strong>שער המפה (חדש)</strong></td><td class="n"><strong>82</strong> · ‎−45%</td><td class="n"><strong>0</strong></td></tr>
+      <tr><td>דרגה 2 · יש תיק בניין</td><td class="n">48</td><td class="n">3</td></tr>
+      <tr><td>דרגה 3 · נפתחו</td><td class="n">7</td><td class="n">7</td></tr>
+      <tr><td>דרגה 3 · שער שנת 1980</td><td class="n">5</td><td class="n">0</td></tr>
+      <tr><td>דרגה 4 · בדיקת חיזוק</td><td class="n">4 כשירים</td><td class="n">4</td></tr>
+      <tr class="win"><td><strong>תיקי הזדמנות</strong></td><td class="n"><strong>3</strong></td><td class="n">3 מסמכים — יזום אדם</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>14 פניות רשת לכל המשפך.</strong> שער המפה הוא הזול והחזק ביותר שנמצא: הוא מסלק 45% לפני שנגענו בארכיון, והוא רץ על נתונים שכבר בידינו.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">תיקון מהותי: בקשה לתמ"א 38 אינה פסילה</h3>
+    <p>סעיף 70א(2) פוסל בניין ש<strong>חוזק בהיתר</strong>. בסעדיה גאון 2 יש בקשה 20140361, "תמ"א 38 — תוספת וחיזוק" — אבל <strong>לא הופק לה היתר</strong>. משפטית הבניין כשיר. מסחרית הוא תפוס: מישהו כבר עובד עם הדיירים. <strong>אלה שתי החלטות שונות ואסור למזג אותן לשער אחד</strong> — הראשונה פוסלת, השנייה רק מורידה בדירוג. גם בהצנחנים 191 יש שתי בקשות תוספת שלא הבשילו להיתר, והוא נשאר נקי.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">שלושת התיקים</h3>
+    <div class="tw"><table><thead><tr><th>כתובת</th><th>מגרש</th><th>רחוב</th><th>מפה</th><th>היתר</th><th>מעטפת</th></tr></thead><tbody>
+      <tr class="win"><td>הצנחנים 15<br><span class="note">7291/146 · תיק 1118</span></td><td class="n">1,964</td><td class="n">20.4</td><td class="n">9</td><td class="n">1962</td><td class="n">~12,016</td></tr>
+      <tr class="win"><td>בר-כוכבא 105<br><span class="note">7291/149 · תיק 2621</span></td><td class="n">1,568</td><td class="n">15.8</td><td class="n">9</td><td class="n">1965</td><td class="n">~11,249</td></tr>
+      <tr class="win"><td>הצנחנים 191<br><span class="note">7291/145 · תיק 605</span></td><td class="n">1,791</td><td class="n">14.6</td><td class="n">9</td><td class="n">1966</td><td class="n">~12,458</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>בשלושתם המפה והרחוב מגיעים ל-9 באופן בלתי תלוי.</strong> חסרים שני שדות בלבד — שטח קיים ומספר דירות — ושניהם על אותה גרמושקה. ותחזית שאפשר לבדוק: תקרת ה-400% תהיה החוסמת אם הקיים קטן מ-~3,000 מ"ר, וזה כמעט ודאי בבניין בן 4 קומות מ-1962.</p>
+  </section>
+
+  <section class="panel revised"><h2>האם לסרוק את כל העיר מראש</h2>
+    <p class="lead">שאלת נכונה, והתשובה מתפצלת — ולא לרעתך. מדדתי את העלות בפועל.</p>
+    <div class="tw"><table><thead><tr><th>שלב</th><th>פניות לכל הרצליה</th><th>זמן ב-11 שנ׳</th><th>מסקנה</th></tr></thead><tbody>
+      <tr class="win"><td>דרגה 1+2 — רשימות גושים</td><td class="n">124</td><td class="n">22 דק'</td><td><strong>לסרוק</strong></td></tr>
+      <tr class="win"><td>דרגה 3 — תיקים ששרדו את שער המפה</td><td class="n">17,050</td><td class="n">52 שע'</td><td><strong>לסרוק</strong></td></tr>
+      <tr class="lose"><td>דרגה 4 — גרמושקות</td><td class="n">~6,000 מסמכים</td><td class="n">—</td><td><strong>לא</strong></td></tr>
+    </tbody></table></div>
+    <p><strong>124 גושים, 19,068 חלקות, ~31,000 תיקים.</strong> <code>GetTikimByGush</code> עם <code>l=false</code> מחזיר גוש שלם בפנייה אחת, ולכן כל האינדקס העירוני עולה 124 פניות. אחרי שער המפה נשארים 17,050 תיקים לפתיחה — <strong>כיומיים של סריקה מנומסת רציפה, פעם אחת.</strong> בלי שער המפה זה 4 ימים.</p>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.2rem 0 .5rem">למה דרגות 1–3 דווקא חזקות</h3>
+    <ul class="tight">
+      <li class="ok"><code>handasi.complot.co.il</code> <strong>אינו מפרסם robots.txt כלל</strong> — אין הנחיה שנעקפת.</li>
+      <li class="ok">מה שנשמר הוא <strong>עובדות</strong>: גוש, חלקה, שנה, סוג בקשה. אין בישראל זכות sui generis במאגרים, ועובדות אינן מוגנות.</li>
+      <li class="ok">המידע התכנוני <strong>ציבורי מכוח חובה סטטוטורית</strong> — הארכיון קיים כדי לקיים חובת עיון, לא כמוצר מסחרי. זה מחליש מאוד טענת עשיית עושר.</li>
+      <li class="ok"><strong>סריקה אחת מנומסת מעמיסה פחות</strong> מאלפי סריקות לפי דרישה שחוזרות על אותם גושים. זה טיעון לטובתך, לא נגדך.</li>
+    </ul>
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.2rem 0 .5rem">ולמה דרגה 4 היא הקו</h3>
+    <ul class="tight">
+      <li class="no"><code>archive.gis-net.co.il</code> אומר <code>Disallow: /</code> לכל סוכן. כדי לחלץ נתון מגרמושקה חייבים להוריד אותה.</li>
+      <li class="no">הגרמושקה היא <strong>יצירה אדריכלית מוגנת</strong>. 6,000 הורדות אינן חילוץ עובדות אלא שכפול.</li>
+      <li class="no">6,000 מסמכים הם <em>מראה של הארכיון</em>; 3 מסמכים לדוח הם אנליסט שעושה את עבודתו. ההבדל כמותי, וזה בדיוק מה שנבחן בדיעבד.</li>
+    </ul>
+    <p class="note"><strong>ההמלצה: סרוק דרגות 1–3 לכל העיר, אל תיגע בדרגה 4 עד שיש לקוח.</strong> זה נותן לך מסד נתונים מקומי שעונה על כל סריקה בלי אף פנייה חיצונית, ומשאיר בחוץ בדיוק את החלק הבעייתי. הסריקה בפועל תרוץ מול המסד שלך — מה שביקשת — ורק שלושת המסמכים האחרונים יגיעו חיים.</p>
+  </section>
+
+  <section class="panel revised"><h2>סריקה חוזרת — מה לשמור כדי שהתוצאה תהיה אחרת</h2>
+    <p class="lead">הבנתי אותך הפוך קודם. אתה לא רוצה מטמון שמחזיר את אותו דבר — אתה רוצה ש<strong>סריקה שנייה תמכור עומק, לא חזרה</strong>.</p>
+    <p>המפתח: <strong>פלט הסריקה אינו שלוש הזדמנויות אלא תור מדורג שלם.</strong> שלוש מוצגות; השאר נשמר.</p>
+    <div class="tw"><table><thead><tr><th>טבלה</th><th>מה יש בה</th><th>TTL</th></tr></thead><tbody>
+      <tr><td><code>parcel_facts</code></td><td>גוש/חלקה, שטח, ייעוד, רוחב רחוב, קטגוריית מפה, קואורדינטות</td><td>חודשים</td></tr>
+      <tr><td><code>archive_index</code></td><td>תיקים, מספרי בקשה, שנים, סוגים, תאריכי היתר</td><td>חודשים · היתרים חדשים: ימים</td></tr>
+      <tr class="win"><td><code>candidate_queue</code></td><td><strong>התור המדורג המלא של האזור</strong> + ציון + סיבת פסילה לכל שורה</td><td>מתעדכן</td></tr>
+      <tr class="win"><td><code>delivery_ledger</code></td><td><strong>מה כבר הוצג למשתמש הזה</strong> — חלקה, סריקה, תאריך</td><td>לצמיתות</td></tr>
+    </tbody></table></div>
+    <p>סריקה שנייה על אותו רדיוס: שולפים את התור מהמסד (<strong>0 פניות</strong>), מחסירים את <code>delivery_ledger</code>, לוקחים את השלושה הבאים, ומריצים דרגה 4 רק עליהם. <strong>הסריקה השנייה זולה לך יותר וחדשה ללקוח</strong> — ומה שהוא באמת קונה הוא את עבודת דרגה 4, שנעשית מחדש בכל פעם.</p>
+    <p class="note lose" style="margin-top:1rem"><strong>אבל מדדתי את עומק התור וצריך שתדע:</strong> ברדיוס 250 מ' סביב הצנחנים שרדו <strong>5</strong> מועמדים בסך הכול, מהם 3 נקיים. אין שם סריקה שלישית. המשמעות: או להרחיב רדיוס בסריקה חוזרת, או לומר ללקוח שהאזור מוצה. <strong>מערכת שגובה על סריקה שנייה באזור מוצה תשרוף את האמון מהר.</strong> שווה למכור "התראה על שינוי באזור" במקום — כשמופק היתר חיזוק, מועמד נופל ואחר עולה, וזו התראה ששווה כסף אמיתי ועולה לך 124 פניות ביום.</p>
+  </section>
+
+  <section class="panel revised"><h2>ארבעה מסמכים נפתחו — והתוצאה הפוכה מהצפוי</h2>
+    <p class="lead">הורדנו את הגרמושקות של שלושת התיקים. <strong>אף אחת משלושתן לא נותנת את המצב הקיים של הבניין.</strong> זה הממצא החשוב ביותר עד כה, והוא משנה את התשובה על "האם למשוך את דרגה 4 מראש".</p>
+    <div class="tw"><table><thead><tr><th>בניין</th><th>מסמך</th><th>מה יש בו</th><th>מצב קיים של הבניין?</th></tr></thead><tbody>
+      <tr class="lose"><td>הצנחנים 15</td><td class="n">19620042_20</td><td>חישוב בכתב יד ל<strong>דירה אחת</strong> — 89.12 מ"ר עיקרי, 42.69 מרפסות</td><td>לא</td></tr>
+      <tr class="lose"><td>בר-כוכבא 105</td><td class="n">19650035_20</td><td>חישוב בכתב יד — 50.53 + 6.00 מרפסת + 6.78 עמודים</td><td>לא</td></tr>
+      <tr class="lose"><td>הצנחנים 191</td><td class="n">19660038_20</td><td>טופס 2 מודפס — <strong>טבלת השטחים ריקה</strong></td><td>לא</td></tr>
+      <tr class="lose"><td>הצנחנים 193/1</td><td class="n">19770028_20</td><td>טופס 2 <strong>מלא</strong> — קיים 125.90, סה"כ 144.86 — אבל של <strong>דירה</strong></td><td>לא</td></tr>
+    </tbody></table></div>
+    <p><strong>הסיבה:</strong> שלושת המגרשים הם שיכוני <strong>עמידר</strong> — "ועד שכון עמידר נוה ישראל". הבניינים נבנו על ידי המדינה לפני שהארכיון העירוני התחיל, ולכן <strong>היתר הבנייה המקורי אינו בארכיון הסרוק כלל</strong>. כל מה שיש הוא בקשות מאוחרות של דיירים בודדים לתוספות.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">מה כן עבד — והיטב</h3>
+    <p>מנגנון האימות האריתמטי החזיק בכל מסמך, בשני פורמטים שונים:</p>
+    <ul class="tight">
+      <li class="ok"><strong>בחישוב בכתב יד (1962):</strong> 13 מתוך 13 זהויות נסגרו בדיוק — 7.00×6.85=47.95, 4.60×3.65=16.79, הסכומים 41.17 ו-40.27, והצירופים 89.12 ו-42.69.</li>
+      <li class="ok"><strong>בטופס המודפס (1977):</strong> 82.12+43.78=125.90 ו-100.90+31.72+12.24=144.86. שתי עמודות, שתיהן נסגרות.</li>
+      <li class="ok"><strong>ומספור החלקות נפתר:</strong> הטפסים רושמים את המספר הישן והחדש זה על זה — 7291 מעל 6424, 149 מעל 196/1. המסמך עצמו הוא טבלת ההמרה.</li>
+    </ul>
+    <p class="note"><strong>הצוואר אינו הטכנולוגיה ואינו הגישה — הוא תוכן המקור.</strong> החילוץ עובד ומאמת את עצמו. פשוט אין מה לחלץ בחלק מהבניינים.</p>
+  </section>
+
+  <section class="panel revised"><h2>ולכן: לא למשוך את דרגה 4 מראש</h2>
+    <p class="lead">השאלה שלך הייתה נכונה, והתשובה השתנתה בגלל מה שראינו — היא כבר לא בעיקר משפטית.</p>
+    <div class="tw"><table><thead><tr><th></th><th>דרגות 1–3</th><th>דרגה 4</th></tr></thead><tbody>
+      <tr><td>robots.txt</td><td class="win">אין קובץ</td><td class="lose"><code>Disallow: /</code></td></tr>
+      <tr><td>מה נשמר</td><td class="win">עובדות בלבד</td><td>עובדות, אבל דרך יצירה מוגנת</td></tr>
+      <tr><td>עלות לכל העיר</td><td class="win">17,174 פניות · יומיים</td><td class="lose">~6,000 מסמכים</td></tr>
+      <tr><td><strong>שיעור הצלחה</strong></td><td class="win">גבוה ועקבי</td><td class="lose"><strong>0 מתוך 3 בניינים</strong></td></tr>
+      <tr><td>מסמכים לבניין</td><td class="win">1</td><td class="lose">לא ידוע מראש — ממשיכים עד שמוצאים או מוותרים</td></tr>
+    </tbody></table></div>
+    <p><strong>סריקה מקדימה של דרגה 4 הייתה ממלאת את המסד ברשומות ריקות.</strong> לא היית יודע אילו מהן שוות משהו בלי לפתוח עוד מסמכים לכל בניין — ובדיוק את זה אי אפשר לתכנן מראש. העלות אינה "מסמך לבניין" אלא "להמשיך לפתוח עד שמוצאים תכנית של בניין שלם, או להסיק שאין".</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ההמלצה המלאה</h3>
+    <ol class="tight">
+      <li><strong>דרגות 1–3 — סרוק את כל העיר לתוך המסד שלך.</strong> 17,174 פניות, יומיים, פעם אחת. חוקית חזקה, ומכאן והלאה כל סריקת משתמש רצה מול המסד שלך בלי אף פנייה חיצונית. <em>בדיוק מה שביקשת.</em></li>
+      <li><strong>שלב 1 לדירוג — לא מהארכיון אלא ממדידה.</strong> טביעת רגל × קומות נותנת אומדן שטח קיים לכל בניין בעיר, בחינם וללא הגבלה. זה מספיק כדי <em>לדרג</em>. ההיתר נחוץ רק כדי <em>לתמחר</em>.</li>
+      <li><strong>דרגה 4 — רק לפי לקוח, ולשמור לנצח.</strong> כל עסקה מוסיפה למסד 3 בניינים מאומתים. אחרי 100 עסקאות יש 300 — <strong>המאגר נבנה כתוצר לוואי של עבודה לגיטימית, ולא כסריקה.</strong> זה גם ההבדל המשפטי המהותי: כל פנייה מוצדקת בהתקשרות אמיתית.</li>
+      <li><strong>וכשהארכיון לא מחזיק את הבניין — לא לזייף מספר.</strong> המצב הקיים מגיע אז מ<strong>תשריט הבית המשותף</strong>, שנמצא אצל הדיירים ומגיע ממילא בעסקה אמיתית. דוח אפס צריך לומר "המצב הקיים טעון אימות מתשריט" ולא להציג אומדן כאילו הוא מההיתר.</li>
+    </ol>
+    <p class="note"><strong>המשמעות לשלושת התיקים:</strong> שלושתם עוברים את כל השערים — מפה, רחוב, שנה, חיזוק — ושלושתם עוצרים בשלב 1. זו תוצאה אמיתית ולא כישלון: <strong>המערכת יודעת מה היא לא יודעת</strong>, ואומרת זאת במקום להמציא.</p>
+  </section>
+
+  <section class="panel revised"><h2>אומדן השטח הקיים ממדידה</h2>
+    <p class="lead">הכיול נעשה מול 19780028 — הבניין היחיד שיש לו גם מדידה וגם מספר אמיתי מההיתר.</p>
+    <p><strong>קודם כל בדיקת זיהום:</strong> לבניין הזה יש היתר תמ"א 38 מ-2024, ואם המצולע ב-OSM שורטט אחריו הכיול היה חסר ערך. בדקתי בהיסטוריית העריכות: <code>way/401491722</code>, <strong>גרסה 1, שורטט 3.3.2016, לא נערך מאז</strong>. המדידה מקדימה את ההיתר — הכיול תקף.</p>
+    <div class="tw"><table><thead><tr><th>גודל</th><th>ערך</th><th>מקור</th></tr></thead><tbody>
+      <tr><td>מלבני ההיתר א+ב</td><td class="n">342.22 + 407.34 = 749.57</td><td>הגרמושקה</td></tr>
+      <tr><td>שטח נספר לקומה טיפוסית</td><td class="n">626.76</td><td>הגרמושקה</td></tr>
+      <tr class="win"><td><strong>נספר / מתאר</strong></td><td class="n"><strong>0.836</strong></td><td>אריתמטיקה פנימית של ההיתר — <strong>בלתי תלוי ב-OSM</strong></td></tr>
+      <tr><td>טביעת רגל OSM</td><td class="n">920</td><td>OpenStreetMap</td></tr>
+      <tr><td>OSM / מתאר ההיתר</td><td class="n">1.227</td><td>OSM משרטט 23% יותר</td></tr>
+      <tr class="win"><td><strong>k = נספר / OSM</strong></td><td class="n"><strong>0.669</strong></td><td>מקדם הכיול</td></tr>
+      <tr><td>קומות אפקטיביות</td><td class="n">3.40</td><td>3 טיפוסיות + קרקע 0.40</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>האומדן:</strong> <code>שטח קיים ≈ טביעת_רגל × 0.68 × קומות</code>. וסייג שאסור להסתיר: <strong>k נגזר מנקודה אחת</strong>, וספירת הקומות היא הנחה ולא מדידה — OSM מתייג <code>building:levels</code> ב-3 מתוך 82 מבנים בלבד. הטווח 3.0–3.4 קומות נותן ±13%.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ואז שני ממצאים ששינו את הארכיטקטורה</h3>
+    <div class="tw"><table><thead><tr><th></th><th>כתובת</th><th>מגרש</th><th>טב"ר</th><th>תכסית</th><th>קיים מוערך</th><th>חוסם</th></tr></thead><tbody>
+      <tr><td></td><td>בר-כוכבא 95</td><td class="n">6,368</td><td class="n">1,834</td><td class="n">29%</td><td class="n">3,748–4,247</td><td class="n">14,990–16,989</td></tr>
+      <tr class="win"><td>✓</td><td>הצנחנים 191</td><td class="n">1,791</td><td class="n">706</td><td class="n"><strong>39%</strong></td><td class="n">1,443–1,635</td><td class="n">5,772–6,542</td></tr>
+      <tr><td></td><td>אלרואי דוד 20</td><td class="n">1,555</td><td class="n">578</td><td class="n">37%</td><td class="n">1,181–1,339</td><td class="n">4,725–5,355</td></tr>
+      <tr><td></td><td>סעדיה גאון 2</td><td class="n">1,926</td><td class="n">562</td><td class="n">29%</td><td class="n">1,148–1,302</td><td class="n">4,594–5,206</td></tr>
+      <tr class="win"><td>✓</td><td>הצנחנים 15</td><td class="n">1,964</td><td class="n">533</td><td class="n"><strong>27%</strong></td><td class="n">1,089–1,234</td><td class="n">4,355–4,936</td></tr>
+      <tr class="win"><td>✓</td><td>בר-כוכבא 105</td><td class="n">1,568</td><td class="n">406</td><td class="n">26%</td><td class="n">830–940</td><td class="n">3,319–3,762</td></tr>
+      <tr><td></td><td>אלרואי דוד 13</td><td class="n">1,522</td><td class="n">382</td><td class="n">25%</td><td class="n">780–884</td><td class="n">3,119–3,535</td></tr>
+    </tbody></table></div>
+    <p><strong>ראשון — תקרת ה-400% חוסמת בכל אחד מהשבעה, בלי יוצא מן הכלל.</strong> המעטפת גדולה פי 2–4 מהתקרה. המשמעות: <strong>שלב 5 — טביעת רגל ומרווחים — אינו משפיע על גודל העסקה בבניינים ישנים בעלי תכסית נמוכה.</strong> גודל העסקה הוא פשוט 4 × הקיים. חישבנו מרווחים בקפידה, והם לא קובעים דבר כאן.</p>
+    <p><strong>שני — ולכן הדירוג לפי שטח מגרש שגוי.</strong> התכסית נעה בין 25% ל-39%, והיא שקובעת:</p>
+    <div class="tw"><table><thead><tr><th>שיטת דירוג</th><th>סדר בשלושת הנקיים</th></tr></thead><tbody>
+      <tr class="lose"><td>לפי שטח מגרש (מה שעשינו)</td><td>הצנחנים 15 &gt; הצנחנים 191 &gt; בר-כוכבא 105</td></tr>
+      <tr class="win"><td><strong>לפי קיים מוערך</strong></td><td><strong>הצנחנים 191</strong> &gt; הצנחנים 15 &gt; בר-כוכבא 105</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>ההזדמנות המובילה מתחלפת.</strong> הצנחנים 191 יושב על מגרש קטן ב-9% מהצנחנים 15, אבל בנוי עליו 32% יותר — ומכיוון שהזכות היא 400% מהקיים ולא מהמגרש, הוא שווה יותר.</p>
+    <p class="note"><strong>ומה שהאומדן כן ולא יכול:</strong> היחס 706/533 בין שני מבנים מאותה טיפולוגיית עמידר חסין ל-k ולספירת הקומות — הם מצטמצמים. <strong>לכן האומדן טוב לסדר ורע למחיר.</strong> בדיוק כפי שהוצע, וכעת גם נמדד: לדרג את כל העיר בלי לפתוח מסמך, ולפתוח מסמך רק כדי לתמחר.</p>
+  </section>
+
+  <section class="panel revised"><h2>מה חסר כדי להפיק שלושה תיקים מלאים</h2>
+    <p class="lead">המשפך רץ מקצה לקצה. מה שלא נסגר אינו <em>שלב</em> אלא <strong>שני שדות קלט</strong> — ובעיקר טעות אחת בתכנון האלגוריתם.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:0 0 .5rem">הטעות: סיננו לכשירות ולא ליכולת חישוב</h3>
+    <p>ארבעת השערים — מפה, רחוב, שנה, חיזוק — בודקים אם הבניין <strong>זכאי</strong>. אף אחד מהם לא בודק אם אנחנו <strong>מסוגלים לחשב אותו</strong>. לכן שלושת המועמדים שנבחרו הם בדיוק אלה שאי אפשר לסגור: שיכוני עמידר שהיתר הבנייה המקורי שלהם מעולם לא נסרק.</p>
+    <p class="note"><strong>התיקון: שער חמישי — "קיימת תכנית של בניין שלם".</strong> הוא צריך לרוץ <em>לפני</em> הדירוג, לא אחריו.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">וסימן זול שאפשר לבדוק בלי להוריד</h3>
+    <div class="tw"><table><thead><tr><th>בקשה</th><th>גודל</th><th>פיקסלים</th><th>מה זה</th></tr></thead><tbody>
+      <tr class="win"><td class="n">19780028</td><td class="n">24.2 MB</td><td class="n">22 Mpx</td><td><strong>בניין שלם</strong></td></tr>
+      <tr class="lose"><td class="n">19770028</td><td class="n">5.2 MB</td><td class="n">6 Mpx</td><td>דירה</td></tr>
+      <tr class="lose"><td class="n">19620042</td><td class="n">1.5 MB</td><td class="n">2 Mpx</td><td>דירה</td></tr>
+      <tr class="lose"><td class="n">19660038</td><td class="n">1.4 MB</td><td class="n">2 Mpx</td><td>טופס ריק</td></tr>
+      <tr class="lose"><td class="n">19650035</td><td class="n">1.1 MB</td><td class="n">2 Mpx</td><td>דירה</td></tr>
+    </tbody></table></div>
+    <p class="note">הפרדה של פי 5 בין המחלקות. <code>Content-Length</code> מתקבל בבקשת HEAD בלי להוריד את היצירה. <strong>אבל זו השערה מ-n=1 בצד "בניין שלם"</strong> — צריך לאמת על 10–20 מסמכים לפני שסומכים עליה.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">רשימת החוסמים, לפי סדר</h3>
+    <div class="tw"><table><thead><tr><th>#</th><th>חוסם</th><th>סוג</th><th>פתרון</th></tr></thead><tbody>
+      <tr><td class="n">1</td><td>שער "תכנית בניין שלם" לא קיים</td><td>אלגוריתם</td><td>לממש + לאמת את סימן הגודל על 10–20 מסמכים</td></tr>
+      <tr><td class="n">2</td><td>שטח קיים בדיוק היתר</td><td>נתון</td><td>אומדן ±13% <strong>או</strong> תשריט בית משותף מטאבו</td></tr>
+      <tr><td class="n">3</td><td>מספר דירות</td><td>נתון</td><td>ספירה מתכנית בניין שלם, או טאבו</td></tr>
+      <tr><td class="n">4</td><td>שלבים 6–9 לא מומשו כלל</td><td>הנדסה</td><td>הפרשה, שטחי שירות, תמהיל, חניה</td></tr>
+      <tr><td class="n">5</td><td>אין דאטאבייס — הכול קבצי JSON</td><td>הנדסה</td><td>סכימה + הסריקה העירונית</td></tr>
+      <tr><td class="n">6</td><td>נקודת כיול אחת ל-k</td><td>דיוק</td><td>עוד 3–5 נקודות</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>שלב 5 ירד בעדיפות:</strong> מדדנו שתקרת ה-400% חוסמת בכל שבעת המועמדים, ולכן מרווחים וטביעת רגל אינם קובעים את גודל העסקה בשכבה הזו. המאמץ צריך לעבור לשלבים 6–9.</p>
+    <p class="note"><strong>ותיקון ניסוח קודם:</strong> תקרת הדירות אינה "חוסמת" את הפרויקט — היא מחייבת <em>דירות גדולות יותר</em>. 8 דירות קיימות → עד 25 דירות, ותקרת שטח 8,674 מ"ר → ממוצע 347 מ"ר לדירה. זו שאלת תמהיל (שלב 8), לא חסם שמקטין את העסקה.</p>
+  </section>
+
+  <section class="panel revised"><h2>טריאז' לפי גודל מסמך — ומה הוא מצא</h2>
+    <p class="lead">בדקנו את <strong>גודל</strong> 31 המסמכים של שבעת המועמדים, בלי להוריד אף אחד. הכתובות נבנות ישירות מהתבנית לפי שנת הבקשה, ולכן גם <code>ShowPhoto</code> לא נדרש.</p>
+    <p class="note lose"><strong>והתברר שפתחתי קודם את המסמכים הלא נכונים.</strong> לקחתי לכל בניין את הבקשה <em>המוקדמת ביותר</em>. המסמך הגדול ביותר הוא תמיד בקשה <em>מאוחרת</em> — 1983–84 ולא 1962–66. "המוקדם" היה היוריסטיקה השגויה; "הגדול" עובד.</p>
+    <div class="tw"><table><thead><tr><th>בניין</th><th>מה פתחתי קודם</th><th>מה באמת הכי גדול</th></tr></thead><tbody>
+      <tr><td>הצנחנים 15</td><td class="n">19620042 · 1.5 MB</td><td class="n">19840026 · 6.7 MB</td></tr>
+      <tr><td>בר-כוכבא 105</td><td class="n">19650035 · 1.1 MB</td><td class="n">19830049 · 8.6 MB</td></tr>
+      <tr><td>הצנחנים 191</td><td class="n">19660038 · 1.4 MB</td><td class="n">19830050 · 7.5 MB</td></tr>
+    </tbody></table></div>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">שדה 9 בטופס 2 נושא את מה שחיפשנו</h3>
+    <p>"מהות הבנין ותכליתו" — שדה שלא שמנו לב אליו — מצהיר על אופי הבניין:</p>
+    <div class="tw"><table><thead><tr><th>בניין</th><th>שדה 9</th><th>מה הושג</th></tr></thead><tbody>
+      <tr class="win"><td>הצנחנים 191</td><td>"בית מגורים <strong>2 קומות 12 דירות</strong>"</td><td>דירות <em>וגם</em> קומות</td></tr>
+      <tr class="win"><td>בר-כוכבא 105</td><td>"<strong>בנין 8 דירות</strong>"</td><td>דירות</td></tr>
+      <tr class="lose"><td>הצנחנים 15</td><td>"תוספת חדר"</td><td>כלום</td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>שלב 3 נסגר בשניים מתוך שלושה</strong> — ולא מספירת דירות בתכנית אלא משורת טקסט בטופס מודפס.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">והנחת הקומות שלי הייתה שגויה</h3>
+    <p>הנחתי 3.0–3.4 קומות. הצנחנים 191 הוא <strong>2 קומות</strong>. האומדן ירד ב-41%:</p>
+    <div class="tw"><table><thead><tr><th>בניין</th><th>טב"ר</th><th>דירות</th><th>קומות</th><th>אומדן קודם</th><th>אומדן מתוקן</th></tr></thead><tbody>
+      <tr><td>הצנחנים 191</td><td class="n">706</td><td class="n">12</td><td class="n"><strong>2</strong></td><td class="n">1,443–1,635</td><td class="n"><strong>962</strong></td></tr>
+      <tr><td>בר-כוכבא 105</td><td class="n">406</td><td class="n">8</td><td class="n">~2</td><td class="n">830–940</td><td class="n"><strong>553</strong></td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>ואימות צולב שעובד:</strong> אם מכפילים 12 דירות ב-70–80 מ"ר ברוטו ומחלקים בטביעת הרגל, מקבלים <strong>1.7–2.0 קומות</strong> — והטופס אומר 2. שני מקורות בלתי תלויים מסכימים, בדיוק כמו שקרה עם המפה והרחוב בשלב 4.</p>
+    <p class="note lose"><strong>מה שעדיין לא הושג: שטח קיים ברמת היתר, באף אחד משלושתם.</strong> שבעה מסמכים נפתחו ואף אחד אינו תכנית של בניין שלם. בשיכוני עמידר זה כנראה פשוט לא קיים בארכיון.</p>
+  </section>
+
+  <section class="panel revised"><h2>הרחבת החיפוש — 37 תיקים נוספים</h2>
+    <p class="lead">פתחנו את כל התיקים שעברו את שער המפה ולא נפתחו קודם, כדי למצוא בניינים שאינם עמידר.</p>
+    <div class="tw"><table><thead><tr><th>שלב</th><th>תוצאה</th></tr></thead><tbody>
+      <tr><td>תיקים שנפתחו</td><td class="n">37</td></tr>
+      <tr><td>עוברים שער 1980</td><td class="n">28</td></tr>
+      <tr class="win"><td><strong>נקיים לגמרי</strong> (אין בקשה אחרי 2005)</td><td class="n"><strong>16</strong></td></tr>
+      <tr><td>גדלי מסמכים שנבדקו ב-HEAD (בלי הורדה)</td><td class="n">47</td></tr>
+      <tr class="lose"><td>מסמכים מעל 10 MB</td><td class="n"><strong>0</strong></td></tr>
+    </tbody></table></div>
+    <p>נמצא אשכול חדש ברחובות הגלבוע/הכרמל, 1957–1969 — שכונה אחרת לגמרי מהעמידר. פתחנו את ארבעת המסמכים הגדולים ביותר.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">שער שלא מימשנו — וצריך היה</h3>
+    <p>סעיף 70א דורש שהבניין יהיה <strong>"בן שתי קומות מעל פני הקרקע לפחות, ויש בו ארבע יחידות דיור שנבנו לפי היתר לפחות"</strong>. <strong>המשפך שלנו מעולם לא בדק את זה.</strong></p>
+    <p>הגלבוע 14 המחיש את המחיר: המסמך שלו הוא דווקא <strong>טופס 1 מודרני מ-1996 עם טבלאות מובנות ומלאות</strong> — בדיוק מה שחיפשנו — אבל השטח הקיים בו הוא <strong>107.86 מ"ר על מגרש 2,000 מ"ר</strong>. זה בית פרטי. הוא נופל ב-70א, והיה צריך ליפול שלוש דרגות קודם.</p>
+    <p class="note"><strong>סינון זול לשער הזה: טביעת רגל.</strong> ארבע דירות על שתי קומות דורשות טביעת רגל של ~150 מ"ר לפחות. זה רץ על נתוני OSM שכבר בידינו, בלי אף פנייה.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">והמסקנה על הארכיון</h3>
+    <div class="tw"><table><thead><tr><th>מסמך</th><th>גודל</th><th>מה הוא</th><th>שטח קיים</th></tr></thead><tbody>
+      <tr class="win"><td class="n">19780028</td><td class="n">24.2 MB</td><td><strong>תכנית בניין שלם</strong></td><td class="n">2,133.88</td></tr>
+      <tr class="lose"><td class="n">19961016 · הגלבוע 14</td><td class="n">9.9 MB</td><td>טופס 1 מלא — בית פרטי</td><td class="n">107.86</td></tr>
+      <tr class="lose"><td class="n">19950029 · בר-כוכבא 38</td><td class="n">9.2 MB</td><td>"הרחבת דיור" — דירה</td><td class="n">88.82</td></tr>
+      <tr class="lose"><td class="n">19890037 · אלרואי דוד 8</td><td class="n">7.5 MB</td><td>מפרט — דירה</td><td class="n">42.30</td></tr>
+      <tr class="lose"><td class="n">19830049 · בר-כוכבא 105</td><td class="n">8.6 MB</td><td>מפרט — דירה (אך "בנין 8 דירות")</td><td class="n">42.72</td></tr>
+      <tr class="lose"><td class="n">19830050 · הצנחנים 191</td><td class="n">7.5 MB</td><td>מפרט — דירה (אך "2 קומות 12 דירות")</td><td class="n">43</td></tr>
+    </tbody></table></div>
+    <p class="note lose"><strong>תשעה מסמכים נפתחו בשתי שכונות, 47 גדלים נבדקו — ונמצאה תכנית בניין שלם אחת בלבד, והיא של בניין פסול.</strong> כל השאר הן בקשות של דיירים בודדים להרחבה. זה כבר לא מדגם קטן: <strong>הארכיון באזור הזה פשוט אינו מחזיק תכניות של בניינים שלמים מלפני 1980.</strong></p>
+    <p class="note"><strong>הטריאז' לפי גודל עבד — והוא זה שהוכיח זאת.</strong> הוא אמר נכון שאין באשכול החדש אף מסמך במחלקת ה-24 MB, ופתיחת השלושה הגדולים אישרה. 47 בדיקות HEAD חסכו 47 הורדות.</p>
+  </section>
+
+  <section class="panel revised"><h2>מפת המקורות — מה נבדק, מה עובד, מה נסגר</h2>
+    <div class="tw"><table><thead><tr><th>מקור</th><th>מה הוא נותן</th><th>מעמד</th></tr></thead><tbody>
+      <tr class="win"><td><strong>שכבת מבנים עירונית</strong><br><code>herzliya_reka_2023/FeatureServer/3</code></td><td><strong>מספר קומות</strong> + טביעת רגל + כתובת + פרטי/ציבורי · 14,072 מבנים</td><td>ArcGIS Online ציבורי של העירייה, REST תקני</td></tr>
+      <tr class="win"><td><strong>שכבת שימור</strong><br><code>PlanningPublic/Shimour/2</code></td><td><strong>שער חדש</strong> — מבנה לשימור אינו בר-הריסה</td><td>iplan, חינם</td></tr>
+      <tr class="win"><td><strong>קווים כחולים</strong><br><code>Xplan/MapServer/1</code></td><td>אילו תכניות חלות + מעמדן, כולל תכניות בהליך</td><td>iplan, חינם · רק מהעידן המקוון</td></tr>
+      <tr class="win"><td>GovMap WFS · XPlan/4 · OSM · Overture</td><td>חלקות, ייעוד, טביעות רגל להצלבה</td><td>פתוח</td></tr>
+      <tr class="win"><td>ארכיון <code>handasi.complot</code></td><td>שנת היתר, היסטוריית חיזוק, מפרט (שדה 9: דירות וקומות)</td><td>אין robots.txt · דרגות 0–3</td></tr>
+      <tr class="lose"><td><code>archive.gis-net</code></td><td>מסמכי היתר</td><td><code>Disallow: /</code> — יזום אדם בלבד</td></tr>
+      <tr class="lose"><td>GIS עירוני (אפליקציית הווב)</td><td>—</td><td>דורש התחזות ללקוח — נפסל</td></tr>
+      <tr class="lose"><td>nadlan.gov.il · מדלן</td><td>—</td><td>302 / API פרטי · נפסלו</td></tr>
+      <tr class="lose"><td>data.gov.il</td><td>שכבת מבנים מצוינת — <strong>של באר שבע</strong></td><td>הרצליה לא מפרסמת שם</td></tr>
+      <tr class="lose"><td>טאבו — תשריט בית משותף</td><td>דירות + שטח רשום</td><td>₪39 לבניין — נפסל (בתשלום)</td></tr>
+    </tbody></table></div>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">שני שערים שנוספו</h3>
+    <ul class="tight">
+      <li class="ok"><strong>שער 70א — שתי קומות וארבע דירות.</strong> החוק דורש זאת ומעולם לא בדקנו. סינון זול: טביעת רגל מתחת ל-~150 מ"ר לא יכולה להחזיק 4 דירות על 2 קומות.</li>
+      <li class="ok"><strong>שער השימור.</strong> מבנה המיועד לשימור אינו בר-הריסה. רץ בחינם על שכבת iplan.</li>
+    </ul>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">התובנה המרכזית: זמינות הנתון היא קריטריון, לא בעיה במורד הזרם</h3>
+    <p>חיפשנו מקור אחד שייתן מצב קיים לכל בניין. <strong>מקור כזה לא קיים, ולא בגלל שלא חיפשנו.</strong> מה שכן קיים הוא מבנה ברור של זמינות:</p>
+    <div class="tw"><table><thead><tr><th>לבניין יש…</th><th>מצב קיים</th><th>עלות</th></tr></thead><tbody>
+      <tr class="win"><td>תכנית בניין שלם בארכיון</td><td><strong>ברמת היתר</strong></td><td>מסמך אחד · סימן: גודל ≥ 10 MB</td></tr>
+      <tr class="win"><td>בקשה אחרי 1999 לבניין שלם</td><td><strong>שטחים מובנים</strong></td><td><strong>אפס מסמכים</strong> — מעמוד הבקשה</td></tr>
+      <tr class="lose"><td>רק תוספות לדירות בודדות</td><td>אומדן בלבד</td><td>—</td></tr>
+    </tbody></table></div>
+    <p><strong>והסימן לבקשה של בניין שלם נמדד:</strong> <code>main_area &gt; 500</code> או <code>units_requested ≥ 4</code>. נבדק — 20190442 (2,916 מ"ר, 25 יח"ד) ו-20070566 (10,703 מ"ר, 84 יח"ד) הן בניין שלם; 20040049 (22.62, יח"ד אחת), 20000330 (127.88, אחת) ו-20030230 (160.85, אחת) הן תוספות. <strong>הבחנה נקייה, בחינם, מעמוד שאנחנו מושכים ממילא.</strong></p>
+    <p class="note"><strong>המסקנה הארכיטקטונית: להכניס את זמינות המצב הקיים לדירוג עצמו.</strong> במקום לבחור בניין ואז לגלות שאי אפשר לחשב אותו — לדרג מלכתחילה לפי "האם ניתן לחשב". זה הופך את החולשה לפיצ'ר: <strong>דוח אפס יופק רק לבניינים שבהם הוא מחזיק.</strong></p>
+    <p class="note lose"><strong>ומה שנשאר פתוח, וכנראה יישאר:</strong> מקדם ההמרה 0.669 מנקודת כיול אחת, ומספר הדירות לבניינים שהמפרט שלהם שותק. שניהם דורשים תכנית בניין שלם — וזה בדיוק מה שחסר. <strong>זה חסם מקור, לא חסם טכני ולא חסם חוקי.</strong></p>
+  </section>
+
+  <section class="panel revised"><h2>השטח הקיים אינו תנאי סף — הוא תמחור</h2>
+    <p class="lead">בדקנו את הטקסט. תנאי הסף של סעיף 70א הם שלושה, ו<strong>שטח בנוי אינו אחד מהם</strong>:</p>
+    <ol class="tight">
+      <li>היתר לפני 1.1.1980 — או 1980–84 עם חוות דעת מהנדס מבנים</li>
+      <li>לא בוצעו בו לפי היתר עבודות חיזוק לפי תקן רעידות אדמה</li>
+      <li><strong>בן שתי קומות מעל פני הקרקע לפחות, ויש בו ארבע יחידות דיור שנבנו לפי היתר לפחות</strong></li>
+    </ol>
+    <p>השטח הקיים נכנס רק בפרק הבא של המדיניות — <strong>"חישוב הזכויות"</strong>, דרך סעיף 70ב. כלומר הוא קובע <em>כמה שווה</em> ההזדמנות, לא <em>אם היא הזדמנות</em>.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">ולכן זה מה שכשירות באמת עולה</h3>
+    <div class="tw"><table><thead><tr><th>תנאי</th><th>מקור</th><th>עלות</th></tr></thead><tbody>
+      <tr class="win"><td>≥ 2 קומות</td><td>שכבת מבנים עירונית · <code>Num_floors</code></td><td class="n"><strong>0</strong></td></tr>
+      <tr class="win"><td>ייעוד מגורים</td><td>XPlan שכבה 4</td><td class="n"><strong>0</strong></td></tr>
+      <tr class="win"><td>קטגוריית מפה</td><td>הר/2323 עמ' 7</td><td class="n"><strong>0</strong></td></tr>
+      <tr class="win"><td>לא לשימור</td><td>Shimour שכבה 2</td><td class="n"><strong>0</strong></td></tr>
+      <tr class="win"><td>לא הרוס ולא בבנייה</td><td>שכבה עירונית · <code>status</code></td><td class="n"><strong>0</strong></td></tr>
+      <tr><td>היתר לפני 1980</td><td>ארכיון — השנה מקודדת במספר הבקשה</td><td class="n">1 פנייה</td></tr>
+      <tr><td>לא חוזק בהיתר</td><td>ארכיון — אותה פנייה</td><td class="n">0</td></tr>
+      <tr class="lose"><td><strong>≥ 4 יחידות דיור</strong></td><td>מפרט · שדה 9 "מהות הבנין"</td><td class="n"><strong>1 מסמך</strong></td></tr>
+    </tbody></table></div>
+    <p class="note"><strong>שער הדירות הוא היחיד שדורש מסמך — וגם הוא דורש סף, לא מספר.</strong> "ארבע לפחות" זה הרבה פחות ממה שנדרש לשלב 3, שצריך את המספר המדויק. שטח ברוטו (טביעת רגל × קומות) מסנן בחינם את הקצוות: מתחת ל-~250 מ"ר ברוטו אין ארבע דירות, מעל ~600 כמעט תמיד יש.</p>
+
+    <h3 style="font-family:var(--display);font-size:1.05rem;margin:1.4rem 0 .5rem">מה זה משנה בפועל</h3>
+    <p><strong>אפשר לסרוק את כל העיר לכשירות בלי לחשב שטח קיים ולו פעם אחת.</strong> בעיית המצב הקיים — שהעסיקה אותנו לאורך כל הדרך — נוגסת רק בשלב הדוח, על כשלושה בניינים לעסקה. היא מעולם לא הייתה בעיה של הסריקה.</p>
+    <p class="note lose"><strong>וסייג בספירת הקומות:</strong> החוק אומר ש"תובא בחשבון קומת עמודים, אך לא תובא בחשבון קומה עליונה ששטחה פחות ממחצית שטחה של הקומה שמתחתיה". <code>Num_floors</code> העירוני הוא ספירה פיזית ואינו מיישם את הכלל הזה — הוא סף טוב, לא קביעה משפטית.</p>
+  </section>
+
+  <section class="panel">
+    <h2>מה עדיין לא מדוד</h2>
+    <ul class="tight">
+      <li><strong>כמה הניקוד המוקדם באמת מנבא.</strong> אם הוא חלש, צריך גל גדול יותר בדרגה 3. נמדד על כל תיק שמופק, ומקטינים רק כשהנתונים מצדיקים.</li>
+      <li><strong>129 תיקים בגוש אחד מול 112 חלקות מועמדות</strong> — היחס בין תיק לחלקה עוד לא ברור, ותיק אחד עשוי לחלוש על כמה חלקות.</li>
+      <li><strong>שיעור התיקים עם מסמכים סרוקים</strong> — דגל הארכיב נראה בסריקת הגושים, אבל טרם נמדד על מדגם.</li>
+      <li><strong>קידוד השנה נבדק על 33 מספרים.</strong> דפוס חזק, אבל לא על כל העיר.</li>
+      <li><strong>דיוק מיקום מפת המדיניות — נמדד ונכשל.</strong> שלוש גישות: אות אפסי, פי 1.9, ופי 1.24 בבדיקה בלתי-תלויה. השגיאה בסדר גודל של 50–150 מ' מול חלקה של 25 מ'.</li>
+      <li><strong>עוד נקודות אמת לרוחב הרחוב</strong> — יש שתיים (מנדלבלט, חובות הלבבות). ליד גבולות טווחים זה לא מספיק, ולכן הקומות מוצגות כטווח.</li>
+      <li><strong>גבולות אזורי הרישום</strong> — נדרשים לכל פרויקט מעל <strong>750 מ"ר</strong> בנוי קיים (הגבול העליון בוטל), וגם לתנאי סף החינוך.</li>
+    </ul>
+  </section>
+
+  <div class="colophon">שקדן · הצעת ארכיטקטורה, גרסה 24 — 37 תיקים נוספים; מסקנה על הארכיון · כל מספר נמדד מול השרתים או בסימולציה על נתונים אמיתיים</div>
+</div>

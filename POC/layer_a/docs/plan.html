@@ -1,0 +1,195 @@
+<title>תכנית עבודה · 13.09</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&display=swap">
+<style>
+:root{
+  --ink:#1c1b16; --ink-2:#56534a; --ink-3:#8a867a;
+  --ground:#fbfaf6; --surface:#ffffff; --sunk:#f4f2e9;
+  --line:#e0dccd; --line-2:#cfc9b4;
+  --accent:#9a8a12; --accent-soft:#e9e5bf;
+  --flag:#a8443c; --flag-soft:#f0dcd9;
+  --ok:#4f6b45; --ok-soft:#dde6d7;
+  --t1:#3f5f7a; --t1-soft:#dce6ee;
+  --display:"Frank Ruhl Libre",Georgia,serif;
+  --body:"Assistant","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#eeebe0; --ink-2:#b3af9f; --ink-3:#827e70;
+  --ground:#14140f; --surface:#1c1c15; --sunk:#23231a;
+  --line:#34332a; --line-2:#45443a;
+  --accent:#cdbb46; --accent-soft:#3a3720;
+  --flag:#d0736a; --flag-soft:#3a2321;
+  --ok:#8fae83; --ok-soft:#23301f;
+  --t1:#8fb0c9; --t1-soft:#1e2a33;
+}}
+:root[data-theme="dark"]{
+  --ink:#eeebe0; --ink-2:#b3af9f; --ink-3:#827e70;
+  --ground:#14140f; --surface:#1c1c15; --sunk:#23231a;
+  --line:#34332a; --line-2:#45443a;
+  --accent:#cdbb46; --accent-soft:#3a3720;
+  --flag:#d0736a; --flag-soft:#3a2321;
+  --ok:#8fae83; --ok-soft:#23301f;
+  --t1:#8fb0c9; --t1-soft:#1e2a33;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);direction:rtl;font-family:var(--body);
+  font-size:16px;line-height:1.6;margin:0;padding:2.5rem 1.25rem 5rem}
+.wrap{max-width:900px;margin:0 auto}
+header{border-bottom:2px solid var(--ink);padding-bottom:1.1rem;margin-bottom:1.6rem}
+h1{font-family:var(--display);font-weight:900;font-size:2.15rem;line-height:1.1;margin:0 0 .35rem;
+  letter-spacing:-.015em}
+.sub{color:var(--ink-2);margin:0;font-size:1.02rem}
+.state{background:var(--sunk);border:1px solid var(--line);border-radius:3px;
+  padding:1.1rem 1.25rem;margin:0 0 2.2rem}
+.state b{color:var(--ink)}
+.state p{margin:0 0 .45rem;font-size:.95rem;color:var(--ink-2)}
+.state p:last-child{margin-bottom:0}
+
+.gate{border:1px solid var(--flag);background:var(--flag-soft);border-radius:3px;
+  padding:1rem 1.15rem;margin:0 0 2.2rem}
+.gate b{color:var(--flag);font-family:var(--display);font-size:1.05rem}
+.gate p{margin:.35rem 0 0;font-size:.93rem;color:var(--ink-2)}
+
+h2{font-family:var(--display);font-weight:700;font-size:1.45rem;margin:2.6rem 0 .3rem;
+  display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap}
+h2 .who{font-family:var(--body);font-size:.72rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;padding:.2rem .55rem;border-radius:2px}
+.w-code{background:var(--t1-soft);color:var(--t1)}
+.w-field{background:var(--ok-soft);color:var(--ok)}
+.w-dec{background:var(--accent-soft);color:var(--accent)}
+.track-note{color:var(--ink-2);font-size:.93rem;margin:.2rem 0 1.1rem;max-width:68ch}
+
+.task{border:1px solid var(--line);border-radius:3px;background:var(--surface);
+  padding:1.1rem 1.25rem;margin-bottom:.8rem}
+.task-top{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;margin-bottom:.4rem}
+.task-top b{font-size:1.02rem;font-weight:700}
+.est{margin-inline-start:auto;font-size:.76rem;color:var(--ink-3);white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.task p{margin:0 0 .5rem;font-size:.93rem;color:var(--ink-2)}
+.task p:last-child{margin-bottom:0}
+.done{font-size:.86rem;color:var(--ink);background:var(--sunk);border-inline-start:2px solid var(--accent);
+  padding:.4rem .7rem;border-radius:2px;display:block}
+.done b{font-weight:700}
+.pri{width:1.5rem;height:1.5rem;border-radius:50%;display:inline-grid;place-items:center;
+  font-size:.74rem;font-weight:700;flex:none;background:var(--accent);color:#fff;
+  font-variant-numeric:tabular-nums}
+ul{margin:.3rem 0 .6rem;padding-inline-start:1.15rem}
+li{margin-bottom:.28rem;font-size:.93rem;color:var(--ink-2)}
+code{font-family:ui-monospace,Menlo,monospace;font-size:.86em;background:var(--sunk);
+  padding:.08em .35em;border-radius:2px;color:var(--ink)}
+.sync{border:1px solid var(--accent);border-radius:3px;padding:1.1rem 1.25rem;margin-top:1rem;
+  background:var(--surface)}
+.sync b{font-family:var(--display);font-size:1.05rem}
+.no{border-top:1px solid var(--line);margin-top:2.6rem;padding-top:1.2rem}
+.no h3{font-family:var(--display);font-size:1.1rem;margin:0 0 .6rem}
+.no li{color:var(--ink-2)}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>תכנית עבודה — עודכנה</h1>
+  <p class="sub">חלופת שקד · הרצליה · שני אנשים במקביל · <b>13.09 אחה"צ</b></p>
+</header>
+
+<div class="state">
+  <p><b>בוצע מאז הבוקר:</b> שכבה א' קובעה בריפו ונדחפה — ענף <code>scan/layer-a-herzliya</code>, שלושה commits, PR מוכן לפתיחה. נוסף שער ≥4 דירות (700 מועמדים), נגזר כלל הקומות מהמדיניות, ונבנה מודול דירוג.</p>
+  <p><b>הארכיון:</b> התאושש. הסירוב היה זמני. <code>GetTikFile</code> עובד.</p>
+  <p><b>מה שהשתנה בהבנה:</b> משימה 2 נוסחה כ"למדוד רוחב רחוב". <b>בדיקה בתצלום אוויר הראתה שזו לא הבעיה.</b></p>
+</div>
+
+<div class="gate">
+  <b>משימה 2 הייתה מנוסחת על אבחנה שגויה</b>
+  <p>בדקתי את הצנחנים 15 בתצלום אוויר עירוני ברזולוציה 13 ס"מ. הגבול הצפוני שלה גובל
+  ב<b>שביל של כ-2.4 מ'</b> — לא ברחוב. שני החישובים שלי נתנו 8.0 ו-20.4 מ', <b>ושניהם שגויים לאותו גבול.</b>
+  הרחוב האמיתי נמצא בקצה המזרחי הקצר.</p>
+  <p><b>הבעיה אינה דיוק המדידה ואינה בחירת החזית — היא זיהוי מה בכלל רחוב.</b>
+  גם מסנן קווי הציר שהוספתי נכשל: הוא שייך את השם "הצנחנים" לרווח שהוא בפועל שביל.
+  מדידה ידנית של 10 רחובות לא הייתה פותרת את זה — היא הייתה נותנת 10 מספרים נכונים
+  לרחובות, בזמן שהאלגוריתם ממשיך למדוד שבילים.</p>
+</div>
+
+<h2><span class="pri" style="background:var(--ok)">✓</span> קיבוע הנכס <span class="who w-field">בוצע</span></h2>
+<p class="track-note"><b>בוצע.</b> ענף <code>scan/layer-a-herzliya</code> · commits <code>d6e20e4</code>, <code>f8ea3fe</code>, <code>1f0147c</code> · 15 קבצים · טסט 8 מקרים עובר מהריפו. הגולמי (106MB) לא נכנס — <code>fetch_sources.py</code> בונה אותו מחדש.</p>
+
+<div class="task">
+  <div class="task-top"><b>✓ שכבה א' בריפו · PR מוכן לפתיחה</b><span class="est">בוצע</span></div>
+  <ul>
+    <li>700 המועמדים עם כל השדות: קומות, דירות, טביעת רגל, קטגוריית מפה, זיווגים</li>
+    <li>הסקריפטים: בניית שכבה א', המחלץ ללא שמות, טסט הרגרסיה</li>
+    <li>הנתונים הגולמיים — מבנים, נקודות כתובת, חלקות, ייעוד, שימור</li>
+  </ul>
+  <span class="done"><b>סיום:</b> <code>git clone</code> על מכונה נקייה, הרצה אחת, ו-700 יוצאים שוב — וטסט הרגרסיה עובר.</span>
+</div>
+
+<div class="task">
+  <div class="task-top"><b>מחיקת ה-HTML הגולמי של הארכיון</b><span class="est">~20 דק' · נותר</span></div>
+  <p>31 עמודי התיק מכילים שמות מבקשים. המחלץ כבר מדלג עליהם — צריך להריץ אותו, לשמור את העובדות, ולמחוק את המקור.</p>
+  <span class="done"><b>סיום:</b> אין קובץ במערכת שמכיל שם של מבקש.</span>
+</div>
+
+<h2><span class="pri">2</span> זיהוי רחובות <span class="who w-code">קוד</span></h2>
+<p class="track-note"><b>הוחלפה.</b> הייתה "למדוד רוחב רחוב" — והתצלום הראה שהאלגוריתם מודד שבילים
+ולא רחובות. מדידה ידנית לא פותרת את זה: היא נותנת מספרים נכונים לרחובות בזמן שהקוד ממשיך
+למדוד את הדבר הלא נכון. <b>קודם לזהות, אחר כך למדוד.</b></p>
+
+<div class="task">
+  <div class="task-top"><b>להשתמש בתצלום האוויר העירוני לזיהוי חזיתות רחוב</b><span class="est">~3 שעות</span></div>
+  <p>מצאתי היום שירות תצלום אוויר עירוני ציבורי ב-<b>13 ס"מ לפיקסל</b>, ב-EPSG:2039:
+  <code>orto_042022_agol</code>. אפשר לחתוך ממנו כל חזית ולסווג — אספלט רחב עם מכוניות חונות
+  מול שביל מרוצף.</p>
+  <ul>
+    <li>לכל חזית: חיתוך מהאורתופוטו + סיווג רחוב / שביל / חצר</li>
+    <li>לאמת מול ארבעת הבניינים המוכרים לפני הרצה רחבה</li>
+    <li>רק חזיתות שסווגו כרחוב נכנסות לכלל <code>street_rule.py</code></li>
+  </ul>
+  <span class="done"><b>סיום:</b> להצנחנים 15 יוצא שהחזית הצפונית אינה רחוב, ושהרחוב הוא בקצה המזרחי.</span>
+</div>
+
+<div class="task">
+  <div class="task-top"><b>אימות אנושי — 5 חזיתות בלבד</b><span class="est">~30 דק' · דסקטופ</span></div>
+  <p>אחרי שהסיווג רץ, לפתוח את חמש החזיתות שהאלגוריתם הכי לא בטוח לגביהן ולהסתכל.
+  <b>זה הרבה פחות ממה שביקשתי בבוקר</b> — לא 10 מדידות בשטח אלא 5 הסתכלויות על תצלום.</p>
+  <span class="done"><b>סיום:</b> סיווג מאומת, או רשימת מקרים שהשיטה נכשלת בהם.</span>
+</div>
+
+<h2><span class="pri" style="background:var(--ok)">✓</span> מצב הארכיון <span class="who w-field">בוצע</span></h2>
+<div class="task">
+  <div class="task-top"><b>✓ נבדק · הארכיון התאושש</b><span class="est">בוצע</span></div>
+  <p>פנייה בודדת ל-<code>GetTikFile?t=605</code> החזירה עמוד מלא, 28KB. <b>הסירוב היה זמני והתאפס.</b>
+  וזה בדיוק מה שהופך את זה למסוכן: הפיתוי הוא להסיק "אפשר להריץ שוב ולחכות". האתר יגיב
+  אותו דבר, והפעם זו כבר לא טעות בתום לב.</p>
+  <p><b>ובשום מצב לא לפתור את ה-CAPTCHA ולא לעקוף אותו.</b> הופעתו היא אות עצירה.</p>
+  <span class="done"><b>סיום:</b> תשובה בינארית, ובניית ההמשך לפיה.</span>
+</div>
+
+<h2><span class="pri">4</span> שלבים 6–9 <span class="who w-code">קוד</span></h2>
+<p class="track-note">דוח האפס עוצר היום בשלב 6. ארבעת השלבים האחרונים מקטינים את השטח הנמכר, ובלעדיהם המספר שאנחנו מציגים גבוה מדי.</p>
+<div class="task">
+  <div class="task-top"><b>הפרשה, שטחי שירות ומרפסות, תמהיל, חניה</b><span class="est">~3 שעות</span></div>
+  <ul>
+    <li>הפרשה ציבורית — הכלל מיושם חלקית; להשלים את רצפת 300/400 לפי אזור רישום</li>
+    <li>שטחי שירות ומרפסות — <b>הר/מק/2302</b> קובעת את חישוב השטחים בבתי מגורים וצריך לקרוא אותה</li>
+    <li>תמהיל וחניה — לפי המדיניות</li>
+  </ul>
+  <span class="done"><b>סיום:</b> דוח אפס שרץ מקצה לקצה על שלושת התיקים, עם כל שלב מסומן במקורו וברמת ודאותו.</span>
+</div>
+
+<div class="sync">
+  <b>נקודת סנכרון — סוף היום</b>
+  <p style="margin:.4rem 0 0;color:var(--ink-2);font-size:.94rem">שתי שאלות שההחלטה עליהן שלך:</p>
+  <ul style="margin-top:.5rem">
+    <li><b>האם המוצר הראשון הוא דוח סינון או דוח הערכה?</b> סינון אפשר לשלוח היום עם 700 מועמדים ודירוג לפי חסם עליון. הערכה דורשת שזיהוי הרחובות יעבוד</li>
+    <li><b>מסלול מתחמי — מוצר או לא?</b> יש 37 אשכולות של 3+ חלקות צמודות באותו רחוב. להציג אותם קל; <b>לתמחר אותם זה פרויקט נפרד</b> — חישוב הזכויות שם שונה לחלוטין, בלי תקרת 400%</li>
+  </ul>
+</div>
+
+<div class="no">
+  <h3>ומה שלא לעשות מחר</h3>
+  <ul>
+    <li><b>לא להריץ סריקה עירונית נוספת מול הארכיון.</b> הוא חסם אתמול; זה היה הכלל שכתבתי ואז שברתי</li>
+    <li><b>לא להמשיך לחפש מקור חינמי לשטח קיים ברמת היתר.</b> נבדקו עשרה מקורות. זה חסם מקור, לא חסם חיפוש</li>
+    <li><b>לא לבנות דאטאבייס.</b> 700 שורות הן קובץ. מסד כשיהיה לקוח שני</li>
+    <li><b>לא להריץ מדידת רוחב רחוב עירונית</b> לפני שזיהוי הרחובות עובד. הכלל "איזו חזית קובעת" כבר נגזר מהמדיניות (<code>street_rule.py</code>) — הוא לא היה החסם</li>
+    <li><b>לא לשלוח מישהו למדוד בשטח.</b> ביקשתי את זה בבוקר על סמך אבחנה שהתבררה כשגויה. עשר מדידות נכונות לא עוזרות כשהאלגוריתם מודד שביל</li>
+  </ul>
+</div>
+</div>

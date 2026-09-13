@@ -1,0 +1,343 @@
+<title>מפת דרכים לבטא</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#F7F5F0; --card:#FFFDF9; --sunk:#F1EDE4;
+  --ink:#1C1A17; --soft:#6B655C; --faint:#9A9388;
+  --plan:#1D4E89; --plan-soft:#E4ECF5;
+  --ochre:#8A6100; --ochre-soft:#F6EEDC;
+  --teal:#1F5F55; --teal-soft:#E1EEEA;
+  --flag:#A8321E; --flag-soft:#F6E6E2;
+  --rule:#DCD6CA; --rule-2:#EAE5DB;
+  --display:"Frank Ruhl Libre",Georgia,serif;
+  --body:"Assistant","Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#16150F; --card:#1E1D16; --sunk:#191811;
+  --ink:#EFEAE0; --soft:#A7A093; --faint:#77716A;
+  --plan:#7FAEE0; --plan-soft:#1B2A3C;
+  --ochre:#D8AE5A; --ochre-soft:#2A2314;
+  --teal:#7FC4B4; --teal-soft:#14251F;
+  --flag:#E28471; --flag-soft:#33201C;
+  --rule:#33312A; --rule-2:#26251E;
+}}
+:root[data-theme="dark"]{
+  --paper:#16150F; --card:#1E1D16; --sunk:#191811;
+  --ink:#EFEAE0; --soft:#A7A093; --faint:#77716A;
+  --plan:#7FAEE0; --plan-soft:#1B2A3C;
+  --ochre:#D8AE5A; --ochre-soft:#2A2314;
+  --teal:#7FC4B4; --teal-soft:#14251F;
+  --flag:#E28471; --flag-soft:#33201C;
+  --rule:#33312A; --rule-2:#26251E;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.62;margin:0}
+.wrap{max-width:70rem;margin:0 auto;padding:2.2rem 1.2rem 4rem}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;margin:.3rem 0 .5rem;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:1.38rem;margin:0 0 .8rem;text-wrap:balance}
+h3{font-family:var(--body);font-weight:700;font-size:1rem;margin:0 0 .4rem}
+p{margin:0 0 .8rem}
+.eyebrow{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--plan);font-weight:600;font-family:var(--mono)}
+.stand{font-size:1.1rem;color:var(--soft);max-width:48rem}
+section{margin:0 0 2.6rem}
+.hr{height:1px;background:var(--rule);margin:2.4rem 0}
+.m{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.9em}
+
+.state{display:grid;gap:1rem;grid-template-columns:1fr}
+@media(min-width:48rem){.state{grid-template-columns:1fr 1fr}}
+.box{background:var(--card);border:1px solid var(--rule);border-radius:.6rem;padding:1.1rem 1.2rem}
+.box.have{border-inline-start:3px solid var(--teal)}
+.box.lack{border-inline-start:3px solid var(--flag)}
+.box h3{font-family:var(--display);font-size:1.1rem}
+.box.have h3{color:var(--teal)} .box.lack h3{color:var(--flag)}
+ul{margin:0;padding-inline-start:1.1rem;display:flex;flex-direction:column;gap:.3rem}
+li{font-size:.95rem}
+
+.scope{display:grid;gap:1rem;grid-template-columns:1fr}
+@media(min-width:52rem){.scope{grid-template-columns:1.1fr 1fr}}
+.in,.out{border-radius:.6rem;padding:1.1rem 1.2rem}
+.in{background:var(--teal-soft)} .out{background:var(--sunk);border:1px dashed var(--rule)}
+.in h3{color:var(--teal)} .out h3{color:var(--faint)}
+.out li{color:var(--soft)}
+.ref{font-family:var(--mono);font-size:.78em;color:var(--faint)}
+
+.contract{background:var(--plan-soft);border:1px solid var(--plan);border-radius:.6rem;padding:1.2rem 1.3rem}
+.contract h2{color:var(--plan);margin-bottom:.5rem}
+pre{direction:ltr;text-align:left;overflow-x:auto;background:var(--card);border:1px solid var(--rule);
+  border-radius:.4rem;padding:.9rem 1rem;font-family:var(--mono);font-size:.82rem;line-height:1.5;margin:.8rem 0 0}
+
+.streams{display:grid;gap:1rem;grid-template-columns:1fr}
+@media(min-width:56rem){.streams{grid-template-columns:repeat(3,1fr)}}
+.stream{background:var(--card);border:1px solid var(--rule);border-radius:.6rem;padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.6rem}
+.chip{display:inline-grid;place-items:center;width:1.9rem;height:1.9rem;border-radius:.4rem;
+  font-family:var(--mono);font-weight:600;font-size:.95rem}
+.sA .chip{background:var(--plan-soft);color:var(--plan)}
+.sB .chip{background:var(--ochre-soft);color:var(--ochre)}
+.sC .chip{background:var(--teal-soft);color:var(--teal)}
+.sA{border-top:3px solid var(--plan)} .sB{border-top:3px solid var(--ochre)} .sC{border-top:3px solid var(--teal)}
+.sHead{display:flex;gap:.6rem;align-items:center}
+.sHead h3{margin:0;font-family:var(--display);font-size:1.12rem}
+.owner{font-size:.8rem;color:var(--faint);font-family:var(--mono);border-top:1px dashed var(--rule);padding-top:.5rem;margin-top:auto}
+
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+.tw{overflow-x:auto}
+th,td{text-align:start;padding:.5rem .7rem;border-bottom:1px solid var(--rule-2);vertical-align:top}
+th{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600;
+  border-bottom:1px solid var(--rule)}
+td.d{white-space:nowrap;font-family:var(--mono);font-size:.85rem;color:var(--soft)}
+.tagA,.tagB,.tagC{font-family:var(--mono);font-size:.72rem;font-weight:600;padding:.1rem .4rem;border-radius:.25rem;margin-inline-end:.35rem}
+.tagA{background:var(--plan-soft);color:var(--plan)}
+.tagB{background:var(--ochre-soft);color:var(--ochre)}
+.tagC{background:var(--teal-soft);color:var(--teal)}
+
+.risk{border-inline-start:3px solid var(--flag);background:var(--flag-soft);border-radius:0 .4rem .4rem 0;padding:.85rem 1rem;margin-bottom:.7rem}
+.risk h3{color:var(--flag);font-size:.97rem}
+.risk p{margin:0;font-size:.93rem;color:var(--soft)}
+.note{border-inline-start:2px solid var(--rule);padding-inline-start:.9rem;color:var(--soft);font-size:.94rem;margin:0}
+.foot{font-size:.83rem;color:var(--faint);border-top:1px solid var(--rule);padding-top:1.1rem;margin-top:2.6rem}
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+<header>
+  <div class="eyebrow">חלופת שקד · הרצליה · 13.09.2026</div>
+  <h1>מפת דרכים לבטא</h1>
+  <p class="stand">שלושה אנשים, ארבעה ימי עבודה, יעד רביעי. המסמך הזה קובע מה נכנס, מה נחתך, ואיך העבודה מתפצלת כך שאיש לא ממתין לאיש.</p>
+</header>
+
+<div class="hr"></div>
+
+<section>
+  <h2>איפה אנחנו עומדים</h2>
+  <p class="note" style="margin-bottom:1.1rem">תיקון לגרסה הראשונה של המסמך: כתבתי ״אין מוצר״. <strong>זה היה שגוי</strong> — ה-POC ב-<span class="m">POC/app</span> מכיל כבר חלק ניכר מה-PRD. הפער אינו בנייה מאפס אלא <strong>חיבור</strong>.</p>
+  <div class="state">
+    <div class="box have">
+      <h3>הנכס — שני חלקים שלא מדברים זה עם זה</h3>
+      <p style="font-size:.9rem;color:var(--soft);margin:.2rem 0 .5rem"><strong>שכבה א׳ (‏<span class="m">layer_a</span>) — הנתונים והכללים</strong></p>
+      <ul>
+        <li>700 מועמדים כשירים בכל העיר, מ-19,066 חלקות, אפס פניות לארכיון</li>
+        <li>311 בשכבת ביטחון 0 · קביעת קומות ל-92%</li>
+        <li>שרשרת זכויות 1–9 מלאה, כולל חניה</li>
+        <li>מרשם מסמכי מדיניות + בדיקה חודשית</li>
+      </ul>
+      <p style="font-size:.9rem;color:var(--soft);margin:.9rem 0 .5rem"><strong>ה-POC (‏<span class="m">POC/app</span>) — האפליקציה</strong></p>
+      <ul>
+        <li>מפה, ציור פוליגון, אימות בגבול העיר, עבודות סריקה</li>
+        <li><span class="m">evidence()</span> — ערך, מקור, ודאות ומיקום לכל שדה</li>
+        <li><span class="m">rank()</span> — <strong>מיון לקסיקוגרפי לפי העדפות</strong>, בדיוק כדרישת ‎4.2</li>
+        <li><span class="m">economics()</span> — הכנסות, עלויות, רווח על עלות ו<strong>רגישות</strong> ‎3×3</li>
+        <li>ייצוא PDF ו-Excel · יתרת חבילה מדומה · מצב הדגמה למשקיעים</li>
+        <li>OCR עברית, הורדת מסמכים וחילוץ טקסט עם הפניית עמוד</li>
+      </ul>
+    </div>
+    <div class="box lack">
+      <h3>הפער האמיתי — שלושה חיבורים</h3>
+      <ul>
+        <li><strong>הגשר.</strong> ‏<span class="m">layer_a</span> מחשב 700 מועמדים מראש; ה-POC אוסף חי לכל סריקה. <strong>שני צינורות נפרדים שלא נפגשים.</strong> שרשרת הזכויות 1–9 אינה ב-<span class="m">rules.py</span></li>
+        <li><strong>ספריית ההנחות.</strong> ‏<span class="m">economics()</span> דורשת <span class="m">sale_price</span> ו-<span class="m">build_cost</span> ומסרבת במפורש לספק קבועים בשקט — <em>״No commercial or planning constants are silently supplied״</em>. <strong>שום דבר לא מזין אותה.</strong></li>
+        <li><strong><span class="m">sale_area</span>.</strong> נדרש כקלט, ושווה לסך הבנוי פחות התמורה לדיירים — וזו דורשת את שטח הדירות הקיימות. <strong>זה הפער שלא היה במפה כלל.</strong></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>מה הבטא — פרוסה אנכית, לא תת-קבוצה</h2>
+  <p>ה-PRD המלא הוא בנייה של 12–14 שבועות. בארבעה ימים אפשר לבנות <strong>פרוסה אחת שעוברת מקצה לקצה</strong> ונראית כמו המוצר, ולא חצי מהתכונות שאף אחת מהן אינה שלמה.</p>
+  <div class="scope">
+    <div class="in">
+      <h3>נכנס — זה המוצר</h3>
+      <ul>
+        <li>מפה, ציור פוליגון, מגבלת שטח</li>
+        <li>תנאי חובה + <strong>סדר העדפות שהיזם מגדיר</strong> <span class="ref">4.2 · SEL-01</span> — מיון מפורש, לא ניקוד סמוי</li>
+        <li>שלוש תוצאות, ללא חזרה לאותה חברה <span class="ref">SEL-02</span></li>
+        <li><strong>הפקת תיק אוטומטית</strong> <span class="ref">DOS-01…04</span></li>
+        <li><strong>תרחיש כלכלי ראשוני</strong> <span class="ref">6.4 · ECO-01…03</span></li>
+        <li>מקור, תאריך וודאות לכל שדה מהותי <span class="ref">4.3 · 8.3</span></li>
+        <li>נימוק בחירה לכל תוצאה</li>
+      </ul>
+    </div>
+    <div class="out">
+      <h3>נחתך במפורש — אחרי הבטא</h3>
+      <ul>
+        <li>סליקה ותשלום אמיתי <span class="ref">PAY-01…04</span> — היתרה מדומה</li>
+        <li>רב-ארגוניות, תפקידים והרשאות <span class="ref">§3</span> — חברה אחת</li>
+        <li>שריון <span class="ref">RES-01…06</span> — זרם ההכנסה השני, לא נדרש כדי לאמת את הליבה</li>
+        <li>מאגר החברה, ייצוא PDF/Excel, הערות וסטטוסים</li>
+        <li>צמדי חלקות <span class="ref">SEL-03</span> — כללי זכויות אחרים</li>
+        <li>יומן פעילות, ניטור, גיבוי <span class="ref">§9</span></li>
+      </ul>
+    </div>
+  </div>
+  <p class="note" style="margin-top:1rem"><strong>למה דווקא כך:</strong> ההנחה המסוכנת ביותר בעסק אינה "האם נצליח לבנות ממשק" אלא <strong>"האם יזם ישלם על התיקים האלה"</strong>. תשלום, שריון ורב-ארגוניות אינם בודקים אותה. תיק + תרחיש כלכלי — כן.</p>
+</section>
+
+<div class="hr"></div>
+
+<section class="contract">
+  <h2>הפעולה החוסמת — לנעול את החוזה בשעה הראשונה</h2>
+  <p>שלושה אנשים יכולים לעבוד במקביל <strong>רק אם מבנה הנתונים שביניהם קפוא לפני שמישהו כותב שורה.</strong> זרם א׳ מייצר אותו, זרמים ב׳ ו-ג׳ צורכים אותו. אם הוא לא ננעל היום, שלושתכם תבנו דברים שלא יתחברו ביום שלישי — וזה הסיכון היחיד שבאמת מפיל את התאריך.</p>
+  <p style="margin:0">ב׳ ו-ג׳ מתחילים מיד מול <strong>קובץ דוגמה ידני</strong> לפי החוזה, בלי להמתין שא׳ יסיים.</p>
+  <pre>candidate = {
+  id, gush, helka, address, geometry,
+  lot_area, buildings, existing_units, floors_existing,
+  floors_allowed: { low, high, certain, case_by_case, why },
+  street:   { width_m | null, display, source, certainty },
+  category: { name, ceiling, source },
+  value:    { sellable_gross_lo, sellable_gross_hi, bound_by, tier },
+  gates:    [ { rule, verdict: pass|fail|unknown|warn, evidence } ],
+  fields:   { &lt;name&gt;: { value, unit, source, doc, page, fetched_at, certainty } },
+  flags:    [ ... ],
+  why_selected: "..."      // מתמלא אחרי המיון, לא לפניו
+}</pre>
+</section>
+
+<section>
+  <h2>שלושה זרמים</h2>
+  <p class="note" style="margin-bottom:1.1rem">שונו לעומת הגרסה הראשונה: <strong>אף זרם אינו בונה מאפס.</strong> א׳ מגשר, ב׳ מזין מנוע קיים, ג׳ מרחיב אפליקציה קיימת.</p>
+  <div class="streams">
+    <div class="stream sA">
+      <div class="sHead"><span class="chip">א</span><h3>הגשר</h3></div>
+      <ul>
+        <li>‏<span class="m">layer_a</span> → מבנה ה-<span class="m">fields</span>/<span class="m">evidence</span> של ה-POC</li>
+        <li>שרשרת הזכויות 1–9 כשערים ב-<span class="m">rules.py</span>, עם מקור ועמוד לכל כלל</li>
+        <li>פוליגון → מועמדים מתוך ה-700 שכבר מחושבים</li>
+        <li>אימות ארכיון על עשרת המובילים — ״תפוס״ ו״חוזק״</li>
+      </ul>
+      <p class="owner">בעלים: ______ · מכיר את שני הצדדים</p>
+    </div>
+    <div class="stream sB">
+      <div class="sHead"><span class="chip">ב</span><h3>הנחות ושטח מכירה</h3></div>
+      <ul>
+        <li><strong>מקור מחירי עסקאות עם כיסוי עירוני</strong> — לא מספר אחד לעיר</li>
+        <li>עלויות בנייה, יועצים, מימון, היטלים — מקור ותאריך לכל אחד</li>
+        <li><strong>מודל התמורה לדיירים</strong> → <span class="m">sale_area</span></li>
+        <li>שטח הדירות הקיימות: ממוצע נגזר, ומקור סמכותי למסירה</li>
+      </ul>
+      <p class="owner">בעלים: ______ · הזרם הכבד ביותר</p>
+    </div>
+    <div class="stream sC">
+      <div class="sHead"><span class="chip">ג</span><h3>הרחבת האפליקציה</h3></div>
+      <ul>
+        <li>ממשק <strong>סידור העדפות</strong> — המנוע קיים, ה-UI לא</li>
+        <li>מסך תוצאות עם <strong>נימוק בחירה</strong> לכל שורה</li>
+        <li>יתרה ״נמסרו 2 מתוך 3״ ומסך השלמה</li>
+        <li>תצוגת תיק: שרשרת הזכויות, מקור וודאות לכל שדה, פערים</li>
+      </ul>
+      <p class="owner">בעלים: ______ · הקטן מבין השלושה</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>ארבעה ימים</h2>
+  <div class="tw"><table>
+    <thead><tr><th>יום</th><th>מה חייב להסתיים</th><th>סימן שהיום הצליח</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="d">ראשון<br>היום</td>
+        <td>
+          <div><span class="tagA">א</span>למפות את שדות <span class="m">layer_a</span> למבנה ה-<span class="m">evidence</span> של ה-POC</div>
+          <div><span class="tagB">ב</span><strong>מקור מחירי עסקאות בכיסוי עירוני</strong> — נסגר היום, לא בשלישי</div>
+          <div><span class="tagC">ג</span>להריץ את ה-POC מקומית ולמפות מה קיים מול מסכי ה-PRD</div>
+        </td>
+        <td>החוזה קפוא, קובץ דוגמה בידי שלושתכם, וה-POC רץ אצל כולם</td>
+      </tr>
+      <tr>
+        <td class="d">שני</td>
+        <td>
+          <div><span class="tagA">א</span>שדות ודאות + אימות ארכיון על הרשימה הקצרה</div>
+          <div><span class="tagB">ב</span>ספריית הנחות + מודל תמורה → <span class="m">sale_area</span></div>
+          <div><span class="tagC">ג</span>סידור העדפות + מסך תוצאות עם נימוק</div>
+        </td>
+        <td>כל זרם מייצר פלט אמיתי מול קובץ הדוגמה</td>
+      </tr>
+      <tr>
+        <td class="d">שלישי</td>
+        <td><strong>אינטגרציה.</strong> להריץ מקצה לקצה על פוליגון אמיתי ולתקן את מה שהפלט האמיתי מגלה — לא את מה שציפינו שיגלה</td>
+        <td>פוליגון אחד → שלושה תיקים, גם אם מכוערים</td>
+      </tr>
+      <tr>
+        <td class="d">רביעי</td>
+        <td>ליטוש, טקסטים, סייגים בשפת נדל״ן ולא בשפת קוד. הדגמה.</td>
+        <td>אפשר להושיב יזם מול המסך</td>
+      </tr>
+    </tbody>
+  </table></div>
+  <p class="note" style="margin-top:1rem">במקביל ולא חוסם: <strong>15 המדידות הידניות ב-GovMap.</strong> הן מכיילות את <span class="m">TOLERANCE_M</span> ומעבירות חלק מ-275 החלקות מ״טווח״ ל״מספר ודאי״. שיפור אמיתי — אבל 369 חלקות כבר היום אינן תלויות בו.</p>
+</section>
+
+<section>
+  <h2>ללא צמצום — ומה זה מחייב</h2>
+  <p>נבחן צמצום לשכונה אחת, או לחלופין צמצום כיסוי ההנחות לאזור אחד. <strong>שניהם נדחו.</strong> הסריקה תרוץ על כל העיר וההנחות יכסו את כל העיר.</p>
+  <p>הבדיקה עצמה הראתה שהצמצום הגאוגרפי ממילא חוסך מעט: <strong>זרם א׳ וזרם ג׳ חוסכים אפס</strong> — 700 המועמדים כבר מחושבים לכל העיר, ושכונה היא פוליגון קטן יותר באותו קוד. החיסכון היחיד היה בזרם ב׳, בכיול מחירים לאזור אחד במקום כמה.</p>
+  <p class="note"><strong>ומכיוון שגם זה נדחה, נגזרת אחת מתחייבת:</strong> מקור המחירים חייב להיות כזה שיש לו כיסוי עירוני מובנה, ולא כיול ידני לאזור. כלומר <strong>נתוני עסקאות לפי כתובת</strong> ולא מספר אחד לעיר. זה יותר עבודה ביום ראשון — וזו הדרך היחידה לקיים את הדרישה בלי להמציא מחיר לאזור שלא נבדק.</p>
+  <div class="tw" style="margin-top:1.1rem"><table>
+    <thead><tr><th>אזור רישום</th><th>שכבה 0</th><th>סה״כ</th></tr></thead>
+    <tbody>
+      <tr><td>ברנר</td><td class="m">51</td><td class="m">155</td></tr>
+      <tr><td>שז״ר</td><td class="m">62</td><td class="m">145</td></tr>
+      <tr><td>ויצמן</td><td class="m">54</td><td class="m">116</td></tr>
+      <tr><td>אלון</td><td class="m">39</td><td class="m">85</td></tr>
+      <tr><td>הנדיב</td><td class="m">37</td><td class="m">79</td></tr>
+      <tr><td>לב טוב</td><td class="m">34</td><td class="m">60</td></tr>
+      <tr><td>יוחנני · בן צבי · אחרים</td><td class="m">34</td><td class="m">57</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note" style="margin-top:.8rem">הפיזור נשמר כאן לא כהמלצה אלא כמידע תפעולי: <strong>שש שכונות מחזיקות ≥20 מועמדים בשכבה 0</strong>, ולכן פוליגון סביר כמעט בכל מקום במרכז העיר יחזיר מלאי מספיק לחבילה של שלוש.</p>
+</section>
+
+<section>
+  <h2>שטח הדירות הקיימות — הפער שלא היה במפה</h2>
+  <p class="stand" style="font-size:1rem;margin-bottom:1.1rem">מנוע התרחיש הכלכלי דורש <span class="m">sale_area</span> — השטח שנשאר למכירה. והוא שווה לסך הבנוי <strong>פחות התמורה לדיירים הקיימים</strong>. כדי לחשב תמורה צריך לדעת מה גודל הדירות היום.</p>
+
+  <p><strong>המדיניות שותקת בנושא לגמרי.</strong> חיפוש במסמך מדיניות שקד מחזיר אזכור אחד בלבד, ל״תמורות ציבוריות״. התמורה לדיירים אינה עניין תכנוני אלא מסחרי — ולכן אין נוסחה רשמית לשאוב, וזה נתון שאנחנו חייבים להביא בעצמנו.</p>
+
+  <h3 style="font-family:var(--display);font-size:1.1rem;margin:1.3rem 0 .5rem">שלושה מקורות, ואף אחד מהם אינו חינמי ומדויק גם יחד</h3>
+  <div class="tw"><table>
+    <thead><tr><th>מקור</th><th>מה נותן</th><th>המגבלה</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>ממוצע נגזר</strong><br><span class="ref">חינם · כל העיר</span></td>
+        <td>שטח קיים ÷ מספר דירות. הר מירון 1: 2,133 ÷ 32 = <span class="m">67 מ״ר</span></td>
+        <td>ממוצע ולא התפלגות; וזה <strong>שטח נספר</strong> הכולל שטחי שירות, כך שהדירה בפועל קטנה יותר. נשען על <span class="m">k=0.669</span> שכויל על נקודה אחת</td>
+      </tr>
+      <tr>
+        <td><strong>גרמושקה / היתר</strong><br><span class="ref">חינם · ארכיון</span></td>
+        <td>שטח לכל דירה, מהתשריט עצמו</td>
+        <td>הארכיון מחזיר CAPTCHA; ומתוך 12 מסמכים שנפתחו <strong>נמצאה תכנית מלאה אחת</strong>. לא ניתן לאוטומציה בקנה מידה היום</td>
+      </tr>
+      <tr class="win">
+        <td><strong>תשריט בית משותף</strong><br><span class="ref">בתשלום · רשם המקרקעין</span></td>
+        <td>שטח רשום לכל דירה — הנתון הסמכותי</td>
+        <td>עולה כסף. <strong>אבל השאלה השתנתה:</strong> נדחה כשמשמעותו הייתה לשלם על 700 חלקות. עבור <strong>שלושה תיקים שנמסרים</strong> זו עלות שולית של מכירה, לא עלות סריקה</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="contract" style="margin-top:1.3rem">
+    <h2>ההצעה: ממוצע נגזר לסינון, מקור סמכותי למסירה</h2>
+    <p>הממוצע הנגזר מספיק כדי <strong>לדרג</strong> 700 מועמדים ולבחור שלושה — טעות של 10% בגודל דירה לא מזיזה סדר. הוא אינו מספיק כדי <strong>למסור</strong> תיק בתשלום.</p>
+    <p style="margin:0">זו בדיוק התבנית שכבר הוכיחה את עצמה בארכיון: <strong>זול על 700, יקר על שלושה.</strong> ו-<span class="ref">DOS-02</span> כבר מחייב אותה — נתון קריטי חסר חוסם ספירה כתוצאה מוכנה.</p>
+  </div>
+  <p class="note" style="margin-top:1rem"><strong>החלטה שנדרשת ממך:</strong> האם מותר להוציא כסף על תשריט בית משותף לשלושת התיקים הנמסרים. אם לא — התיק יימסר עם ממוצע נגזר <em>המסומן כאומדן</em>, וסעיף התמורה בתרחיש יישא סטייה שיש להציג במפורש.</p>
+</section>
+
+<section>
+  <h2>מה מפיל את התאריך</h2>
+  <div class="risk"><h3>החוזה לא נקפא היום</h3><p>שלושה אנשים בונים שלושה דברים שלא מתחברים, והאינטגרציה של יום שלישי הופכת ליומיים. <strong>זה הסיכון הגדול ביותר, והוא היחיד שנפתר בשעה אחת.</strong></p></div>
+  <div class="risk"><h3>מחירי מכירה ועלויות בנייה מתגלים כבעיה ביום שלישי</h3><p>בלי מקור למחיר אין תרחיש כלכלי, ובלי תרחיש אין תיק שעומד בדרישת ה-PRD. זרם ב׳ חייב לסגור את המקורות <strong>היום</strong>. אם אין מקור חינמי — לקבוע הנחות מתועדות ולהציג אותן כהנחות, לא לדחות.</p></div>
+  <div class="risk"><h3>שטח הדירות הקיימות מתגלה כחוסם ביום שלישי</h3><p>בלי <span class="m">sale_area</span> אין תרחיש, ובלי תרחיש התיק אינו נספר כמוכן לפי <span class="ref">DOS-02</span>. <strong>להחליט היום</strong> אם מוציאים כסף על תשריט בית משותף לשלושת הנמסרים, או מוסרים ממוצע נגזר מסומן כאומדן.</p></div>
+  <div class="risk"><h3>הארכיון חוסם את שער ה״תפוס״</h3><p>הארכיון מחזיר CAPTCHA וסירובים, ויש לנו נתונים ל-16 חלקות בלבד. <strong>נפילה מתוכננת:</strong> אם האימות לא עובד — לסמן "היסטוריית היתרים לא נבדקה" בתיק ולא להעמיד פנים שנבדקה. תיק כן, הבטחה לא.</p></div>
+  <div class="risk"><h3>המשתמש מצייר פוליגון מחוץ לאזור המכויל</h3><p>הוא מקבל אפס תוצאות וההדגמה נראית שבורה, למרות שהמערכת התנהגה נכון. <strong>שכבת כיסוי על המפה היא התיקון</strong>, והיא חצי שעה בזרם ג׳ — לא משהו שמגלים ביום רביעי.</p></div>
+  <div class="risk"><h3>זחילת היקף לשריון ולסליקה</h3><p>שניהם מפתים כי הם "המודל העסקי". שניהם לא בודקים את ההנחה המסוכנת. אם מישהו נוגע בהם לפני רביעי — התאריך נעלם.</p></div>
+</section>
+
+<p class="foot">
+  <strong>שתי החלטות שיידרשו לפני מכירה ואינן חוסמות את הבטא:</strong> מחיר החבילה ומשך השריון (‏PRD §15.3), ומדיניות כשאין מלאי להשלים שלוש. אפשר להריץ בטא בלעדיהן; אי אפשר למכור.
+  <br><br>
+  כל מספר שהמערכת מפיקה הוא <strong>תקרה נתונה לבחינת הוועדה, לא זכות</strong> — הערה 1 לטבלת התכנית האסטרטגית. זה חייב להופיע בכל תיק, בכל גרסה, כולל הבטא.
+</p>
+</div>

@@ -1,0 +1,227 @@
+<title>מדידת חזיתות · הרצליה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#F7F5F0; --card:#FFFDF9; --ink:#1C1A17; --soft:#6B655C; --faint:#9A9388;
+  --blue:#1D4E89; --blue-soft:#E4ECF5; --flag:#A8321E; --flag-soft:#F6E6E2;
+  --ok:#2E6B4F; --ok-soft:#E2EFE8; --warn:#8A6100; --warn-soft:#F6EEDC;
+  --rule:#DCD6CA; --rule-2:#EAE5DB;
+  --display:"Frank Ruhl Libre",Georgia,serif;
+  --body:"Assistant","Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#16150F; --card:#1E1D16; --ink:#EFEAE0; --soft:#A7A093; --faint:#77716A;
+  --blue:#7FAEE0; --blue-soft:#1B2A3C; --flag:#E28471; --flag-soft:#33201C;
+  --ok:#7BC69F; --ok-soft:#17291F; --warn:#D8AE5A; --warn-soft:#2A2314;
+  --rule:#33312A; --rule-2:#26251E;
+}}
+:root[data-theme="dark"]{
+  --paper:#16150F; --card:#1E1D16; --ink:#EFEAE0; --soft:#A7A093; --faint:#77716A;
+  --blue:#7FAEE0; --blue-soft:#1B2A3C; --flag:#E28471; --flag-soft:#33201C;
+  --ok:#7BC69F; --ok-soft:#17291F; --warn:#D8AE5A; --warn-soft:#2A2314;
+  --rule:#33312A; --rule-2:#26251E;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.65;margin:0}
+.wrap{max-width:64rem;margin:0 auto;padding:2.2rem 1.2rem 4rem}
+[dir=rtl]{direction:rtl}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.7rem,4vw,2.5rem);line-height:1.15;margin:.3rem 0 .5rem;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:1.3rem;margin:0 0 .7rem;text-wrap:balance}
+h3{font-family:var(--body);font-weight:700;font-size:1rem;margin:0 0 .35rem}
+p{margin:0 0 .8rem}
+.eyebrow{font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:600;font-family:var(--mono)}
+.stand{font-size:1.08rem;color:var(--soft);max-width:46rem;margin-bottom:0}
+.rule{height:1px;background:var(--rule);margin:2.2rem 0}
+section{margin:0 0 2.2rem}
+.steps{list-style:none;counter-reset:s;padding:0;margin:0;display:flex;flex-direction:column;gap:.75rem}
+.steps li{counter-increment:s;display:grid;grid-template-columns:2rem 1fr;gap:.8rem;align-items:start}
+.steps li::before{content:counter(s);font-family:var(--mono);font-weight:600;font-size:.85rem;color:var(--blue);
+  background:var(--blue-soft);border-radius:50%;width:1.85rem;height:1.85rem;display:grid;place-items:center}
+.traps{display:grid;gap:.8rem;grid-template-columns:1fr}
+@media(min-width:50rem){.traps{grid-template-columns:repeat(3,1fr)}}
+.trap{background:var(--flag-soft);border-inline-start:3px solid var(--flag);border-radius:0 .4rem .4rem 0;padding:.85rem 1rem}
+.trap h3{color:var(--flag)}
+.trap p{margin:0;font-size:.93rem;color:var(--soft)}
+.status{font-family:var(--mono);font-size:.78rem;color:var(--faint);margin-bottom:1rem}
+.row{background:var(--card);border:1px solid var(--rule);border-radius:.6rem;padding:1rem 1.1rem;margin-bottom:.85rem}
+.rowhead{display:flex;flex-wrap:wrap;gap:.6rem 1rem;align-items:baseline;margin-bottom:.8rem}
+.addr{font-family:var(--display);font-weight:700;font-size:1.15rem}
+.pk{font-family:var(--mono);font-size:.82rem;color:var(--faint)}
+.badge{font-size:.72rem;font-weight:700;padding:.15rem .55rem;border-radius:999px;font-family:var(--body)}
+.b-crit{background:var(--flag-soft);color:var(--flag)}
+.b-th{background:var(--warn-soft);color:var(--warn)}
+.b-ctl{background:var(--blue-soft);color:var(--blue)}
+.b-blk{background:var(--ok-soft);color:var(--ok)}
+.ours{margin-inline-start:auto;font-family:var(--mono);font-size:.9rem;color:var(--soft)}
+.ours b{color:var(--ink);font-size:1.05rem}
+.inputs{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem}
+@media(min-width:44rem){.inputs{grid-template-columns:repeat(3,7rem) 1fr auto}}
+label{display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--soft)}
+input{font-family:var(--mono);font-size:.95rem;padding:.45rem .55rem;border:1px solid var(--rule);
+  border-radius:.35rem;background:var(--paper);color:var(--ink);width:100%;min-width:0}
+input:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.verdict{align-self:end;font-family:var(--mono);font-size:.85rem;padding:.45rem .6rem;border-radius:.35rem;
+  white-space:nowrap;background:var(--rule-2);color:var(--faint)}
+.v-ok{background:var(--ok-soft);color:var(--ok)}
+.v-warn{background:var(--warn-soft);color:var(--warn)}
+.v-bad{background:var(--flag-soft);color:var(--flag)}
+a.map{font-family:var(--mono);font-size:.82rem;color:var(--blue);text-decoration:none;border-bottom:1px solid var(--blue-soft)}
+a.map:hover{border-bottom-color:var(--blue)}
+.note{color:var(--soft);font-size:.93rem;border-inline-start:2px solid var(--rule);padding-inline-start:.9rem;margin:0}
+.foot{font-size:.83rem;color:var(--faint);border-top:1px solid var(--rule);padding-top:1.1rem;margin-top:2.5rem}
+code{font-family:var(--mono);font-size:.88em;background:var(--rule-2);padding:.1rem .3rem;border-radius:.2rem}
+.who{display:flex;gap:.6rem;align-items:end;flex-wrap:wrap;margin-bottom:1.2rem}
+.who label{max-width:12rem}
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+<header>
+  <div class="eyebrow">חלופת שקד · אימות שכבה א׳</div>
+  <h1>מדידת רוחב זכות דרך</h1>
+  <p class="stand">15 חלקות בהרצליה. המטרה אחת: לבדוק אם המדידה האוטומטית שלנו נכונה, ובכמה היא טועה. כל שורה נשמרת מיד — אפשר לעצור באמצע ולחזור, ואפשר ששניים ימלאו במקביל.</p>
+</header>
+
+<div class="rule"></div>
+
+<section>
+  <h2>מה מודדים</h2>
+  <p>את המרחק <strong>מגבול החלקה עד גבול החלקה שממול</strong>, לרוחב הרחוב. זו "זכות הדרך" — הרצועה שהתכנית ייעדה לדרך, כולל המדרכות. <strong>לא</strong> רוחב האספלט.</p>
+  <p class="note">זה מה שקובע: המדיניות של הרצליה נותנת קומות לפי רוחב הרחוב. עד 8 מ׳ — אין תוספת בכלל. 9–10 מ׳ — שבע קומות. 10–12 — שמונה. 12–15 — תשע. כלומר <strong>מטר אחד יכול להיות ההבדל בין פרויקט לכלום</strong>, ולכן צריך לדעת כמה הכלי שלנו מדויק.</p>
+</section>
+
+<section>
+  <h2>איך</h2>
+  <ol class="steps">
+    <li><div><h3>פתח את הקישור של השורה</h3><p style="margin:0;color:var(--soft);font-size:.93rem">הוא נוחת על החלקה. אם הקישור לא עובד, העתק את הקואורדינטות והדבק בשורת החיפוש של GovMap.</p></div></li>
+    <li><div><h3>ודא שרואים קווי חלקות</h3><p style="margin:0;color:var(--soft);font-size:.93rem">צריך לראות את גבולות החלקה מצוירים. אם לא — הגדל זום, או הדלק את שכבת החלקות.</p></div></li>
+    <li><div><h3>בחר כלי מדידת מרחק</h3><p style="margin:0;color:var(--soft);font-size:.93rem">בסרגל הכלים של GovMap, "מדידה" ← מרחק.</p></div></li>
+    <li><div><h3>מדוד בניצב לרחוב</h3><p style="margin:0;color:var(--soft);font-size:.93rem">מקו הגבול של החלקה, ישר מעבר לרחוב, עד קו הגבול של החלקה שממול.</p></div></li>
+    <li><div><h3>שלוש נקודות לאורך החזית</h3><p style="margin:0;color:var(--soft);font-size:.93rem">תחילת החזית, אמצע, סוף. אם שלושתן דומות — מצוין. אם הן שונות מאוד, זה עצמו ממצא, רשום בהערה.</p></div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>שלוש מלכודות</h2>
+  <div class="traps">
+    <div class="trap"><h3>לא האספלט</h3><p>הכביש הסלול צר מזכות הדרך, לפעמים בהרבה. מודדים גבול חלקה לגבול חלקה — המדרכות בפנים.</p></div>
+    <div class="trap"><h3>בניצב, לא באלכסון</h3><p>מדידה נטויה תיתן מספר גדול מדי. אם החזית מתעקלת, מדוד בניצב לקטע המקומי.</p></div>
+    <div class="trap"><h3>לחצות רצועות סרק</h3><p>לפעמים יש חלקה דקה בין המגרש לכביש — מדרכה שנרשמה בנפרד. ממשיכים עד החלקה הבנויה שממול, לא עוצרים ברצועה.</p></div>
+  </div>
+  <p class="note" style="margin-top:1rem">אם למגרש יש יותר מחזית אחת — מדוד את כולן, ורשום את השנייה בהערה. אצלנו החזית <strong>הצרה</strong> קובעת את מספר הקומות, אז דווקא הצרה חשובה.</p>
+</section>
+
+<div class="rule"></div>
+
+<section>
+  <div class="who">
+    <label>מי מודד<input id="who" placeholder="שם או ראשי תיבות" autocomplete="off"></label>
+  </div>
+  <h2>הרשימה</h2>
+  <p class="status" id="status">טוען…</p>
+  <div id="rows"></div>
+</section>
+
+<p class="foot">
+  <strong>למה דווקא 15 החלקות האלה.</strong> שבע מסומנות <span class="badge b-crit">קריטי</span> — הן יושבות בטווח מטר מקו ה-8–9 מ׳, שם טעות קטנה קובעת אם יש פרויקט בכלל.
+  ארבע <span class="badge b-th">סף</span> — קרובות לסף אחר, שם טעות מזיזה קומה.
+  שלוש <span class="badge b-ctl">בקרה</span> — רחוקות מכל סף, ואם דווקא שם נצא מדויקים זה מאשש את השיטה.
+  ואחת <span class="badge b-blk">חסום</span> — הצנחנים 15, שהכלי שלנו לא הצליח למדוד בכלל, ומדידה ידנית שלה משחררת תיק תקוע.
+</p>
+</div>
+
+<script>
+const P = [{"key": "6529/43", "addr": "יהודה הלוי 3", "width": 9.0, "x": 184950, "y": 675134, "role": "קריטי"}, {"key": "6538/476", "addr": "מזא\"ה 25", "width": 9.0, "x": 185931, "y": 674498, "role": "קריטי"}, {"key": "6531/160", "addr": "הגליל 9", "width": 9.0, "x": 185462, "y": 674765, "role": "קריטי"}, {"key": "6537/5", "addr": "אלוף יגאל אלון 42", "width": 10.0, "x": 186058, "y": 675064, "role": "קריטי"}, {"key": "6529/63", "addr": "אלי כהן 5", "width": 10.0, "x": 184814, "y": 675166, "role": "קריטי"}, {"key": "6530/141", "addr": "מלכי ישראל 14", "width": 10.0, "x": 185271, "y": 675353, "role": "קריטי"}, {"key": "6530/214", "addr": "הראשונים 2", "width": 10.0, "x": 185280, "y": 675048, "role": "קריטי"}, {"key": "6536/194", "addr": "פלמ\"ח 17", "width": 10.2, "x": 185534, "y": 675260, "role": "סף"}, {"key": "6536/841", "addr": "עגנון 35", "width": 11.8, "x": 186100, "y": 675606, "role": "סף"}, {"key": "6530/191", "addr": "הנביאים 11", "width": 12.1, "x": 185244, "y": 675211, "role": "סף"}, {"key": "6546/498", "addr": "בן גוריון 111", "width": 14.9, "x": 185334, "y": 673402, "role": "סף"}, {"key": "6533/283", "addr": "רופין 10", "width": 29.1, "x": 185207, "y": 674819, "role": "בקרה"}, {"key": "6536/550", "addr": "י.ל.ברוך 22", "width": 31.7, "x": 186081, "y": 675206, "role": "בקרה"}, {"key": "6538/553", "addr": "ארלוזורוב 5", "width": 33.0, "x": 185427, "y": 674209, "role": "בקרה"}, {"key": "7291/146", "addr": "הצנחנים 15", "width": null, "x": 185006, "y": 673871, "role": "חסום"}];
+const $ = s => document.querySelector(s);
+let db = null, saveTimer = {};
+
+function median(a){ const s=a.slice().sort((x,y)=>x-y); const n=s.length;
+  return n===0?null:(n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2); }
+
+function verdict(p, vals){
+  const m = median(vals.filter(v=>Number.isFinite(v)&&v>0));
+  if(m===null) return ['','—'];
+  if(p.width===null) return ['v-ok', m.toFixed(1)+' מ׳ · נמדד לראשונה'];
+  const d = m - p.width;
+  const a = Math.abs(d);
+  const cls = a<=0.5?'v-ok' : a<=1.5?'v-warn' : 'v-bad';
+  return [cls, (d>=0?'+':'')+d.toFixed(1)+' מ׳ מול הכלי'];
+}
+
+function render(){
+  $('#rows').innerHTML = '';
+  P.forEach(p=>{
+    const id = p.key.replace('/','-');
+    const badge = {'קריטי':'b-crit','סף':'b-th','בקרה':'b-ctl','חסום':'b-blk'}[p.role]||'b-ctl';
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = `
+      <div class="rowhead">
+        <span class="addr">${p.addr}</span>
+        <span class="pk">${p.key}</span>
+        <span class="badge ${badge}">${p.role}</span>
+        <a class="map" href="https://www.govmap.gov.il/?c=${p.x},${p.y}&z=10" target="_blank" rel="noopener">פתח ב-GovMap ↗</a>
+        <span class="ours">הכלי: <b>${p.width===null?'לא נמדד':p.width.toFixed(1)+' מ׳'}</b></span>
+      </div>
+      <div class="inputs">
+        <label>תחילת חזית<input type="number" step="0.1" min="0" data-k="${id}" data-f="a" inputmode="decimal"></label>
+        <label>אמצע<input type="number" step="0.1" min="0" data-k="${id}" data-f="b" inputmode="decimal"></label>
+        <label>סוף חזית<input type="number" step="0.1" min="0" data-k="${id}" data-f="c" inputmode="decimal"></label>
+        <label>הערה<input type="text" data-k="${id}" data-f="note" placeholder="חזית שנייה, קושי, כל דבר חריג" autocomplete="off"></label>
+        <span class="verdict" id="v-${id}">—</span>
+      </div>`;
+    $('#rows').appendChild(el);
+  });
+  document.querySelectorAll('input[data-k]').forEach(i=>{
+    i.addEventListener('input', ()=>{ recompute(i.dataset.k); queueSave(i.dataset.k); });
+  });
+}
+
+function recompute(id){
+  const p = P.find(x=>x.key.replace('/','-')===id);
+  const g = f => parseFloat(document.querySelector(`input[data-k="${id}"][data-f="${f}"]`).value);
+  const [cls, txt] = verdict(p, [g('a'),g('b'),g('c')]);
+  const v = document.getElementById('v-'+id);
+  v.className = 'verdict ' + cls; v.textContent = txt;
+}
+
+function collect(id){
+  const g = f => document.querySelector(`input[data-k="${id}"][data-f="${f}"]`).value;
+  return { a:g('a'), b:g('b'), c:g('c'), note:g('note'),
+           who:$('#who').value||'', at:new Date().toISOString() };
+}
+
+function queueSave(id){
+  if(!db) return;
+  clearTimeout(saveTimer[id]);
+  saveTimer[id] = setTimeout(async ()=>{
+    try{ await db.doc('measurements/'+id).set(collect(id));
+         $('#status').textContent = 'נשמר · ' + new Date().toLocaleTimeString('he-IL');
+    }catch(e){ $('#status').textContent = 'לא נשמר: ' + (e.code||'שגיאה') + ' — המספרים על המסך נשארים'; }
+  }, 700);
+}
+
+function fill(id, d){
+  ['a','b','c','note'].forEach(f=>{
+    const el = document.querySelector(`input[data-k="${id}"][data-f="${f}"]`);
+    if(el && document.activeElement!==el && d[f]!==undefined) el.value = d[f];
+  });
+  if(d.who && !$('#who').value) $('#who').value = d.who;
+  recompute(id);
+}
+
+render();
+$('#status').textContent = 'עובד מקומית — עדיין לא מחובר לשמירה';
+
+claude.use('db').then(x=>{
+  db = x;
+  if(!db){ $('#status').textContent = 'שמירה לא זמינה בתצוגה הזו — המדידות לא יישמרו, העתיקו אותן ידנית'; return; }
+  $('#status').textContent = 'מחובר · כל שינוי נשמר אוטומטית';
+  db.collection('measurements').onSnapshot(
+    s => s.docs.forEach(d => fill(d.id, d.data()||{})),
+    e => { $('#status').textContent = 'הסנכרון נפסק (' + e.code + ') — מה שהוקלד כבר נשמר'; }
+  );
+});
+</script>

@@ -1,0 +1,285 @@
+<title>חלופת שקד · מצב הארכיטקטורה</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@300;400;600;700&display=swap">
+<style>
+:root{
+  --ink:#1c1b16; --ink-2:#56534a; --ink-3:#8a867a;
+  --ground:#fbfaf6; --surface:#ffffff; --sunk:#f4f2e9;
+  --line:#e0dccd; --line-2:#cfc9b4;
+  --accent:#9a8a12; --accent-soft:#e9e5bf; --map-yellow:#e6e600;
+  --flag:#a8443c; --flag-soft:#f0dcd9;
+  --ok:#4f6b45; --ok-soft:#dde6d7;
+  --display:"Frank Ruhl Libre",Georgia,"Times New Roman",serif;
+  --body:"Assistant","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#eeebe0; --ink-2:#b3af9f; --ink-3:#827e70;
+  --ground:#14140f; --surface:#1c1c15; --sunk:#23231a;
+  --line:#34332a; --line-2:#45443a;
+  --accent:#cdbb46; --accent-soft:#3a3720; --map-yellow:#e6e600;
+  --flag:#d0736a; --flag-soft:#3a2321;
+  --ok:#8fae83; --ok-soft:#23301f;
+}}
+:root[data-theme="dark"]{
+  --ink:#eeebe0; --ink-2:#b3af9f; --ink-3:#827e70;
+  --ground:#14140f; --surface:#1c1c15; --sunk:#23231a;
+  --line:#34332a; --line-2:#45443a;
+  --accent:#cdbb46; --accent-soft:#3a3720; --map-yellow:#e6e600;
+  --flag:#d0736a; --flag-soft:#3a2321;
+  --ok:#8fae83; --ok-soft:#23301f;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);direction:rtl;
+  font-family:var(--body);font-weight:400;font-size:16px;line-height:1.6;margin:0;padding:0}
+.deck{max-width:1080px;margin:0 auto;padding:2.5rem 1.5rem 5rem;display:flex;flex-direction:column;gap:2.25rem}
+.slide{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:2.5rem 2.25rem}
+.head{display:flex;align-items:baseline;gap:1rem;border-bottom:2px solid var(--ink);padding-bottom:1rem;margin-bottom:1.75rem;flex-wrap:wrap}
+.num{font-family:var(--display);font-weight:900;font-size:2.6rem;line-height:1;color:var(--accent);
+  font-variant-numeric:tabular-nums}
+.head h2{font-family:var(--display);font-weight:700;font-size:1.9rem;line-height:1.15;margin:0;
+  text-wrap:balance;letter-spacing:-.01em}
+.eyebrow{margin-inline-start:auto;font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;white-space:nowrap}
+.lede{font-size:1.06rem;color:var(--ink-2);max-width:66ch;margin:0 0 1.75rem}
+h3{font-family:var(--display);font-weight:700;font-size:1.12rem;margin:2rem 0 .85rem;color:var(--ink)}
+h3:first-of-type{margin-top:0}
+
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;
+  border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:.5rem}
+.tally div{padding:.95rem 1rem;border-inline-start:1px solid var(--line);background:var(--sunk)}
+.tally div:first-child{border-inline-start:0}
+.tally b{display:block;font-family:var(--display);font-weight:700;font-size:1.6rem;line-height:1.1;
+  font-variant-numeric:tabular-nums;color:var(--ink)}
+.tally span{display:block;font-size:.76rem;color:var(--ink-2);margin-top:.2rem}
+
+ol.ins{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:1.05rem;counter-reset:i}
+ol.ins li{counter-increment:i;padding-inline-start:2.6rem;position:relative}
+ol.ins li::before{content:counter(i);position:absolute;inset-inline-start:0;top:.05rem;
+  width:1.75rem;height:1.75rem;border:1px solid var(--line-2);border-radius:50%;
+  display:grid;place-items:center;font-size:.8rem;font-weight:700;color:var(--accent);
+  font-variant-numeric:tabular-nums}
+ol.ins b{font-weight:700}
+ol.ins p{margin:.2rem 0 0;color:var(--ink-2);font-size:.95rem}
+
+.layers{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.layer{display:grid;grid-template-columns:auto 1fr auto;gap:1.25rem;align-items:start;
+  padding:1.15rem 1.25rem;border-top:1px solid var(--line)}
+.layer:first-child{border-top:0}
+.layer .tag{font-family:var(--display);font-weight:700;font-size:1.05rem;color:var(--accent);white-space:nowrap}
+.layer .what b{display:block;font-weight:700;margin-bottom:.15rem}
+.layer .what span{color:var(--ink-2);font-size:.92rem}
+.layer .cost{font-size:.82rem;color:var(--ink-2);text-align:start;white-space:nowrap;
+  font-variant-numeric:tabular-nums;background:var(--sunk);padding:.3rem .6rem;border-radius:2px}
+.layer.free .cost{background:var(--ok-soft);color:var(--ok);font-weight:600}
+.layer.gated .cost{background:var(--flag-soft);color:var(--flag);font-weight:600}
+
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1.1rem;margin-top:.4rem}
+.why div{border-top:2px solid var(--accent);padding-top:.7rem}
+.why b{display:block;font-weight:700;font-size:.95rem;margin-bottom:.2rem}
+.why span{color:var(--ink-2);font-size:.9rem}
+
+.rule{border:1px solid var(--flag);background:var(--flag-soft);border-radius:3px;
+  padding:1.05rem 1.2rem;margin-top:1.6rem}
+.rule b{color:var(--flag)}
+.rule p{margin:.3rem 0 0;font-size:.93rem;color:var(--ink-2)}
+:root[data-theme="dark"] .rule p,
+:root:not([data-theme="light"]) .rule p{color:var(--ink-2)}
+
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:3px}
+table{border-collapse:collapse;width:100%;min-width:860px;font-size:.88rem}
+thead th{background:var(--sunk);text-align:start;padding:.7rem .8rem;font-size:.7rem;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);font-weight:700;
+  border-bottom:1px solid var(--line-2);white-space:nowrap}
+td{padding:.68rem .8rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2)}
+tbody tr:last-child td{border-bottom:0}
+td.f{color:var(--ink);font-weight:600}
+td.src{font-size:.84rem}
+code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.85em;
+  background:var(--sunk);padding:.08em .35em;border-radius:2px;color:var(--ink)}
+.chip{display:inline-block;font-size:.74rem;font-weight:700;padding:.16rem .5rem;
+  border-radius:2px;white-space:nowrap}
+.c-ok{background:var(--ok-soft);color:var(--ok)}
+.c-part{background:var(--accent-soft);color:var(--accent)}
+.c-gap{background:var(--flag-soft);color:var(--flag)}
+.need{font-size:.78rem;font-weight:600;white-space:nowrap;color:var(--ink-2)}
+.foot{margin-top:1.4rem;font-size:.86rem;color:var(--ink-2);border-top:1px solid var(--line);padding-top:1rem}
+.foot b{color:var(--ink)}
+pre.algo{background:var(--sunk);border:1px solid var(--line);border-radius:3px;
+  padding:1.1rem 1.2rem;overflow-x:auto;direction:ltr;text-align:left;
+  font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.79rem;line-height:1.65;
+  color:var(--ink);margin:0}
+pre.algo .c{color:var(--ink-3)}
+pre.algo .k{color:var(--accent);font-weight:600}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem;margin-top:1.2rem}
+.steps div{border-inline-start:2px solid var(--accent);padding-inline-start:.8rem}
+.steps b{display:block;font-size:.9rem;font-weight:700}
+.steps span{font-size:.86rem;color:var(--ink-2)}
+@media print{
+  @page{size:A4 landscape;margin:12mm}
+  body{background:#fff;font-size:11.5px}
+  .deck{max-width:none;padding:0;gap:0}
+  .slide{border:0;padding:0 0 6mm;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .tw{overflow:visible;border:1px solid #cfc9b4}
+  table{min-width:0}
+  pre.algo{white-space:pre-wrap}
+  ol.ins,.layers,.tally,.steps{break-inside:avoid}
+}
+@media (max-width:640px){
+  .slide{padding:1.6rem 1.15rem}
+  .head h2{font-size:1.45rem}
+  .num{font-size:2rem}
+  .layer{grid-template-columns:1fr;gap:.5rem}
+}
+</style>
+
+<div class="deck">
+
+<section class="slide">
+  <div class="head">
+    <span class="num">1</span>
+    <h2>מה נעשה היום, ומה למדנו</h2>
+    <span class="eyebrow">חלופת שקד · הרצליה</span>
+  </div>
+  <p class="lede">היום עברנו מ"האם אפשר" ל"כמה יש". הצינור אומת מקצה לקצה, ואז הורץ על כל העיר — והמעבר מקנה מידה קטן לגדול הוא שחשף את הממצאים החשובים ביותר, לטובה ולרעה.</p>
+
+  <div class="tally">
+    <div><b>19,066</b><span>חלקות נסרקו</span></div>
+    <div><b>700</b><span>עברו סינון כשירות</span></div>
+    <div><b>674</b><span>תיקי בניין בסריקה</span></div>
+    <div><b>12</b><span>מסמכי ארכיון נפתחו</span></div>
+    <div><b>0</b><span>עלות כספית</span></div>
+  </div>
+
+  <h3>חמש התובנות</h3>
+  <ol class="ins">
+    <li><b>השטח הקיים אינו תנאי סף — הוא תמחור.</b>
+      <p>סעיף 70א מונה שלושה תנאים, ושטח בנוי אינו אחד מהם. הוא נכנס רק ב"חישוב הזכויות". רדפנו אחריו חצי יום כאילו הוא חוסם את המשפך — הוא נוגס רק בדוח, על שלושה בניינים לעסקה.</p></li>
+    <li><b>עיריית הרצליה כבר מפרסמת את מה שחיפשנו.</b>
+      <p>פורטל ArcGIS ציבורי דרך API תקני ומתועד: 14,072 מבנים עם <b>מספר קומות</b>, ו-14,624 נקודות כתובת עם <b>מספר דירות</b> ב-92% כיסוי. שני השדות שחסרו לנו. חוקי לחלוטין, בניגוד ל-GIS שנפסל.</p></li>
+    <li><b>מפת המדיניות היא השער החזק והזול ביותר.</b>
+      <p>גאו-רפרנס מתוויות שמות הרחובות שבמפה עצמה, RMS 20.7 מ'. היא חותכת <b>83%</b> מהמועמדים באפס פניות, ומאומתת ממקור סטטוטורי בלתי תלוי.</p></li>
+    <li><b>הארכיון כמעט אינו מחזיק תכניות של בניין שלם מלפני 1980.</b>
+      <p>12 מסמכים נפתחו בשתי שכונות; אחד בלבד היה תכנית בניין שלם — ושל בניין פסול. זה חסם מקור, לא חסם טכני ולא משפטי.</p></li>
+    <li><b>קנה מידה הורג הנחות.</b>
+      <p>שלוש מסקנות שנמדדו על 7 מקרים התבררו כשגויות, ושני באגים התגלו רק כשהמשפך רץ על 904. גם "אין שדה דירות בפורטל" היה שגוי — הוא נמצא בסריקה חוזרת. <b>כל ממצא נבדק מול מקרה מוכר לפני שהוא נכנס.</b></p></li>
+  </ol>
+</section>
+
+<section class="slide">
+  <div class="head">
+    <span class="num">2</span>
+    <h2>הארכיטקטורה שנבחרה</h2>
+    <span class="eyebrow">שלוש שכבות · לא מפל</span>
+  </div>
+  <p class="lede">התכנון המקורי היה מפל שרץ לפי סריקה: המשתמש מבקש רדיוס, והמערכת מושכת מהארכיון דרגה אחר דרגה. ההנחה שבבסיסו נשברה — כמעט כל שערי הכשירות רצים בלי לגעת בארכיון. הצורה הנכונה היא שכבות שנבנות בקצבים שונים.</p>
+
+  <div class="layers">
+    <div class="layer free">
+      <span class="tag">שכבה א'</span>
+      <span class="what"><b>כשירות גיאומטרית · כל העיר, רענון חודשי</b>
+        <span>חלקות, מספר קומות, ייעוד, שימור, קטגוריית מפה. כאן נופלים 95% מהמועמדים.</span></span>
+      <span class="cost">0 פניות לארכיון</span>
+    </div>
+    <div class="layer">
+      <span class="tag">שכבה ב'</span>
+      <span class="what"><b>היסטוריית היתרים · לפי גוש, מטמון קבוע</b>
+        <span>רשימות גושים מראש (21 פניות). פתיחת תיק — לפי דרישה בלבד, ונשמרת לנצח.</span></span>
+      <span class="cost">1 פנייה לתיק</span>
+    </div>
+    <div class="layer gated">
+      <span class="tag">שכבה ג'</span>
+      <span class="what"><b>מסמכים · לפי לקוח, יזום אדם</b>
+        <span>מספר דירות ושטח קיים. שלושה מסמכים לדוח — לא זחילה.</span></span>
+      <span class="cost">Disallow: / — ידני</span>
+    </div>
+  </div>
+
+  <h3>למה כך</h3>
+  <div class="why">
+    <div><b>מהירות</b><span>המתנה למשתמש יורדת מ-9.3 דקות לאפס. זה שינוי ברמת מוצר, לא אופטימיזציה.</span></div>
+    <div><b>חוקיות</b><span>מארח האינדקס אינו מפרסם robots.txt; מארח המסמכים אומר <code>Disallow: /</code>. הגבול בין השכבות עובר בדיוק שם.</span></div>
+    <div><b>עלות</b><span>הקמה ~1.5 שעות ו-21 פניות. נקודת איזון מול המפל: 20 סריקות.</span></div>
+    <div><b>יכולת חדשה</b><span>דירוג עירוני והתראות שינוי — דברים שהמפל לא איפשר כלל.</span></div>
+  </div>
+
+  <div class="rule">
+    <b>תנאי אחד שאינו ניתן לוויתור: אימות חי לפני מסירה.</b>
+    <p>השכבות הן צילום מצב, והטריות היא הסיכון שלהן. תיק 475 עבר את כל השערים ונפסל בגלל היתר חיזוק מ-2024 — שהתגלה רק בפתיחה חיה. שלוש פניות על שלושת המועמדים הסופיים, בכל דוח.</p>
+  </div>
+</section>
+
+<section class="slide">
+  <div class="head">
+    <span class="num">3</span>
+    <h2>מפת הנתונים</h2>
+    <span class="eyebrow">מקור · מגבלה · צורך · אמינות</span>
+  </div>
+  <p class="lede">כל נתון שהמערכת צורכת, מאיפה הוא מגיע, מה מגביל אותו, האם הוא נדרש לתנאי הסף או רק לדוח האפס, ועד כמה אפשר לסמוך עליו היום.</p>
+
+  <div class="tw"><table>
+    <thead><tr>
+      <th>נתון</th><th>מקור</th><th>מגבלת המקור</th><th>נדרש ל־</th><th>אמינות</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="f">גבול ושטח חלקה</td><td class="src">GovMap WFS · <code>Parcels_ITM</code></td><td>מספרי חלקות משתנים עם השנים</td><td class="need">שניהם</td><td><span class="chip c-ok">מאומת</span></td></tr>
+      <tr><td class="f">מספר קומות</td><td class="src">ArcGIS עירוני · <code>buildings_reka</code></td><td>ספירה פיזית; אינה מיישמת את כלל קומת העמודים והקומה החלקית שבחוק</td><td class="need">תנאי סף</td><td><span class="chip c-ok">מאומת</span></td></tr>
+      <tr><td class="f">טביעת רגל</td><td class="src">אותה שכבה · הצלבה מול OSM</td><td>שרטוט פוטוגרמטרי, לא מדידה</td><td class="need">דוח 0</td><td><span class="chip c-ok">מאומת</span> <span style="font-size:.78rem">2% פער בין המקורות</span></td></tr>
+      <tr><td class="f">ייעוד קרקע</td><td class="src">XPlan שכבה 4</td><td>רק תכניות מהעידן המקוון</td><td class="need">תנאי סף</td><td><span class="chip c-ok">מאומת</span></td></tr>
+      <tr><td class="f">קטגוריית מדיניות</td><td class="src">הר/2323 עמ' 7 · ראסטר מגאו-רפרנס</td><td>RMS 20.7 מ' — דגימת דיסק ורוב, לא פיקסל</td><td class="need">תנאי סף</td><td><span class="chip c-ok">מאומת</span> <span style="font-size:.78rem">אישור צולב משכבת השימור</span></td></tr>
+      <tr><td class="f">שימור</td><td class="src">iplan · <code>Shimour</code> שכבה 2</td><td>רק "מבנה לשימור" פוסל; אזורי עתיקות הם סימון בלבד</td><td class="need">תנאי סף</td><td><span class="chip c-ok">מאומת</span></td></tr>
+      <tr><td class="f">שנת ההיתר</td><td class="src">ארכיון · עמוד תיק</td><td>אינה ברשימת הגוש — עולה פנייה לתיק</td><td class="need">תנאי סף</td><td><span class="chip c-ok">מאומת</span></td></tr>
+      <tr><td class="f">חיזוק בהיתר</td><td class="src">ארכיון · תיאורי הבקשות</td><td><b>רק היתר שהופק פוסל</b> — בקשה שלא הבשילה אינה פוסלת</td><td class="need">תנאי סף</td><td><span class="chip c-ok">מאומת</span></td></tr>
+      <tr><td class="f">מספר דירות</td><td class="src">ArcGIS עירוני · <code>num_aprt</code><br><span style="font-size:.8rem">גיבוי: מפרט שדה 9</span></td><td>92% כיסוי; מונה לפי כניסה ולא לפי בניין; ערך 999 הוא סנטינל</td><td class="need">שניהם</td><td><span class="chip c-ok">מאומת</span> <span style="font-size:.78rem">בר-כוכבא 105: 8=8 · הגלבוע 14: 1=1</span></td></tr>
+      <tr><td class="f">קומת עמודים</td><td class="src">ArcGIS עירוני · <code>amudim</code></td><td>ערך טקסטואלי (ק.ק. / ע.ע.), לא מתועד</td><td class="need">תנאי סף</td><td><span class="chip c-part">חלקי</span> <span style="font-size:.78rem">נדרש לכלל ספירת הקומות שבחוק</span></td></tr>
+      <tr><td class="f">שטח קיים</td><td class="src">גרמושקה אם קיימת · אחרת אומדן מדוד</td><td>תכנית בניין שלם נדירה — 1 מתוך 12 מסמכים</td><td class="need">דוח 0</td><td><span class="chip c-gap">אומדן</span> <span style="font-size:.78rem">מקדם 0.669 מנקודת כיול אחת</span></td></tr>
+      <tr><td class="f">רוחב רחוב</td><td class="src">מדידה מגרש-למגרש · זכות דרך</td><td>שתי נקודות אמת סותרות בכיוון; ריצה עירונית נכשלה ונמשכה בחזרה</td><td class="need">דוח 0</td><td><span class="chip c-gap">לא אמין בקנה מידה</span></td></tr>
+      <tr><td class="f">מעטפת ומרווחים</td><td class="src">גיאומטריה + מרווחי המדיניות</td><td>קו הבניין בא מהתב"ע המקומית שאינה זמינה; 3 מ' מול 4 מ' מזיז את התוצאה מ-24% ל-38%</td><td class="need">דוח 0</td><td><span class="chip c-gap">לא מאומת</span></td></tr>
+      <tr><td class="f">תכניות חלות</td><td class="src">XPlan שכבה 1 · קווים כחולים</td><td>רק העידן המקוון — הר/1461 אינה שם</td><td class="need">דוח 0</td><td><span class="chip c-part">חלקי</span></td></tr>
+    </tbody>
+  </table></div>
+
+
+  <h3>האלגוריתם</h3>
+  <div class="steps">
+    <div><b>בזמן שאילתה</b><span>אפס פניות חיצוניות — הכול נקרא מהשכבות המקומיות</span></div>
+    <div><b>שערי חוק בלבד</b><span>שנה וחיזוק — הם היחידים שדורשים את הארכיון</span></div>
+    <div><b>דירוג לפי שטח חוסם</b><span>ולא לפי ברוטו: החוסם משתנה בין מגרשים</span></div>
+    <div><b>סריקה חוזרת = עומק</b><span>שלושת הבאים בתור, לא אותם שלושה</span></div>
+  </div>
+  <pre class="algo"><span class="c"># --- שכבה א' · נבנית מראש, אפס פניות לארכיון ---</span>
+A = parcels
+    .has_building()                    <span class="c"># שכבת מבנים עירונית</span>
+    .floors &gt;= 2  and  status not in {הרוס, בבנייה}
+    .gross &gt;= 250                      <span class="c"># טביעת רגל × קומות</span>
+    .apartments &gt;= 4                   <span class="c"># num_aprt · 92% כיסוי</span>
+    .zoning is residential_approved     <span class="c"># XPlan שכבה 4</span>
+    .not מבנה_לשימור                    <span class="c"># Shimour שכבה 2</span>
+    .policy_map in {צהוב, צהוב_בהיר}     <span class="c"># הר/2323 · חותך 83%</span>
+<span class="c"># 19,066 → 904 → 700</span>
+
+<span class="c"># --- זמן שאילתה ---</span>
+cand = A.within(center, radius).join(B)        <span class="c"># B = היסטוריית היתרים</span>
+cand = [c <span class="k">for</span> c <span class="k">in</span> cand
+        <span class="k">if</span> c.permit_year &lt; 1980                  <span class="c"># שער חוק</span>
+        <span class="k">and not</span> c.strengthened_by_permit]        <span class="c"># היתר שהופק בלבד</span>
+
+<span class="k">for</span> c <span class="k">in</span> cand:
+    c.existing = c.gross * 0.669               <span class="c"># אומדן · כויל n=1</span>
+    c.envelope = setback_envelope(c)           <span class="c"># רגיש: 3מ' מול 4מ'</span>
+    c.value    = min(4*c.existing, c.envelope) - c.allocation
+    c.bound_by = <span class="k">'400%'</span> <span class="k">if</span> 4*c.existing &lt;= c.envelope <span class="k">else</span> <span class="k">'מעטפת'</span>
+    c.conf     = <span class="k">'היתר'</span> | <span class="k">'מובנה'</span> | <span class="k">'אומדן'</span>
+    c.pair     = adjacent_same_street(c)       <span class="c"># 20% מהצמידויות</span>
+
+rank    = sort(cand, key=(-value, conf, -pair))
+deliver = next_3_not_in(delivery_ledger[user])
+
+<span class="c"># --- שכבה ג' · על השלושה בלבד, יזום אדם ---</span>
+<span class="k">for</span> c <span class="k">in</span> deliver:
+    revalidate_live(c)                         <span class="c"># חובה — לקח תיק 475</span>
+    c.existing = whole_building_plan(c) <span class="k">or</span> c.existing</pre>
+
+  <p class="foot"><b>הקריאה בשורה אחת:</b> כל מה שנדרש כדי לקבוע <b>אם</b> מגרש כשיר — מאומת. כל מה שנדרש כדי לקבוע <b>כמה הוא שווה</b> — אומדן או פחות. זו אינה תקלה בשיטה אלא תכונה של הרישום: הארכיון מתעד היטב מתי נבנה בניין ומה נעשה בו, ורע מאוד כמה מ"ר יש בו.</p>
+</section>
+
+</div>

@@ -1,0 +1,278 @@
+<title>תכנית עבודה לבטא</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#F7F5F0; --card:#FFFDF9; --sunk:#F1EDE4;
+  --ink:#1C1A17; --soft:#6B655C; --faint:#9A9388;
+  --plan:#1D4E89; --plan-soft:#E4ECF5;
+  --ochre:#8A6100; --ochre-soft:#F6EEDC;
+  --teal:#1F5F55; --teal-soft:#E1EEEA;
+  --flag:#A8321E; --flag-soft:#F6E6E2;
+  --rule:#DCD6CA; --rule-2:#EAE5DB;
+  --display:"Frank Ruhl Libre",Georgia,serif;
+  --body:"Assistant","Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#16150F; --card:#1E1D16; --sunk:#191811;
+  --ink:#EFEAE0; --soft:#A7A093; --faint:#77716A;
+  --plan:#7FAEE0; --plan-soft:#1B2A3C;
+  --ochre:#D8AE5A; --ochre-soft:#2A2314;
+  --teal:#7FC4B4; --teal-soft:#14251F;
+  --flag:#E28471; --flag-soft:#33201C;
+  --rule:#33312A; --rule-2:#26251E;
+}}
+:root[data-theme="dark"]{
+  --paper:#16150F; --card:#1E1D16; --sunk:#191811;
+  --ink:#EFEAE0; --soft:#A7A093; --faint:#77716A;
+  --plan:#7FAEE0; --plan-soft:#1B2A3C;
+  --ochre:#D8AE5A; --ochre-soft:#2A2314;
+  --teal:#7FC4B4; --teal-soft:#14251F;
+  --flag:#E28471; --flag-soft:#33201C;
+  --rule:#33312A; --rule-2:#26251E;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;margin:0}
+.wrap{max-width:74rem;margin:0 auto;padding:2.2rem 1.2rem 4rem}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.8rem,4vw,2.6rem);line-height:1.12;margin:.3rem 0 .5rem;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:1.32rem;margin:0 0 .7rem;text-wrap:balance}
+h3{font-family:var(--body);font-weight:700;font-size:.98rem;margin:0 0 .3rem}
+p{margin:0 0 .75rem}
+.eyebrow{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--plan);font-weight:600;font-family:var(--mono)}
+.stand{font-size:1.08rem;color:var(--soft);max-width:48rem}
+section{margin:0 0 2.4rem}
+.hr{height:1px;background:var(--rule);margin:2.2rem 0}
+.m{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.89em}
+code{font-family:var(--mono);font-size:.86em;background:var(--rule-2);padding:.08rem .3rem;border-radius:.2rem}
+
+.who{display:grid;gap:.9rem;grid-template-columns:1fr}
+@media(min-width:54rem){.who{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:.6rem;padding:1rem 1.1rem}
+.sA{border-top:3px solid var(--plan)} .sB{border-top:3px solid var(--ochre)} .sC{border-top:3px solid var(--teal)}
+.chip{display:inline-grid;place-items:center;width:1.7rem;height:1.7rem;border-radius:.35rem;font-family:var(--mono);font-weight:600;font-size:.9rem}
+.sA .chip{background:var(--plan-soft);color:var(--plan)}
+.sB .chip{background:var(--ochre-soft);color:var(--ochre)}
+.sC .chip{background:var(--teal-soft);color:var(--teal)}
+.cHead{display:flex;gap:.55rem;align-items:center;margin-bottom:.5rem}
+.cHead h3{margin:0;font-family:var(--display);font-size:1.08rem}
+.card p{font-size:.93rem;color:var(--soft);margin:0 0 .4rem}
+.name{font-family:var(--mono);font-size:.8rem;color:var(--faint);border-top:1px dashed var(--rule);padding-top:.45rem;margin-top:.6rem}
+
+.contract{background:var(--plan-soft);border:1px solid var(--plan);border-radius:.6rem;padding:1.15rem 1.3rem}
+.contract h2{color:var(--plan)}
+pre{direction:ltr;text-align:left;overflow-x:auto;background:var(--card);border:1px solid var(--rule);
+  border-radius:.4rem;padding:.85rem 1rem;font-family:var(--mono);font-size:.8rem;line-height:1.5;margin:.7rem 0 0}
+
+.day{margin-bottom:1.6rem}
+.dayHead{display:flex;align-items:baseline;gap:.8rem;border-bottom:2px solid var(--rule);padding-bottom:.4rem;margin-bottom:.9rem;flex-wrap:wrap}
+.dayHead h2{margin:0}
+.dayNote{font-size:.88rem;color:var(--faint)}
+.tasks{display:grid;gap:.7rem;grid-template-columns:1fr}
+@media(min-width:58rem){.tasks{grid-template-columns:repeat(3,1fr)}}
+.task{background:var(--card);border:1px solid var(--rule);border-radius:.5rem;padding:.8rem .9rem;font-size:.9rem}
+.task.a{border-inline-start:3px solid var(--plan)}
+.task.b{border-inline-start:3px solid var(--ochre)}
+.task.c{border-inline-start:3px solid var(--teal)}
+.tid{font-family:var(--mono);font-weight:600;font-size:.78rem;padding:.08rem .38rem;border-radius:.25rem;margin-inline-end:.4rem}
+.task.a .tid{background:var(--plan-soft);color:var(--plan)}
+.task.b .tid{background:var(--ochre-soft);color:var(--ochre)}
+.task.c .tid{background:var(--teal-soft);color:var(--teal)}
+.task h3{display:inline;font-size:.94rem}
+.task p{font-size:.87rem;margin:.4rem 0 0;color:var(--soft)}
+.done{display:block;margin-top:.5rem;padding-top:.45rem;border-top:1px dashed var(--rule);font-size:.84rem;color:var(--ink)}
+.done b{color:var(--teal);font-weight:700}
+.blocks{display:inline-block;font-size:.76rem;font-family:var(--mono);color:var(--flag);margin-top:.35rem}
+
+.risk{border-inline-start:3px solid var(--flag);background:var(--flag-soft);border-radius:0 .4rem .4rem 0;padding:.8rem 1rem;margin-bottom:.6rem}
+.risk h3{color:var(--flag)}
+.risk p{margin:0;font-size:.92rem;color:var(--soft)}
+.note{border-inline-start:2px solid var(--rule);padding-inline-start:.9rem;color:var(--soft);font-size:.93rem;margin:0}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+.tw{overflow-x:auto}
+th,td{text-align:start;padding:.45rem .65rem;border-bottom:1px solid var(--rule-2);vertical-align:top}
+th{font-size:.76rem;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600;border-bottom:1px solid var(--rule)}
+.foot{font-size:.83rem;color:var(--faint);border-top:1px solid var(--rule);padding-top:1.1rem;margin-top:2.4rem}
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+<header>
+  <div class="eyebrow">חלופת שקד · תכנית עבודה · 13–16.09.2026</div>
+  <h1>מי עושה מה, ומתי</h1>
+  <p class="stand">פירוט של מפת הדרכים לרמת משימה. לכל משימה יש מזהה, קובץ, ותנאי סיום שאפשר לבדוק — כדי ששלושה אנשים יוכלו לעבוד בלי לשאול זה את זה מה קורה.</p>
+</header>
+
+<div class="hr"></div>
+
+<section>
+  <h2>שלושת התפקידים</h2>
+  <div class="who">
+    <div class="card sA">
+      <div class="cHead"><span class="chip">א</span><h3>הגשר</h3></div>
+      <p>מחבר את <span class="m">layer_a</span> — 700 המועמדים ושרשרת הזכויות — למבנה הנתונים של ה-POC, ומוסיף את שערי המדיניות ל-<code>rules.py</code>.</p>
+      <p><strong>נוגע ב:</strong> <span class="m">POC/app/rules.py</span>, <span class="m">bridge.py</span> (חדש), <span class="m">layer_a/scripts/</span></p>
+      <p class="name">שם: ______________</p>
+    </div>
+    <div class="card sB">
+      <div class="cHead"><span class="chip">ב</span><h3>הנחות ושטח מכירה</h3></div>
+      <p>מוצא מקורות למחירים ולעלויות, בונה ספריית הנחות בגרסאות, ומחשב את <span class="m">sale_area</span> דרך מודל התמורה לדיירים.</p>
+      <p><strong>נוגע ב:</strong> <span class="m">POC/app/assumptions.py</span> (חדש), <span class="m">compensation.py</span> (חדש). <strong>לא</strong> ב-<code>economics()</code> — היא כבר עובדת</p>
+      <p class="name">שם: ______________</p>
+    </div>
+    <div class="card sC">
+      <div class="cHead"><span class="chip">ג</span><h3>האפליקציה</h3></div>
+      <p>מרחיב את ה-POC הקיים למסכים שה-PRD דורש: סידור העדפות, נימוק בחירה, יתרה, ותצוגת תיק עם מקור וודאות.</p>
+      <p><strong>נוגע ב:</strong> <span class="m">POC/static/</span>, <span class="m">app/main.py</span>, <span class="m">app/models.py</span></p>
+      <p class="name">שם: ______________</p>
+    </div>
+  </div>
+</section>
+
+<section class="contract">
+  <h2>החוזה כבר קיים — אל תמציאו אותו</h2>
+  <p>בגרסה הקודמת הצעתי לעצב סכמת <span class="m">candidate</span> משותפת. <strong>זה היה מיותר.</strong> ה-POC כבר מגדיר אותה ב-<code>rules.py</code>, וכל הצדדים עובדים מולה כמו שהיא.</p>
+  <pre>evidence(value, source, certainty, location, method)
+    certainty ∈ official | derived | manually_verified | estimate | missing | conflict
+
+usable(field)  →  True רק אם כל אלה מתקיימים:
+    certainty ∈ (official, derived, manually_verified)
+    source.url          קיים
+    source.retrieved_at קיים, וגילו ≤ SOURCE_MAX_AGE_DAYS
+    location            אינו None</pre>
+  <p class="note" style="margin-top:.9rem"><strong>המלכודת שתתפוס את כולם ביום שני:</strong> שדה בלי <span class="m">url</span>, בלי <span class="m">retrieved_at</span>, בלי <span class="m">location</span> או ישן מדי — חוזר <span class="m">unknown</span> ו<strong>חוסם מסירה</strong>, בשקט ובלי הודעת שגיאה. זו התנהגות נכונה, והיא תיראה כמו באג. כל שדה שזרם א׳ מייצר חייב לשאת את הארבעה.</p>
+</section>
+
+<div class="hr"></div>
+
+<div class="day">
+  <div class="dayHead"><h2>ראשון · היום</h2><span class="dayNote">הכל מקבילי. אין תלות בין שלושת הזרמים.</span></div>
+  <div class="tasks">
+    <div class="task a"><span class="tid">A1</span><h3>מיפוי שדות</h3>
+      <p>לכתוב <span class="m">bridge.to_fields(parcel)</span> שממיר פלט <span class="m">layer_a</span> ל-<span class="m">fields</span> עם <code>evidence()</code>. הקפדה על ארבעת התנאים של <code>usable()</code>.</p>
+      <span class="done"><b>נגמר כש:</b> חלקה אמיתית מייצרת <span class="m">fields</span> ש-<code>usable()</code> מחזירה True עבור <span class="m">parcel_area, units, floors, renewal_policy_category</span>.</span></div>
+    <div class="task a"><span class="tid">A2</span><h3>פוליגון → מועמדים</h3>
+      <p><span class="m">candidates_in(polygon)</span> מתוך 700 המועמדים המחושבים מראש. לא איסוף חי.</p>
+      <span class="done"><b>נגמר כש:</b> פוליגון מעל שז״ר מחזיר רשימה בפחות משתי שניות.</span></div>
+    <div class="task a"><span class="tid">A3</span><h3>לוודא ששערי ה-POC עוברים</h3>
+      <p><code>evaluate()</code> כבר בודק ייעוד, 70% מגורים, מועד היתר עם חוות דעת 1980–84, חיזוק, קומות, דירות, היקף. לבדוק מה מהם <span class="m">layer_a</span> יודע למלא ומה לא.</p>
+      <span class="done"><b>נגמר כש:</b> רשימה כתובה של שדות שאין להם מקור — לפני שמנסים לפתור אותם.</span></div>
+
+    <div class="task b"><span class="tid">B1</span><h3>מקור מחירי עסקאות</h3>
+      <p>כיסוי עירוני לפי כתובת, לא מספר אחד לעיר. מועמד ראשון: נתוני עסקאות ממשלתיים. לבדוק זמינות, רישיון וגרנולריות.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">lat/lon</span> → עסקאות אחרונות עם ₪ למ״ר, כתובת URL ותאריך.</span>
+      <span class="blocks">חוסם את B3 ו-B4</span></div>
+    <div class="task b"><span class="tid">B2</span><h3>מקור עלויות בנייה</h3>
+      <p>מדד תשומות הבנייה או מקור מפורסם אחר. לתעד גרסה ותאריך — <code>ScenarioRequest</code> דורשת <span class="m">assumptions_note</span> באורך 10 תווים לפחות.</p>
+      <span class="done"><b>נגמר כש:</b> מספר אחד עם מקור, תאריך ויחידה, כתוב בקובץ.</span></div>
+    <div class="task b"><span class="tid">B3</span><h3>להחליט על שטח הדירות</h3>
+      <p>ממוצע נגזר, גרמושקה, או תשריט בית משותף בתשלום. <strong>החלטה, לא מחקר</strong> — ההשלכה היא על <span class="m">sale_area</span> ולכן על כל התרחיש.</p>
+      <span class="done"><b>נגמר כש:</b> ההחלטה כתובה, ואם היא ״ממוצע נגזר״ — הסטייה מנוסחת למשפט שייכנס לתיק.</span></div>
+
+    <div class="task c"><span class="tid">C1</span><h3>להריץ את ה-POC</h3>
+      <p><span class="m">run-dev.sh</span> או <span class="m">compose.yaml</span>. לפתוח את שלושת המצבים: הרגיל, <span class="m">/demo</span> ו-<span class="m">/investor-demo</span>.</p>
+      <span class="done"><b>נגמר כש:</b> רץ אצל שלושתכם, לא רק אצל מי שכתב אותו.</span></div>
+    <div class="task c"><span class="tid">C2</span><h3>מיפוי מסכים מול ה-PRD</h3>
+      <p>שבעה מסכים ב-PRD §7. לסמן מה קיים, מה חלקי, מה חסר. <strong>לא לבנות שום דבר לפני שהרשימה כתובה.</strong></p>
+      <span class="done"><b>נגמר כש:</b> טבלה של שבע שורות עם קיים/חלקי/חסר.</span></div>
+    <div class="task c"><span class="tid">C3</span><h3>להרחיב את שדות ההעדפה</h3>
+      <p><code>Preference.field</code> מוגבל היום ל-<span class="m">parcel_area, units, floors</span>. ה-PRD דורש שהיזם יגדיר העדפות. להוסיף שדות מהגשר.</p>
+      <span class="done"><b>נגמר כש:</b> אפשר למיין לפי שדה חדש דרך ה-API, גם בלי UI.</span></div>
+  </div>
+</div>
+
+<div class="day">
+  <div class="dayHead"><h2>שני</h2><span class="dayNote">כל זרם מייצר פלט אמיתי. סנכרון קצר בבוקר ובערב.</span></div>
+  <div class="tasks">
+    <div class="task a"><span class="tid">A4</span><h3>שרשרת הזכויות כשערים</h3>
+      <p>להוסיף ל-<code>evaluate()</code> את שלבים 2–9: תקרת 400%, תקרת דירות, גובה, טביעת רגל, הפרשה, מרפסות, תמהיל, חניה. כל שער עם <span class="m">source_url</span> ו-<span class="m">page</span> כמו הקיימים.</p>
+      <span class="done"><b>נגמר כש:</b> <code>eligibility_status()</code> משקף אותם, וכל שער מצטט עמוד במסמך המדיניות.</span></div>
+    <div class="task a"><span class="tid">A5</span><h3>אימות ארכיון על העשירייה</h3>
+      <p>״תפוס״ ו״חוזק״ מנתוני התיקים. יש נתונים ל-16 חלקות בלבד — <strong>השאר חייבות לקבל <span class="m">missing</span></strong> ולא ״עבר״.</p>
+      <span class="done"><b>נגמר כש:</b> חלקה בלי נתוני ארכיון מחזירה <span class="m">unknown</span> בשער החיזוק, ולא <span class="m">passed</span>.</span></div>
+    <div class="task a"><span class="tid">A6</span><h3>נימוק בחירה</h3>
+      <p><span class="m">why_selected</span> לכל מועמד שנבחר — איזו העדפה הכריעה ובאיזה ערך. נדרש ב-<span class="m">SEL-01</span>.</p>
+      <span class="done"><b>נגמר כש:</b> משפט קריא בעברית לכל אחת משלוש התוצאות.</span></div>
+
+    <div class="task b"><span class="tid">B4</span><h3>ספריית הנחות</h3>
+      <p><span class="m">assumptions.for_parcel(p)</span> מחזירה את כל 12 הקלטים של <code>ScenarioRequest</code>, לכל אחד מקור ותאריך. גרסה לספרייה כולה.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<code>ScenarioRequest(**assumptions.for_parcel(p))</code> עובר ולידציה בלי ערך מומצא.</span></div>
+    <div class="task b"><span class="tid">B5</span><h3>מודל התמורה</h3>
+      <p><span class="m">compensation(existing_area, units, ...)</span> → שטח תמורה, ומכאן <span class="m">sale_area</span> = סך בנוי פחות תמורה.</p>
+      <span class="done"><b>נגמר כש:</b> <code>economics()</code> רצה מקצה לקצה על חלקה אמיתית, וכל מספר ניתן לעקוב עד מקורו.</span></div>
+    <div class="task b"><span class="tid">B6</span><h3>לבדוק מול מקרה ייחוס</h3>
+      <p><span class="m">ACC-09</span> דורש שהחישוב ייבדק מול מקרי ייחוס. להריץ על הר מירון 1 ולוודא שהמספרים סבירים ליזם.</p>
+      <span class="done"><b>נגמר כש:</b> רווח על עלות יוצא בטווח שאפשר להגן עליו, או שידוע למה לא.</span></div>
+
+    <div class="task c"><span class="tid">C4</span><h3>מסך סידור העדפות</h3>
+      <p>גרירה לסדר, כיוון מיון לכל אחת, הפרדה בין תנאי חובה להעדפות. <span class="m">4.2</span> קובע: מיון מפורש, לא ניקוד סמוי.</p>
+      <span class="done"><b>נגמר כש:</b> שינוי הסדר משנה את התוצאות בפועל.</span></div>
+    <div class="task c"><span class="tid">C5</span><h3>מסך תוצאות</h3>
+      <p>תוצאות מוכנות בלבד, נימוק בחירה לכל שורה, יתרה ״נמסרו 2 מתוך 3״, וכפתור השלמה באזור נוסף.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">ACC-02</span> עובר — שתי תוצאות, ואז השלמה שמוסרת רק אחת.</span></div>
+    <div class="task c"><span class="tid">C6</span><h3>תצוגת תיק</h3>
+      <p>שרשרת הזכויות 1–9, מקור וודאות לכל שדה, סעיף פערים מפורש. <span class="m">DOS-03</span>: מסמך חסר מצוין ואינו מוצג כארכיון מלא.</p>
+      <span class="done"><b>נגמר כש:</b> אפשר לראות בתיק מאיפה הגיע כל מספר.</span></div>
+  </div>
+</div>
+
+<div class="day">
+  <div class="dayHead"><h2>שלישי</h2><span class="dayNote">אינטגרציה. כולם על אותו דבר.</span></div>
+  <div class="tasks">
+    <div class="task a"><span class="tid">A7</span><h3>חיבור הצינורות</h3>
+      <p>פוליגון אמיתי → מועמדים → שערים → דירוג → שלוש תוצאות. לתקן את מה שהפלט האמיתי מגלה.</p>
+      <span class="done"><b>נגמר כש:</b> ריצה אחת מחזירה שלוש תוצאות מוכנות.</span></div>
+    <div class="task b"><span class="tid">B7</span><h3>תרחיש לשלושתן</h3>
+      <p>להריץ את התרחיש על שלוש התוצאות ולבדוק שאף אחת לא נחסמת על נתון חסר. אם כן — זה תקין, וזה מה ש-<span class="m">DOS-02</span> דורש.</p>
+      <span class="done"><b>נגמר כש:</b> שלושה תרחישים מלאים, או הסבר כתוב למה אחד נחסם.</span></div>
+    <div class="task c"><span class="tid">C7</span><h3>המסלול המלא במסכים</h3>
+      <p>מפה → קריטריונים → סריקה → תוצאות → תיק → ייצוא. בלי לעבור דרך API ידנית.</p>
+      <span class="done"><b>נגמר כש:</b> אפשר לעשות את כל המסלול בעכבר בלבד.</span></div>
+  </div>
+  <p class="note" style="margin-top:.9rem"><strong>יום שלישי הוא היום שבו מתגלות ההנחות השגויות.</strong> אל תתכננו אליו תכונות חדשות — הוא כולו לתיקון. אם הוא ריק, סימן שמשהו לא נבדק.</p>
+</div>
+
+<div class="day">
+  <div class="dayHead"><h2>רביעי</h2><span class="dayNote">ליטוש והדגמה.</span></div>
+  <div class="tasks">
+    <div class="task a"><span class="tid">A8</span><h3>שפת הסייגים</h3>
+      <p>כל טקסט שער והודעת חסימה — בשפת נדל״ן ולא בשפת קוד. ״אין בסיס מחיר לאזור״, לא <span class="m">missing field</span>.</p>
+      <span class="done"><b>נגמר כש:</b> אפשר להראות ליזם בלי להסביר.</span></div>
+    <div class="task b"><span class="tid">B8</span><h3>הצגת ההנחות</h3>
+      <p>כל הנחה בתיק מסומנת כהנחה עם מקור ותאריך. <span class="m">6.4</span>: התוצר אינו דוח שמאי חתום, וזה צריך להיכתב במפורש.</p>
+      <span class="done"><b>נגמר כש:</b> אין בתיק מספר שלא ברור מאיפה הגיע.</span></div>
+    <div class="task c"><span class="tid">C8</span><h3>הדגמה</h3>
+      <p>מסלול מוקלט מראש שעובד. פוליגון אחד, שלושה תיקים, ייצוא אחד.</p>
+      <span class="done"><b>נגמר כש:</b> רץ פעמיים ברצף בלי הפתעות.</span></div>
+  </div>
+</div>
+
+<div class="hr"></div>
+
+<section>
+  <h2>כללי עבודה משותפים</h2>
+  <div class="tw"><table>
+    <thead><tr><th>נושא</th><th>הכלל</th></tr></thead>
+    <tbody>
+      <tr><td>ענפים</td><td><span class="m">beta/bridge</span>, <span class="m">beta/economics</span>, <span class="m">beta/app</span>. מיזוג ל-<span class="m">main</span> רק אחרי שהבדיקות עוברות</td></tr>
+      <tr><td>קבצים</td><td>כל זרם נוגע בקבצים שלו. <strong>‏<code>rules.py</code> שייך לזרם א׳ בלבד</strong> — ג׳ שרוצה שדה חדש מבקש, לא עורך</td></tr>
+      <tr><td>סנכרון</td><td>‏15 דקות בבוקר ו-15 בערב. בערב כל אחד אומר <em>מה נחסם</em>, לא מה עשה</td></tr>
+      <tr><td>ערכים מומצאים</td><td><strong>אסור.</strong> <code>ScenarioRequest</code> מסרבת לקבועים שקטים בכוונה. אם אין נתון — השדה <span class="m">missing</span> והתיק לא נספר</td></tr>
+      <tr><td>בדיקות</td><td><span class="m">layer_a/tests/test_layer_a.py</span> חייב לעבור לפני כל מיזוג</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>מה יפיל את התאריך</h2>
+  <div class="risk"><h3>שדות שלא עוברים את <code>usable()</code></h3><p>הכי סביר שיקרה, והכי קל להחמיץ: הכל ייראה עובד, והתוצאות יחזרו ריקות. <strong>A1 קיים בדיוק בשביל זה — לבדוק אותו ביום ראשון ולא ביום שלישי.</strong></p></div>
+  <div class="risk"><h3>B1 לא נסגר היום</h3><p>בלי מקור מחירים אין תרחיש, בלי תרחיש התיק לא נספר כמוכן. זו המשימה היחידה שחוסמת שתי משימות אחרות. <strong>אם עד סוף היום אין מקור — לקבוע הנחה מתועדת ולהתקדם</strong>, לא לחפש עוד יום.</p></div>
+  <div class="risk"><h3>מישהו נוגע בשריון או בסליקה</h3><p>שניהם מפתים כי הם ״המודל העסקי״. שניהם אינם בודקים את ההנחה המסוכנת. הם מחוץ להיקף עד רביעי, בלי יוצא מן הכלל.</p></div>
+</section>
+
+<p class="foot">
+  <strong>החלטה אחת נדרשת ממך היום ולא מחר:</strong> האם מותר להוציא כסף על תשריט בית משותף עבור שלושת התיקים הנמסרים. אם כן — B3 הופך למשימת רכש קצרה. אם לא — התיק יימסר עם ממוצע נגזר מסומן כאומדן, וסעיף התמורה יישא סטייה שיש להציג במפורש.
+  <br><br>
+  במקביל ולא חוסם: <strong>15 המדידות הידניות ב-GovMap</strong> — <span class="m">POC/layer_a/validation/street_width.csv</span>. הן מכיילות את <span class="m">TOLERANCE_M</span> ומעבירות חלק מ-275 החלקות מ״טווח״ ל״מספר ודאי״.
+</p>
+</div>
