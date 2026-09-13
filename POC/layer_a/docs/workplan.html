@@ -250,17 +250,88 @@ usable(field)  →  True רק אם כל אלה מתקיימים:
 <div class="hr"></div>
 
 <section>
-  <h2>כללי עבודה משותפים</h2>
+  <h2>ביקורת על התכנית — ארבעה חורים, שניים מהם מתפוצצים ברביעי</h2>
+  <p>עברתי על מסע המשתמש של יום רביעי ושאלתי לכל צעד ״איזו משימה מייצרת את זה״. ארבעה צעדים לא היה להם בעלים.</p>
+
+  <div class="risk"><h3>‏1 · <code>POLICY_URL</code> מחזיר 404 — נבדק עכשיו</h3>
+    <p><code>config.py</code> מפנה לקובץ מדיניות מספטמבר 2025 שכבר לא קיים בשרת. <strong>כל שער ב-<code>evaluate()</code> פולט אותו כ-<span class="m">source_url</span></strong>, ולכן כל תיק שיימסר יצטט קישור מת. ‏<code>usable()</code> בודקת שיש <span class="m">url</span> — לא שהוא נפתח. זה היה עובר בשקט עד שיזם לוחץ.</p></div>
+
+  <div class="risk"><h3>‏2 · <span class="m">SOURCE_MAX_AGE_DAYS = 30</span></h3>
+    <p>שדה שמקורו נשלף לפני יותר מ-30 יום נופל ב-<code>usable()</code> <strong>ומחזיר תוצאות ריקות</strong>. נתוני <span class="m">layer_a</span> נאספו ב-12.09 — תקינים לרביעי, פגים באוקטובר. ובנוסף: <span class="m">retrieved_at</span> שהגשר ישתול חייב להיות <strong>זמן השליפה האמיתי</strong>. אם מישהו ישים <span class="m">now()</span> זו תהיה שקר שעובר ולידציה.</p></div>
+
+  <div class="risk"><h3>‏3 · <span class="m">entity_key</span> קובע אם <span class="m">SEL-02</span> עובד</h3>
+    <p>טבלת <span class="m">deliveries</span> כבר אוכפת ״ללא תוצאות חוזרות״ דרך <span class="m">entity_key TEXT PRIMARY KEY</span>. <strong>אבל רק אם המפתח הוא זהות מקרקעין</strong> — גוש/חלקה, כפי ש-‏<span class="m">8.1</span> דורש. מפתח מבוסס כתובת ישבור את זה בשקט, ואותה חלקה תימסר פעמיים.</p></div>
+
+  <div class="risk"><h3>‏4 · אף אחד לא בודק את הייצוא</h3>
+    <p><code>exports.py</code> קיים ועובד — אבל תוכן התיק משתנה לגמרי, ואיש אינו אחראי שה-PDF וה-Excel ישקפו את השדות החדשים. <span class="m">DOS-04</span> דורש את שניהם בגרסה הראשונה.</p></div>
+
+  <h3 style="font-family:var(--display);font-size:1.1rem;margin:1.4rem 0 .6rem">המשימות שנוספו</h3>
+  <div class="tasks">
+    <div class="task a"><span class="tid">A0</span><h3>לתקן את <code>POLICY_URL</code></h3>
+      <p><strong>ראשון, לפני הכל.</strong> להחליף לכתובת החיה של אפריל 2026, ולוודא שהטקסט זהה למה שכבר אומת. לעדכן <span class="m">RULE_VERSION</span> בהתאם.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">curl</span> על הכתובת מחזיר 200 ו-PDF, והטקסט תואם ל-<span class="m">policy_shaked_apr2026.pdf</span>.</span>
+      <span class="blocks">כל תיק מצטט אותו</span></div>
+    <div class="task a"><span class="tid">A9</span><h3>‏<span class="m">retrieved_at</span> ו-<span class="m">entity_key</span></h3>
+      <p>זמן שליפה אמיתי לכל שדה; מפתח ישות לפי גוש/חלקה. להחליט אם מרעננים את <span class="m">layer_a</span> לפני רביעי או מעלים את <span class="m">SOURCE_MAX_AGE_DAYS</span> עם נימוק כתוב.</p>
+      <span class="done"><b>נגמר כש:</b> אותה חלקה בשתי סריקות חופפות נמסרת פעם אחת, ואף שדה לא נופל על גיל.</span></div>
+    <div class="task a"><span class="tid">A10</span><h3>בדיקה לגשר</h3>
+      <p>‏<span class="m">test_bridge.py</span> — חלקה ידועה נכנסת, <span class="m">fields</span> צפוי יוצא, <code>usable()</code> מחזירה True לשדות הקריטיים.</p>
+      <span class="done"><b>נגמר כש:</b> יוצא לא-אפס כששדה מאבד מקור.</span></div>
+    <div class="task c"><span class="tid">C9</span><h3>ייצוא משקף את התיק החדש</h3>
+      <p>‏PDF ו-Excel עם שרשרת הזכויות, מקור וודאות לכל שדה, וסעיף הפערים.</p>
+      <span class="done"><b>נגמר כש:</b> נפתח באקסל בעברית ואפשר לעקוב אחרי כל מספר.</span></div>
+    <div class="task c"><span class="tid">C10</span><h3>שלושת תרחישי הקבלה</h3>
+      <p><span class="m">ACC-03</span>: סריקה ריקה או הפקה שנכשלה <strong>אינן מפחיתות יתרה</strong>. ואם אין שלוש — לומר זאת, לא לרפד.</p>
+      <span class="done"><b>נגמר כש:</b> שלושתם עוברים ידנית ומתועדים.</span></div>
+    <div class="task c"><span class="tid">C11</span><h3>ריצת קבלה · רביעי בבוקר</h3>
+      <p>מסלול מלא פעמיים ברצף, על שני פוליגונים שונים. <strong>בעלים אחד שמריץ, לא ״כולם״.</strong></p>
+      <span class="done"><b>נגמר כש:</b> שתי ריצות נקיות ברצף.</span></div>
+  </div>
+  <p class="note" style="margin-top:1rem"><strong>A0 קודם לכל השאר בזרם א׳.</strong> הוא חמש דקות, והוא ההבדל בין תיק שאפשר להראות ליזם לתיק שהקישור בו מת.</p>
+</section>
+
+<section>
+  <h2>איך לא לדרוס אחד את השני</h2>
+  <p class="stand" style="font-size:1rem;margin-bottom:1.1rem">ענפים לא מונעים התנגשות — <strong>בעלות על קבצים כן.</strong> שני אנשים שעורכים את אותו קובץ בשני ענפים ייפגשו במיזוג בכל מקרה. הכלל האמיתי הוא שלכל קובץ יש בעלים אחד.</p>
+
+  <h3 style="font-family:var(--display);font-size:1.1rem;margin:1.2rem 0 .5rem">מפת הבעלות — זה העיקר</h3>
   <div class="tw"><table>
-    <thead><tr><th>נושא</th><th>הכלל</th></tr></thead>
+    <thead><tr><th>קובץ / תיקייה</th><th>בעלים</th><th>אם אתה צריך שינוי שם</th></tr></thead>
     <tbody>
-      <tr><td>ענפים</td><td><span class="m">beta/bridge</span>, <span class="m">beta/economics</span>, <span class="m">beta/app</span>. מיזוג ל-<span class="m">main</span> רק אחרי שהבדיקות עוברות</td></tr>
-      <tr><td>קבצים</td><td>כל זרם נוגע בקבצים שלו. <strong>‏<code>rules.py</code> שייך לזרם א׳ בלבד</strong> — ג׳ שרוצה שדה חדש מבקש, לא עורך</td></tr>
-      <tr><td>סנכרון</td><td>‏15 דקות בבוקר ו-15 בערב. בערב כל אחד אומר <em>מה נחסם</em>, לא מה עשה</td></tr>
-      <tr><td>ערכים מומצאים</td><td><strong>אסור.</strong> <code>ScenarioRequest</code> מסרבת לקבועים שקטים בכוונה. אם אין נתון — השדה <span class="m">missing</span> והתיק לא נספר</td></tr>
-      <tr><td>בדיקות</td><td><span class="m">layer_a/tests/test_layer_a.py</span> חייב לעבור לפני כל מיזוג</td></tr>
+      <tr><td><span class="m">app/rules.py</span></td><td><strong>א׳ בלבד</strong></td><td>בקש. אל תערוך — זה הקובץ שכולם תלויים בו</td></tr>
+      <tr><td><span class="m">app/bridge.py</span> · <span class="m">layer_a/</span></td><td>א׳</td><td>—</td></tr>
+      <tr><td><span class="m">app/assumptions.py</span> · <span class="m">compensation.py</span></td><td>ב׳</td><td>—</td></tr>
+      <tr><td><span class="m">app/exports.py</span></td><td>ב׳ לתוכן, ג׳ לפורמט</td><td>תאמו ביניכם לפני שנוגעים</td></tr>
+      <tr><td><span class="m">static/</span> · <span class="m">app/main.py</span></td><td>ג׳</td><td>—</td></tr>
+      <tr><td><span class="m">app/models.py</span></td><td><strong>משותף — סכנה</strong></td><td>שינוי כאן משפיע על כולם. הודיעו בקבוצה <em>לפני</em>, לא אחרי</td></tr>
+      <tr><td><span class="m">app/config.py</span></td><td>א׳</td><td>—</td></tr>
     </tbody>
   </table></div>
+
+  <h3 style="font-family:var(--display);font-size:1.1rem;margin:1.4rem 0 .5rem">שגרת היום</h3>
+  <pre># בוקר — לפני שכותבים שורה
+git checkout main &amp;&amp; git pull
+git checkout beta/&lt;שלך&gt; &amp;&amp; git merge main
+
+# במהלך היום — קומיטים קטנים בענף שלך
+git add -A &amp;&amp; git commit -m "..."
+git push origin beta/&lt;שלך&gt;
+
+# כשמשהו מוכן — PR, ואחד אחר מאשר
+# אף אחד לא דוחף ישירות ל-main</pre>
+
+  <div class="tw" style="margin-top:1.1rem"><table>
+    <thead><tr><th>כלל</th><th>למה</th></tr></thead>
+    <tbody>
+      <tr><td><strong>‏main → הענף שלך</strong>, אף פעם לא הפוך</td><td>ככה ההתנגשות נפתרת אצלך ולא אצל כולם</td></tr>
+      <tr><td>קומיט כל שעה־שעתיים, לא בסוף היום</td><td>קומיט ענק אי אפשר לבדוק ואי אפשר לבטל</td></tr>
+      <tr><td><strong>סדר מיזוג בשלישי: א׳ → ב׳ → ג׳</strong></td><td>ב׳ ו-ג׳ צורכים את מה שא׳ מייצר. הפוך = מיזוג פעמיים</td></tr>
+      <tr><td>‏<span class="m">test_layer_a.py</span> עובר לפני כל מיזוג</td><td>שמונה מקרים מאומתים ביד; הם תפסו רגרסיות אמיתיות</td></tr>
+      <tr><td>לא מכניסים לגיט: <span class="m">raw/</span>, <span class="m">__pycache__</span>, <span class="m">.DS_Store</span>, <span class="m">*.sqlite</span></td><td>‏104MB נתונים גולמיים משוחזרים ב-<span class="m">fetch_sources.py</span></td></tr>
+      <tr><td>ענף אחד למשימה, לא ליום</td><td>‏<span class="m">beta/bridge-fields</span> ולא <span class="m">beta/bridge-sunday</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note" style="margin-top:1rem"><strong>ואם בכל זאת התנגשתם:</strong> מי שפתח את ה-PR מאוחר יותר פותר. לא לתקן קובץ של מישהו אחר בענף שלך כדי ״לסדר״ — זה מה שיוצר את הבלאגן שניסיתם למנוע.</p>
 </section>
 
 <section>
