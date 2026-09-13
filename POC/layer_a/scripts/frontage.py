@@ -43,7 +43,11 @@ def frontage_runs(g, plots, ptree, samples=240, max_reach=40.0, min_run=8):
     out = []
     for r in runs:
         w = statistics.median([h[3] for h in r])
-        out.append(dict(width=round(w, 1), pts=[(h[0].x, h[0].y) for h in r],
+        out.append(dict(width=round(w, 1),
+                        # נורמל פר-נקודה. ממוצע על חזית מעוקלת מצביע לכיוון שגוי
+                        # ושולח את קרן הסיווג הצידה במקום לחצות את הרווח.
+                        samples=[(h[0].x, h[0].y, h[1], h[2], h[3]) for h in r],
+                        pts=[(h[0].x, h[0].y) for h in r],
                         normal=(statistics.mean([h[1] for h in r]),
                                 statistics.mean([h[2] for h in r])),
                         length=round(len(r)/len(hits) * g.boundary.length, 1)))

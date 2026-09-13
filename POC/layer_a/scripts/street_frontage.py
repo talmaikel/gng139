@@ -19,13 +19,19 @@ STREET_TAGS = {'residential', 'tertiary', 'secondary', 'primary',
                'living_street', 'unclassified', 'trunk'}
 MIN_ROW_M = 8.0        # "עד 8 מ' כולל — לא תותר תוספת"
 
-def classify_run(run, street_index, streets, tags, names, step=4):
-    """מזהה איזו דרך חוצה את הרווח. מחזיר (tag, name)."""
+def classify_run(run, street_index, streets, tags, names, step=3, reach=1.8):
+    """מזהה איזו דרך חוצה את הרווח. מחזיר (tag, name).
+
+    משתמש בנורמל פר-נקודה ולא בממוצע החזית: על חזית מעוקלת הממוצע מצביע
+    לכיוון שגוי ושולח את הקרן לחלקה שכנה במקום אל מעבר לרווח.
+    """
     from shapely.geometry import LineString
-    nx, ny = run['normal']; w = max(run['width'], 3.0)
+    samples = run.get('samples') or [(x, y, *run['normal'], run['width'])
+                                     for x, y in run['pts']]
     hits = []
-    for x, y in run['pts'][::step]:
-        seg = LineString([(x + nx*0.3, y + ny*0.3), (x + nx*w, y + ny*w)])
+    for x, y, nx, ny, w in samples[::step]:
+        r = max((w or run['width']) * reach, 4.0)
+        seg = LineString([(x + nx*0.3, y + ny*0.3), (x + nx*r, y + ny*r)])
         for j in street_index.query(seg):
             if streets[j].intersects(seg):
                 hits.append((tags[j], names[j]))
