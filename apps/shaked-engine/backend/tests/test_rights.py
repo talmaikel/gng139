@@ -82,7 +82,23 @@ def test_a_band_spanning_two_floor_counts_is_never_reported_certain():
     r = R.floors(11.0, CAT)
     assert (r.floors_low, r.floors_high) == (7, 8)
     assert r.floors_certain is False
-    assert any(c.id == "street_width" and c.status == "undefined" for c in r.checks)
+    # ‏`needs_measurement` ולא `undefined`: המדיניות מכסה את 11.0 מ׳ היטב,
+    # והמדידה שלנו היא זו שחוצה שורה. ״לא מוגדר״ היה שולח את הקורא לחפש
+    # בעיה במדיניות במקום לצאת למדוד את הרחוב.
+    check = next(c for c in r.checks if c.id == "street_width")
+    assert check.status == "needs_measurement"
+    assert "מדידה בשטח תכריע" in check.detail
+
+
+def test_the_policy_gap_and_our_measurement_are_told_apart():
+    """‏8-9 מ׳ הוא חור אמיתי בטבלה; ‏11.5 מ׳ הוא שורה ברורה שהמדידה שלנו
+    מטשטשת. שתי מסקנות הפוכות לגבי מה לעשות הלאה, ובגרסה הקודמת שתיהן
+    חזרו כ-`undefined`."""
+    def status(w):
+        return next(c.status for c in R.floors(w, CAT).checks if c.id == "street_width")
+    assert status(8.5) == "undefined"            # המדיניות שותקת
+    assert status(11.5) == "needs_measurement"   # אנחנו לא מדדנו מספיק טוב
+    assert status(20.0) == "passed"              # מעל 15 — הרחוב אינו מגביל
 
 
 def test_the_category_ceiling_caps_the_street_table():

@@ -10,6 +10,7 @@ from app.core.database import get_async_session
 from app.core.security import current_active_user
 from app.models.tenant import User
 from app.cities.herzliya.archive_facts import fetch_for_delivery
+from app.cities.herzliya.dossier import NotEntitled, build as build_dossier
 from app.services.deliveries import (NoCredits, NotDeliverable, deliver, delivered_ids,
                                      for_company, provenance)
 
@@ -78,6 +79,25 @@ async def my_deliveries(
     """מאגר המסירות של החברה — ‏SEL-02: *״מוצג במאגר החברה בלבד״*."""
     get_city_rules(city_code)
     return await for_company(session, user.company_id)
+
+
+@router.get("/{city_code}/{opportunity_id}/dossier")
+async def get_dossier(
+    city_code: str,
+    opportunity_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> dict[str, Any]:
+    """התיק המלא — שרשרת 1–9, ראיות, תרחיש ופערים. רק למי שקיבל אותו.
+
+    ‏**404 ולא 403.** ‏ACC-08: *״בקשה של חברה ללא הרשאה לתיק נדחית גם
+    כשמזהה התיק ידוע״* — ו-403 מאשר שהמזהה קיים, וזו דליפה בפני עצמה.
+    """
+    rules = get_city_rules(city_code)
+    try:
+        return await build_dossier(session, rules, opportunity_id, user.company_id)
+    except NotEntitled as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.post("/{city_code}/{opportunity_id}/deliver")

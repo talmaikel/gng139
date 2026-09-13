@@ -93,7 +93,11 @@ MAIN_AXES = {"דרך ירושלים", "העצמאות", "הרב קוק", "ארל
 class Check:
     id: str
     label: str
-    status: str            # passed | failed | unknown | routed | undefined
+    # passed | failed | unknown | routed | undefined | needs_measurement
+    #
+    # ‏`undefined` = המדיניות שותקת. ‏`needs_measurement` = המדיניות ברורה
+    # והמדידה שלנו אינה. שניהם אינם ״עבר״, ושניהם מובילים לפעולה אחרת.
+    status: str
     source_url: str
     page: int | None = None
     detail: str | None = None
@@ -111,10 +115,16 @@ class Rights:
 
 # ─────────────────────────── §70א · תנאי הסף ───────────────────────────
 
-# מזהי שערי §70א, לפי סדר ההגדרה. משמש את שכבת ההערכה כדי לדעת מה נשאר
-# פתוח בתנאי הסף עצמו — להבדיל משאר השרשרת, שהיא חישוב ולא כשירות.
-THRESHOLD_IDS = ("residential_zoning", "residential_share", "permit_date",
-                 "strengthened", "occupied", "floors", "units")
+# שערי §70א עצמם, לפי סדר ההגדרה. לכל אחד יש סעיף לצטט.
+SECTION_70A_IDS = ("residential_zoning", "residential_share", "permit_date",
+                   "strengthened", "floors", "units")
+
+# השערים שחייבים תשובה לפני מסירה. ששה מהם הם §70א, והשביעי — `occupied` —
+# **אינו תנאי סף בחוק**: בקשת חיזוק שהוגשה ולא הבשילה להיתר פירושה שיזם
+# אחר כבר מול הדיירים. המגרש כשיר בדין ואינו זמין בפועל, ולכן אין לו עמוד
+# לצטט ואין להציג אותו כסעיף בחוק. השם הקודם היה `THRESHOLD_IDS` בלבד,
+# והוא הציג את השער המסחרי הזה כאילו הוא §70א.
+THRESHOLD_IDS = SECTION_70A_IDS + ("occupied",)
 
 # שער שאין לו מקור פתוח, ולכן ״לא ידוע״ בו אינו מעיד על עבודה חסרה אלא על
 # גבול הנתונים. הוא נשאר שאלה פתוחה בתיק ואינו פוסל מסירה — אבל הוא גם
@@ -244,10 +254,27 @@ def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M
     r.floors_low, r.floors_high = min(seen), max(seen)
     r.floors_certain = len(seen) == total and r.floors_low == r.floors_high
     r.case_by_case = width_m > RELIABLE_MAX_M
-    status = "passed" if r.floors_certain else "undefined"
+
+    # **שני דברים שונים, ולא סטטוס אחד.** ‏11.5 מ׳ נופל בבירור בשורת
+    # ״10-12״ ומקבל 8 קומות — המדיניות מוגדרת לחלוטין. מה שאינו ודאי הוא
+    # **המדידה שלנו**: ±1 מ׳ חוצה לשורה הבאה. הגרסה הקודמת החזירה
+    # ״undefined״ בשני המקרים, והקורא הבין ״המדיניות אינה מכסה את זה״
+    # במקום ״צריך למדוד את הרחוב״ — שתי מסקנות הפוכות לגמרי לגבי מה
+    # לעשות הלאה.
+    policy_silent = (none_hits + undefined_hits) > 0
+    if r.floors_certain:
+        status, label = "passed", "רוחב רחוב מול מספר קומות"
+    elif policy_silent:
+        status, label = "undefined", "רוחב רחוב — המדיניות אינה מכסה חלק מהתחום"
+    else:
+        status, label = "needs_measurement", "רוחב רחוב — המדידה אינה חד-משמעית"
+
     bits = [_width_text(width_m)]
-    if none_hits or undefined_hits:
+    if policy_silent:
         bits.append(f"{100*(none_hits+undefined_hits)//total}% מתחום המדידה ללא מספר במדיניות")
+    elif not r.floors_certain:
+        bits.append(f"טווח ±{tol:g} מ׳ חוצה שורות בטבלה — {r.floors_low:g} עד {r.floors_high:g} קומות; "
+                    "מדידה בשטח תכריע")
     if r.case_by_case:
         bits.append("מעל 15 מ׳ — הרחוב אינו מגביל, תקרת הקטגוריה קובעת ונתונה לבחינה נקודתית")
     r.checks.append(Check("street_width", "רוחב רחוב מול מספר קומות", status,
