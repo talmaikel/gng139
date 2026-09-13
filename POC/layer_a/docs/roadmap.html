@@ -111,35 +111,47 @@ td.d{white-space:nowrap;font-family:var(--mono);font-size:.85rem;color:var(--sof
 
 <section>
   <h2>איפה אנחנו עומדים</h2>
-  <p class="note" style="margin-bottom:1.1rem">תיקון לגרסה הראשונה של המסמך: כתבתי ״אין מוצר״. <strong>זה היה שגוי</strong> — ה-POC ב-<span class="m">POC/app</span> מכיל כבר חלק ניכר מה-PRD. הפער אינו בנייה מאפס אלא <strong>חיבור</strong>.</p>
-  <div class="state">
+  <p class="note" style="margin-bottom:1.1rem"><strong>תיקון לשתי הגרסאות הקודמות של המסמך.</strong> כתבתי ״אין מוצר״, ואז תיקנתי ל״יש POC״. שניהם היו שגויים: לא הסתכלתי ב-<span class="m">apps/</span>. יש שם <strong>engine עם תשתית בטא מלאה</strong>, וזה הבסיס.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th></th><th>POC</th><th>engine</th></tr></thead>
+    <tbody>
+      <tr><td>בסיס נתונים</td><td>SQLite</td><td class="win"><strong>PostgreSQL + PostGIS · 8 טבלאות · alembic</strong></td></tr>
+      <tr><td>משתמשים וארגונים</td><td>אין</td><td class="win"><strong>JWT · tenants · בידוד חברות</strong></td></tr>
+      <tr><td>חבילות, יתרה, שריון</td><td>מדומה</td><td class="win"><strong>טבלאות אמיתיות עם פקיעה</strong></td></tr>
+      <tr><td>הפקת תיקים</td><td>סינכרונית</td><td class="win"><strong>תור · FOR UPDATE SKIP LOCKED · נבדק חי</strong></td></tr>
+      <tr><td>ממשק</td><td>93 שורות</td><td>Next.js · מפה עם פוליגונים אמיתיים · login</td></tr>
+      <tr><td>ערים</td><td>הרצליה</td><td class="win"><strong>ארכיטקטורת פלאגין</strong></td></tr>
+      <tr><td>כלכלה</td><td><code>economics()</code></td><td class="win"><strong>מחשבון + ספריית הנחות בגרסאות</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="state" style="margin-top:1.3rem">
     <div class="box have">
-      <h3>הנכס — שני חלקים שלא מדברים זה עם זה</h3>
-      <p style="font-size:.9rem;color:var(--soft);margin:.2rem 0 .5rem"><strong>שכבה א׳ (‏<span class="m">layer_a</span>) — הנתונים והכללים</strong></p>
+      <h3>מה שה-engine כבר עושה</h3>
       <ul>
-        <li>700 מועמדים כשירים בכל העיר, מ-19,066 חלקות, אפס פניות לארכיון</li>
-        <li>311 בשכבת ביטחון 0 · קביעת קומות ל-92%</li>
-        <li>שרשרת זכויות 1–9 מלאה, כולל חניה</li>
-        <li>מרשם מסמכי מדיניות + בדיקה חודשית</li>
-      </ul>
-      <p style="font-size:.9rem;color:var(--soft);margin:.9rem 0 .5rem"><strong>ה-POC (‏<span class="m">POC/app</span>) — האפליקציה</strong></p>
-      <ul>
-        <li>מפה, ציור פוליגון, אימות בגבול העיר, עבודות סריקה</li>
-        <li><span class="m">evidence()</span> — ערך, מקור, ודאות ומיקום לכל שדה</li>
-        <li><span class="m">rank()</span> — <strong>מיון לקסיקוגרפי לפי העדפות</strong>, בדיוק כדרישת ‎4.2</li>
-        <li><span class="m">economics()</span> — הכנסות, עלויות, רווח על עלות ו<strong>רגישות</strong> ‎3×3</li>
-        <li>ייצוא PDF ו-Excel · יתרת חבילה מדומה · מצב הדגמה למשקיעים</li>
-        <li>OCR עברית, הורדת מסמכים וחילוץ טקסט עם הפניית עמוד</li>
+        <li>‏<span class="m">Opportunity</span> עם גאומטריה ב-PostGIS, <span class="m">metadata_json</span>, <span class="m">verification_level</span></li>
+        <li>‏API: <span class="m">candidates/{city}</span>, <span class="m">economic/feasibility</span>, <span class="m">dossiers/generate</span>, <span class="m">filters/options</span></li>
+        <li>צינור OCR חי — Tesseract עברית, בדיקת סבירות, דגל <span class="m">requires_human_review</span> לכל תוצאת AI</li>
+        <li>ספריית הנחות בנויה נכון: <span class="m">DATA / ESTIMATE / MISSING</span>, גרסה ותאריך, ו-MISSING חוסם</li>
       </ul>
     </div>
     <div class="box lack">
-      <h3>הפער האמיתי — שלושה חיבורים</h3>
+      <h3>ומה שחסר בו — בדיוק מה ש-layer_a פתר</h3>
       <ul>
-        <li><strong>הגשר.</strong> ‏<span class="m">layer_a</span> מחשב 700 מועמדים מראש; ה-POC אוסף חי לכל סריקה. <strong>שני צינורות נפרדים שלא נפגשים.</strong> שרשרת הזכויות 1–9 אינה ב-<span class="m">rules.py</span></li>
-        <li><strong>ספריית ההנחות.</strong> ‏<span class="m">economics()</span> דורשת <span class="m">sale_price</span> ו-<span class="m">build_cost</span> ומסרבת במפורש לספק קבועים בשקט — <em>״No commercial or planning constants are silently supplied״</em>. <strong>שום דבר לא מזין אותה.</strong></li>
-        <li><strong><span class="m">sale_area</span>.</strong> נדרש כקלט, ושווה לסך הבנוי פחות התמורה לדיירים — וזו דורשת את שטח הדירות הקיימות. <strong>זה הפער שלא היה במפה כלל.</strong></li>
+        <li><strong>‏<span class="m">herzliya/rules.py</span> הוא 31 שורות.</strong> אין בו את שלושת תנאי הסף של §70א, אין טבלת רוחב רחוב, אין תקרות קטגוריה, אין שרשרת זכויות, אין חניה, אין צירים ראשיים</li>
+        <li><strong>שטח בנוי מגיע מ-OCR על PDF סרוק</strong> — וה-engine מתעד בעצמו טעות אמיתית של 128 מ״ר שנקראה ממספר מגרש</li>
+        <li><strong>פער מספר 1 שלו:</strong> ״סריקות היתר ישנות אינן נגישות — לא נמצאה דרך מתיק למספר בקשה״. <span class="ok">אנחנו פתרנו את זה</span> — התבנית, <span class="m">GetTikimByGush</span>, ו-84 תיקים מחולצים</li>
+        <li>כל ההנחות עדיין <span class="m">ESTIMATE</span> ולא <span class="m">DATA</span></li>
+        <li>אין ודאות ברמת שדה — רק <span class="m">verification_level</span> אחד לכל הזדמנות</li>
       </ul>
     </div>
+  </div>
+
+  <div class="contract" style="margin-top:1.3rem">
+    <h2>ההחלטה: לבנות על ה-engine, ולהעביר אליו שני דברים בלבד</h2>
+    <p><strong>מ-<span class="m">layer_a</span> — הכל.</strong> 700 המועמדים, שרשרת הזכויות 1–9, טבלת הרחוב, תקרות הקטגוריה, החניה, הצירים, ונתוני הארכיון. זה מה שהופך את <span class="m">herzliya/rules.py</span> מ-31 שורות לכללים אמיתיים, ומחליף את שלב ה-OCR השברירי במקור רשמי לכל העיר.</p>
+    <p style="margin:0"><strong>מה-POC — דבר אחד.</strong> מודל הוודאות: <code>evidence(value, source, certainty, location)</code> ו-<code>usable()</code>. ה-engine מחזיק <span class="m">verification_level</span> אחד לכל הזדמנות, וה-PRD דורש מקור, תאריך וודאות <strong>לכל שדה מהותי</strong> (‏4.3 · 8.3). זה הפריט היחיד שראוי להעתיק. <strong>שאר ה-POC נשאר כהתייחסות ולא עובר.</strong></p>
   </div>
 </section>
 
@@ -196,37 +208,37 @@ td.d{white-space:nowrap;font-family:var(--mono);font-size:.85rem;color:var(--sof
 
 <section>
   <h2>שלושה זרמים</h2>
-  <p class="note" style="margin-bottom:1.1rem">שונו לעומת הגרסה הראשונה: <strong>אף זרם אינו בונה מאפס.</strong> א׳ מגשר, ב׳ מזין מנוע קיים, ג׳ מרחיב אפליקציה קיימת.</p>
+  <p class="note" style="margin-bottom:1.1rem">כולם ב-<span class="m">apps/shaked-engine</span>. אף זרם אינו בונה מאפס, ואף זרם אינו נוגע ב-<span class="m">POC/</span> — הוא נשאר כהתייחסות.</p>
   <div class="streams">
     <div class="stream sA">
-      <div class="sHead"><span class="chip">א</span><h3>הגשר</h3></div>
+      <div class="sHead"><span class="chip">א</span><h3>כללים ומועמדים</h3></div>
       <ul>
-        <li>‏<span class="m">layer_a</span> → מבנה ה-<span class="m">fields</span>/<span class="m">evidence</span> של ה-POC</li>
-        <li>שרשרת הזכויות 1–9 כשערים ב-<span class="m">rules.py</span>, עם מקור ועמוד לכל כלל</li>
-        <li>פוליגון → מועמדים מתוך ה-700 שכבר מחושבים</li>
-        <li>אימות ארכיון על עשרת המובילים — ״תפוס״ ו״חוזק״</li>
+        <li>לזרוע את 700 המועמדים כ-<span class="m">Opportunity</span> עם גאומטריה</li>
+        <li>שרשרת הזכויות 1–9 ושערי §70א לתוך <span class="m">herzliya/rules.py</span> — היום 31 שורות</li>
+        <li>מודל הוודאות מה-POC: מקור, תאריך וודאות לכל שדה</li>
+        <li>נתוני הארכיון — <strong>סוגר את פער מספר 1 של ה-engine</strong></li>
       </ul>
-      <p class="owner">בעלים: ______ · מכיר את שני הצדדים</p>
+      <p class="owner">‏<span class="m">backend/app/cities/herzliya/</span></p>
     </div>
     <div class="stream sB">
-      <div class="sHead"><span class="chip">ב</span><h3>הנחות ושטח מכירה</h3></div>
+      <div class="sHead"><span class="chip">ב</span><h3>הנחות ותיק</h3></div>
       <ul>
-        <li><strong>מקור מחירי עסקאות עם כיסוי עירוני</strong> — לא מספר אחד לעיר</li>
-        <li>עלויות בנייה, יועצים, מימון, היטלים — מקור ותאריך לכל אחד</li>
-        <li><strong>מודל התמורה לדיירים</strong> → <span class="m">sale_area</span></li>
-        <li>שטח הדירות הקיימות: ממוצע נגזר, ומקור סמכותי למסירה</li>
+        <li>למלא את <span class="m">assumptions.py</span> ב-<span class="m">DATA</span> במקום <span class="m">ESTIMATE</span></li>
+        <li>מודל התמורה לדיירים → <span class="m">sale_area</span></li>
+        <li>שטח דירה וקומה מהגרמושקה, דרך ה-extractor הקיים</li>
+        <li><strong>להחליף את שלב ה-OCR לשטח בנוי</strong> בנתון של <span class="m">layer_a</span></li>
       </ul>
-      <p class="owner">בעלים: ______ · הזרם הכבד ביותר</p>
+      <p class="owner">‏<span class="m">services/economic/</span> · <span class="m">worker.py</span></p>
     </div>
     <div class="stream sC">
-      <div class="sHead"><span class="chip">ג</span><h3>הרחבת האפליקציה</h3></div>
+      <div class="sHead"><span class="chip">ג</span><h3>האפליקציה</h3></div>
       <ul>
-        <li>ממשק <strong>סידור העדפות</strong> — המנוע קיים, ה-UI לא</li>
-        <li>מסך תוצאות עם <strong>נימוק בחירה</strong> לכל שורה</li>
-        <li>יתרה ״נמסרו 2 מתוך 3״ ומסך השלמה</li>
-        <li>תצוגת תיק: שרשרת הזכויות, מקור וודאות לכל שדה, פערים</li>
+        <li>ציור פוליגון על המפה הקיימת + מגבלת שטח</li>
+        <li>טופס קריטריונים: חובה + סדר העדפות</li>
+        <li>מסך תוצאות עם נימוק בחירה ויתרה</li>
+        <li>תצוגת תיק: שרשרת, מקור וודאות, פערים, ייצוא</li>
       </ul>
-      <p class="owner">בעלים: ______ · הקטן מבין השלושה</p>
+      <p class="owner">‏<span class="m">frontend/src/</span> — 197 שורות היום</p>
     </div>
   </div>
 </section>
@@ -239,17 +251,17 @@ td.d{white-space:nowrap;font-family:var(--mono);font-size:.85rem;color:var(--sof
       <tr>
         <td class="d">ראשון<br>היום</td>
         <td>
-          <div><span class="tagA">א</span>למפות את שדות <span class="m">layer_a</span> למבנה ה-<span class="m">evidence</span> של ה-POC</div>
+          <div><span class="tagA">א</span>להריץ את ה-engine מקומית ולזרוע הזדמנות אחת אמיתית</div>
           <div><span class="tagB">ב</span><strong>מקור מחירי עסקאות בכיסוי עירוני</strong> — נסגר היום, לא בשלישי</div>
-          <div><span class="tagC">ג</span>להריץ את ה-POC מקומית ולמפות מה קיים מול מסכי ה-PRD</div>
+          <div><span class="tagC">ג</span>למפות את 7 מסכי ה-PRD מול מה שה-frontend כבר עושה</div>
         </td>
-        <td>החוזה קפוא, קובץ דוגמה בידי שלושתכם, וה-POC רץ אצל כולם</td>
+        <td>ה-engine רץ אצל שלושתכם מול Postgres, והזדמנות אחת נזרעה</td>
       </tr>
       <tr>
         <td class="d">שני</td>
         <td>
           <div><span class="tagA">א</span>שדות ודאות + אימות ארכיון על הרשימה הקצרה</div>
-          <div><span class="tagB">ב</span>ספריית הנחות + מודל תמורה → <span class="m">sale_area</span></div>
+          <div><span class="tagB">ב</span>למלא את <span class="m">assumptions.py</span> ב-DATA + מודל תמורה</div>
           <div><span class="tagC">ג</span>סידור העדפות + מסך תוצאות עם נימוק</div>
         </td>
         <td>כל זרם מייצר פלט אמיתי מול קובץ הדוגמה</td>
@@ -332,6 +344,7 @@ td.d{white-space:nowrap;font-family:var(--mono);font-size:.85rem;color:var(--sof
   <div class="risk"><h3>שטח הדירות הקיימות מתגלה כחוסם ביום שלישי</h3><p>בלי <span class="m">sale_area</span> אין תרחיש, ובלי תרחיש התיק אינו נספר כמוכן לפי <span class="ref">DOS-02</span>. <strong>להחליט היום</strong> אם מוציאים כסף על תשריט בית משותף לשלושת הנמסרים, או מוסרים ממוצע נגזר מסומן כאומדן.</p></div>
   <div class="risk"><h3>הארכיון חוסם את שער ה״תפוס״</h3><p>הארכיון מחזיר CAPTCHA וסירובים, ויש לנו נתונים ל-16 חלקות בלבד. <strong>נפילה מתוכננת:</strong> אם האימות לא עובד — לסמן "היסטוריית היתרים לא נבדקה" בתיק ולא להעמיד פנים שנבדקה. תיק כן, הבטחה לא.</p></div>
   <div class="risk"><h3>המשתמש מצייר פוליגון מחוץ לאזור המכויל</h3><p>הוא מקבל אפס תוצאות וההדגמה נראית שבורה, למרות שהמערכת התנהגה נכון. <strong>שכבת כיסוי על המפה היא התיקון</strong>, והיא חצי שעה בזרם ג׳ — לא משהו שמגלים ביום רביעי.</p></div>
+  <div class="risk"><h3>ההרצה המקומית של ה-engine תיקח יותר ממה שנדמה</h3><p>‏Postgres + PostGIS + alembic + venv + npm, ו-<span class="m">PRODUCT_STRUCTURE.md</span> מתעד שהרצה ראשונה דרשה תיקון באגי enum, החלפת גרסת next בגלל RCE, ותיקון react-leaflet. <strong>זו משימת יום ראשון לשלושתכם, לא ״נסדר את זה אחר כך״.</strong></p></div>
   <div class="risk"><h3>זחילת היקף לשריון ולסליקה</h3><p>שניהם מפתים כי הם "המודל העסקי". שניהם לא בודקים את ההנחה המסוכנת. אם מישהו נוגע בהם לפני רביעי — התאריך נעלם.</p></div>
 </section>
 

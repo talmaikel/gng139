@@ -111,133 +111,133 @@ th{font-size:.76rem;letter-spacing:.06em;text-transform:uppercase;color:var(--fa
 
 <section>
   <h2>שלושת התפקידים</h2>
+  <p class="note" style="margin-bottom:1rem">הכל ב-<span class="m">apps/shaked-engine</span>. <strong>‏<span class="m">POC/</span> אינו בסיס הפיתוח</strong> — הוא נשאר כהתייחסות, ופריט אחד בלבד עובר ממנו.</p>
   <div class="who">
     <div class="card sA">
-      <div class="cHead"><span class="chip">א</span><h3>הגשר</h3></div>
-      <p>מחבר את <span class="m">layer_a</span> — 700 המועמדים ושרשרת הזכויות — למבנה הנתונים של ה-POC, ומוסיף את שערי המדיניות ל-<code>rules.py</code>.</p>
-      <p><strong>נוגע ב:</strong> <span class="m">POC/app/rules.py</span>, <span class="m">bridge.py</span> (חדש), <span class="m">layer_a/scripts/</span></p>
+      <div class="cHead"><span class="chip">א</span><h3>כללים ומועמדים</h3></div>
+      <p>מעביר את <span class="m">layer_a</span> לתוך ה-engine: 700 המועמדים כשורות <span class="m">Opportunity</span>, ושרשרת הזכויות 1–9 לתוך <code>herzliya/rules.py</code> — שהיום הוא 31 שורות ואין בו §70א, טבלת רחוב, תקרות קטגוריה, חניה או צירים.</p>
+      <p><strong>נוגע ב:</strong> <span class="m">backend/app/cities/herzliya/</span>, <span class="m">core/schemas.py</span></p>
       <p class="name">שם: ______________</p>
     </div>
     <div class="card sB">
-      <div class="cHead"><span class="chip">ב</span><h3>הנחות ושטח מכירה</h3></div>
-      <p>מוצא מקורות למחירים ולעלויות, בונה ספריית הנחות בגרסאות, ומחשב את <span class="m">sale_area</span> דרך מודל התמורה לדיירים.</p>
-      <p><strong>נוגע ב:</strong> <span class="m">POC/app/assumptions.py</span> (חדש), <span class="m">compensation.py</span> (חדש). <strong>לא</strong> ב-<code>economics()</code> — היא כבר עובדת</p>
+      <div class="cHead"><span class="chip">ב</span><h3>הנחות ותיק</h3></div>
+      <p>ממלא את ספריית ההנחות בנתונים אמיתיים, מחשב <span class="m">sale_area</span> דרך התמורה לדיירים, <strong>ומחליף את שלב ה-OCR לשטח בנוי</strong> בנתון הרשמי של <span class="m">layer_a</span>.</p>
+      <p><strong>נוגע ב:</strong> <span class="m">services/economic/</span>, <span class="m">worker.py</span>, <span class="m">pipeline/extractor.py</span></p>
       <p class="name">שם: ______________</p>
     </div>
     <div class="card sC">
       <div class="cHead"><span class="chip">ג</span><h3>האפליקציה</h3></div>
-      <p>מרחיב את ה-POC הקיים למסכים שה-PRD דורש: סידור העדפות, נימוק בחירה, יתרה, ותצוגת תיק עם מקור וודאות.</p>
-      <p><strong>נוגע ב:</strong> <span class="m">POC/static/</span>, <span class="m">app/main.py</span>, <span class="m">app/models.py</span></p>
+      <p>מרחיב את ה-frontend — 197 שורות היום, עם מפה שכבר מציגה פוליגונים אמיתיים ו-login שעובד — למסכים שה-PRD דורש.</p>
+      <p><strong>נוגע ב:</strong> <span class="m">frontend/src/</span>, <span class="m">api/v1/</span></p>
       <p class="name">שם: ______________</p>
     </div>
   </div>
 </section>
 
 <section class="contract">
-  <h2>החוזה כבר קיים — אל תמציאו אותו</h2>
-  <p>בגרסה הקודמת הצעתי לעצב סכמת <span class="m">candidate</span> משותפת. <strong>זה היה מיותר.</strong> ה-POC כבר מגדיר אותה ב-<code>rules.py</code>, וכל הצדדים עובדים מולה כמו שהיא.</p>
-  <pre>evidence(value, source, certainty, location, method)
-    certainty ∈ official | derived | manually_verified | estimate | missing | conflict
+  <h2>החוזה: המודלים של ה-engine, פלוס פריט אחד מה-POC</h2>
+  <p>‏<span class="m">Opportunity</span> הוא הישות המרכזית וכבר קיים. מה שחסר לו הוא <strong>ודאות ברמת שדה</strong> — יש בו <span class="m">verification_level</span> אחד לכל ההזדמנות, וה-PRD דורש מקור, תאריך וודאות <em>לכל שדה מהותי</em> (‏4.3 · 8.3).</p>
+  <pre>Opportunity                       # קיים
+  city_code, address, block, parcel
+  geom          MULTIPOLYGON 4326  # PostGIS
+  area_sqm, existing_units, xplan_code
+  verification_level               # אחד לכל ההזדמנות
+  metadata_json JSONB              # ← כאן נכנסת הוודאות לכל שדה
 
-usable(field)  →  True רק אם כל אלה מתקיימים:
-    certainty ∈ (official, derived, manually_verified)
-    source.url          קיים
-    source.retrieved_at קיים, וגילו ≤ SOURCE_MAX_AGE_DAYS
-    location            אינו None</pre>
-  <p class="note" style="margin-top:.9rem"><strong>המלכודת שתתפוס את כולם ביום שני:</strong> שדה בלי <span class="m">url</span>, בלי <span class="m">retrieved_at</span>, בלי <span class="m">location</span> או ישן מדי — חוזר <span class="m">unknown</span> ו<strong>חוסם מסירה</strong>, בשקט ובלי הודעת שגיאה. זו התנהגות נכונה, והיא תיראה כמו באג. כל שדה שזרם א׳ מייצר חייב לשאת את הארבעה.</p>
+metadata_json.fields[name] = {     # מועבר מה-POC
+    value, unit, certainty,        # official | derived | manually_verified
+    source: {url, retrieved_at},   #          | estimate | missing | conflict
+    location, method
+}</pre>
+  <p class="note" style="margin-top:.9rem"><strong>הכלל שמגיע איתו:</strong> שדה נחשב ראיה רק אם יש לו ודאות מותרת, <span class="m">url</span>, <span class="m">retrieved_at</span> בתוקף, ו-<span class="m">location</span>. חסר אחד — הוא <span class="m">missing</span>, והשער חוזר <span class="m">unknown</span>. <strong>‏<span class="m">retrieved_at</span> הוא זמן השליפה האמיתי, לא <span class="m">now()</span>.</strong></p>
+  <p class="note" style="margin-top:.7rem">‏<span class="m">POC/app/bridge.py</span> שנכתב היום מייצר בדיוק את המבנה הזה. <strong>הלוגיקה עוברת, היעד משתנה</strong> — במקום מבנה ה-POC היא כותבת ל-<span class="m">metadata_json</span> של <span class="m">Opportunity</span>.</p>
 </section>
 
 <div class="hr"></div>
 
 <div class="day">
-  <div class="dayHead"><h2>ראשון · היום</h2><span class="dayNote">הכל מקבילי. אין תלות בין שלושת הזרמים.</span></div>
+  <div class="dayHead"><h2>ראשון · היום</h2><span class="dayNote">קודם להרים את ה-engine אצל שלושתכם. אחר כך מקבילי.</span></div>
   <div class="tasks">
-    <div class="task a new"><span class="tid">A0</span><h3>לתקן את <code>POLICY_URL</code></h3><span class="added">13.09 · ביקורת</span>
-      <p>הצביע לקובץ ספטמבר 2025 שכבר לא קיים בשרת, וכל שער פולט אותו כ-<span class="m">source_url</span>.</p>
-      <span class="done"><b class="ok">✓ בוצע</b> — הוחלף לפרסום אפריל 2026, אומת 200 וזהות טקסט מול העותק בריפו. <span class="m">e28a04e</span></span></div>
-    <div class="task a"><span class="tid">A1</span><h3>מיפוי שדות</h3><span class="added">13.09</span>
-      <p>לכתוב <span class="m">bridge.to_fields(parcel)</span> שממיר פלט <span class="m">layer_a</span> ל-<span class="m">fields</span> עם <code>evidence()</code>. הקפדה על ארבעת התנאים של <code>usable()</code>.</p>
-      <span class="done"><b>נגמר כש:</b> חלקה אמיתית מייצרת <span class="m">fields</span> ש-<code>usable()</code> מחזירה True עבור <span class="m">parcel_area, units, floors, renewal_policy_category</span>.</span></div>
-    <div class="task a new"><span class="tid">A9</span><h3><span class="m">retrieved_at</span> ו-<span class="m">entity_key</span></h3><span class="added">13.09 · ביקורת</span>
-      <p>זמן שליפה אמיתי לכל שדה — <span class="m">now()</span> יהיה שקר שעובר ולידציה. מפתח ישות לפי גוש/חלקה, אחרת <span class="m">SEL-02</span> נשבר בשקט.</p>
-      <span class="done"><b>נגמר כש:</b> אותה חלקה בשתי סריקות חופפות נמסרת פעם אחת, ואף שדה לא נופל על גיל.</span></div>
-    <div class="task a"><span class="tid">A2</span><h3>פוליגון → מועמדים</h3><span class="added">13.09</span>
-      <p><span class="m">candidates_in(polygon)</span> מתוך 700 המועמדים המחושבים מראש. לא איסוף חי.</p>
-      <span class="done"><b>נגמר כש:</b> פוליגון מעל שז״ר מחזיר רשימה בפחות משתי שניות.</span></div>
-    <div class="task a"><span class="tid">A3</span><h3>מיפוי שערים קיימים</h3><span class="added">13.09</span>
-      <p><code>evaluate()</code> כבר בודק ייעוד, 70% מגורים, מועד היתר עם חוות דעת 1980–84, חיזוק, קומות, דירות, היקף. לבדוק מה <span class="m">layer_a</span> יודע למלא.</p>
-      <span class="done"><b>נגמר כש:</b> רשימה כתובה של שדות ללא מקור — לפני שמנסים לפתור אותם.</span></div>
+    <div class="task a new"><span class="tid">A0</span><h3>‏<code>POLICY_URL</code></h3><span class="added">13.09 · ביקורת</span>
+      <p>הצביע לקובץ ספטמבר 2025 שכבר לא קיים.</p>
+      <span class="done"><b class="ok">✓ בוצע</b> ב-<span class="m">POC/app/config.py</span>. <strong>צריך להעתיק גם ל-engine</strong> כשהכללים עוברים. <span class="m">e28a04e</span></span></div>
+    <div class="task a new"><span class="tid">E0</span><h3>להרים את ה-engine — כל השלושה</h3><span class="added">13.09 · engine</span>
+      <p>‏Postgres 16 + PostGIS, <span class="m">alembic upgrade head</span>, venv, <span class="m">npm install</span>, <span class="m">uvicorn app.main:app</span>. ‏<span class="m">PRODUCT_STRUCTURE.md</span> מתעד את המלכודות מההרצה הראשונה.</p>
+      <span class="done"><b>נגמר כש:</b> register → login → <span class="m">candidates/herzliya</span> מחזיר 200 אצל כל אחד.</span>
+      <span class="blocks">חוסם את כולם</span></div>
+    <div class="task a new"><span class="tid">A1</span><h3>הגשר → <span class="m">Opportunity</span></h3><span class="added">13.09 · יעד שונה</span>
+      <p>הלוגיקה נכתבה היום ועובדת — ארבעת השדות הנדרשים עוברים על כל 700. <strong>היעד משתנה:</strong> במקום מבנה ה-POC, לכתוב שורות <span class="m">Opportunity</span> עם הוודאות ב-<span class="m">metadata_json</span>.</p>
+      <span class="done"><b>נגמר כש:</b> הזדמנות אחת נזרעה ומוחזרת דרך <span class="m">GET candidates/herzliya</span> עם גאומטריה.</span></div>
+    <div class="task a new"><span class="tid">A9</span><h3>‏<span class="m">retrieved_at</span> ומפתח ישות</h3><span class="added">13.09 · ביקורת</span>
+      <p>זמן שליפה אמיתי לכל שדה. מפתח לפי גוש/חלקה — ב-engine זה <span class="m">block</span>+<span class="m">parcel</span>, וה-<span class="m">UNIQUE</span> עליהם הוא מה שמונע מסירה כפולה.</p>
+      <span class="done"><b>נגמר כש:</b> זריעה חוזרת אינה יוצרת כפילות, ואף שדה לא נופל על גיל.</span></div>
 
     <div class="task b"><span class="tid">B1</span><h3>מקור מחירי עסקאות</h3><span class="added">13.09</span>
-      <p>כיסוי עירוני לפי כתובת, לא מספר אחד לעיר. לבדוק זמינות, רישיון וגרנולריות.</p>
-      <span class="done"><b>נגמר כש:</b> ‏<span class="m">lat/lon</span> → עסקאות אחרונות עם ₪ למ״ר, כתובת URL ותאריך.</span>
+      <p>כיסוי עירוני לפי כתובת. נכנס כ-<span class="m">AssumptionStatus.DATA</span> במקום <span class="m">ESTIMATE</span>.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">lat/lon</span> → ₪ למ״ר עם URL ותאריך.</span>
       <span class="blocks">חוסם את B4 ו-B5</span></div>
     <div class="task b"><span class="tid">B2</span><h3>מקור עלויות בנייה</h3><span class="added">13.09</span>
-      <p>מדד תשומות הבנייה או מקור מפורסם אחר, עם גרסה ותאריך.</p>
-      <span class="done"><b>נגמר כש:</b> מספר אחד עם מקור, תאריך ויחידה, כתוב בקובץ.</span></div>
-    <div class="task b new"><span class="tid">B3</span><h3>שטח כל דירה ובאיזו קומה</h3><span class="added">13.09 · תוקן</span>
-      <p><strong>הנתון קיים בגרמושקה, חינם.</strong> נבדק בפועל על היתר 19780028: תכניות הקומה נושאות שטח לכל חדר — <span class="m">ח. דיור 20.27 מ״ר</span>, <span class="m">ח. שינה 10.75</span>, <span class="m">מטבח 7.18</span> — וכל תכנית מסומנת בקומה שלה (<span class="m">תכנית קומה ד׳</span>). סכימת החדרים נותנת את שטח הדירה.</p>
-      <p style="margin-top:.4rem"><strong>הקושי אינו זמינות אלא חילוץ:</strong> שרטוט סרוק מ-1978, בלי שכבת טקסט, בכתב יד. ה-engine כבר מחזיק את הצינור לזה — Tesseract heb+eng, בדיקת סבירות, ודגל <span class="m">requires_human_review</span> לכל תוצאת AI.</p>
-      <span class="done"><b>נגמר כש:</b> דירה אחת חולצה מגרמושקה אמיתית — שטח וקומה — ואומתה ידנית מול התמונה.</span>
+      <p>מדד תשומות הבנייה או מקור מפורסם. הספרייה כבר דורשת גרסה ותאריך.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">construction_cost_per_sqm_ils</span> הוא <span class="m">DATA</span> עם מקור.</span></div>
+    <div class="task b new"><span class="tid">B3</span><h3>שטח דירה וקומה מהגרמושקה</h3><span class="added">13.09 · תוקן</span>
+      <p>נבדק בפועל על היתר 19780028: <span class="m">ח. דיור 20.27 מ״ר</span>, <span class="m">ח. שינה 10.75</span>, וכל תכנית מסומנת <span class="m">תכנית קומה ד׳</span>. הנתון קיים וחינם; הקושי הוא חילוץ משרטוט סרוק. ה-extractor של ה-engine כבר עושה את זה.</p>
+      <span class="done"><b>נגמר כש:</b> דירה אחת חולצה — שטח וקומה — ואומתה ידנית מול התמונה.</span>
       <span class="blocks">חוסם את B5</span></div>
 
-    <div class="task c"><span class="tid">C1</span><h3>להריץ את ה-POC</h3><span class="added">13.09</span>
-      <p><span class="m">run-dev.sh</span> או <span class="m">compose.yaml</span>. לפתוח את שלושת המצבים.</p>
-      <span class="done"><b>נגמר כש:</b> רץ אצל שלושתכם, לא רק אצל מי שכתב אותו.</span></div>
-    <div class="task c"><span class="tid">C2</span><h3>מיפוי מסכים מול ה-PRD</h3><span class="added">13.09</span>
-      <p>שבעה מסכים ב-§7. <strong>לא לבנות כלום לפני שהרשימה כתובה.</strong></p>
-      <span class="done"><b>נגמר כש:</b> טבלה של שבע שורות עם קיים/חלקי/חסר.</span></div>
-    <div class="task c"><span class="tid">C3</span><h3>להרחיב את שדות ההעדפה</h3><span class="added">13.09</span>
-      <p><code>Preference.field</code> מוגבל ל-<span class="m">parcel_area, units, floors</span>. להוסיף שדות מהגשר.</p>
-      <span class="done"><b>נגמר כש:</b> אפשר למיין לפי שדה חדש דרך ה-API, גם בלי UI.</span></div>
+    <div class="task c new"><span class="tid">C1</span><h3>מיפוי 7 מסכי ה-PRD</h3><span class="added">13.09 · engine</span>
+      <p>ה-frontend הוא 197 שורות: login, dashboard, מפה עם פוליגונים אמיתיים. לסמן מה מהשבעה קיים, חלקי או חסר. <strong>לא לבנות לפני שהרשימה כתובה.</strong></p>
+      <span class="done"><b>נגמר כש:</b> טבלה של שבע שורות.</span></div>
+    <div class="task c new"><span class="tid">C3</span><h3>להרחיב את הפילטרים</h3><span class="added">13.09 · engine</span>
+      <p><span class="m">filters/options</span> ו-<span class="m">screen_herzliya_candidates</span> תומכים היום ב-<span class="m">min_area_sqm</span>, <span class="m">categories</span>, <span class="m">verification_level</span>. ה-PRD דורש שהיזם יגדיר תנאי חובה <em>וסדר העדפות</em>.</p>
+      <span class="done"><b>נגמר כש:</b> מיון לפי שדה חדש עובד דרך ה-API, גם בלי UI.</span></div>
+    <div class="task c new"><span class="tid">C12</span><h3>ציור פוליגון</h3><span class="added">13.09 · engine</span>
+      <p>המפה קיימת ומציגה פוליגונים. חסר <strong>ציור</strong> — leaflet-draw, אימות בגבול העיר, ומגבלת שטח.</p>
+      <span class="done"><b>נגמר כש:</b> פוליגון מצויר נשלח ל-API ומחזיר מועמדים.</span></div>
   </div>
 </div>
 
 <div class="day">
-  <div class="dayHead"><h2>שני</h2><span class="dayNote">כל זרם מייצר פלט אמיתי. סנכרון קצר בבוקר ובערב.</span></div>
+  <div class="dayHead"><h2>שני</h2><span class="dayNote">כל זרם מייצר פלט אמיתי מול בסיס הנתונים.</span></div>
   <div class="tasks">
-    <div class="task a"><span class="tid">A4</span><h3>שרשרת הזכויות כשערים</h3><span class="added">13.09</span>
-      <p>שלבים 2–9 ל-<code>evaluate()</code>: תקרת 400%, תקרת דירות, גובה, טביעת רגל, הפרשה, מרפסות, תמהיל, חניה, ודגל ציר ראשי. כל שער עם <span class="m">source_url</span> ו-<span class="m">page</span>.</p>
-      <span class="done"><b>נגמר כש:</b> <code>eligibility_status()</code> משקף אותם וכל שער מצטט עמוד.</span></div>
-    <div class="task a new"><span class="tid">A11</span><h3><span class="m">tier</span> הופך לשער</h3><span class="added">13.09 · ביקורת</span>
-      <p>שכבות הביטחון עוברות מ-<span class="m">rank.py</span> ל-<code>eligibility_status()</code>. שכבה 2 → <span class="m">needs_verification</span>. <strong>המיון נשאר של היזם.</strong></p>
-      <span class="done"><b>נגמר כש:</b> מועמד בלי קביעת קומות אינו נמסר, ואינו ״מדורג נמוך״.</span></div>
-    <div class="task a"><span class="tid">A5</span><h3>אימות ארכיון על העשירייה</h3><span class="added">13.09</span>
-      <p>״תפוס״ ו״חוזק״ מנתוני התיקים. יש נתונים ל-84 תיקים בלבד — <strong>השאר חייבות <span class="m">missing</span></strong>.</p>
+    <div class="task a new"><span class="tid">A4</span><h3>שרשרת הזכויות ל-<code>herzliya/rules.py</code></h3><span class="added">13.09 · engine</span>
+      <p>שלושת תנאי §70א, טבלת רוחב הרחוב, תקרות הקטגוריה 9 / 5.5, שלבים 2–9, חניה וצירים ראשיים. <strong>הקובץ הוא 31 שורות והכל חסר בו.</strong> כל שער עם מקור ועמוד.</p>
+      <span class="done"><b>נגמר כש:</b> מועמד מחזיר החלטה עם ציטוט עמוד לכל שער.</span></div>
+    <div class="task a new"><span class="tid">A11</span><h3>שכבת הביטחון → <span class="m">verification_level</span></h3><span class="added">13.09 · ביקורת</span>
+      <p>ל-engine כבר יש את העמודה, ו<strong>פער מספר 2 שלו הוא שאיש אינו מעדכן אותה</strong>. שכבה 2 → <span class="m">needs_verification</span>. המיון נשאר של היזם.</p>
+      <span class="done"><b>נגמר כש:</b> העמודה משקפת את השכבה, ומועמד בלי קביעת קומות אינו נמסר.</span></div>
+    <div class="task a new"><span class="tid">A5</span><h3>נתוני הארכיון</h3><span class="added">13.09 · engine</span>
+      <p>84 התיקים ל״תפוס״ ו״חוזק״. <strong>זה סוגר את פער מספר 1 של ה-engine</strong> — הוא מתעד שלא נמצאה דרך מתיק למספר בקשה, ואצלנו היא קיימת.</p>
       <span class="done"><b>נגמר כש:</b> חלקה בלי נתוני ארכיון מחזירה <span class="m">unknown</span> ולא <span class="m">passed</span>.</span></div>
     <div class="task a"><span class="tid">A6</span><h3>נימוק בחירה</h3><span class="added">13.09</span>
-      <p><span class="m">why_selected</span> — איזו העדפה הכריעה ובאיזה ערך. נדרש ב-<span class="m">SEL-01</span>.</p>
-      <span class="done"><b>נגמר כש:</b> משפט קריא בעברית לכל אחת משלוש התוצאות.</span></div>
-    <div class="task a new"><span class="tid">A10</span><h3>בדיקה לגשר</h3><span class="added">13.09 · ביקורת</span>
-      <p><span class="m">test_bridge.py</span> — חלקה ידועה נכנסת, <span class="m">fields</span> צפוי יוצא.</p>
-      <span class="done"><b>נגמר כש:</b> יוצא לא-אפס כששדה מאבד מקור.</span></div>
+      <p><span class="m">why_selected</span> — איזו העדפה הכריעה. נדרש ב-<span class="m">SEL-01</span>.</p>
+      <span class="done"><b>נגמר כש:</b> משפט קריא בעברית לכל תוצאה.</span></div>
+    <div class="task a new"><span class="tid">A10</span><h3>בדיקות ל-backend</h3><span class="added">13.09 · ביקורת</span>
+      <p><strong>פער מספר 6 של ה-engine: אין בו בדיקות כלל.</strong> להתחיל מהגשר ומהשערים.</p>
+      <span class="done"><b>נגמר כש:</b> שדה שהופשט ממקורו מפיל בדיקה.</span></div>
 
-    <div class="task b"><span class="tid">B4</span><h3>ספריית הנחות</h3><span class="added">13.09</span>
-      <p><span class="m">assumptions.for_parcel(p)</span> מחזירה את כל 12 הקלטים של <code>ScenarioRequest</code>, לכל אחד מקור ותאריך.</p>
-      <span class="done"><b>נגמר כש:</b> <code>ScenarioRequest(**assumptions.for_parcel(p))</code> עובר ולידציה בלי ערך מומצא.</span></div>
-    <div class="task b"><span class="tid">B5</span><h3>מודל התמורה</h3><span class="added">13.09</span>
-      <p><span class="m">compensation(...)</span> → שטח תמורה, ומכאן <span class="m">sale_area</span> = סך בנוי פחות תמורה.</p>
-      <span class="done"><b>נגמר כש:</b> <code>economics()</code> רצה מקצה לקצה, וכל מספר ניתן לעקוב עד מקורו.</span></div>
-    <div class="task b"><span class="tid">B6</span><h3>מול מקרה ייחוס</h3><span class="added">13.09</span>
-      <p><span class="m">ACC-09</span> דורש בדיקה מול מקרי ייחוס. להריץ על הר מירון 1.</p>
-      <span class="done"><b>נגמר כש:</b> רווח על עלות בטווח שאפשר להגן עליו, או שידוע למה לא.</span></div>
+    <div class="task b new"><span class="tid">B4</span><h3>‏<span class="m">assumptions.py</span> מ-ESTIMATE ל-DATA</h3><span class="added">13.09 · engine</span>
+      <p>המבנה קיים ונכון — <span class="m">DATA/ESTIMATE/MISSING</span>, גרסה, תאריך. <strong>הקובץ מודה בעצמו:</strong> ״none of these figures have been sourced״. למלא מ-B1 ו-B2.</p>
+      <span class="done"><b>נגמר כש:</b> מחיר ועלות הם <span class="m">DATA</span>, והגרסה עלתה.</span></div>
+    <div class="task b new"><span class="tid">B5</span><h3>תמורה → <span class="m">sale_area</span></h3><span class="added">13.09 · engine</span>
+      <p>המחשבון כבר מפריד שטחי דיירים מיזם — ותוקן בו באג מבני שאיפס את חלק היזם. להזין אותו מנתוני הדירות של B3.</p>
+      <span class="done"><b>נגמר כש:</b> <span class="m">economic/feasibility</span> מחזיר תרחיש מלא לחלקה אמיתית.</span></div>
+    <div class="task b new"><span class="tid">B9</span><h3>להוציא את ה-OCR ממסלול השטח הבנוי</h3><span class="added">13.09 · engine</span>
+      <p><code>generate_dossier_handler</code> מפיק שטח בנוי מ-OCR על PDF סרוק, וה-engine תיעד טעות של 128 מ״ר שנקראה ממספר מגרש. <strong>‏<span class="m">layer_a</span> נותן את אותו נתון לכל 700 מהשכבות הרשמיות.</strong> ה-OCR נשאר לגרמושקה בלבד.</p>
+      <span class="done"><b>נגמר כש:</b> התיק מציג מקור רשמי לשטח, לא <span class="m">ai_assisted_unverified</span>.</span></div>
 
-    <div class="task c"><span class="tid">C4</span><h3>מסך סידור העדפות</h3><span class="added">13.09</span>
-      <p>גרירה לסדר, כיוון מיון, הפרדה בין חובה להעדפה. <span class="m">4.2</span>: מיון מפורש, לא ניקוד סמוי.</p>
-      <span class="done"><b>נגמר כש:</b> שינוי הסדר משנה את התוצאות בפועל.</span></div>
-    <div class="task c"><span class="tid">C5</span><h3>מסך תוצאות</h3><span class="added">13.09</span>
-      <p>תוצאות מוכנות בלבד, נימוק לכל שורה, יתרה ״נמסרו 2 מתוך 3״, כפתור השלמה.</p>
-      <span class="done"><b>נגמר כש:</b> <span class="m">ACC-02</span> עובר.</span></div>
+    <div class="task c new"><span class="tid">C4</span><h3>סידור העדפות</h3><span class="added">13.09</span>
+      <p>גרירה לסדר, כיוון מיון, הפרדה בין חובה להעדפה.</p>
+      <span class="done"><b>נגמר כש:</b> שינוי הסדר משנה תוצאות בפועל.</span></div>
+    <div class="task c new"><span class="tid">C5</span><h3>מסך תוצאות ויתרה</h3><span class="added">13.09</span>
+      <p>טבלאות <span class="m">Balance</span> ו-<span class="m">Package</span> קיימות. חסר המסך והחיבור.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">ACC-02</span> עובר — שתי תוצאות ואז השלמה אחת.</span></div>
     <div class="task c"><span class="tid">C6</span><h3>תצוגת תיק</h3><span class="added">13.09</span>
-      <p>שרשרת 1–9, מקור וודאות לכל שדה, סעיף פערים מפורש.</p>
-      <span class="done"><b>נגמר כש:</b> אפשר לראות בתיק מאיפה הגיע כל מספר.</span></div>
+      <p>שרשרת 1–9, מקור וודאות לכל שדה, סעיף פערים.</p>
+      <span class="done"><b>נגמר כש:</b> אפשר לראות מאיפה הגיע כל מספר.</span></div>
 
     <div class="task a new"><span class="tid">D1</span><h3>מדידת רוחב · כל השלושה</h3><span class="added">13.09 · ביקורת</span>
-      <p>כל אחד מודד קודם את אותן שלוש — <span class="m">6529/43, 6538/476, 6531/160</span> — ואז ארבע משלו. ~20 דקות לאדם.<br>
-      <strong>א:</strong> <span class="m">6537/5, 6530/214, 6530/191, 6536/550</span><br>
-      <strong>ב:</strong> <span class="m">6529/63, 6536/194, 6546/498, 6538/553</span><br>
-      <strong>ג:</strong> <span class="m">6530/141, 6536/841, 6533/283, 7291/146</span></p>
-      <span class="done"><b>נגמר כש:</b> <span class="m">street_width.csv</span> מלא ונדחף ב-PR. <em>השלוש המשותפות אינן בזבוז — הפיזור בין המודדים הוא חלק מהשגיאה שמכיילים.</em></span></div>
+      <p>קודם אותן שלוש — <span class="m">6529/43, 6538/476, 6531/160</span> — ואז ארבע לכל אחד. ~20 דקות.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">street_width.csv</span> מלא. <em>השלוש המשותפות מודדות את הפיזור בין המודדים, שהוא חלק מהשגיאה.</em></span></div>
   </div>
 </div>
 
@@ -245,7 +245,7 @@ usable(field)  →  True רק אם כל אלה מתקיימים:
   <div class="dayHead"><h2>שלישי</h2><span class="dayNote">אינטגרציה. כולם על אותו דבר.</span></div>
   <div class="tasks">
     <div class="task a"><span class="tid">A7</span><h3>חיבור הצינורות</h3><span class="added">13.09</span>
-      <p>פוליגון אמיתי → מועמדים → שערים → דירוג → שלוש תוצאות.</p>
+      <p>פוליגון מצויר → <span class="m">candidates/herzliya</span> → שערים → דירוג → <span class="m">dossiers/generate</span> → שלוש תוצאות.</p>
       <span class="done"><b>נגמר כש:</b> ריצה אחת מחזירה שלוש תוצאות מוכנות.</span></div>
     <div class="task a new"><span class="tid">D2</span><h3>לכייל את <span class="m">TOLERANCE_M</span></h3><span class="added">13.09 · ביקורת</span>
       <p>מהפער בין המדידה הידנית לכלי. אם השלוש המשותפות לא מסכימות בין המודדים — זו התוצאה החשובה.</p>
@@ -254,7 +254,7 @@ usable(field)  →  True רק אם כל אלה מתקיימים:
       <p>לבדוק שאף אחת לא נחסמת על נתון חסר. אם כן — זה תקין, וזה מה ש-<span class="m">DOS-02</span> דורש.</p>
       <span class="done"><b>נגמר כש:</b> שלושה תרחישים מלאים, או הסבר כתוב למה אחד נחסם.</span></div>
     <div class="task c"><span class="tid">C7</span><h3>המסלול המלא במסכים</h3><span class="added">13.09</span>
-      <p>מפה → קריטריונים → סריקה → תוצאות → תיק → ייצוא, בלי API ידני.</p>
+      <p>מפה → ציור → קריטריונים → סריקה → תוצאות → תיק → ייצוא, בלי curl.</p>
       <span class="done"><b>נגמר כש:</b> כל המסלול בעכבר בלבד.</span></div>
     <div class="task c new"><span class="tid">C9</span><h3>ייצוא משקף את התיק החדש</h3><span class="added">13.09 · ביקורת</span>
       <p>‏PDF ו-Excel עם השרשרת, מקור וודאות, וסעיף הפערים. <span class="m">DOS-04</span> דורש את שניהם.</p>
