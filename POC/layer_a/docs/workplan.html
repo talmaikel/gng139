@@ -335,6 +335,62 @@ git push origin beta/&lt;שלך&gt;
 </section>
 
 <section>
+  <h2>האם התכנית תואמת את הארכיטקטורה</h2>
+  <p>עברתי רכיב-רכיב. <strong>כן — למעט סתירה אחת שהייתה מתגלה רק באינטגרציה.</strong></p>
+  <div class="tw"><table>
+    <thead><tr><th>רכיב בארכיטקטורה</th><th>איפה בתכנית</th></tr></thead>
+    <tbody>
+      <tr><td>סינון עירוני · 19,066 → 904 → 700</td><td><span class="m">A2</span> — הרשימה כבר מחושבת, לא נסרקת מחדש</td></tr>
+      <tr><td>מפת המדיניות והקטגוריות</td><td><span class="m">A1</span> — שדה <span class="m">renewal_policy_category</span> שהשער כבר בודק</td></tr>
+      <tr><td>סיווג רחוב ורוחב · תקרת 15 מ׳</td><td><span class="m">A1</span> + <span class="m">D1</span> (המדידות)</td></tr>
+      <tr><td>קומות = min(תקרת קטגוריה, טבלת רחוב) ± טווח</td><td><span class="m">A4</span></td></tr>
+      <tr><td>שרשרת זכויות 1–9 כולל חניה</td><td><span class="m">A4</span></td></tr>
+      <tr><td>שערי ארכיון — תפוס וחוזק</td><td><span class="m">A5</span>, ועל העשירייה בלבד</td></tr>
+      <tr><td>דגל ציר ראשי · 29 חלקות</td><td><span class="m">A4</span> — שער נוסף</td></tr>
+      <tr><td>מרשם מסמכים ובדיקה חודשית</td><td>רץ כבר · <span class="m">A0</span> מתקן את הקישור השבור</td></tr>
+      <tr class="lose"><td><strong>דירוג לפי שכבת ביטחון</strong></td><td><strong>סותר את ה-PRD — ראה למטה</strong></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="contract" style="margin-top:1.3rem">
+    <h2>הסתירה: שני דירוגים שאינם יכולים לחיות יחד</h2>
+    <p>‏<span class="m">rank.py</span> שלנו ממיין <strong>שכבת ביטחון ואז ערך</strong>. ה-PRD אוסר זאת מפורשות — <em>״לא נדרש ציון משוקלל סמוי״</em> — והמיון הוא <strong>לפי סדר ההעדפות שהיזם הגדיר</strong> (‏<span class="ref">4.2 · SEL-01</span>). שני מפתחות מיון על אותה רשימה.</p>
+    <p><strong>הפתרון: ביטחון אינו העדפה, הוא מוכנות.</strong></p>
+    <ul style="margin:.5rem 0 .7rem">
+      <li><strong>שכבה 2</strong> — חסם עליון בלי קביעת קומות — <span class="m">needs_verification</span>, ואינה נמסרת כלל. זה <span class="ref">DOS-02</span>, לא דירוג</li>
+      <li><strong>שכבה 1 מול 0</strong> — אמירה על איכות הנתון. מקומה בשדות הוודאות בתיק ובסעיף הפערים</li>
+      <li><strong>המיון עצמו</strong> — של היזם, כפי ש-<code>rank()</code> ב-POC כבר עושה</li>
+    </ul>
+    <p style="margin:0">כלומר <span class="m">rank.py</span> אינו עובר לאפליקציה; <strong>ה-<span class="m">tier</span> שלו הופך לשער ב-<code>eligibility_status()</code></strong>. זו משימה, לא הערה — ראו <span class="m">A11</span>.</p>
+  </div>
+
+  <div class="contract" style="margin-top:1.1rem;border-color:var(--ochre);background:var(--ochre-soft)">
+    <h2 style="color:var(--ochre)">והחלטה שנייה, מאותו סוג: מה הוודאות של השטח הקיים</h2>
+    <p>השטח הקיים מחושב טביעת-רגל × קומות × <span class="m">k=0.669</span>, ו-k כויל על <strong>נקודת אמת אחת</strong>. ‏<code>usable()</code> מקבלת רק <span class="m">official / derived / manually_verified</span>. לסמן <span class="m">estimate</span> — הכל נחסם. לסמן <span class="m">derived</span> — קראנו לאומדן גזירה.</p>
+    <p style="margin:0"><strong>המוצא כבר קיים בארכיטקטורה:</strong> שלושת תנאי הסף של §70א <em>אינם מזכירים שטח בנוי כלל</em>. השטח נכנס רק ב-§70ב, כלומר בחישוב — לא בכשירות. לכן <strong>השטח הקיים הוא קלט כלכלי המסומן <span class="m">estimate</span>, ולא שדה כשירות</strong>. הוא לעולם אינו נכנס ל-<code>usable()</code> של שער, והסטייה שלו מוצגת בתרחיש כהנחה. אימות: <code>evaluate()</code> אכן אינה משתמשת בשטח בנוי באף בדיקה.</p>
+  </div>
+</section>
+
+<section>
+  <h2>המדידות — מי, ולמה דווקא כך</h2>
+  <div class="tasks">
+    <div class="task a"><span class="tid">D1</span><h3>מדידת רוחב · כל השלושה</h3>
+      <p><strong>כל אחד מודד קודם את אותן שלוש</strong> — <span class="m">6529/43</span>, <span class="m">6538/476</span>, <span class="m">6531/160</span> — ואז ארבע משלו. כ-20 דקות לאדם.</p>
+      <p style="margin-top:.4rem"><strong>א:</strong> <span class="m">6537/5, 6530/214, 6530/191, 6536/550</span><br>
+         <strong>ב:</strong> <span class="m">6529/63, 6536/194, 6546/498, 6538/553</span><br>
+         <strong>ג:</strong> <span class="m">6530/141, 6536/841, 6533/283, 7291/146</span></p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">street_width.csv</span> מלא ונדחף ב-PR.</span></div>
+    <div class="task a"><span class="tid">D2</span><h3>לכייל את <span class="m">TOLERANCE_M</span></h3>
+      <p>מהפער בין המדידה הידנית לכלי. אם השלוש המשותפות <strong>לא</strong> מסכימות בין המודדים — זו התוצאה החשובה, ויש לתקן את ההוראות לפני שמכיילים.</p>
+      <span class="done"><b>נגמר כש:</b> ‏<span class="m">TOLERANCE_M</span> נשען על מדידה ולא על הנחה, וחלק מ-275 החלקות עוברות ל״מספר ודאי״.</span></div>
+    <div class="task a"><span class="tid">A11</span><h3>‏<span class="m">tier</span> הופך לשער</h3>
+      <p>להעביר את שכבות הביטחון מ-<span class="m">rank.py</span> ל-<code>eligibility_status()</code>. שכבה 2 → <span class="m">needs_verification</span>. המיון נשאר של היזם.</p>
+      <span class="done"><b>נגמר כש:</b> מועמד בלי קביעת קומות אינו נמסר, ואינו ״מדורג נמוך״.</span></div>
+  </div>
+  <p class="note" style="margin-top:1rem"><strong>למה שלוש משותפות ולא חלוקה נקייה:</strong> אנחנו מכיילים סף שגיאה. אם שלושה אנשים מודדים אותה חזית ומקבלים שלושה מספרים, <strong>הפיזור ביניהם הוא חלק מהשגיאה שאנחנו מודדים</strong> — ובלי זה נכייל סף צר מדי ונציג ודאות שאין לנו. עשר דקות שקונות את המספר הזה.</p>
+</section>
+
+<section>
   <h2>מה יפיל את התאריך</h2>
   <div class="risk"><h3>שדות שלא עוברים את <code>usable()</code></h3><p>הכי סביר שיקרה, והכי קל להחמיץ: הכל ייראה עובד, והתוצאות יחזרו ריקות. <strong>A1 קיים בדיוק בשביל זה — לבדוק אותו ביום ראשון ולא ביום שלישי.</strong></p></div>
   <div class="risk"><h3>B1 לא נסגר היום</h3><p>בלי מקור מחירים אין תרחיש, בלי תרחיש התיק לא נספר כמוכן. זו המשימה היחידה שחוסמת שתי משימות אחרות. <strong>אם עד סוף היום אין מקור — לקבוע הנחה מתועדת ולהתקדם</strong>, לא לחפש עוד יום.</p></div>
