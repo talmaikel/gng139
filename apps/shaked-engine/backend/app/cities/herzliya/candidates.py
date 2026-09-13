@@ -31,6 +31,12 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
     if min_area := filters.get("min_area_sqm"):
         stmt = stmt.where(Opportunity.area_sqm >= min_area)
 
+    # מועמד שנפסל בשערים אינו מוצג כלל. מי שאין לו קביעת קומות אינו
+    # "מדורג נמוך" אלא אינו בר-מסירה — זו מוכנות, לא העדפה.
+    stmt = stmt.where(Opportunity.metadata_json["assessment"]["status"].astext != "ineligible")
+    if filters.get("deliverable_only"):
+        stmt = stmt.where(Opportunity.metadata_json["assessment"]["deliverable"].astext == "true")
+
     if verification_level := filters.get("verification_level"):
         stmt = stmt.where(Opportunity.verification_level == verification_level)
 
@@ -48,6 +54,7 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
             "existing_units": opp.existing_units,
             "verification_level": opp.verification_level,
             "category": opp.metadata_json.get("category"),
+            "assessment": opp.metadata_json.get("assessment"),
             "geometry": json.loads(geojson) if geojson else None,
             "centroid": {"lat": lat, "lng": lng} if lat is not None and lng is not None else None,
         }

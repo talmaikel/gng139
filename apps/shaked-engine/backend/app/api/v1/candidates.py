@@ -16,6 +16,8 @@ async def list_candidates(
     city_code: str,
     min_area_sqm: float | None = Query(default=None),
     verification_level: str | None = Query(default=None),
+    deliverable_only: bool = Query(default=False,
+        description="רק מועמדים שההערכה שלהם ניתנת למסירה — לא מנותבים למתחמים ולא ללא קביעת קומות"),
     limit: int = Query(default=100, le=500),
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user),
@@ -25,6 +27,7 @@ async def list_candidates(
     filters = {
         "min_area_sqm": min_area_sqm,
         "verification_level": verification_level,
+        "deliverable_only": deliverable_only,
         "limit": limit,
     }
     return await rules.screen_candidates(session, filters)
