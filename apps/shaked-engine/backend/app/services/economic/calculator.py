@@ -16,7 +16,16 @@ for surfacing which inputs are data vs. estimate vs. missing.
 from app.services.economic.schemas import FeasibilityInput, FeasibilityResult
 
 
-def calculate_feasibility(inputs: FeasibilityInput) -> FeasibilityResult:
+def calculate_feasibility(inputs: FeasibilityInput,
+                          missing_inputs: list[str] | None = None) -> FeasibilityResult:
+    """Run the scenario.
+
+    `missing_inputs` names the commercial inputs that are genuinely unknown
+    (see `EconomicAssumptionSet.blocking`). The numbers are still computed --
+    a scenario built on a placeholder is useful to reason with -- but the
+    result carries `is_deliverable=False`, so it cannot be handed to a client
+    as though it rested on data.
+    """
     # Each existing unit is replaced 1:1 at its (assumed) EXISTING size, plus
     # any additional per-unit compensation sqm -- NOT a share of the new
     # buildable area. Sizing the replacement off the new building instead of
@@ -25,10 +34,11 @@ def calculate_feasibility(inputs: FeasibilityInput) -> FeasibilityResult:
     # buildable_area_sqm, identically, regardless of building size), leaving
     # the developer with zero allocation no matter how much is built -- a
     # real bug found via testing, not a simplification.
-    tenant_allocation_sqm = min(
-        inputs.existing_units * (inputs.average_existing_unit_sqm + inputs.tenant_compensation_sqm_per_existing_unit),
-        inputs.buildable_area_sqm,
+    tenant_requirement_sqm = inputs.existing_units * (
+        inputs.average_existing_unit_sqm + inputs.tenant_compensation_sqm_per_existing_unit
     )
+    tenants_fit = tenant_requirement_sqm <= inputs.buildable_area_sqm
+    tenant_allocation_sqm = min(tenant_requirement_sqm, inputs.buildable_area_sqm)
     developer_allocation_sqm = inputs.buildable_area_sqm - tenant_allocation_sqm
 
     total_revenue_ils = developer_allocation_sqm * inputs.sale_price_per_sqm
@@ -55,4 +65,7 @@ def calculate_feasibility(inputs: FeasibilityInput) -> FeasibilityResult:
         projected_profit_ils=round(projected_profit_ils, 2),
         profit_margin_on_cost_ratio=round(profit_margin_on_cost_ratio, 4),
         meets_developer_target=profit_margin_on_cost_ratio >= inputs.developer_profit_target_ratio,
+        tenants_fit=tenants_fit,
+        inputs_missing=sorted(missing_inputs or []),
+        is_deliverable=not missing_inputs,
     )

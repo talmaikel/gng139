@@ -45,6 +45,39 @@ class EconomicAssumptionSet:
     demolition_cost_per_unit_ils: Assumption
     soft_cost_ratio: Assumption
     developer_profit_target_ratio: Assumption
+    # The single largest deduction from the developer's share, and until now
+    # it was a bare `70.0` default inside FeasibilityInput that the worker
+    # never passed and the dossier never reported. Between a 55 sqm and a
+    # 95 sqm average the projected profit moves by ~12.6M ILS on a typical
+    # candidate. It is MISSING rather than ESTIMATE because it is knowable:
+    # it is in the gramushka and the building permit, and guessing it is
+    # exactly what the PRD forbids.
+    average_existing_unit_sqm: Assumption
+
+    def blocking(self) -> list[str]:
+        """Assumptions that are genuinely unknown.
+
+        `AssumptionStatus.MISSING` was defined here from the start with the
+        comment "must block a 'ready' result, not default to zero", and then
+        nothing ever read it -- no entry carried the status and no code
+        branched on it. This is the reader.
+        """
+        return sorted(
+            name for name, field in self.__dataclass_fields__.items()
+            if isinstance(getattr(self, name), Assumption)
+            and getattr(self, name).status is AssumptionStatus.MISSING
+        )
+
+    def report(self) -> dict[str, dict]:
+        """Every assumption with its value and status, for the dossier.
+
+        Built from the dataclass fields rather than hand-listed: the
+        hand-written version in worker.py silently omitted two of them.
+        """
+        return {name: {"value": a.value, "status": a.status.value,
+                       "unit": a.unit, "source": a.source}
+                for name in self.__dataclass_fields__
+                if isinstance(a := getattr(self, name), Assumption)}
 
 
 HERZLIYA_2026_V1 = EconomicAssumptionSet(
@@ -56,6 +89,9 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
     demolition_cost_per_unit_ils=Assumption(150_000.0, AssumptionStatus.ESTIMATE, "ILS/unit"),
     soft_cost_ratio=Assumption(0.15, AssumptionStatus.ESTIMATE, "ratio"),
     developer_profit_target_ratio=Assumption(0.20, AssumptionStatus.ESTIMATE, "ratio"),
+    average_existing_unit_sqm=Assumption(
+        70.0, AssumptionStatus.MISSING, "sqm",
+        source="נדרש מהגרמושקה או מהיתר הבנייה — 70 הוא מציין מקום לחישוב, לא נתון"),
 )
 
 ASSUMPTIONS_BY_CITY: dict[str, EconomicAssumptionSet] = {

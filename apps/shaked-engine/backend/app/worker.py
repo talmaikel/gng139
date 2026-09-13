@@ -172,31 +172,24 @@ async def generate_dossier_handler(payload: dict) -> dict:
                     soft_cost_ratio=assumptions.soft_cost_ratio.value,
                     demolition_cost_per_unit=assumptions.demolition_cost_per_unit_ils.value,
                     developer_profit_target_ratio=assumptions.developer_profit_target_ratio.value,
-                )
+                    # Was never passed, so every dossier silently used the
+                    # schema default of 70 sqm -- the largest single deduction
+                    # from the developer's share, undeclared and unreported.
+                    average_existing_unit_sqm=assumptions.average_existing_unit_sqm.value,
+                ),
+                missing_inputs=assumptions.blocking(),
             )
             dossier["feasibility"] = feasibility.model_dump()
             # Per PRD ECO-02, every commercial component is marked data /
             # estimate / missing, and the assumptions library carries a date
             # and version -- surfaced here rather than left implicit.
+            # Generated from the assumption set rather than hand-listed: the
+            # hand-written version omitted developer_profit_target_ratio and
+            # average_existing_unit_sqm, and nothing noticed.
             dossier["feasibility_assumptions"] = {
                 "assumptions_version": assumptions.version,
                 "assumptions_effective_date": assumptions.effective_date.isoformat(),
-                "sale_price_per_sqm_ils": {
-                    "value": assumptions.sale_price_per_sqm_ils.value,
-                    "status": assumptions.sale_price_per_sqm_ils.status.value,
-                },
-                "construction_cost_per_sqm_ils": {
-                    "value": assumptions.construction_cost_per_sqm_ils.value,
-                    "status": assumptions.construction_cost_per_sqm_ils.status.value,
-                },
-                "soft_cost_ratio": {
-                    "value": assumptions.soft_cost_ratio.value,
-                    "status": assumptions.soft_cost_ratio.status.value,
-                },
-                "demolition_cost_per_unit_ils": {
-                    "value": assumptions.demolition_cost_per_unit_ils.value,
-                    "status": assumptions.demolition_cost_per_unit_ils.status.value,
-                },
+                **assumptions.report(),
             }
 
         # True whenever a human needs to confirm a figure before this dossier

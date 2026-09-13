@@ -32,7 +32,14 @@ def wgs(geom: BaseGeometry) -> dict[str, Any]:
 
 def validate_polygon(geo: dict[str, Any], boundary: BaseGeometry, max_area_sqm: float) -> BaseGeometry:
     """A drawn search area, in ITM, after checking it is simple, bounded and inside the city."""
-    polygon = shape(geo)
+    # `shape()` raises KeyError/AttributeError/TypeError on malformed GeoJSON,
+    # not ValueError -- so `{"type": "Polygon"}` with no coordinates escaped
+    # every check here and reached the client as a 500. Every rejection on
+    # this path must be a ValueError the endpoint can turn into a 422.
+    try:
+        polygon = shape(geo)
+    except (KeyError, AttributeError, TypeError, IndexError) as exc:
+        raise ValueError("הפוליגון אינו תקין; יש לצייר אזור ללא חצייה עצמית") from exc
     if (
         polygon.geom_type != "Polygon"
         or polygon.is_empty

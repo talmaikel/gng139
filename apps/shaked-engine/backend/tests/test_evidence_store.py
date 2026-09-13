@@ -27,6 +27,14 @@ def test_the_thirty_first_day_stops_it_deciding():
     assert not usable(_field(31), now=NOW)
 
 
+def test_an_empty_value_never_decides_however_good_its_source():
+    """שורת MISSING נושאת מקור, מיקום ותאריך טרי — הכול תקין חוץ מהערך.
+    אם רק הוודאות נבדקת, די בכתיבת None עם DERIVED כדי ששער יוכרע על לא-כלום."""
+    assert not usable(_field(value=None), now=NOW)
+    assert not usable(_field(value=None, certainty=Certainty.DERIVED), now=NOW)
+    assert not usable(_field(value=None, certainty=Certainty.MISSING), now=NOW)
+
+
 def test_a_field_without_a_location_never_decides():
     assert not usable(_field(location=None), now=NOW)
 

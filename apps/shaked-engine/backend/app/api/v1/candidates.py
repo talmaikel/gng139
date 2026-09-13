@@ -4,12 +4,21 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.cities import get_city_rules
+from app.cities import get_city_rules as _get_city_rules
 from app.core.database import get_async_session
 from app.core.security import current_active_user
 from app.models.tenant import User
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
+
+
+def get_city_rules(city_code: str):
+    """‏`ValueError` על עיר לא רשומה הגיע ללקוח כ-500 — שגיאת שרת על קלט
+    של משתמש. עיר שאינה קיימת היא 404."""
+    try:
+        return _get_city_rules(city_code)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 class Preference(BaseModel):

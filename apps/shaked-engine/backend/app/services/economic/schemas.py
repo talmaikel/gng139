@@ -45,3 +45,15 @@ class FeasibilityResult(BaseModel):
     # divided by expenses"), computed only when cost is positive.
     profit_margin_on_cost_ratio: float
     meets_developer_target: bool
+
+    # Whether the new building can house the existing tenants at all. Without
+    # it, an impossible project reports as an ordinary loss: 60 tenants in a
+    # 3,396 sqm building returned a developer share of 0 and a 40M loss, with
+    # nothing saying the replacement itself does not fit.
+    tenants_fit: bool = True
+
+    # PRD ECO-02: an estimated figure must never be presented as a verified
+    # one. These two carry that from the assumptions library into the result,
+    # so the caller cannot lose it by forgetting to look.
+    inputs_missing: list[str] = Field(default_factory=list)
+    is_deliverable: bool = True
