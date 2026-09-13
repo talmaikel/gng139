@@ -41,6 +41,7 @@ LAYER_A = Path(__file__).resolve().parents[6] / "POC" / "layer_a" / "data"
 CATEGORY = {"9": "התחדשות מגרשית מוטת מגורים",
             "5.5": "התחדשות מגרשית מוטת מגורים נמוכה"}
 CEILING = {"9": 9.0, "5.5": 5.5}
+K = 0.669  # מקדם ההמרה מברוטו לשטח נספר. נקודת כיול אחת.
 STRENGTHENING = re.compile(r'תמ["״]?א\s*38|חיזוק|רעידות אדמה')
 
 
@@ -79,6 +80,18 @@ def _rows(key, surv, front, geo, sources, archive):
            f'{at} · {front.get("why", "")}'[:400], Certainty.DERIVED,
            "פער קדסטרלי, החזית הצרה קובעת; אמין עד 15 מ׳"),
         ev("pilotis", surv.get("pilotis"), "agol_addresses", f"{at} · amudim"),
+        ev("registration_area", geo.get("registration_area"), "strategic_plan",
+           f"{at} · אזורי רישום", Certainty.DERIVED, "אזור הרישום שמכיל את מרכז החלקה"),
+        ev("in_tama70", geo.get("in_tama70"), "iplan_xplan", at, Certainty.DERIVED,
+           'חפיפה של מעל 50% משטח החלקה עם מרחב תמ"א 70'),
+        ev("scope_buildings", geo.get("buildings"), "agol_buildings", at, Certainty.DERIVED,
+           "מבנים שרוב שטחם בתוך החלקה"),
+        # ‏k=0.669 כויל על נקודת אמת אחת, ולכן ESTIMATE ולא DERIVED. ההבדל אינו
+        # סמנטי: הערך מוכפל פי ארבע כדי להגיע לתקרת הזכויות, ו-ESTIMATE נשאר
+        # מחוץ ל-DECIDING כך שאפשר להציג אותו ואי אפשר להכריע לפיו.
+        ev("existing_area", round(surv["gross"] * K, 1) if surv.get("gross") else None,
+           "agol_buildings", f'{at} · ברוטו {surv.get("gross")} מ"ר', Certainty.ESTIMATE,
+           f"טביעת רגל × קומות × k={K} · k כויל על היתר 19780028, נקודת אמת אחת"),
     ]
 
     if archive:

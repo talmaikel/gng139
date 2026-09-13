@@ -38,6 +38,7 @@ class Certainty(str, enum.Enum):
     COMMUNITY = "community"                  # e.g. OpenStreetMap: good for discovery, never decides
     OCR_CANDIDATE = "ocr_candidate"          # machine-read from a scan, awaiting human review
     AI_CANDIDATE = "ai_candidate"            # model-read, awaiting human review (see pipeline/extractor.py)
+    ESTIMATE = "estimate"                    # computed, but resting on an assumption rather than a measurement
     MISSING = "missing"                      # looked for and not found
 
 

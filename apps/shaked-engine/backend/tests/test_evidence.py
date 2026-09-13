@@ -1,4 +1,5 @@
 import importlib.util
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -90,8 +91,18 @@ def test_stored_row_reads_back_as_an_observation_that_can_decide():
 
 
 def test_migration_certainties_match_the_code():
-    path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "0002_field_evidence.py"
-    spec = importlib.util.spec_from_file_location("migration_0002", path)
+    """‏האנום בקוד והטיפוס בבסיס הנתונים חייבים להישאר זהים.
+
+    הטיפוס נוצר ב-0002 וערכים נוספים לו במיגרציות מאוחרות יותר — Postgres
+    אינו מאפשר להסיר ערך מאנום, ולכן כל תוספת היא מיגרציה נפרדת עם
+    `ADD VALUE`. הבדיקה אוספת את כל המקורות ומשווה, אחרת היא נשברת בכל
+    תוספת לגיטימית ומאבדת את הערך שלה.
+    """
+    versions = Path(__file__).resolve().parents[1] / "alembic" / "versions"
+    spec = importlib.util.spec_from_file_location("migration_0002", versions / "0002_field_evidence.py")
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
-    assert set(migration.CERTAINTIES) == {c.value for c in Certainty}
+    in_db = set(migration.CERTAINTIES)
+    for f in sorted(versions.glob("*.py")):
+        in_db |= set(re.findall(r"ADD VALUE IF NOT EXISTS '([a-z_]+)'", f.read_text(encoding="utf-8")))
+    assert in_db == {c.value for c in Certainty}

@@ -22,5 +22,11 @@
   "url": "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/%D7%AA%D7%9B%D7%A0%D7%99%D7%AA-%D7%90%D7%A1%D7%98%D7%A8%D7%98%D7%92%D7%99%D7%AA-%D7%9C%D7%94%D7%AA%D7%97%D7%93%D7%A9%D7%95%D7%AA-%D7%9E%D7%A8%D7%9B%D7%96-%D7%94%D7%A2%D7%99%D7%A8-%D7%99%D7%A0%D7%95%D7%90%D7%A8-2023.pdf",
   "retrieved_at": "2026-09-13T09:00:00+00:00",
   "note": "אומת ב-check_documents.py ב-13.09. הקטגוריה נגזרת בגאו-רפרנס של המפה בעמ׳ 8, RMS 20.7 מ׳."
+ },
+ "iplan_xplan": {
+  "label": "ייעודי קרקע · iplan XPlan שכבה 4",
+  "url": "https://ags.iplan.gov.il/arcgisiplan/rest/services/PlanningPublic/Xplan/MapServer/4",
+  "retrieved_at": "2026-09-12T18:19:00+00:00",
+  "note": "מרחב תמ\"א 70 נגזר מפוליגוני הייעוד שמספר התכנית שלהם תמא/ 70."
  }
 }
