@@ -27,6 +27,24 @@ class Undefined(Exception):
     """רוחב שהמדיניות אינה נותנת לו מספר — צריך הכרעה אנושית."""
 
 
+# רחוב רחב מ-15 מ׳ אינו מגביל את הגובה — תקרת הקטגוריה קובעת.
+#
+# מסמך המדיניות, טבלת סעיף 5: "מעל 15 — יבחן נקודתית בהתאם למדיניות
+# להתחדשות מרכז העיר ותמ"א 70". "המדיניות להתחדשות מרכז העיר" היא התכנית
+# האסטרטגית הר/2323, ועמ׳ 8 שלה קובע לקטגוריות מסלול המגרשים: "התחדשות
+# מגרשית מוטת מגורים — **עד 9 קומות** (בכפוף לחתכים)" ו"מוטת מגורים נמוכה
+# — **עד 5.5 קומות** (בכפוף לחתכים)". "בכפוף לחתכים" הוא ההפניה חזרה לטבלת
+# רוחב הרחוב, שמקטינה את התקרה ברחובות צרים.
+#
+# כלומר שני המסמכים מרכיבים כלל אחד: תקרת הקטגוריה, מוקטנת לפי רוחב הרחוב.
+# מעל 15 מ׳ ההקטנה מתאפסת, ולכן INF — ‏min() מול תקרת המפה מחזיר אותה.
+#
+# סייג שחייב להיאמר בכל תיק: הערה 1 לאותה טבלה קובעת "התכנית הינה מדיניות
+# בלבד. הוועדה המקומית רשאית לקבוע מס' קומות ונפחים שונים לפי שיקול דעתה".
+# זו תקרה עליונה נתונה לבחינה, לא זכות.
+UNBOUND = float("inf")
+
+
 # תחום אי-הוודאות של מדידת הפער הקדסטרלי, במטרים לכל צד.
 #
 # זו **הנחה, לא מדידה.** נכון ל-13.09.2026 אין נקודת אמת חיצונית: פוליגוני
@@ -72,8 +90,8 @@ def floors_for_frontage(width_m):
     for upper, plain, mx in TABLE[2:]:
         if width_m <= upper:
             return (plain, mx)
-    # "מעל 15 — נקודתית, יבחן בהתאם למדיניות להתחדשות מרכז העיר ותמ"א 70"
-    raise Undefined("מעל 15 מ' — המדיניות קובעת בחינה נקודתית, לא מספר")
+    # מעל 15 הרחוב אינו מגביל; ראה UNBOUND למעלה
+    return (None, UNBOUND)
 
 def floors_band(width_m, tol=TOLERANCE_M, step=0.1):
     """מה המדיניות אומרת על כל התחום [w-tol, w+tol], לא רק על w.
@@ -148,6 +166,7 @@ def parcel_report(frontage_widths, map_cap, tol=TOLERANCE_M):
     lows, highs, notes = [], [], []
     certain = True
     risk = 0.0
+    unbound = False
     for w in frontage_widths:
         b = floors_band(w, tol)
         certain &= b["certain"]
@@ -158,7 +177,14 @@ def parcel_report(frontage_widths, map_cap, tol=TOLERANCE_M):
                     "needs_measurement": not b["certain"],
                     "why": f"חזית {w} מ׳ (±{tol}): {why}"}
         lows.append(b["low"]); highs.append(b["high"])
-        tag = f"{w}→{b['low']}" if b["certain"] else f"{w}→{b['low']}–{b['high']}"
+        if b["low"] == UNBOUND:
+            unbound = True
+            tag = f"{display_width(w)}→הרחוב אינו מגביל"
+        elif b["certain"]:
+            tag = f"{w}→{b['low']}"
+        else:
+            hi_txt = "אינו מגביל" if b["high"] == UNBOUND else b["high"]
+            tag = f"{w}→{b['low']}–{hi_txt}"
         if b["none_share"] or b["undef_share"]:
             tag += f" ({100 * (b['none_share'] + b['undef_share']):.0f}% מהתחום ללא מספר)"
         notes.append(tag)
@@ -173,8 +199,11 @@ def parcel_report(frontage_widths, map_cap, tol=TOLERANCE_M):
     head = f"{lo}" if lo == hi else f"{lo}–{hi}"
     if not certain:
         head += " (דורש מדידה)"
+    if unbound:
+        head += " · נקודתית — תקרת הקטגוריה, נתון לשיקול דעת הוועדה"
     return {"floors_low": lo, "floors_high": hi,
             "certain": certain and lo == hi,
             "needs_measurement": not certain,
+            "case_by_case": unbound,
             "risk_share": round(risk, 2),
             "why": f"חזיתות {', '.join(notes)} · מפה {map_cap} → {head}"}
