@@ -123,27 +123,80 @@ def test_the_999_sentinel_is_not_read_as_a_unit_count():
     assert ok["units"]["value"] == 28
 
 
-def test_an_estimate_that_implies_a_thousand_metres_per_flat_is_withheld():
-    """‏`gross` הוא טביעת הרגל הכוללת כפול **מקסימום** הקומות בחלקה, ולכן
-    מבנה נמוך לצד גבוה מוכפל גם הוא בגובה הגבוה. הנדיב 3: 7 דירות, מגרש
-    2,303 מ״ר, ותקרת 400% של 30,632 מ״ר.
+def test_an_undercounted_unit_figure_is_withheld_and_the_measured_area_is_kept():
+    """**שכבת נקודות הכתובת מחמיצה כניסות.** אלרואי דוד 32 — בניין בן 15
+    קומות על 840 מ״ר טביעת רגל — רשום כארבע דירות; סביר שיש בו כ-84.
 
-    אי אפשר לתקן את האומדן מכאן — אפשר לזהות שהוא שבור ולא לכתוב אותו.
-    ״לא ידוע״ עדיף על 30,632."""
+    השטח הבנוי נמדד מהגאומטריה ומהימן. מספר הדירות מגיע מנקודות כתובת
+    שחלקן חסרות, והוא זה שנשבר — ולכן הוא זה שנפסל. הגרסה הראשונה פסלה
+    את השדה ההפוך."""
     sources = _load("source_fetched.json")
 
-    def area(gross, apt):
+    def row(field, gross, apt):
         rows = {r["field"]: r for r in
                 _rows("x/1", {**SURV, "gross": gross, "apt": apt}, {}, {}, sources, [])}
-        return rows["existing_area"]["value"]
+        return rows[field]
 
-    assert area(2000, 28) is not None          # 48 מ"ר לדירה — סביר
-    assert area(11447, 7) is None              # 1,094 מ"ר לדירה — שבור
+    assert row("units", 2000, 28)["value"] == 28              # 48 מ"ר לדירה — סביר
+    assert row("units", 11447, 7)["value"] is None            # 1,094 — ספירה שבורה
+    # והשטח, שנמדד מהגאומטריה, נשאר
+    assert row("existing_area", 11447, 7)["value"] is not None
 
 
-def test_a_plot_with_no_unit_count_still_gets_its_area_estimate():
+def test_a_plot_without_a_unit_count_keeps_its_area():
     """הסינון הוא על **היחס**. בלי מספר דירות אין יחס, ואין מה לפסול."""
     sources = _load("source_fetched.json")
     rows = {r["field"]: r for r in
             _rows("x/1", {**SURV, "apt": 999, "gross": 11447}, {}, {}, sources, [])}
     assert rows["existing_area"]["value"] is not None
+    assert rows["units"]["value"] is None
+
+
+def test_a_broken_count_blocks_delivery_rather_than_scaling_a_wrong_mix():
+    """לשער §70א(3) ספירה חסרה עדיין מספיקה — אבל אותו מספר מזין את
+    התמהיל (×2.8), את החניה ואת פיצוי הדיירים, ושם הוא שגוי פי עשרה
+    ומנפח את הרווח. תיק כזה אינו ניתן למסירה."""
+    from app.cities.herzliya import rights
+    assert "units" in rights.THRESHOLD_IDS
+    assert rights.unit_mix(7)["units_max"] == 22        # מה שהיה נמסר
+    assert rights.unit_mix(77)["units_max"] == 245      # מה שנכון
+
+
+@pytest.mark.asyncio
+async def test_reseeding_does_not_erase_a_building_file_fetched_on_demand(session):
+    """שליפת תיק היא יקרה, מוגבלת בקצב, ומדיניות הסיכון מחייבת לשמור
+    אותה **לתמיד**. הזריעה מחקה את כל ראיות ההזדמנות — וארבעה תיקים
+    שנשלפו להדגמה נמחקו בזריעה שאחריה, בלי סימן."""
+    from datetime import datetime, timezone
+
+    from app.cities.herzliya.seed_layer_a import ARCHIVE_HOST, seed
+    from app.models.evidence import FieldEvidence
+    from app.models.opportunity import Opportunity
+    from sqlalchemy import select
+
+    opp = (await session.execute(
+        select(Opportunity).where(Opportunity.city_code == "herzliya").limit(1))).scalar_one()
+    session.add(FieldEvidence(
+        opportunity_id=opp.id, field="permit_date", value="1978-01-01",
+        certainty=Certainty.DERIVED.value,
+        source_url=f"https://handasi.{ARCHIVE_HOST}/magicscripts/mgrqispi.dll",
+        retrieved_at=datetime.now(timezone.utc), location="תיק 475 · 6 בקשות",
+        method="שורות הבקשות בתיק הבניין"))
+    await session.flush()
+
+    await seed(limit=None)
+
+    kept = (await session.execute(
+        select(FieldEvidence).where(FieldEvidence.opportunity_id == opp.id,
+                                    FieldEvidence.source_url.like(f"%{ARCHIVE_HOST}%")
+                                    ))).scalars().all()
+    assert kept, "ראיית ארכיון שנשלפה לפי דרישה נמחקה בזריעה"
+
+
+def test_the_rejected_count_does_not_survive_in_the_opportunity_column():
+    """הראיה נחסמה, אבל העמודה המשיכה לשאת את המספר — והיא זו שמזינה את
+    התחשיב הכלכלי בתיק ואת המיון במסך. דלת אחורית לאותו ערך בדיוק."""
+    from app.cities.herzliya.seed_layer_a import usable_units
+    assert usable_units({"apt": 28, "gross": 4000}) == 28
+    assert usable_units({"apt": 999, "gross": 2910}) is None
+    assert usable_units({"apt": 7, "gross": 11447}) is None      # 1,094 מ"ר לדירה
