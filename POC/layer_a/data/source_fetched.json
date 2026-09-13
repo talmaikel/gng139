@@ -1,0 +1,26 @@
+{
+ "govmap_parcels": {
+  "label": "חלקות · GovMap WFS",
+  "url": "https://open.govmap.gov.il/geoserver/opendata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=opendata:Parcels_ITM",
+  "retrieved_at": "2026-09-12T18:17:00+00:00",
+  "note": "שכבת חלקות פתוחה. שדה LEGAL_AREA נושא הערה שאינו אסמכתה משפטית."
+ },
+ "agol_buildings": {
+  "label": "מבנים · ArcGIS עירוני herzliya_reka_2023/3",
+  "url": "https://services3.arcgis.com/9qGhZGtb39XMVQyR/arcgis/rest/services/herzliya_reka_2023/FeatureServer/3",
+  "retrieved_at": "2026-09-12T18:17:00+00:00",
+  "note": "14,072 מבנים. Num_floors, status, PUB_PRVT, טביעת רגל."
+ },
+ "agol_addresses": {
+  "label": "נקודות כתובת · ArcGIS עירוני מספרי_בתים_חדש/43",
+  "url": "https://services3.arcgis.com/9qGhZGtb39XMVQyR/arcgis/rest/services/%D7%9E%D7%A1%D7%A4%D7%A8%D7%99_%D7%91%D7%AA%D7%99%D7%9D_%D7%97%D7%93%D7%A9/FeatureServer/43",
+  "retrieved_at": "2026-09-12T20:11:00+00:00",
+  "note": "num_aprt ב-92% מהנקודות. הספירה היא לכל כניסה ולא לכל מבנה; 999 הוא ערך סנטינל."
+ },
+ "strategic_plan": {
+  "label": "תכנית אסטרטגית הר/2323 · מפת המדיניות",
+  "url": "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/%D7%AA%D7%9B%D7%A0%D7%99%D7%AA-%D7%90%D7%A1%D7%98%D7%A8%D7%98%D7%92%D7%99%D7%AA-%D7%9C%D7%94%D7%AA%D7%97%D7%93%D7%A9%D7%95%D7%AA-%D7%9E%D7%A8%D7%9B%D7%96-%D7%94%D7%A2%D7%99%D7%A8-%D7%99%D7%A0%D7%95%D7%90%D7%A8-2023.pdf",
+  "retrieved_at": "2026-09-13T09:00:00+00:00",
+  "note": "אומת ב-check_documents.py ב-13.09. הקטגוריה נגזרת בגאו-רפרנס של המפה בעמ׳ 8, RMS 20.7 מ׳."
+ }
+}

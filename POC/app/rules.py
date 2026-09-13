@@ -54,8 +54,12 @@ def evaluate(fields,filters):
         checks.append({'id':key,'label':label,'status':status,'source_url':POLICY_URL,'page':2,'field_evidence':field})
     scope_check('scope_parcels','חלקה אחת או שתיים במסלול המגרשי; 3 ומעלה למסלול מתחמי')
     scope_check('scope_buildings','מבנה אחד או שניים במסלול המגרשי; 3 ומעלה למסלול מתחמי')
+    # שתי הקטגוריות כלשונן בעמ' 8 של הר/2323. הניסוח הקודם כאן היה
+    # 'התחדשות עירונית מוטת מגורים נמוכה' — צירוף שאינו מופיע בתכנית אף פעם
+    # (נבדק: 0 מופעים ל'עירונית', 4 ל'מגרשית'), ולכן פסל את כל 58 החלקות
+    # בקטגוריית 5.5 קומות, 8% מהמלאי, על מילה אחת.
     check('renewal_policy_category','מיקום באזור המאפשר התחדשות מגרשית',lambda x:x in (
-        'התחדשות מגרשית מוטת מגורים','התחדשות עירונית מוטת מגורים נמוכה'),5)
+        'התחדשות מגרשית מוטת מגורים','התחדשות מגרשית מוטת מגורים נמוכה'),5)
     for key,label in [('planning_lot','זיהוי מגרש תכנוני'),('planning_basis','בסיס תכנוני מבוסס לתרחיש'),('overriding_plans_checked','בדיקת תכניות ומדיניות גוברות')]:
         check(key,label,lambda x:bool(x),2)
     for key,op,val in [('parcel_area','min',filters.get('min_parcel_area')),('units','max',filters.get('max_units')),('floors','max',filters.get('max_floors'))]:
