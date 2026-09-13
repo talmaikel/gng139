@@ -41,6 +41,19 @@ def classify_run(run, street_index, streets, tags, names, step=3, reach=1.8):
     pool = st or hits
     return max(set(pool), key=pool.count)
 
+def has_street(parcel, street_index, streets, tags, reach=12.0):
+    """האם קו רחוב עובר סמוך לגבול החלקה.
+
+    שאלה נפרדת מ"מה רוחבו". כשהכביש הוא חלקה רשומה הצמודה למגרש, מדידת
+    הרווח מדלגת עליו — היא מחפשת את המגרש שמעבר — ולכן היעדר רווח אינו
+    ראיה להיעדר רחוב. הצנחנים 15 נדחתה כך בטעות: קו רחוב נוגע בגבולה המזרחי.
+    """
+    b = parcel.buffer(reach)
+    for j in street_index.query(b):
+        if tags[j] in STREET_TAGS and streets[j].intersects(b):
+            return True
+    return False
+
 def qualifying(runs, street_index, streets, tags, names):
     """מחזיר רשימת חזיתות רחוב כשירות: [(רוחב, tag, שם), ...]."""
     out = []
@@ -50,13 +63,20 @@ def qualifying(runs, street_index, streets, tags, names):
             out.append((r['width'], tag, name))
     return out
 
-def governing_width(runs, street_index, streets, tags, names):
+def governing_width(runs, street_index, streets, tags, names, parcel=None):
     """הרוחב הקובע: הצר מבין חזיתות הרחוב הכשירות.
-    מחזיר (רוחב, נימוק). None = אין חזית רחוב כשירה → נופל בתנאי הסף.
+
+    מחזיר (רוחב, נימוק, יש_רחוב). שלושה מצבים שונים שאסור למזג:
+      (w, ..., True)     — יש רחוב ורוחבו נמדד
+      (None, ..., True)  — יש רחוב אך הרוחב לא נמדד (כביש צמוד, למשל)
+      (None, ..., False) — אין רחוב כלל → נופל בתנאי הסף
     """
+    street = has_street(parcel, street_index, streets, tags) if parcel is not None else None
     q = qualifying(runs, street_index, streets, tags, names)
     if not q:
-        return None, 'אין חזית רחוב כשירה מעל 8 מ׳'
+        if street:
+            return None, 'קו רחוב סמוך אך הרוחב לא נמדד — ייתכן כביש צמוד', True
+        return None, 'אין קו רחוב בסביבת החלקה', False
     w = min(x[0] for x in q)
     desc = ' · '.join(f"{x[0]} מ׳ {x[1]}" + (f" ({x[2]})" if x[2] else "") for x in q)
-    return w, f"{desc} → הצרה קובעת {w}"
+    return w, f"{desc} → הצרה קובעת {w}", True
