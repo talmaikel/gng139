@@ -23,12 +23,14 @@ class Settings(BaseSettings):
     # Public data sources (see app/sources/client.py and app/evidence.py)
     source_cache_dir: str = ".cache/sources"
     source_cache_ttl_seconds: int = 86400
-    source_max_age_days: int = 30
+    source_max_age_days: int = 30  # evidence older than this cannot decide an eligibility check
     # מגבלת שטח לאזור חיפוש מצויר. הערך ייקבע בפיילוט (PRD MAP-01);
     # 250 דונם הוא הערך שה-POC עבד לפיו והוא נקודת המוצא.
-    max_search_area_sqm: float = 250_000  # evidence older than this cannot decide an eligibility check
+    max_search_area_sqm: float = 250_000
 
-    cors_origins: str = "http://localhost:3000"
+    # ‏localhost ו-127.0.0.1 הם מקורות שונים לדפדפן, ושניהם בשימוש בהרצה
+    # מקומית — origin אחד בלבד נכשל ב-CORS בלי שהשרת מדווח על כלום.
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     @property
     def cors_origin_list(self) -> list[str]:
