@@ -1,0 +1,32 @@
+# בעלות על קבצים — נאכף ע"י GitHub ב-Pull Requests.
+#
+# כל שורה: תבנית נתיב, ואחריה מי שנדרש לאשר שינוי בו.
+# השורה האחרונה שמתאימה לקובץ היא הקובעת — לכן הכללי למעלה והספציפי למטה.
+#
+# החליפו את שמות המשתמש בשמות ה-GitHub האמיתיים לפני השימוש.
+# כדי שזה יאכוף בפועל צריך גם: Settings → Branches → Add rule על main
+#   ✓ Require a pull request before merging
+#   ✓ Require review from Code Owners
+
+# ברירת מחדל — כל שינוי שלא נתפס למטה
+*                                   @talmaikel
+
+# ── זרם א׳ · הגשר, הכללים והנתונים ──
+/POC/app/rules.py                   @OWNER-A
+/POC/app/bridge.py                  @OWNER-A
+/POC/app/config.py                  @OWNER-A
+/POC/layer_a/                       @OWNER-A
+
+# ── זרם ב׳ · הנחות, תמורה וכלכלה ──
+/POC/app/assumptions.py             @OWNER-B
+/POC/app/compensation.py            @OWNER-B
+
+# ── זרם ג׳ · אפליקציה וממשק ──
+/POC/static/                        @OWNER-C
+/POC/app/main.py                    @OWNER-C
+
+# ── משותפים · דורשים שני מאשרים ──
+# models.py משנה את החוזה בין כל השלושה
+/POC/app/models.py                  @OWNER-A @OWNER-B @OWNER-C
+# exports.py — ב׳ אחראי לתוכן, ג׳ לפורמט
+/POC/app/exports.py                 @OWNER-B @OWNER-C
