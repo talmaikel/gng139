@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -12,11 +12,19 @@ from app.models.tenant import User
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
 
+class Preference(BaseModel):
+    """העדפת מיון אחת. ‏PRD 4.2: היזם מגדיר סדר מפורש, לא משקולות."""
+    field: Literal["parcel_area", "units", "floors", "cap_400"]
+    direction: Literal["asc", "desc"] = "desc"
+
+
 class SearchArea(BaseModel):
-    """אזור חיפוש מצויר, GeoJSON Polygon ב-WGS84."""
+    """אזור חיפוש מצויר, GeoJSON Polygon ב-WGS84, עם תנאי חובה וסדר העדפות."""
     polygon: dict[str, Any]
     min_area_sqm: float | None = None
     deliverable_only: bool = False
+    # שלוש לכל היותר — מעבר לכך הסדר מפסיק להיות מובן למי שהגדיר אותו.
+    preferences: list[Preference] = Field(default_factory=list, max_length=3)
     limit: int = Field(default=100, le=500)
 
 
@@ -30,7 +38,7 @@ async def search_candidates(
     """מועמדים בתוך אזור מצויר. פוליגון שאינו תקין או חורג מהעיר נדחה ב-422."""
     rules = get_city_rules(city_code)
     try:
-        return await rules.screen_candidates(session, {**body.model_dump(), "polygon": body.polygon})
+        return await rules.screen_candidates(session, body.model_dump())
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 

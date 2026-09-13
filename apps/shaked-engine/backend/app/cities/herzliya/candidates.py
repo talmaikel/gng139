@@ -3,12 +3,81 @@
 import json
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import Float, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cities.herzliya.xplan_schema import QUEUE_ELIGIBLE_CATEGORIES
 from app.models.opportunity import Opportunity
 from app.cities.herzliya.boundary import search_polygon_wkt
+
+
+# השדות שהיזם רשאי למיין לפיהם, וכיצד כל אחד נקרא מהשורה.
+# ‏PRD 4.2: מיון מפורש לפי סדר שהיזם מגדיר — לא ניקוד משוקלל סמוי.
+SORTABLE: dict[str, tuple[Any, str]] = {
+    "parcel_area": (Opportunity.area_sqm, "שטח המגרש"),
+    "units": (Opportunity.existing_units, "מספר הדירות הקיים"),
+    "floors": (Opportunity.metadata_json["assessment"]["floors_low"].astext.cast(Float),
+               "מספר הקומות המותר"),
+    "cap_400": (Opportunity.metadata_json["assessment"]["cap_400_sqm"].astext.cast(Float),
+                'תקרת 400% במ"ר'),
+}
+
+
+def _ordered(stmt, preferences: list[dict[str, Any]]):
+    """מיון לקסיקוגרפי לפי סדר ההעדפות, ואז מזהה יציב לשבירת שוויון מלא.
+
+    שדה מיון חסר ממוקם **אחרי** ערכים ידועים (PRD 4.2), אחרת חוסר מידע
+    היה נראה כמו יתרון.
+    """
+    order = []
+    for pref in preferences:
+        col, _ = SORTABLE.get(pref.get("field"), (None, None))
+        if col is None:
+            continue
+        order.append(col.desc().nullslast() if pref.get("direction", "desc") == "desc"
+                     else col.asc().nullslast())
+    return stmt.order_by(*order, Opportunity.id)
+
+
+def _why_selected(rows: list[dict[str, Any]], preferences: list[dict[str, Any]]) -> None:
+    """מוסיף לכל שורה את ההעדפה שהכריעה אותה מול הבאה אחריה.
+
+    זה מה ש-SEL-01 דורש — נימוק לכל בחירה — ולא הסבר כללי על המיון.
+    """
+    if not preferences:
+        for r in rows:
+            r["why_selected"] = "לא הוגדרו העדפות; הסדר לפי מזהה יציב"
+        return
+    for i, row in enumerate(rows):
+        nxt = rows[i + 1] if i + 1 < len(rows) else None
+        decided = None
+        for pref in preferences:
+            field = pref.get("field")
+            if field not in SORTABLE:
+                continue
+            mine, theirs = _value(row, field), _value(nxt, field) if nxt else None
+            if nxt is None or mine != theirs:
+                decided = (field, mine, theirs)
+                break
+        if decided is None:
+            row["why_selected"] = "זהה לבא אחריו בכל ההעדפות; הוכרע במזהה יציב"
+            continue
+        field, mine, theirs = decided
+        label = SORTABLE[field][1]
+        shown = "—" if mine is None else f"{mine:,.0f}" if isinstance(mine, (int, float)) else mine
+        row["why_selected"] = (f"{label}: {shown}" if theirs is None else
+                               f"{label}: {shown} מול {theirs:,.0f} בבא אחריו")
+
+
+def _value(row: dict[str, Any] | None, field: str):
+    if row is None:
+        return None
+    if field == "parcel_area":
+        return row.get("area_sqm")
+    if field == "units":
+        return row.get("existing_units")
+    a = row.get("assessment") or {}
+    return a.get("floors_low") if field == "floors" else a.get("cap_400_sqm")
 
 
 async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, Any]) -> list[dict[str, Any]]:
@@ -41,17 +110,25 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
 
     # מועמד שנפסל בשערים אינו מוצג כלל. מי שאין לו קביעת קומות אינו
     # "מדורג נמוך" אלא אינו בר-מסירה — זו מוכנות, לא העדפה.
-    stmt = stmt.where(Opportunity.metadata_json["assessment"]["status"].astext != "ineligible")
+    #
+    # ‏`IS DISTINCT FROM` ולא `!=`: בשורה שאין בה `assessment` האופרנד הוא
+    # NULL, ו-`NULL != 'x'` הוא NULL — שאינו TRUE, ולכן השורה **נופלת**.
+    # זריעה חוזרת דורסת את `metadata_json` בלי ההערכה, וכל 699 המועמדים
+    # היו נעלמים מה-API בלי שגיאה. מי שטרם הוערך צריך להופיע, לא להיעלם.
+    stmt = stmt.where(
+        Opportunity.metadata_json["assessment"]["status"].astext.is_distinct_from("ineligible")
+    )
     if filters.get("deliverable_only"):
         stmt = stmt.where(Opportunity.metadata_json["assessment"]["deliverable"].astext == "true")
 
     if verification_level := filters.get("verification_level"):
         stmt = stmt.where(Opportunity.verification_level == verification_level)
 
+    stmt = _ordered(stmt, filters.get("preferences") or [])
     stmt = stmt.limit(int(filters.get("limit", 100)))
 
     result = await session.execute(stmt)
-    return [
+    rows = [
         {
             "id": str(opp.id),
             "address": opp.address,
@@ -68,3 +145,5 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
         }
         for opp, geojson, lat, lng in result.all()
     ]
+    _why_selected(rows, filters.get("preferences") or [])
+    return rows
