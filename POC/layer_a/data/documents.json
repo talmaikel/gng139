@@ -1,0 +1,96 @@
+{
+ "note": "מרשם המסמכים הקובעים. ראה DOCUMENTS.md להסבר, ו-check_documents.py לבדיקה.",
+ "index_pages": [
+  "https://handasa.herzliya.muni.il/urbanrenewal/",
+  "https://handasa.herzliya.muni.il/elementor-10209/"
+ ],
+ "documents": [
+  {
+   "title": "מדיניות בנייה — חלופת שקד",
+   "file": "policy_shaked_apr2026.pdf",
+   "date": "אפריל 2026",
+   "url": "https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/%D7%9E%D7%93%D7%99%D7%A0%D7%99%D7%95%D7%AA-%D7%91%D7%A0%D7%99%D7%94-%D7%97%D7%9C%D7%95%D7%A4%D7%AA-%D7%A9%D7%A7%D7%93-%D7%90%D7%A4%D7%A8%D7%99%D7%9C-2026.pdf",
+   "used_for": "street_rule.py — טבלת רוחב רחוב↔קומות; stages_6_9.py — הפרשות שב\"צ, תמהיל, מרפסות",
+   "sha_bytes": "af0941b40f681fac",
+   "sha_text": "e32b96ed03d797c0",
+   "checked": "2026-09-13"
+  },
+  {
+   "title": "תכנית אסטרטגית הר/2323",
+   "file": "strategic.pdf",
+   "date": "ינואר 2023",
+   "url": "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/%D7%AA%D7%9B%D7%A0%D7%99%D7%AA-%D7%90%D7%A1%D7%98%D7%A8%D7%98%D7%92%D7%99%D7%AA-%D7%9C%D7%94%D7%AA%D7%97%D7%93%D7%A9%D7%95%D7%AA-%D7%9E%D7%A8%D7%9B%D7%96-%D7%94%D7%A2%D7%99%D7%A8-%D7%99%D7%A0%D7%95%D7%90%D7%A8-2023.pdf",
+   "used_for": "מפת המדיניות וגאו-רפרנס; תקרות הקטגוריות (9 / 5.5) שקובעות מעל 15 מ׳; מכסת 40 מבנים בשנה",
+   "sha_bytes": "fd3fe8d25b60f079",
+   "sha_text": "ef9d577936ad2486",
+   "checked": "2026-09-13"
+  },
+  {
+   "title": "תקן חניה — ועדת משנה 769",
+   "file": "parking_standard_2025.pdf",
+   "date": "10.09.2025",
+   "url": "https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/%D7%AA%D7%A7%D7%9F-%D7%97%D7%A0%D7%99%D7%94-2025-%D7%9B%D7%95%D7%9C%D7%9C-%D7%94%D7%97%D7%9C%D7%98%D7%AA-%D7%94%D7%95%D7%A2%D7%93%D7%94.pdf",
+   "used_for": "stages_6_9.parking() — 1.0 בתמ\"א 70 / 1.5 מחוץ; MAIN_AXES — צירים ללא כניסות",
+   "sha_bytes": "2854b0914d599ea0",
+   "sha_text": "f213f387f6cb841f",
+   "checked": "2026-09-13"
+  },
+  {
+   "title": "נוהל קידום חלופת שקד",
+   "file": "procedure_shaked_2025.pdf",
+   "date": "מרץ 2025",
+   "url": "https://handasa.herzliya.muni.il/wp-content/uploads/2025/03/%D7%A0%D7%95%D7%94%D7%9C-%D7%A7%D7%99%D7%93%D7%95%D7%9D-%D7%97%D7%9C%D7%95%D7%A4%D7%AA-%D7%A9%D7%A7%D7%93.pdf",
+   "used_for": "הליך ההגשה. ⚠ מכיל את חסימת הר/2213 שפגה ב-04.01.2026 — שינוי כאן עשוי להיות התיקון",
+   "sha_bytes": "d97652a05f5cafe8",
+   "sha_text": "60b20ad70ec4652e",
+   "checked": "2026-09-13"
+  },
+  {
+   "title": "מדיניות דיור בר השגה",
+   "file": "affordable_housing_apr2026.pdf",
+   "date": "אפריל 2026",
+   "url": "https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/%D7%93%D7%99%D7%95%D7%A8-%D7%91%D7%A8-%D7%94%D7%A9%D7%92%D7%94-%D7%90%D7%A4%D7%A8%D7%99%D7%9C-2026.pdf",
+   "used_for": "סף 100 יח\"ד לדיור מכליל 15%; טבלת התמהיל העירונית",
+   "sha_bytes": "c4b431c0c89043dc",
+   "sha_text": "f5b92674bb9cca34",
+   "checked": "2026-09-13"
+  },
+  {
+   "title": "מסמך מנחה תכנית נקודתית",
+   "file": "pointplan_guide_2024.pdf",
+   "date": "דצמבר 2024",
+   "url": "https://handasa.herzliya.muni.il/wp-content/uploads/2024/12/%D7%9E%D7%A1%D7%9E%D7%9A-%D7%9E%D7%A0%D7%97%D7%94-%D7%AA%D7%9B%D7%A0%D7%99%D7%AA-%D7%A0%D7%A7%D7%95%D7%93%D7%AA%D7%99%D7%AA-.pdf",
+   "used_for": "רשימת החומרים לבדיקת היתכנות מול המנהלת",
+   "sha_bytes": "356e85ca78eda7de",
+   "sha_text": "b2fd352ffd25edb5",
+   "checked": "2026-09-13"
+  }
+ ],
+ "ignored": [],
+ "seen_links": [
+  "https://archive.gis-net.co.il/Herzeliya/files/Internet/mithamim/sokolov 2016.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/דוח-חברתי-תמא-38.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/הוראות-מנחות-לתמא-38.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/החלטה-עיצוב-אדריכלי-ברחוב-סוקולוב.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/החלטה-קרן-תחזוקה.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/הליך-תיאום-מקדים.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/הנחיות-להגשת-בקשה-במסגרת-תמא-38.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/הקפאת-ת.מ.א-38-במרכז-העיר-ותקן-חניה.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/חישוב-זכויות-הריסה-ובניה-תמא-38.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/כתב-התחייבות-לשיפוי.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/מסמך-הנחיות-תמא-38-פרה-רולינג.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/מסמך-מדיניות-כלכלית-לתוכניות-פינוי-בינוי-בהרצליה.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/מסמך-מדיניות-מתחם-הלפרין.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/נוהל-קידום-מתחמי-פינוי-בינוי-בהרצליה-2020.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/תכנית-אסטרטגית-להתחדשות-מרכז-העיר-ינואר-2023.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2023/09/תצהיר-מהנדס-להגשת-בקשה.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2024/07/מצב-חברתי-לתחילת-תיאום-תכנון-מונגש.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2024/10/חלופת-שקד-01-2023-מצגת-עינת-גנון.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2024/12/מסמך-מנחה-תכנית-נקודתית-.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2025/03/נוהל-קידום-חלופת-שקד.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/דיור-בר-השגה-אפריל-2026.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/מדיניות-בניה-חלופת-שקד-אפריל-2026.pdf",
+  "https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/תקן-חניה-2025-כולל-החלטת-הועדה.pdf"
+ ],
+ "baseline_set": "2026-09-13"
+}
