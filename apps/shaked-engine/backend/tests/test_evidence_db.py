@@ -18,11 +18,18 @@ from app.models.opportunity import Opportunity
 
 pytestmark = pytest.mark.db
 
+# זהות סינתטית. הערך הקודם — גוש 6529 חלקה 167, השושנים 4 — הוא חלקה
+# אמיתית, ומרגע שהיא נזרעה לבסיס הנתונים הבדיקות התנגשו ב-
+# uq_opportunities_parcel. בדיקה לא אמורה לתפוס זהות שנתון אמיתי עשוי לקבל.
+TEST_BLOCK = "TEST-GUSH"
+TEST_PARCEL = "TEST-HELKA"
+
+
 HASHOSHANIM_4 = "SRID=4326;MULTIPOLYGON(((34.8390 32.1683,34.8396 32.1683,34.8396 32.1688,34.8390 32.1688,34.8390 32.1683)))"
 
 
 async def _opportunity(session) -> Opportunity:
-    opportunity = Opportunity(city_code="herzliya", address="השושנים 4, הרצליה", block="6529", parcel="167", geom=HASHOSHANIM_4)
+    opportunity = Opportunity(city_code="herzliya", address="בדיקה, הרצליה", block=TEST_BLOCK, parcel=TEST_PARCEL, geom=HASHOSHANIM_4)
     session.add(opportunity)
     await session.flush()
     return opportunity

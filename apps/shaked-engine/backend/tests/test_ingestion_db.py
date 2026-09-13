@@ -16,6 +16,13 @@ from app.models.opportunity import Opportunity
 
 pytestmark = pytest.mark.db
 
+# זהות סינתטית. הערך הקודם — גוש 6529 חלקה 167, השושנים 4 — הוא חלקה
+# אמיתית, ומרגע שהיא נזרעה לבסיס הנתונים הבדיקות התנגשו ב-
+# uq_opportunities_parcel. בדיקה לא אמורה לתפוס זהות שנתון אמיתי עשוי לקבל.
+TEST_BLOCK = "TEST-GUSH"
+TEST_PARCEL = "TEST-HELKA"
+
+
 PARCEL_GEOM = "SRID=4326;MULTIPOLYGON(((34.8390 32.1683,34.8396 32.1683,34.8396 32.1688,34.8390 32.1688,34.8390 32.1683)))"
 
 
@@ -28,7 +35,7 @@ async def db(session):
 
 def parcel(suffix: int = 0) -> Opportunity:
     return Opportunity(
-        city_code="herzliya", address="השושנים 4, הרצליה", block="6529", block_suffix=suffix, parcel="167", geom=PARCEL_GEOM
+        city_code="herzliya", address="בדיקה, הרצליה", block=TEST_BLOCK, block_suffix=suffix, parcel=TEST_PARCEL, geom=PARCEL_GEOM
     )
 
 
@@ -61,7 +68,7 @@ async def test_a_parcel_is_stored_once_per_city(db):
 async def test_a_different_sub_gush_suffix_is_a_different_parcel(db):
     db.add_all([parcel(suffix=0), parcel(suffix=2)])
     await db.flush()
-    assert await _count(db, Opportunity, Opportunity.block == "6529", Opportunity.parcel == "167") == 2
+    assert await _count(db, Opportunity, Opportunity.block == TEST_BLOCK, Opportunity.parcel == TEST_PARCEL) == 2
 
 
 async def test_the_same_building_source_cannot_be_added_twice_to_one_parcel(db):
