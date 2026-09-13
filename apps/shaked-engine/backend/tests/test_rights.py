@@ -12,7 +12,10 @@ def test_built_area_is_not_a_threshold_condition():
     ids = {c.id for c in R.threshold_checks({"permit_date": "1978-01-01", "strengthened": False,
                                              "floors": 4, "units": 32})}
     assert "existing_area" not in ids
-    assert ids == {"permit_date", "strengthened", "floors", "units"}
+    # ארבעת השערים של §70א עצמו. `occupied` אינו אחד מהם — הוא שער זמינות
+    # מסחרית ולא תנאי סף בחוק — אבל הוא כן נבדק באותו מעבר.
+    assert {"permit_date", "strengthened", "floors", "units"} <= ids
+    assert not {"existing_area", "parcel_area", "street_width"} & ids
 
 
 def test_1980_to_1984_needs_an_engineers_opinion():

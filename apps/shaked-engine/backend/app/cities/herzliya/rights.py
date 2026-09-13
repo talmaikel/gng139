@@ -107,6 +107,17 @@ def threshold_checks(f: dict) -> list[Check]:
                      POLICY_URL, 3,
                      None if s is None else ("לא נמצאה בקשת חיזוק עם היתר" if not s else "חוזק — §70א(2)")))
 
+    # ״תפוס״ אינו תנאי סף בחוק — מבנה כזה כשיר לחלוטין. הוא פשוט אינו
+    # זמין: בקשת חיזוק שהוגשה ולא הבשילה להיתר פירושה שיזם אחר כבר עובד
+    # מול הדיירים. לכן `routed` ולא `failed` — ניתוב, לא פסילה.
+    occ = f.get("occupied")
+    out.append(Check("occupied", "לא נמצאה יוזמת התחדשות פעילה של אחר",
+                     "unknown" if occ is None else ("passed" if occ is False else "routed"),
+                     POLICY_URL, None,
+                     None if occ is None else
+                     ("אין בקשת חיזוק פתוחה" if not occ else
+                      "בקשת חיזוק ללא היתר — יזם אחר כבר מול הדיירים")))
+
     fl, un = f.get("floors"), f.get("units")
     out.append(Check("floors", "לפחות שתי קומות מעל הקרקע",
                      "unknown" if fl is None else ("passed" if fl >= 2 else "failed"),

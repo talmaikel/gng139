@@ -100,10 +100,14 @@ def _rows(key, surv, front, geo, sources, archive):
         if years:
             out.append(ev("permit_date", f"{min(years)}-01-01", "govmap_parcels", loc,
                           Certainty.DERIVED, "שנת הבקשה המוקדמת ביותר בתיק"))
-        out.append(ev("strengthened",
-                      any(STRENGTHENING.search(r.get("action") or "") and (r.get("permit_date") or "").strip()
-                          for r in archive),
-                      "govmap_parcels", loc, Certainty.DERIVED))
+        hits = [r for r in archive if STRENGTHENING.search(r.get("action") or "")]
+        # חיזוק **עם** היתר פוסל לפי §70א(2). חיזוק **בלי** היתר פירושו
+        # שיזם אחר כבר מול הדיירים — כשיר בדין, לא זמין בפועל. שני שדות.
+        out.append(ev("strengthened", any((r.get("permit_date") or "").strip() for r in hits),
+                      "archive", loc, Certainty.DERIVED))
+        out.append(ev("occupied", any(not (r.get("permit_date") or "").strip() for r in hits),
+                      "archive", loc, Certainty.DERIVED,
+                      "בקשת חיזוק שהוגשה ולא הופק לה היתר"))
     return [r for r in out if r]
 
 

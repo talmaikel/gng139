@@ -19,6 +19,8 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.opportunity import Opportunity
 
+# `urban_renewal_compound` אינו נמסר במסלול המגרשי, ועכשיו הוא גם הסטטוס
+# של מגרש תפוס. בשני המקרים המשמעות זהה מבחינת המוצר: לא מוכר את זה.
 DELIVERABLE = {"eligible", "needs_verification"}
 
 

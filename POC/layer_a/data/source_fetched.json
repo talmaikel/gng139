@@ -28,5 +28,11 @@
   "url": "https://ags.iplan.gov.il/arcgisiplan/rest/services/PlanningPublic/Xplan/MapServer/4",
   "retrieved_at": "2026-09-12T18:19:00+00:00",
   "note": "מרחב תמ\"א 70 נגזר מפוליגוני הייעוד שמספר התכנית שלהם תמא/ 70."
+ },
+ "archive": {
+  "label": "ארכיון תיקי בניין · הרצליה",
+  "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll",
+  "retrieved_at": "2026-09-12T12:00:00+00:00",
+  "note": "עמודי תיק בניין. שם המבקש אינו נקרא בפרסור. כיסוי חלקי — 16 מ-699."
  }
 }
