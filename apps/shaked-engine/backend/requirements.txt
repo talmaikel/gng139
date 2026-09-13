@@ -9,6 +9,10 @@ psycopg2-binary>=2.9  # sync driver used by Alembic migrations
 geoalchemy2>=0.15
 alembic>=1.13
 
+# --- Geometry in the Israeli grid (ITM <-> WGS84, parcel matching) ---
+shapely>=2.0
+pyproj>=3.6
+
 # --- Auth / multi-tenancy ---
 fastapi-users[sqlalchemy]>=13.0
 

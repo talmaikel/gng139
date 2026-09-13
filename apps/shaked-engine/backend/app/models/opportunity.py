@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from geoalchemy2 import Geometry
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Integer, String, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, Integer, SmallInteger, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,6 +27,8 @@ class Opportunity(Base):
     city_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # e.g. "herzliya", "tel_aviv"
     address: Mapped[str] = mapped_column(String(500), nullable=False)
     block: Mapped[str | None] = mapped_column(String(50))   # Gush
+    # Sub-gush suffix (GovMap GUSH_SUFFI). Part of a parcel\'s identity: gush + suffix + parcel.
+    block_suffix: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default="0")
     parcel: Mapped[str | None] = mapped_column(String(50))  # Helka
     xplan_code: Mapped[str | None] = mapped_column(String(50), index=True)
 
@@ -53,4 +55,14 @@ class Opportunity(Base):
 
     __table_args__ = (
         Index("ix_opportunities_geom", "geom", postgresql_using="gist"),
+        # One row per parcel per city, so re-scanning an area updates rather than duplicates.
+        Index(
+            "uq_opportunities_parcel",
+            "city_code",
+            "block",
+            "block_suffix",
+            "parcel",
+            unique=True,
+            postgresql_where=text("block IS NOT NULL AND parcel IS NOT NULL"),
+        ),
     )

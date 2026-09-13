@@ -1,16 +1,15 @@
-# Python
-__pycache__/
-*.pyc
-.venv/
-
 # Env files
+# Node / Next.js
+# Playwright
+# Public-source response cache
+# Python
+*.pyc
+*.tsbuildinfo
 .env
 .env.local
-
-# Node / Next.js
-node_modules/
 .next/
-*.tsbuildinfo
-
-# Playwright
+.venv/
+__pycache__/
+backend/.cache/
 backend/.playwright-cache/
+node_modules/
