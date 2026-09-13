@@ -1,8 +1,17 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
-import { getCandidates, type Assessment, type Candidate } from "@/lib/api";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ApiError,
+  getCandidates,
+  searchCandidates,
+  type Assessment,
+  type Candidate,
+} from "@/lib/api";
+// מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
+// לחבילת ה-SSR, שם אין `window`, והדף מחזיר 500 בטעינה נקייה.
+import { MAX_AREA_SQM } from "@/lib/searchArea";
 
 const STATUS_LABEL: Record<Assessment["status"], string> = {
   eligible: "כשיר",
@@ -21,6 +30,8 @@ const STATUS_COLOUR: Record<Assessment["status"], string> = {
 /** Gate ids come from the rules engine in English. A developer reading the screen
  *  should see what is missing, not a field name. */
 const GATE_LABEL: Record<string, string> = {
+  residential_zoning: "ייעוד למגורים",
+  residential_share: "70% שימוש למגורים",
   permit_date: "מועד ההיתר",
   strengthened: "בוצע חיזוק",
   occupied: "יוזמה פעילה של אחר",
@@ -45,6 +56,8 @@ function floorsText(a: Assessment | null): string {
   return a.floors_certain ? base : `${base} · דורש מדידה`;
 }
 
+const dunam = (sqm: number) => `${(sqm / 1000).toFixed(1)} דונם`;
+
 const OpportunityMap = dynamic(() => import("@/components/Map"), { ssr: false });
 
 const DEFAULT_CITY = "herzliya";
@@ -52,44 +65,138 @@ const DEFAULT_CITY = "herzliya";
 export default function DashboardPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const [drawing, setDrawing] = useState(false);
+  const [searchArea, setSearchArea] = useState<object | null>(null);
+  const [liveArea, setLiveArea] = useState<{ points: number; sqm: number } | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const loadAll = useCallback(() => {
+    setLoading(true);
+    setError(null);
     getCandidates(DEFAULT_CITY)
       .then(setCandidates)
-      .catch(() => setError("Could not load candidates. Are you signed in and is the API running?"));
+      .catch((e) => setError(e instanceof ApiError ? e.detail : "לא ניתן לטעון מועמדים. האם השרת רץ?"))
+      .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <main className="page">
-      <h1>Candidate opportunities — Herzliya</h1>
+  useEffect(loadAll, [loadAll]);
 
-      <div className="card" style={{ marginBottom: "1.5rem" }}>
-        <OpportunityMap candidates={candidates} />
+  function onPolygon(polygon: object, areaSqm: number) {
+    setDrawing(false);
+    setLiveArea(null);
+    setSearchArea(polygon);
+    setSelectedId(null);
+    setLoading(true);
+    setError(null);
+    searchCandidates(DEFAULT_CITY, polygon)
+      .then(setCandidates)
+      // ‏422 כאן אינו תקלה אלא MAP-01 עושה את עבודתו, והמשפט בעברית הוא
+      // מה שהמשתמש צריך לפעול לפיו — ולכן הוא מוצג כמו שהוא.
+      .catch((e) => {
+        setError(e instanceof ApiError ? e.detail : "החיפוש נכשל.");
+        setCandidates([]);
+      })
+      .finally(() => setLoading(false));
+  }
+
+  function clearArea() {
+    setSearchArea(null);
+    setSelectedId(null);
+    loadAll();
+  }
+
+  const overLimit = liveArea !== null && liveArea.points >= 3 && liveArea.sqm > MAX_AREA_SQM;
+
+  return (
+    <main className="page" style={{ maxWidth: 1100 }}>
+      <h1>מועמדים · הרצליה</h1>
+
+      <div className="card" style={{ marginBottom: "1rem", padding: "0.9rem 1.1rem" }}>
+        <div style={{ display: "flex", gap: ".6rem", alignItems: "center", flexWrap: "wrap" }}>
+          {!drawing ? (
+            <button onClick={() => { setDrawing(true); setLiveArea(null); }}>
+              ✏️ צייר אזור חיפוש
+            </button>
+          ) : (
+            <button onClick={() => { setDrawing(false); setLiveArea(null); }} style={{ background: "#6b655c" }}>
+              בטל ציור
+            </button>
+          )}
+
+          {searchArea && !drawing && (
+            <button onClick={clearArea} style={{ background: "#6b655c" }}>
+              נקה אזור · הצג הכל
+            </button>
+          )}
+
+          <span style={{ color: "#6b655c", fontSize: ".88rem" }}>
+            {drawing
+              ? liveArea === null
+                ? "לחיצה מוסיפה קודקוד · לחיצה כפולה או Enter לסיום · Escape לביטול"
+                : `${liveArea.points} קודקודים · ${dunam(liveArea.sqm)}`
+              : searchArea
+                ? "התוצאות מוגבלות לאזור המסומן על המפה"
+                : "מוצגים כל המועמדים בעיר"}
+          </span>
+
+          {overLimit && (
+            <span style={{ color: "#a8321e", fontWeight: 600, fontSize: ".88rem" }}>
+              מעל מגבלת {MAX_AREA_SQM / 1000} הדונם — השרת ידחה
+            </span>
+          )}
+        </div>
       </div>
 
-      {error && <p style={{ color: "#b3261e" }}>{error}</p>}
+      <div className="card" style={{ marginBottom: "1.2rem", padding: 0, overflow: "hidden" }}>
+        <OpportunityMap
+          candidates={candidates}
+          drawing={drawing}
+          searchArea={searchArea}
+          onPolygon={onPolygon}
+          onCancelDraw={() => { setDrawing(false); setLiveArea(null); }}
+          onDrawProgress={(points, sqm) => setLiveArea({ points, sqm })}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
+      </div>
+
+      {error && (
+        <div className="card" style={{ marginBottom: "1rem", borderColor: "#e6c9c2", background: "#fdf6f4" }}>
+          <strong style={{ color: "#a8321e" }}>{error}</strong>
+        </div>
+      )}
 
       <div className="card">
+        <p style={{ margin: "0 0 .8rem", color: "#6b655c", fontSize: ".9rem" }}>
+          {loading ? "טוען…" : `${candidates.length} מועמדים`}
+        </p>
         <table>
           <thead>
             <tr>
-              <th>Address</th>
-              <th>Block / Parcel</th>
-              <th>Area (sqm)</th>
-              <th>Category</th>
+              <th>כתובת</th>
+              <th>גוש / חלקה</th>
+              <th>שטח (מ״ר)</th>
               <th>קומות</th>
               <th>מצב</th>
             </tr>
           </thead>
           <tbody>
             {candidates.map((candidate) => (
-              <tr key={candidate.id}>
+              <tr
+                key={candidate.id}
+                onClick={() => setSelectedId(candidate.id)}
+                style={{
+                  cursor: "pointer",
+                  background: candidate.id === selectedId ? "#fdf3e8" : undefined,
+                }}
+              >
                 <td>{candidate.address}</td>
                 <td>
                   {candidate.block ?? "—"} / {candidate.parcel ?? "—"}
                 </td>
                 <td>{candidate.area_sqm ?? "—"}</td>
-                <td>{candidate.category ?? "—"}</td>
                 <td>{floorsText(candidate.assessment)}</td>
                 <td>
                   {candidate.assessment ? (
@@ -107,6 +214,13 @@ export default function DashboardPage() {
                 </td>
               </tr>
             ))}
+            {!loading && candidates.length === 0 && !error && (
+              <tr>
+                <td colSpan={5} style={{ color: "#6b655c" }}>
+                  אין מועמדים באזור שסומן.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

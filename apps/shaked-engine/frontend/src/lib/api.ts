@@ -13,6 +13,36 @@ export function clearToken(): void {
   window.localStorage.removeItem("shaked_token");
 }
 
+/**
+ * An API refusal, with the message the server meant a person to read.
+ *
+ * The refusals here are not plumbing errors: "כל אזור החיפוש חייב להיות
+ * בתוך הגבול העירוני הרשמי" and "מגבלת האזור היא 250 דונם" are MAP-01
+ * doing its job, and the user is the one who has to act on them. Throwing
+ * `API request failed (422): {"detail":"..."}` buries the sentence inside
+ * a stringified body, so nothing could show it.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  /** the Hebrew sentence, when the server sent one */
+  readonly detail: string;
+
+  constructor(status: number, detail: string) {
+    super(detail);
+    this.name = "ApiError";
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+const FALLBACK: Record<number, string> = {
+  401: "נדרשת התחברות מחדש.",
+  402: "לא נותרה זכאות לחברה.",
+  404: "לא נמצא.",
+  409: "המועמד אינו מוכן למסירה.",
+  422: "הבקשה אינה תקינה.",
+};
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -25,8 +55,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`API request failed (${response.status}): ${body}`);
+    let detail = FALLBACK[response.status] ?? `השרת החזיר ${response.status}.`;
+    try {
+      const body = await response.json();
+      // FastAPI puts a string in `detail` for HTTPException, and a list of
+      // field errors there for a validation failure. Only the first is meant
+      // for a person.
+      if (typeof body?.detail === "string") detail = body.detail;
+    } catch {
+      /* לא JSON — נשארים עם המשפט הכללי */
+    }
+    throw new ApiError(response.status, detail);
   }
   return response.json() as Promise<T>;
 }
@@ -76,6 +115,20 @@ export interface Assessment {
   cap_400_certainty: string | null;
   /** gate ids that are failing, unknown or routed */
   blocking: string[];
+  /** §70א gates that were never answered — distinct from gates that failed */
+  threshold_open?: string[];
+  /**
+   * Two different questions, and they were one flag until they were split.
+   *
+   * `screenable` — still in the running: has a floor figure, not rejected,
+   * not routed to the compound track. This is what the screen lists.
+   *
+   * `deliverable` — the §70א threshold was actually ASKED and answered.
+   * False while the building file has not been pulled, which is most of
+   * the inventory: the archive is fetched per customer request, and the
+   * moment of delivery is the moment it happens.
+   */
+  screenable?: boolean;
   deliverable: boolean;
 }
 
@@ -84,7 +137,6 @@ export interface Candidate {
   address: string;
   block: string | null;
   parcel: string | null;
-  xplan_code: string | null;
   area_sqm: number | null;
   verification_level: string;
   category: string | null;
@@ -120,4 +172,70 @@ export function searchCandidates(
       limit: options.limit ?? 100,
     }),
   });
+}
+
+
+// ── מסירות, יתרה וחבילות ──
+
+export interface DeliveredOpportunity {
+  delivery_id: string;
+  opportunity_id: string;
+  address: string;
+  block: string | null;
+  parcel: string | null;
+  delivered_at: string | null;
+  credits_charged: number;
+  rules_version: string;
+  data_version: string;
+  why_selected: Record<string, unknown> | null;
+  assessment: Assessment | null;
+}
+
+/** מה שכבר נמסר לחברה — SEL-02: "מוצג במאגר החברה בלבד". */
+export function getMyDeliveries(cityCode: string): Promise<DeliveredOpportunity[]> {
+  return request<DeliveredOpportunity[]>(`/api/v1/candidates/${cityCode}/mine`);
+}
+
+/**
+ * מוסר הזדמנות לחברה ומנכה זכאות.
+ *
+ * מועמד שתנאי הסף שלו לא נשאל — תיק הבניין נשלף בתוך הבקשה הזו ואז
+ * המסירה מנוסה שוב, ולכן היא עשויה לקחת כמה שניות. ‏409 פירושו שגם אחרי
+ * השליפה השער נשאר פתוח; ‏402 פירושו שאין יתרה.
+ */
+export function deliverOpportunity(
+  cityCode: string,
+  opportunityId: string,
+): Promise<{ delivery_id: string; opportunity_id: string; charged: boolean; delivered_at: string }> {
+  return request(`/api/v1/candidates/${cityCode}/${opportunityId}/deliver`, { method: "POST" });
+}
+
+export interface AccountBalance {
+  credits_remaining: number;
+  delivered_count: number;
+  company_id: string;
+  updated_at: string | null;
+}
+
+export function getBalance(): Promise<AccountBalance> {
+  return request<AccountBalance>("/api/v1/account/balance");
+}
+
+export interface CreditPackage {
+  id: string;
+  name: string;
+  credits: number;
+  price_ils: number;
+}
+
+export function getPackages(): Promise<CreditPackage[]> {
+  return request<CreditPackage[]>("/api/v1/account/packages");
+}
+
+export function purchasePackage(packageId: string): Promise<{
+  package: string;
+  credits_added: number;
+  credits_remaining: number;
+}> {
+  return request(`/api/v1/account/packages/${packageId}/purchase`, { method: "POST" });
 }
