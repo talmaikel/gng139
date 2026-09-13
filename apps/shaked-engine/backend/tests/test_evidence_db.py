@@ -4,15 +4,14 @@ field_evidence against a real, migrated Postgres.
 Each test runs inside a transaction that is rolled back, so nothing is left in
 the database. Without a reachable, migrated database the tests are skipped
 rather than failed, so the unit suite still runs on a machine with no Postgres.
+The `session` fixture lives in conftest.py.
 """
 
 from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy import delete, func, select, text
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.core.config import get_settings
 from app.evidence import CONFLICT, Certainty, resolve_evidence, usable
 from app.models.evidence import FieldEvidence
 from app.models.opportunity import Opportunity
@@ -20,21 +19,6 @@ from app.models.opportunity import Opportunity
 pytestmark = pytest.mark.db
 
 HASHOSHANIM_4 = "SRID=4326;MULTIPOLYGON(((34.8390 32.1683,34.8396 32.1683,34.8396 32.1688,34.8390 32.1688,34.8390 32.1683)))"
-
-
-@pytest.fixture
-async def session():
-    engine = create_async_engine(get_settings().database_url)
-    try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1 FROM field_evidence LIMIT 0"))
-    except Exception as exc:  # no server, no database, or not migrated
-        await engine.dispose()
-        pytest.skip(f"no migrated database reachable: {type(exc).__name__}")
-    async with async_sessionmaker(engine, expire_on_commit=False)() as s:
-        yield s
-        await s.rollback()
-    await engine.dispose()
 
 
 async def _opportunity(session) -> Opportunity:

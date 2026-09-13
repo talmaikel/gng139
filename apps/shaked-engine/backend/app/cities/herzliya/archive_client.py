@@ -1,19 +1,39 @@
 """
-Live client for Herzliya's municipal building-permit archive ("Tik Binyan"),
-a legacy CGI-style HTTP API at handasi.complot.co.il — a plain GET/query-string
-API, not a JS-rendered page. This is why Herzliya's real scraping doesn't need
-`app/pipeline/scraper.py`'s Playwright scaffold; that scaffold stays as the
-fallback for a city whose archive turns out to require browser rendering.
+Live client for Herzliya's municipal building-permit archive ("Tik Binyan") at
+handasi.complot.co.il: a legacy CGI-style HTTP API, not a JS-rendered page,
+which is why Herzliya needs no browser automation (app/pipeline/scraper.py stays
+the fallback for a city whose archive does).
+
+Runs on AsyncPublicClient, so every archive request is cached, paced one per
+10 s (the archive answers bursts with 429) and retried. Merged with the POC's
+BuildingArchive (POC/app/sources.py):
+
+- a search reports whether the archive answered "no results" or answered
+  something unrecognised, so a changed page is never read as "no files"
+- an address search checks the file count the page declares against the files
+  actually parsed, so a partly rendered result cannot pass as complete
+- street catalogue and building-file pages, which the archive index (phase 2c)
+  builds on
+
+The public methods worker.py already calls (find_tik_ids, find_documents,
+download) keep their signatures.
 """
 
+import html
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 from urllib.parse import urljoin
 
 import httpx
 
+from app.core.config import get_settings
+from app.sources.client import AsyncPublicClient, SourceError
+
 ARCHIVE_URL = "https://handasi.complot.co.il/magicscripts/mgrqispi.dll"
+STREETS_URL = "https://handasi.complot.co.il/wsComplotPublicData/ComplotPublicData.asmx/GetStreets"
 SITE_ID = 121
+HERZLIYA_LAMAS_CODE = 6400
 
 # Hosts the archive is known to link documents from. Downloads outside this
 # allowlist are refused so a compromised/altered response can't redirect us
@@ -27,10 +47,11 @@ ALLOWED_DOCUMENT_HOSTS = {
 
 TIK_ID_PATTERN = re.compile(r"(?:getBuilding\s*\(\s*['\"]?|#building/)(\d+)")
 PDF_HREF_PATTERN = re.compile(r'href=["\']([^"\']+)', re.IGNORECASE)
-USER_AGENT = "Mozilla/5.0 (compatible; ShakedEngine/1.0)"
+DECLARED_COUNT_PATTERN = re.compile(r"נמצאו\s*(\d+)\s*תיקי\s*בניין")
+NO_RESULTS_MARKERS = ("ERR_NO_RESULTS", "לא נמצאו")
 
 
-class HerzliyaArchiveError(RuntimeError):
+class HerzliyaArchiveError(SourceError):
     pass
 
 
@@ -40,14 +61,33 @@ class ArchiveDocument:
     url: str
 
 
+@dataclass
+class ArchiveSearch:
+    tik_ids: list[str]
+    status: str  # "found" | "empty" | "unrecognized"
+    source: dict[str, Any] = field(default_factory=dict)
+
+
+def text_from_html(raw: bytes | str) -> str:
+    page = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw
+    page = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", "", page, flags=re.S | re.I)
+    return html.unescape(re.sub(r"<[^>]+>", " ", page))
+
+
+def _tik_ids(page: str) -> list[str]:
+    return sorted(set(TIK_ID_PATTERN.findall(page)), key=int)
+
+
 class HerzliyaArchiveClient:
     """Async client for the real Herzliya building-permit archive API."""
 
-    def __init__(self, timeout_seconds: float = 20.0):
-        self._client = httpx.AsyncClient(timeout=timeout_seconds, headers={"User-Agent": USER_AGENT})
+    def __init__(self, public_client: AsyncPublicClient | None = None, timeout_seconds: float = 20.0):
+        self._owns_client = public_client is None
+        self._public = public_client or AsyncPublicClient(get_settings().source_cache_dir, timeout_seconds=timeout_seconds)
 
     async def close(self) -> None:
-        await self._client.aclose()
+        if self._owns_client:
+            await self._public.aclose()
 
     async def __aenter__(self) -> "HerzliyaArchiveClient":
         return self
@@ -55,44 +95,105 @@ class HerzliyaArchiveClient:
     async def __aexit__(self, *exc_info: object) -> None:
         await self.close()
 
+    async def _page(self, params: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+        raw, meta = await self._public.get(ARCHIVE_URL, params)
+        return raw.decode("utf-8", errors="replace"), meta
+
+    async def search(self, gush: str, parcel: str) -> ArchiveSearch:
+        """Building-permit files ("tik binyan") for a gush/parcel, with how the archive answered."""
+        page, meta = await self._page(
+            {
+                "appname": "cixpa",
+                "prgname": "GetTikimByGush",
+                "siteid": SITE_ID,
+                "g": gush,
+                "h": parcel,
+                "m": "",
+                "l": "true",
+                "arguments": "siteid,g,h,m,l",
+            }
+        )
+        ids = _tik_ids(page)
+        status = "found" if ids else ("empty" if any(marker in page for marker in NO_RESULTS_MARKERS) else "unrecognized")
+        return ArchiveSearch(tik_ids=ids, status=status, source=meta)
+
     async def find_tik_ids(self, gush: str, parcel: str) -> list[str]:
-        """Look up building-permit file ("tik binyan") ids for a gush/parcel."""
-        params = {
-            "appname": "cixpa",
-            "prgname": "GetTikimByGush",
-            "siteid": SITE_ID,
-            "g": gush,
-            "h": parcel,
-            "m": "",
-            "l": "true",
-            "arguments": "siteid,g,h,m,l",
+        """File ids for a gush/parcel. An unrecognised page raises rather than reading as "no files"."""
+        result = await self.search(gush, parcel)
+        if result.status == "unrecognized":
+            raise HerzliyaArchiveError(f"Unrecognised archive response for gush {gush} parcel {parcel}")
+        return result.tik_ids
+
+    async def streets(self) -> dict[str, Any]:
+        """Herzliya's street catalogue, de-duplicated by code, with the source it came from."""
+        data, meta = await self._public.post_json(STREETS_URL, {"site_id": str(SITE_ID)})
+        rows = [
+            {"code": str(item["v"]), "name": item["label"]}
+            for item in data.get("d", [])
+            if str(item.get("k")) == str(HERZLIYA_LAMAS_CODE) and str(item.get("v", "")).isdigit()
+        ]
+        if not rows:
+            raise HerzliyaArchiveError("The municipal street catalogue returned no Herzliya streets")
+        unique = {row["code"]: row for row in rows}
+        return {"streets": sorted(unique.values(), key=lambda row: (row["name"], row["code"])), "source": meta}
+
+    async def search_address(self, street_code: str) -> dict[str, Any]:
+        """Every file on a street, checked against the count the page declares."""
+        page, meta = await self._page(
+            {
+                "appname": "cixpa",
+                "prgname": "GetTikimByAddress",
+                "siteid": SITE_ID,
+                "c": HERZLIYA_LAMAS_CODE,
+                "s": int(street_code),
+                "h": "",
+                "l": "false",
+                "arguments": "siteid,c,s,h,l",
+            }
+        )
+        plain = text_from_html(page)
+        ids = _tik_ids(page)
+        declared = DECLARED_COUNT_PATTERN.search(plain)
+        if declared and int(declared.group(1)) != len(ids):
+            raise HerzliyaArchiveError(
+                f"Archive street result is incomplete: declared {declared.group(1)}, parsed {len(ids)}"
+            )
+        status = "found" if ids else ("empty" if any(marker in plain or marker in page for marker in NO_RESULTS_MARKERS) else "unrecognized")
+        if status == "unrecognized":
+            raise HerzliyaArchiveError("Unrecognised municipal street-search response")
+        return {
+            "tik_ids": ids,
+            "declared_count": int(declared.group(1)) if declared else len(ids),
+            "status": status,
+            "source": meta,
         }
-        response = await self._client.get(ARCHIVE_URL, params=params)
-        response.raise_for_status()
-        return sorted(set(TIK_ID_PATTERN.findall(response.text)), key=int)
+
+    async def file(self, tik_id: str) -> dict[str, Any]:
+        """A building file's page: requests, permits, plans and addresses, as HTML and text."""
+        page, meta = await self._page(
+            {"appname": "cixpa", "prgname": "GetTikFile", "siteid": SITE_ID, "t": int(tik_id), "arguments": "siteid,t"}
+        )
+        return {"id": str(tik_id), "source": meta, "text": text_from_html(page), "html": page}
 
     async def find_documents(self, tik_id: str) -> list[ArchiveDocument]:
-        """Return downloadable PDF links attached to one building-permit file."""
-        params = {
-            "appname": "cixpa",
-            "prgname": "GetTikDocs",
-            "siteid": SITE_ID,
-            "t": tik_id,
-            "arguments": "siteid,t",
-        }
-        response = await self._client.get(ARCHIVE_URL, params=params)
-        response.raise_for_status()
+        """Downloadable PDF links attached to one building-permit file."""
+        page, _ = await self._page(
+            {"appname": "cixpa", "prgname": "GetTikDocs", "siteid": SITE_ID, "t": tik_id, "arguments": "siteid,t"}
+        )
         links = [
-            urljoin(ARCHIVE_URL, href)
-            for href in PDF_HREF_PATTERN.findall(response.text)
+            urljoin(ARCHIVE_URL, html.unescape(href))
+            for href in PDF_HREF_PATTERN.findall(page)
             if ".pdf" in href.lower()
         ]
         return [ArchiveDocument(tik_id=tik_id, url=url) for url in links]
 
-    async def download(self, document: ArchiveDocument) -> bytes:
+    async def download_with_source(self, document: ArchiveDocument) -> tuple[bytes, dict[str, Any]]:
+        """The document's bytes and its source record (URL, retrieval time, SHA-256), for evidence."""
         host = httpx.URL(document.url).host
         if host not in ALLOWED_DOCUMENT_HOSTS:
             raise HerzliyaArchiveError(f"Refusing to download from untrusted host: {host}")
-        response = await self._client.get(document.url)
-        response.raise_for_status()
-        return response.content
+        return await self._public.get(document.url)
+
+    async def download(self, document: ArchiveDocument) -> bytes:
+        content, _ = await self.download_with_source(document)
+        return content

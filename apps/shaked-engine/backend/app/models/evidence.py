@@ -26,6 +26,11 @@ class FieldEvidence(Base):
     opportunity_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("opportunities.id", ondelete="CASCADE"), nullable=False
     )
+    # Set when the fact is about one building on the parcel (permit year, units, floors);
+    # null when it is about the parcel itself (area, zoning).
+    building_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("buildings.id", ondelete="CASCADE"), nullable=True
+    )
     field: Mapped[str] = mapped_column(String(80), nullable=False)  # e.g. "parcel_area", "permit_date"
     value: Mapped[Any | None] = mapped_column(JSONB, nullable=True)
     certainty: Mapped[Certainty] = mapped_column(
@@ -44,7 +49,10 @@ class FieldEvidence(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    __table_args__ = (Index("ix_field_evidence_opportunity_field", "opportunity_id", "field"),)
+    __table_args__ = (
+        Index("ix_field_evidence_opportunity_field", "opportunity_id", "field"),
+        Index("ix_field_evidence_building_field", "building_id", "field"),
+    )
 
     def as_observation(self) -> dict[str, Any]:
         """The row in the shape app.evidence reads, so stored and fresh evidence resolve the same way."""
