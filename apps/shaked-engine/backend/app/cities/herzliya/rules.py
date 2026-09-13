@@ -49,7 +49,10 @@ class HerzliyaCityRules(BaseCityRules):
         checks += r.checks
 
         est = f.get("existing_area") or {}
-        cap, cap_why = rights.cap_400(est.get("value"))
+        # ההחרגה של §70ב(א)(1)(ב) נגזרת מהתיק. הראיה נושאת True/False ולא
+        # שטח, כי התיק מדווח שהיתר ניתן ולא כמה מ״ר הוא הוסיף.
+        post_2005 = (f.get("post_2005_permit") or {}).get("value")
+        cap, cap_why = rights.cap_400(est.get("value"), post_2005)
 
         out: dict[str, Any] = {
             "checks": [c.__dict__ for c in checks],
@@ -59,6 +62,7 @@ class HerzliyaCityRules(BaseCityRules):
             "cap_400_sqm": cap,
             "cap_400_basis": cap_why,
             "cap_400_certainty": est.get("certainty"),
+            "cap_400_reliable": rights.cap_400_reliable(post_2005),
             "notes": list(r.notes),
             "stale_fields": stale_fields(f),
         }
@@ -69,7 +73,7 @@ class HerzliyaCityRules(BaseCityRules):
             out["balconies_sqm"], out["balconies_why"] = rights.balconies(out["unit_mix"]["units_max"])
             out["parking"] = rights.parking(out["unit_mix"]["units_max"], d.get("in_tama70"))
         if cap and d.get("registration_area"):
-            alloc, why = rights.allocation(cap, d["registration_area"])
+            alloc, why = rights.allocation(cap, d["registration_area"], total_is_ceiling=True)
             out["allocation_sqm"], out["allocation_why"] = alloc, why
         return out
 

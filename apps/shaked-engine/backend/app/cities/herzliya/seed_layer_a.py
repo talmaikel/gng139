@@ -9,8 +9,10 @@
 שדה מהותי (‏4.3 · 8.3). שטח מגרש שהגיע מ-GovMap ומספר דירות שהגיע משכבה
 עירונית אינם באותה רמת ביטחון, וצריך לראות את ההבדל בתיק.
 
-**אין כאן ערך בלי מקור.** `_ev()` דורש מזהה מקור ומיקום; בלעדיהם השדה
-נכתב כ-`MISSING` ולא כערך. `retrieved_at` מגיע מ-`source_fetched.json`,
+**אין כאן ערך בלי מקור.** `ev()` דורש מזהה מקור ומיקום; בלעדיהם אין שורה
+כלל — לא ניתן לטעון שחיפשנו במקום שאין לו כתובת. כשהמקור קיים והערך אינו
+בו, נכתבת שורת `MISSING`: ״נבדק ולא נמצא״ נראה אחרת מ״לא נשאל״, ובלי
+ההבחנה הזו תיק שלם נקרא כאילו איש לא בדק. `retrieved_at` מגיע מ-`source_fetched.json`,
 כלומר זמן השליפה **האמיתי** של שכבת המקור — לא `now()`, שהיה עובר
 ולידציה ומשקר.
 
@@ -23,7 +25,7 @@ import argparse
 import asyncio
 import json
 import re
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from sqlalchemy import delete, select
@@ -55,8 +57,15 @@ def _rows(key, surv, front, geo, sources, archive):
 
     def ev(field, value, source_id, location, certainty=Certainty.OFFICIAL, method=None):
         src = sources.get(source_id)
-        if value is None or not src or not location:
+        # בלי מקור או בלי מיקום אי אפשר אפילו לומר שחיפשנו — אין שורה.
+        if not src or not location:
             return None
+        # פנינו למקור והערך לא היה שם. זה **ממצא**, לא היעדר: שורת MISSING
+        # אומרת ״נבדק ולא נמצא״, ושתיקה אומרת ״לא נשאל״. ‏MISSING אינו
+        # ב-DECIDING ולכן לעולם אינו מכריע — הוא רק מונע מהתיק להיראות
+        # כאילו השדה מעולם לא עלה.
+        if value is None:
+            certainty, method = Certainty.MISSING, method or "המקור נבדק והשדה ריק בו"
         return dict(field=field, value=value, certainty=certainty.value,
                     source_url=src["url"], retrieved_at=datetime.fromisoformat(src["retrieved_at"]),
                     # מתי המקור מדווח שהוא עודכן — שונה ממתי אנחנו שלפנו אותו.
@@ -82,6 +91,11 @@ def _rows(key, surv, front, geo, sources, archive):
         ev("pilotis", surv.get("pilotis"), "agol_addresses", f"{at} · amudim"),
         ev("registration_area", geo.get("registration_area"), "strategic_plan",
            f"{at} · אזורי רישום", Certainty.DERIVED, "אזור הרישום שמכיל את מרכז החלקה"),
+        # השער הראשון של §70א: ״מגרש המיועד לפי תכנית **גם** למגורים״.
+        # נגזר מפוליגוני ייעוד הקרקע בתכניות המקומיות (504-*) ב-XPlan.
+        ev("residential_zoning", geo.get("residential_zoning"), "iplan_xplan",
+           f"{at} · ייעוד קרקע בתכנית מקומית", Certainty.DERIVED,
+           "חפיפה של מעל 30% עם פוליגון ייעוד שבשמו 'מגורים'"),
         ev("in_tama70", geo.get("in_tama70"), "iplan_xplan", at, Certainty.DERIVED,
            'חפיפה של מעל 50% משטח החלקה עם מרחב תמ"א 70'),
         ev("scope_buildings", geo.get("buildings"), "agol_buildings", at, Certainty.DERIVED,
@@ -108,7 +122,29 @@ def _rows(key, surv, front, geo, sources, archive):
         out.append(ev("occupied", any(not (r.get("permit_date") or "").strip() for r in hits),
                       "archive", loc, Certainty.DERIVED,
                       "בקשת חיזוק שהוגשה ולא הופק לה היתר"))
+        # ‏§70ב(א)(1)(ב): תוספת שהותרה אחרי 18.5.2005 אינה נכנסת לבסיס
+        # ה-400%. התיק מדווח שהיתר ניתן, לא כמה מ״ר הוא הוסיף, ולכן הערך
+        # בוליאני: **False** פירושו נבדק ואין, ולא ״לא נבדק״ — את ההבדל
+        # הזה `cap_400` מטפל בו, ואת ההיעדר כשאין תיק כלל.
+        out.append(ev("post_2005_permit", _post_2005(archive), "archive", loc,
+                      Certainty.DERIVED, "היתר בתיק שתאריכו אחרי 18.5.2005"))
     return [r for r in out if r]
+
+
+CUTOFF_2005 = date(2005, 5, 18)
+
+
+def _post_2005(requests) -> bool:
+    """האם בתיק היתר שניתן אחרי מועד החיתוך של §70ב(א)(1)(ב)."""
+    for r in requests:
+        raw = (r.get("permit_date") or "").strip()
+        try:
+            d, m, y = (int(x) for x in raw.split("/"))
+        except ValueError:
+            continue
+        if date(y, m, d) > CUTOFF_2005:
+            return True
+    return False
 
 
 async def seed(limit=None):
@@ -202,8 +238,26 @@ def _wkt(geom):
     return "MULTIPOLYGON(" + ",".join("(" + ",".join(ring(r) for r in p) + ")" for p in polys) + ")"
 
 
+async def _seed_and_assess(limit=None):
+    """זריעה ואז הערכה. ‏**חייבות לרוץ יחד.**
+
+    הראיות וההערכה השמורה הם אותה אמת בשתי צורות. זריעה לבדה מחליפה את
+    הראיות ומשאירה `metadata_json.assessment` מהריצה הקודמת — ואז המסך
+    מציג סטטוס שחושב על נתונים שכבר אינם שם, בלי שגיאה ובלי סימן.
+    """
+    from app.cities.herzliya.assessments import refresh
+    from app.cities.herzliya.rules import HerzliyaCityRules
+    out = await seed(limit)
+    async with AsyncSessionLocal() as session:
+        out["assessment"] = await refresh(session, HerzliyaCityRules())
+        await session.commit()
+    return out
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--no-assess", action="store_true",
+                    help="זריעה בלבד — ההערכה השמורה תישאר מהריצה הקודמת")
     a = ap.parse_args()
-    print(asyncio.run(seed(a.limit)))
+    print(asyncio.run(seed(a.limit) if a.no_assess else _seed_and_assess(a.limit)))

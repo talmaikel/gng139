@@ -83,8 +83,14 @@ def _value(row: dict[str, Any] | None, field: str):
 async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Return pre-filtered candidate addresses for Herzliya, restricted to
-    opportunities whose XPlan screening category is queue-eligible
+    opportunities whose screening category is queue-eligible
     (`primary_candidate` / `needs_verification`) unless the caller overrides it.
+
+    The category is set by the Layer-A seeder from the policy map and the
+    archive, **not** by XPlan — an earlier version of this docstring said
+    XPlan and there is no XPlan screening step here. `xplan_code` is NULL
+    on every seeded row for the same reason, and is therefore omitted from
+    the response rather than returned as a null the client has to guess at.
     """
     geometry_geojson = func.ST_AsGeoJSON(Opportunity.geom)
     centroid = func.ST_Centroid(Opportunity.geom)
@@ -118,8 +124,11 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
     stmt = stmt.where(
         Opportunity.metadata_json["assessment"]["status"].astext.is_distinct_from("ineligible")
     )
+    # ‏`screenable` ולא `deliverable`: המסך מציג מי נשאר במסלול, ולא מי
+    # שתנאי הסף שלו כבר נענה במלואו. השניים התבלבלו כאן, והתוצאה הייתה
+    # שכל העיר הוצגה כמוכנה למסירה.
     if filters.get("deliverable_only"):
-        stmt = stmt.where(Opportunity.metadata_json["assessment"]["deliverable"].astext == "true")
+        stmt = stmt.where(Opportunity.metadata_json["assessment"]["screenable"].astext == "true")
 
     if verification_level := filters.get("verification_level"):
         stmt = stmt.where(Opportunity.verification_level == verification_level)
@@ -134,7 +143,6 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
             "address": opp.address,
             "block": opp.block,
             "parcel": opp.parcel,
-            "xplan_code": opp.xplan_code,
             "area_sqm": opp.area_sqm,
             "existing_units": opp.existing_units,
             "verification_level": opp.verification_level,

@@ -11,8 +11,10 @@
 **פרטיות:** עמודת שם המבקש היא `i+3` בשורת הבקשה, והיא מדולגת **בזמן
 הפרסור** ולא מסוננת אחר כך. שם שלא נקרא אינו יכול להישמר בטעות.
 """
+import argparse
+import asyncio
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -30,6 +32,7 @@ REQUEST_NO = re.compile(r"^(19|20)\d{6}$")
 STRENGTHENING = re.compile(r'תמ["״]?א\s*38|חיזוק|רעידות אדמה')
 
 MAX_SHORTLIST = 25          # לא סריקה. מעבר לזה — לעצור ולשאול.
+CUTOFF_2005 = date(2005, 5, 18)     # §70ב(א)(1)(ב)
 
 
 def _text(x: str) -> str:
@@ -67,8 +70,22 @@ def facts(requests: list[dict[str, Any]]) -> dict[str, Any]:
         "strengthened": any((r.get("permit_date") or "").strip() for r in hits),
         # בקשת חיזוק ללא היתר → יזם אחר מול הדיירים. כשיר בדין, לא זמין בפועל.
         "occupied": any(not (r.get("permit_date") or "").strip() for r in hits),
+        # §70ב(א)(1)(ב): תוספת שהותרה אחרי המועד אינה נכנסת לבסיס ה-400%.
+        # התיק מדווח שהיתר ניתן, לא כמה מ״ר הוא הוסיף — ולכן בוליאני.
+        "post_2005_permit": _post_2005(requests),
         "n_requests": len(requests),
     }
+
+
+def _post_2005(requests) -> bool:
+    for r in requests:
+        try:
+            d, m, y = (int(x) for x in (r.get("permit_date") or "").strip().split("/"))
+            if date(y, m, d) > CUTOFF_2005:
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveClient | None = None) -> dict:
@@ -119,7 +136,8 @@ async def _write(session, oid: UUID, f: dict, page: dict, tik_id: str) -> None:
 
     for field, value in (("permit_date", f["permit_date"]),
                          ("strengthened", f["strengthened"]),
-                         ("occupied", f["occupied"])):
+                         ("occupied", f["occupied"]),
+                         ("post_2005_permit", f["post_2005_permit"])):
         if value is None:
             continue
         await session.execute(
@@ -129,3 +147,20 @@ async def _write(session, oid: UUID, f: dict, page: dict, tik_id: str) -> None:
             opportunity_id=oid, field=field, value=value,
             certainty=Certainty.DERIVED.value, source_url=url, retrieved_at=when,
             location=loc, method="שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא"))
+
+
+async def _main(argv=None):
+    """‏`enrich()` נכתב ולא הייתה לו דרך הרצה, ולכן גם לא רצה מעולם על
+    הזדמנות אמיתית. הרשימה הקצרה נמסרת במפורש — אין כאן ״כל העיר״."""
+    from app.core.database import AsyncSessionLocal
+    ap = argparse.ArgumentParser(description="העשרת רשימה קצרה מתיקי הבניין")
+    ap.add_argument("ids", nargs="+", help=f"מזהי הזדמנות · עד {MAX_SHORTLIST}")
+    a = ap.parse_args(argv)
+    async with AsyncSessionLocal() as session:
+        out = await enrich(session, [UUID(x) for x in a.ids])
+        await session.commit()
+    return out
+
+
+if __name__ == "__main__":
+    print(asyncio.run(_main()))

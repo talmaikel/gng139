@@ -38,8 +38,55 @@ def test_every_evidence_row_carries_a_source_and_a_location():
 
 
 def test_a_field_without_a_known_source_is_not_written_at_all():
+    """בלי מקור אי אפשר אפילו לטעון שחיפשנו, ולכן אין שורה — לא MISSING."""
     rows = _rows("6537/222", SURV, {"width": 15.5}, {}, {}, [])
     assert rows == []
+
+
+def test_a_source_that_was_read_and_came_back_empty_is_written_as_missing():
+    """״נבדק ולא נמצא״ ו״לא נשאל״ נראו אותו דבר — שניהם היעדר שורה. התיק
+    נקרא כאילו איש לא בדק, והדוקסטרינג של הקובץ טען שנכתב MISSING בעוד
+    ששום שורה כזו לא נוצרה מעולם."""
+    sources = _load("source_fetched.json")
+    rows = {r["field"]: r for r in
+            _rows("x/1", {"lot": 1816, "apt": 28, "cat": "9"}, {}, {}, sources, [])}
+    assert rows["floors"]["certainty"] == Certainty.MISSING.value
+    assert rows["floors"]["value"] is None
+    assert rows["floors"]["source_url"] and rows["floors"]["location"]
+    # וערך שנמצא אינו הופך ל-MISSING
+    assert rows["parcel_area"]["certainty"] == Certainty.OFFICIAL.value
+
+
+def test_a_missing_row_can_never_decide_a_gate():
+    """‏MISSING אינו ב-DECIDING. אם היה — שדה ריק היה מכריע שער."""
+    from app.evidence import DECIDING
+    assert Certainty.MISSING.value not in DECIDING
+
+
+def test_residential_zoning_is_seeded_as_the_first_gate_of_70a():
+    sources = _load("source_fetched.json")
+    rows = {r["field"]: r for r in
+            _rows("x/1", SURV, {}, {"residential_zoning": True}, sources, [])}
+    assert rows["residential_zoning"]["value"] is True
+    assert rows["residential_zoning"]["certainty"] == Certainty.DERIVED.value
+
+
+def test_a_permit_after_may_2005_is_recorded_for_the_cap_exclusion():
+    """‏§70ב(א)(1)(ב). ‏False כאן פירושו ״נבדק בתיק ואין״, ולכן הוא ערך
+    ולא היעדר — `cap_400` מבדיל בין השניים."""
+    sources = _load("source_fetched.json")
+
+    def flag(pdate):
+        req = [dict(req=20060011, submitted="01/01/2006", action="תוספת בנייה",
+                    permit="7", permit_date=pdate)]
+        return {r["field"]: r for r in
+                _rows("x/1", SURV, {}, {}, sources, req)}["post_2005_permit"]
+
+    assert flag("19/05/2005")["value"] is True
+    assert flag("18/05/2005")["value"] is False      # המועד עצמו אינו ״אחרי״
+    # בקשה משנת 2006 שלא הופק לה היתר — התיק נקרא, ואין מה להחריג.
+    assert flag("")["value"] is False
+    assert flag("")["certainty"] == Certainty.DERIVED.value
 
 
 def test_policy_categories_match_the_plans_wording():

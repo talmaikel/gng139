@@ -6,9 +6,22 @@
 
 **מה שקל לטעות בו, ולכן כתוב במפורש:**
 
-‏§70א מונה שלושה תנאי סף — מועד ההיתר, שלא בוצע חיזוק, ושני קומות וארבע
-דירות. **שטח בנוי אינו אחד מהם.** הוא נכנס רק ב-§70ב, בחישוב הזכויות.
-לכן שטח קיים לעולם אינו שדה כשירות כאן, וההערכה שלו אינה יכולה לפסול.
+‏§70א אינו שלושה תנאים אלא **הגדרה** שכולה תנאי סף, כפי שהמדיניות אומרת
+במפורש: *״תנאי סף לקידום תכנית בחלופת שקד הינו עמידה בהגדרות סעיף 70א״*.
+לשון ההגדרה:
+
+  *״בנין הנמצא במגרש המיועד לפי תכנית **גם למגורים**, ש-**70% לפחות
+  משטח הבנייה הכולל הקיים שלו משמש כדין למגורים**, ובכלל זה לשטחי שירות
+  למגורים, ושמתקיימים בו כל אלה: (1)(2)(3)״*
+
+כלומר **חמישה** שערים ולא שלושה. גרסה קודמת של הקובץ הזה מנתה שלושה
+בלבד וקבעה ש״שטח בנוי אינו אחד מהם״ — זו הייתה קריאה של הסעיפים
+הממוספרים בלבד, ומבחן ה-70% הוא דווקא **כן** מבחן על שטח בנוי. בניין
+שנכשל בו דווח ככשיר.
+
+מה שנשאר נכון מאותה קריאה: השטח הקיים אינו נכנס לתקרת הזכויות כשדה
+כשירות. הוא נכנס ב-§70ב, בחישוב, ולכן אומדן שלו אינו פוסל איש — אבל
+**היחס** בין שימוש למגורים לשטח הכולל כן.
 
 ‏400% הוא על השטח הכולל **מעל הקרקע וכולל שטחי שירות וממ״ד** — לא על
 השטח העיקרי בלבד.
@@ -92,9 +105,36 @@ class Rights:
 
 # ─────────────────────────── §70א · תנאי הסף ───────────────────────────
 
+# מזהי שערי §70א, לפי סדר ההגדרה. משמש את שכבת ההערכה כדי לדעת מה נשאר
+# פתוח בתנאי הסף עצמו — להבדיל משאר השרשרת, שהיא חישוב ולא כשירות.
+THRESHOLD_IDS = ("residential_zoning", "residential_share", "permit_date",
+                 "strengthened", "occupied", "floors", "units")
+
+# שער שאין לו מקור פתוח, ולכן ״לא ידוע״ בו אינו מעיד על עבודה חסרה אלא על
+# גבול הנתונים. הוא נשאר שאלה פתוחה בתיק ואינו פוסל מסירה — אבל הוא גם
+# לעולם לא ייקרא כ״עבר״: `threshold_checks` מחזיר בו unknown, והסטטוס יורד
+# ל-needs_verification בכל מקרה.
+UNOBTAINABLE = {"residential_share"}
+
+
 def threshold_checks(f: dict) -> list[Check]:
-    """שלושת תנאי §70א. שטח בנוי אינו אחד מהם, ולכן אינו נבדק כאן."""
+    """חמשת תנאי §70א: שניים מההגדרה עצמה ושלושה מהסעיפים הממוספרים."""
     out = []
+
+    # ── שני התנאים שבגוף ההגדרה ──
+    zoning = f.get("residential_zoning")
+    out.append(Check("residential_zoning", "המגרש מיועד בתכנית גם למגורים",
+                     "unknown" if zoning is None else ("passed" if zoning else "failed"),
+                     POLICY_URL, 3,
+                     None if zoning is None else ("ייעוד מגורים בתכנית מקומית" if zoning
+                                                  else "אין ייעוד מגורים")))
+
+    share = f.get("residential_share")
+    out.append(Check("residential_share", "לפחות 70% מהשטח הבנוי משמש כדין למגורים",
+                     "unknown" if share is None else ("passed" if share >= 0.7 else "failed"),
+                     POLICY_URL, 3,
+                     "לא ניתן לגזור ממקורות פתוחים — שכבת השימושים ריקה ב-97% מהנקודות"
+                     if share is None else f"{share:.0%}"))
 
     permit, opinion = f.get("permit_date"), f.get("engineer_opinion")
     if permit is None:
@@ -127,9 +167,14 @@ def threshold_checks(f: dict) -> list[Check]:
                       "בקשת חיזוק ללא היתר — יזם אחר כבר מול הדיירים")))
 
     fl, un = f.get("floors"), f.get("units")
+    # §70א(3) קובע כלל ספירה משלו: קומת עמודים **נספרת**, וקומה עליונה
+    # ששטחה פחות ממחצית זו שמתחתיה **אינה**. ‏Num_floors בשכבה העירונית
+    # הוא ספירה פיזית ואינו מיישם אותו, ולכן הערך נשא סייג ולא שתיקה.
     out.append(Check("floors", "לפחות שתי קומות מעל הקרקע",
                      "unknown" if fl is None else ("passed" if fl >= 2 else "failed"),
-                     POLICY_URL, 3, None if fl is None else f"{fl} קומות"))
+                     POLICY_URL, 3,
+                     None if fl is None else
+                     f"{fl} קומות · ספירה פיזית; כלל הספירה של §70א(3) לא הוחל"))
     out.append(Check("units", "לפחות ארבע דירות שנבנו בהיתר",
                      "unknown" if un is None else ("passed" if un >= 4 else "failed"),
                      POLICY_URL, 3, None if un is None else f"{un} דירות"))
@@ -211,8 +256,16 @@ def _width_text(w: float) -> str:
 
 # ───────────────────────── שלבים 6–9 ─────────────────────────
 
-def allocation(total_after: float, registration_area: str | None):
-    """שלב 6 · הפרשה לשב״צ: 10%, עם רצפה לפי אזור רישום. מתחת לרצפה — אין."""
+def allocation(total_after: float, registration_area: str | None,
+               total_is_ceiling: bool = False):
+    """שלב 6 · הפרשה לשב״צ: 10%, עם רצפה לפי אזור רישום. מתחת לרצפה — אין.
+
+    ‏`total_after` הוא **סך השטחים בתכנית לאחר ההגדלה** (מדיניות עמ׳ 13
+    §8ה) — מה שהתכנית מציעה בפועל. תקרת ה-400% אינה זה: היא החסם העליון
+    שהתכנית מותרת להגיע אליו. הזנת התקרה נותנת הפרשה מקסימלית, וזו תשובה
+    שימושית בשלב הסינון אבל היא חסם ולא חישוב — `total_is_ceiling` מסמן
+    אותה ככזו בנימוק, כדי שלא תיקרא כשטח ההפרשה שייקבע בתכנית.
+    """
     if registration_area is None:
         return None, "אזור הרישום אינו ידוע"
     floor = 300 if registration_area in ALLOCATION_FLOOR_300 else \
@@ -220,8 +273,9 @@ def allocation(total_after: float, registration_area: str | None):
     if floor is None:
         return None, f"אזור {registration_area} אינו ברשימות הרצפה במדיניות §8"
     ten = total_after * 0.10
-    return (ten, f"10% = {ten:,.0f} ≥ רצפת {floor}") if ten >= floor else \
-        (0.0, f"10% = {ten:,.0f} מתחת לרצפת {floor} — אין הפרשה")
+    basis = " · על תקרת 400% ולא על סך השטחים המוצע — חסם עליון" if total_is_ceiling else ""
+    return (ten, f"10% = {ten:,.0f} ≥ רצפת {floor}{basis}") if ten >= floor else \
+        (0.0, f"10% = {ten:,.0f} מתחת לרצפת {floor} — אין הפרשה{basis}")
 
 
 def balconies(units: int) -> tuple[float, str]:
@@ -245,27 +299,51 @@ def parking(units: int, in_tama70: bool | None, unit_areas: list[float] | None =
 
     `in_tama70` נדרש במפורש ואין לו ברירת מחדל: 72% מהמועמדים בתוך תמ״א 70
     ו-28% מחוצה לה, וההבדל הוא רבע ממספר החניות.
+
+    שתי שורות בתקן שהיו כאן שגויות, ושתיהן בכיוון שמקטין את הדרישה:
+
+    * **חניות אורחים הן 20% ממספר יחידות הדיור** — ״ידרשו 20% ממספר יח״ד
+      לתקן חניות אורחים״ — ולא 20% מהדירות הקטנות. הסעיף חל ״בתבע״ות שבהם
+      תקן החניה 0-1:1״, כלומר רק כשהתקן האפקטיבי אינו עולה על 1.0, וניתן
+      להקטינו ל-10% באישור הוועדה המקומית.
+    * **10% חניות נגישות במרתף** נמדדות ממספר הדירות **עד 30 מ״ר** בלבד,
+      והן ״בנוסף לתקן הרגיל״ ואינן מוצמדות.
+
+    סעיף האורחים יושב בפרק ג.2 — ״מחוץ לטווח תמ״א 70״. בתוך תמ״א 70 התקן
+    נקבע בהוראות תמ״א 70 עצמה, ולכן כאן הוא מסויג ואינו מחושב.
     """
     if in_tama70 is None:
         return {"spaces": None, "why": 'לא ידוע אם בתוך תמ"א 70 — התקן 1.0 מול 1.5'}
     if in_tama70:
         return {"spaces": units * 1.0, "per_unit": 1.0,
                 "why": 'תמ"א 70, מדד נגישות 1+2 — 1.0 ליח"ד',
-                "caveat": "מדד הנגישות נקבע במיפוי תמ״א 70; כאן נקרא מטבלה מסומנת ידנית"}
+                "caveat": "מדד הנגישות נקבע במיפוי תמ״א 70; כאן נקרא מטבלה מסומנת ידנית · "
+                          "סעיף חניות האורחים במדיניות חל מחוץ לתמ״א 70, ובתוכה קובעות "
+                          "הוראות תמ״א 70 — ולכן אינו מחושב כאן"}
     if unit_areas is None:
         return {"spaces": units * 1.5, "per_unit": 1.5,
                 "why": 'מחוץ לתמ"א 70 — 1.5 ליח"ד, ללא הנחות לדירות קטנות'}
-    spaces, small = 0.0, 0
-    for a in unit_areas:
-        if a <= 30:
-            small += 1                      # תקן 0, אך חובה מרתף עם חניות נגישות
-        elif a <= 65:
-            spaces += 1.0; small += 1
-        else:
-            spaces += 1.5
-    return {"spaces": round(spaces, 1), "per_unit": round(spaces / units, 2),
-            "guests": round(small * 0.20, 1),
-            "why": f'מחוץ לתמ"א 70 · {units - small} × 1.5 + {small} קטנות · אורחים 20%'}
+
+    micro = sum(1 for a in unit_areas if a <= 30)          # תקן 0
+    compact = sum(1 for a in unit_areas if 30 < a <= 65)   # תקן 1.0
+    full = len(unit_areas) - micro - compact               # תקן 1.5
+    spaces = compact * 1.0 + full * 1.5
+    per_unit = round(spaces / units, 2) if units else None
+
+    out = {"spaces": round(spaces, 1), "per_unit": per_unit,
+           "accessible_basement": round(micro * 0.10, 1),
+           "why": f'מחוץ לתמ"א 70 · {full} × 1.5 + {compact} × 1.0 + {micro} עד 30 מ"ר בתקן 0'}
+    if per_unit is not None and per_unit <= 1.0:
+        out["guests"] = round(units * 0.20, 1)
+        out["guests_why"] = ('20% ממספר יח"ד — התקן האפקטיבי 0-1:1 · '
+                             "ניתן להקטין ל-10% באישור הוועדה המקומית")
+    else:
+        out["guests"] = 0.0
+        out["guests_why"] = (f"התקן האפקטיבי {per_unit} עולה על 1:1 — "
+                             "סעיף חניות האורחים אינו חל")
+    if micro:
+        out["accessible_why"] = f'10% מ-{micro} דירות עד 30 מ"ר · בנוסף לתקן ולא מוצמדות'
+    return out
 
 
 def main_axis_only(street_names: list[str]) -> str | None:
@@ -276,9 +354,41 @@ def main_axis_only(street_names: list[str]) -> str | None:
     return ("כל החזיתות על ציר ראשי (" + ", ".join(sorted(set(axes))) +
             ") — תקן החניה 2025 ס׳א.2 אינו מבטיח כניסה חדשה לרכבים")
 
+def cap_400(existing_area: float | None,
+            post_2005: float | bool | None = None) -> tuple[float | None, str]:
+    """שלב 2 · §70ב(א)(1). כולל שטחי שירות וממ״ד, לא רק עיקרי.
 
-def cap_400(existing_area: float | None) -> tuple[float | None, str]:
-    """שלב 2 · §70ב(א)(1). כולל שטחי שירות וממ״ד, לא רק עיקרי."""
+    ‏§70ב(א)(1)(ב) מחריג מהבסיס תוספת בנייה שהותרה **אחרי 18.5.2005**.
+    בלי ההחרגה הבסיס מנופח לכל בניין שהורחב מאז, והשגיאה מוכפלת פי ארבע.
+
+    ‏`post_2005` נושא ארבעה מצבים ולא שניים, כי ״לא נבדק״ ו״נבדק ואין״
+    נראים אותו דבר אם שואלים רק כן/לא:
+
+      ``None``   — לא נבדק
+      ``False``  — נבדק, אין תוספת שהותרה אחרי המועד
+      ``True``   — נבדק, יש היתר אחרי המועד ושטחו אינו ידוע
+      ``float``  — שטח התוספת, להחרגה בפועל
+    """
     if existing_area is None:
         return None, "השטח הקיים אינו ידוע — אומדן בלבד, ואינו תנאי סף"
-    return existing_area * 4, f"400% × {existing_area:,.0f} מ\"ר (כולל שירות וממ\"ד)"
+
+    excluded = post_2005 if _is_area(post_2005) else 0.0
+    base = existing_area - excluded
+    why = f'400% × {base:,.0f} מ"ר (כולל שירות וממ"ד)'
+    if excluded:
+        why += f' · הוחרגה תוספת של {excluded:,.0f} מ"ר שהותרה אחרי 18.5.2005'
+    elif post_2005 is True:
+        why += (" · בתיק יש היתר שניתן אחרי 18.5.2005 ושטחו אינו ידוע — "
+                "יש להחריג אותו מהבסיס, והתקרה כאן מנופחת")
+    elif post_2005 is None:
+        why += " · לא נבדק אם הותרה תוספת אחרי 18.5.2005 — התקרה עשויה להיות מנופחת"
+    return base * 4, why
+
+
+def _is_area(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def cap_400_reliable(post_2005: float | bool | None) -> bool:
+    """התקרה מהימנה רק אם ההחרגה של §70ב(א)(1)(ב) נבדקה והוכרעה."""
+    return post_2005 is False or _is_area(post_2005)

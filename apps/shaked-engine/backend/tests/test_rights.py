@@ -6,16 +6,43 @@ from app.cities.herzliya import rights as R
 
 # ── §70א · תנאי הסף ──
 
-def test_built_area_is_not_a_threshold_condition():
-    """§70א מונה מועד היתר, חיזוק, קומות ודירות. שטח בנוי אינו אחד מהם,
-    ולכן אומדן שטח לעולם אינו יכול לפסול חלקה."""
+def test_the_definition_itself_is_the_threshold_not_only_its_numbered_items():
+    """הבדיקה הזו קבעה פעם ש-§70א מונה ארבעה שערים ו״שטח בנוי אינו אחד מהם״.
+    זו הייתה קריאה של הסעיפים הממוספרים בלבד. גוף ההגדרה מוסיף שניים —
+    ייעוד למגורים, ו-70% מהשטח הבנוי המשמש למגורים — והשני הוא דווקא כן
+    מבחן על שטח בנוי. המדיניות מפורשת: ״תנאי סף... הינו עמידה בהגדרות
+    סעיף 70א״, ההגדרה כולה."""
     ids = {c.id for c in R.threshold_checks({"permit_date": "1978-01-01", "strengthened": False,
                                              "floors": 4, "units": 32})}
-    assert "existing_area" not in ids
-    # ארבעת השערים של §70א עצמו. `occupied` אינו אחד מהם — הוא שער זמינות
-    # מסחרית ולא תנאי סף בחוק — אבל הוא כן נבדק באותו מעבר.
-    assert {"permit_date", "strengthened", "floors", "units"} <= ids
+    assert {"residential_zoning", "residential_share",
+            "permit_date", "strengthened", "floors", "units"} <= ids
+    # אומדן השטח הקיים עדיין אינו שער: הוא נכנס ב-§70ב, בחישוב התקרה.
     assert not {"existing_area", "parcel_area", "street_width"} & ids
+
+
+def test_the_seventy_percent_test_is_unknown_rather_than_assumed_to_pass():
+    """אין מקור פתוח לחלק המשמש למגורים. ״לא ידוע״ מוריד את הסטטוס
+    ל-needs_verification; ״עבר״ היה מוכר בניין שאיש לא בדק."""
+    def status(d, i="residential_share"):
+        return next(c.status for c in R.threshold_checks(d) if c.id == i)
+    assert status({}) == "unknown"
+    assert status({"residential_share": 0.69}) == "failed"
+    assert status({"residential_share": 0.70}) == "passed"
+
+
+def test_a_plot_not_designated_for_housing_fails_rather_than_waits():
+    def status(d):
+        return next(c.status for c in R.threshold_checks(d) if c.id == "residential_zoning")
+    assert status({"residential_zoning": True}) == "passed"
+    assert status({"residential_zoning": False}) == "failed"
+    assert status({}) == "unknown"
+
+
+def test_the_floor_count_carries_the_caveat_that_70a3_counting_was_not_applied():
+    """§70א(3) סופר קומת עמודים וגורע קומה עליונה קטנה מחצי. ‏Num_floors
+    העירוני הוא ספירה פיזית. הערך נמסר — עם הסייג, לא בשתיקה."""
+    detail = next(c.detail for c in R.threshold_checks({"floors": 4}) if c.id == "floors")
+    assert "§70א(3)" in detail
 
 
 def test_1980_to_1984_needs_an_engineers_opinion():
@@ -114,3 +141,85 @@ def test_the_four_hundred_percent_cap_includes_service_area():
     cap, why = R.cap_400(2133.0)
     assert cap == 8532.0
     assert "שירות" in why
+
+
+# ── §70ב(א)(1)(ב) · ההחרגה שאחרי 18.5.2005 ──
+
+def test_a_post_2005_addition_leaves_the_four_hundred_percent_base():
+    """התקרה מוכפלת פי ארבע, ולכן כל מ״ר שנשאר בבסיס בטעות שווה ארבעה."""
+    assert R.cap_400(2000.0, 200.0)[0] == 7200.0
+    assert R.cap_400(2000.0, False)[0] == 8000.0
+
+
+def test_not_checked_and_checked_and_none_do_not_look_alike():
+    """שניהם נראים כמו אפס אם שואלים רק כן/לא, והאחד הוא ממצא והשני חוסר."""
+    assert "לא נבדק" in R.cap_400(2000.0, None)[1]
+    assert "לא נבדק" not in R.cap_400(2000.0, False)[1]
+    assert "אינו ידוע" in R.cap_400(2000.0, True)[1]
+    assert [R.cap_400_reliable(v) for v in (None, True, False, 200.0)] == [False, False, True, True]
+
+
+def test_a_boolean_is_never_mistaken_for_an_area():
+    """‏`True` הוא 1 בפייתון. אם ההחרגה נקראת כשטח, התקרה יורדת בארבעה מ״ר
+    בשקט ונראית כאילו נבדקה."""
+    assert R.cap_400(2000.0, True)[0] == 8000.0
+
+
+# ── שלב 6 · הפרשה ──
+
+def test_allocation_on_the_ceiling_says_so_in_the_reason():
+    """המדיניות מחשבת 10% מ״סך השטחים בתכנית לאחר ההגדלה״. תקרת 400% אינה
+    זה — היא החסם שהתכנית מותרת להגיע אליו."""
+    assert "חסם עליון" in R.allocation(8000.0, "שז\"ר", total_is_ceiling=True)[1]
+    assert "חסם עליון" not in R.allocation(8000.0, "שז\"ר")[1]
+
+
+def test_an_area_outside_the_policy_lists_gets_no_invented_floor():
+    assert R.allocation(8000.0, "בית ספר ירוק")[0] is None
+
+
+# ── שלב 9 · חניה ──
+
+def test_guest_parking_is_a_share_of_all_units_not_of_the_small_ones():
+    """״ידרשו 20% ממספר יח״ד״. הגרסה הקודמת חישבה 20% מהדירות הקטנות."""
+    p = R.parking(20, False, [25.0] * 10 + [50.0] * 10)
+    assert p["guests"] == 4.0                      # 20% מ-20, לא מ-10
+
+
+def test_guest_parking_does_not_apply_where_the_standard_exceeds_one_to_one():
+    """הסעיף מותנה ב״תבע״ות שבהם תקן החניה 0-1:1״."""
+    assert R.parking(20, False, [90.0] * 20)["guests"] == 0.0
+
+
+def test_accessible_basement_spaces_count_only_the_units_under_thirty_metres():
+    """״חניות נגישות בשיעור של 10% ממספר יח״ד ששטחן עד 30 מ״ר״ — ולא מכולן."""
+    p = R.parking(20, False, [25.0] * 10 + [50.0] * 10)
+    assert p["accessible_basement"] == 1.0
+
+
+def test_the_small_flat_bands_are_priced_at_their_own_rates():
+    p = R.parking(3, False, [30.0, 65.0, 66.0])
+    assert p["spaces"] == 2.5                      # 0 + 1.0 + 1.5, הגבולות כולל
+
+
+def test_zero_units_does_not_divide_by_zero():
+    assert R.parking(0, False, [])["per_unit"] is None
+
+
+# ── שלב 8 · תמהיל ──
+
+def test_the_unit_multiplier_is_the_current_policy_band():
+    """‏2.8–3.18 מהמדיניות התקפה. ‏32 לדונם הוא נוסח ועדה 769 שהוחלף, ואסור
+    שיחזור לכאן דרך הדלת האחורית."""
+    m = R.unit_mix(20)
+    assert (m["units_min"], m["units_max"]) == (56, 64)
+
+
+def test_a_quarter_of_the_units_must_be_small_and_a_tenth_of_those_micro():
+    m = R.unit_mix(20)
+    assert m["small_min"] == 16 and m["micro_max"] == 2 and m["accessible"] == 6
+
+
+def test_the_mix_is_infeasible_when_the_average_flat_falls_below_the_small_band():
+    assert R.unit_mix(20, sellable_main=3000.0)["mix_feasible"] is False   # 46.9 מ"ר
+    assert R.unit_mix(20, sellable_main=4000.0)["mix_feasible"] is True    # 62.5 מ"ר

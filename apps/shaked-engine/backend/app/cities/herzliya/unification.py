@@ -2,9 +2,9 @@
 Plot-unification checks for Herzliya using PostGIS spatial predicates.
 
 Two or more parcels may be combined into a single "Shaked Alternative" buildable
-lot only if every parcel touches at least one other parcel in the set (so the
-whole set forms one connected shape) and the unioned area clears the municipal
-minimum plot threshold.
+lot only if the parcels dissolve into ONE contiguous shape and the unioned area
+clears the municipal minimum plot threshold. "Every parcel touches another" is
+not the same test and is not enough — see `_is_connected`.
 """
 
 from sqlalchemy import select, text
@@ -14,22 +14,26 @@ from app.cities.base import UnificationResult
 from app.models.opportunity import Opportunity
 
 
-async def _all_touch_within_set(session: AsyncSession, parcel_ids: list[str]) -> bool:
+async def _is_connected(session: AsyncSession, parcel_ids: list[str]) -> bool:
     """
-    True if the parcels form one connected group under ST_Touches, i.e. no
-    parcel in the set is isolated from the rest.
+    True if the parcels form ONE connected shape.
+
+    The previous implementation asserted something weaker: that no parcel is
+    isolated. That is not connectivity. Two adjacent pairs 1.7 km apart each
+    satisfy "every parcel touches another parcel in the set", so the check
+    passed and `_unioned_area_sqm` summed two unrelated plots into one lot
+    that clears the municipal minimum. Nothing in the result said they were
+    not contiguous.
+
+    Dissolving the set and counting what is left answers the real question:
+    polygons that share an edge merge into one, and anything disconnected
+    survives as its own part of the MultiPolygon.
     """
     stmt = text(
         """
-        SELECT count(*) = 0 AS fully_connected
-        FROM opportunities a
-        WHERE a.id = ANY(:ids)
-          AND NOT EXISTS (
-              SELECT 1 FROM opportunities b
-              WHERE b.id = ANY(:ids)
-                AND b.id <> a.id
-                AND ST_Touches(a.geom, b.geom)
-          )
+        SELECT ST_NumGeometries(ST_Multi(ST_Union(geom))) = 1 AS connected
+        FROM opportunities
+        WHERE id = ANY(:ids)
         """
     )
     result = await session.execute(stmt, {"ids": parcel_ids})
@@ -72,12 +76,12 @@ async def check_unification(
             reason=f"Unknown parcel id(s): {sorted(missing)}",
         )
 
-    if not await _all_touch_within_set(session, parcel_ids):
+    if not await _is_connected(session, parcel_ids):
         return UnificationResult(
             is_unifiable=False,
             combined_area_sqm=0.0,
             parcel_ids=parcel_ids,
-            reason="Not every parcel touches another parcel in the set",
+            reason="The parcels do not form one contiguous shape",
         )
 
     combined_area = await _unioned_area_sqm(session, parcel_ids)

@@ -56,3 +56,20 @@ async def test_enrich_refuses_to_become_a_sweep():
     from app.cities.herzliya.archive_facts import enrich
     with pytest.raises(ValueError, match="סריקה"):
         await enrich(None, list(range(MAX_SHORTLIST + 1)))
+
+
+def test_the_live_archive_path_also_answers_the_post_2005_exclusion():
+    """‏`facts()` הוא מה ש-`enrich()` כותב על הזדמנות אמיתית. בלי השדה הזה
+    המסלול החי היה מחזיר תקרת 400% מנופחת בעוד שהזורע המקומי לא."""
+    after = dict(req="20060011", sub="01/01/2006", act="תוספת בנייה",
+                 name="פלוני", permit="7", pdate="19/05/2005")
+    assert facts(parse_requests(page(PERMIT_1978)))["post_2005_permit"] is False
+    assert facts(parse_requests(page(PERMIT_1978, after)))["post_2005_permit"] is True
+
+
+def test_a_request_number_after_2005_is_not_itself_a_permit_after_2005():
+    """מספר הבקשה נושא שנה, וקל להחליף בינו לבין מועד ההיתר. בקשה מ-2006
+    שלא הופק לה היתר אינה מחריגה דבר."""
+    open_2006 = dict(req="20060011", sub="01/01/2006", act="תוספת בנייה",
+                     name="פלוני", permit="", pdate="")
+    assert facts(parse_requests(page(open_2006)))["post_2005_permit"] is False
