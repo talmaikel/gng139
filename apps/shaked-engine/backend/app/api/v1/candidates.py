@@ -32,9 +32,19 @@ class Preference(BaseModel):
 
 
 class SearchArea(BaseModel):
-    """אזור חיפוש מצויר, GeoJSON Polygon ב-WGS84, עם תנאי חובה וסדר העדפות."""
+    """אזור חיפוש מצויר, GeoJSON Polygon ב-WGS84, עם תנאי חובה וסדר העדפות.
+
+    **תנאי חובה מוציאים מהרשימה; העדפות רק מסדרות אותה.** ה-PRD מפריד
+    ביניהם (SEL-01), ולכן גם הבקשה מפרידה — מינימום שנשלח כהעדפה היה
+    מדרג נמוך מועמד שהיזם כלל אינו רוצה לראות.
+    """
     polygon: dict[str, Any]
-    min_area_sqm: float | None = None
+    # ── תנאי חובה ──
+    min_area_sqm: float | None = Field(default=None, ge=0)
+    min_units: int | None = Field(default=None, ge=0)
+    min_floors: float | None = Field(default=None, ge=0)
+    min_cap_400_sqm: float | None = Field(default=None, ge=0)
+    certain_floors_only: bool = False
     deliverable_only: bool = False
     # שלוש לכל היותר — מעבר לכך הסדר מפסיק להיות מובן למי שהגדיר אותו.
     preferences: list[Preference] = Field(default_factory=list, max_length=3)

@@ -143,6 +143,8 @@ export interface Candidate {
   geometry: MultiPolygonGeometry | null;
   centroid: { lat: number; lng: number } | null;
   assessment: Assessment | null;
+  /** ההעדפה שהכריעה את מקומו מול הבא אחריו — SEL-01 דורש נימוק לכל בחירה */
+  why_selected?: string;
 }
 
 export function getCandidates(
@@ -156,19 +158,52 @@ export function getCandidates(
   return request<Candidate[]>(`/api/v1/candidates/${cityCode}${suffix}`);
 }
 
+/** שדה שאפשר למיין לפיו. הרשימה נאכפת גם בשרת — ‏422 על שם שאינו כאן. */
+export type SortField = "parcel_area" | "units" | "floors" | "cap_400";
+
+export interface Preference {
+  field: SortField;
+  direction: "asc" | "desc";
+}
+
+/**
+ * תנאי חובה וסדר העדפות — **שני דברים, לא אחד**.
+ *
+ * ה-PRD מפריד ביניהם (SEL-01: ״כללים, תנאי חובה וסדר העדיפויות״): תנאי
+ * חובה מוציא מועמד מהרשימה, והעדפה רק מזיזה אותו בה. מינימום שנשלח
+ * כהעדפה היה מדרג נמוך מועמד שהיזם כלל אינו רוצה לראות.
+ */
+export interface SearchOptions {
+  // ── תנאי חובה ──
+  minAreaSqm?: number;
+  minUnits?: number;
+  minFloors?: number;
+  minCap400Sqm?: number;
+  certainFloorsOnly?: boolean;
+  deliverableOnly?: boolean;
+  // ── סדר העדפות, עד שלוש ──
+  preferences?: Preference[];
+  limit?: number;
+}
+
 /** Candidates inside a drawn area. A polygon that is invalid, too large or
  *  outside the city comes back as 422 with a Hebrew message meant for the user. */
 export function searchCandidates(
   cityCode: string,
   polygon: object,
-  options: { deliverableOnly?: boolean; minAreaSqm?: number; limit?: number } = {},
+  options: SearchOptions = {},
 ): Promise<Candidate[]> {
   return request<Candidate[]>(`/api/v1/candidates/${cityCode}/search`, {
     method: "POST",
     body: JSON.stringify({
       polygon,
-      deliverable_only: options.deliverableOnly ?? false,
       min_area_sqm: options.minAreaSqm,
+      min_units: options.minUnits,
+      min_floors: options.minFloors,
+      min_cap_400_sqm: options.minCap400Sqm,
+      certain_floors_only: options.certainFloorsOnly ?? false,
+      deliverable_only: options.deliverableOnly ?? false,
+      preferences: options.preferences ?? [],
       limit: options.limit ?? 100,
     }),
   });

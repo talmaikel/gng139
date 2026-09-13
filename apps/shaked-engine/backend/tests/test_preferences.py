@@ -59,3 +59,20 @@ def test_every_sortable_field_can_actually_be_read_from_a_row():
     assert _value(r, "floors") == 9
     for field in SORTABLE:
         assert _value(r, field) is not None or field == "cap_400"
+
+
+# ── תנאי חובה, שהם דבר אחר מהעדפות ──
+
+def test_mandatory_and_sortable_are_not_the_same_list():
+    """‏SEL-01 מונה ״כללים, תנאי חובה וסדר העדיפויות״ כשלושה דברים. תנאי
+    חובה מוציא מועמד מהרשימה; העדפה רק מזיזה אותו בה. מינימום שנשלח
+    כהעדפה היה מדרג נמוך מועמד שהיזם כלל אינו רוצה לראות."""
+    from app.cities.herzliya.candidates import MANDATORY, SORTABLE
+    assert set(MANDATORY) == {"min_area_sqm", "min_units", "min_floors", "min_cap_400_sqm"}
+    assert not set(MANDATORY) & set(SORTABLE)
+
+
+def test_every_mandatory_condition_has_a_hebrew_label():
+    """הן מוצגות ליזם, ולא רק נשלחות."""
+    from app.cities.herzliya.candidates import MANDATORY
+    assert all(label and not label.isascii() for _, label in MANDATORY.values())

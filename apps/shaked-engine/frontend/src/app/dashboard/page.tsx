@@ -15,9 +15,11 @@ import {
   type Candidate,
   type CreditPackage,
   type DeliveredOpportunity,
+  type SearchOptions,
 } from "@/lib/api";
 import Balance from "@/components/Balance";
 import DeliveredTable from "@/components/DeliveredTable";
+import SearchControls from "@/components/SearchControls";
 // מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
 // לחבילת ה-SSR, שם אין `window`, והדף מחזיר 500 בטעינה נקייה.
 import { MAX_AREA_SQM } from "@/lib/searchArea";
@@ -94,6 +96,8 @@ export default function DashboardPage() {
   const [drawing, setDrawing] = useState(false);
   const [searchArea, setSearchArea] = useState<object | null>(null);
   const [liveArea, setLiveArea] = useState<{ points: number; sqm: number } | null>(null);
+  const [options, setOptions] = useState<SearchOptions>({});
+  const [showControls, setShowControls] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const loadAll = useCallback(() => {
@@ -152,14 +156,10 @@ export default function DashboardPage() {
     }
   }
 
-  function onPolygon(polygon: object, areaSqm: number) {
-    setDrawing(false);
-    setLiveArea(null);
-    setSearchArea(polygon);
-    setSelectedId(null);
+  const runSearch = useCallback((polygon: object, opts: SearchOptions) => {
     setLoading(true);
     setError(null);
-    searchCandidates(DEFAULT_CITY, polygon)
+    searchCandidates(DEFAULT_CITY, polygon, opts)
       .then(setCandidates)
       // ‏422 כאן אינו תקלה אלא MAP-01 עושה את עבודתו, והמשפט בעברית הוא
       // מה שהמשתמש צריך לפעול לפיו — ולכן הוא מוצג כמו שהוא.
@@ -168,6 +168,14 @@ export default function DashboardPage() {
         setCandidates([]);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  function onPolygon(polygon: object, areaSqm: number) {
+    setDrawing(false);
+    setLiveArea(null);
+    setSearchArea(polygon);
+    setSelectedId(null);
+    runSearch(polygon, options);
   }
 
   function clearArea() {
@@ -175,6 +183,14 @@ export default function DashboardPage() {
     setSelectedId(null);
     loadAll();
   }
+
+  const activeConditions = [
+    options.minAreaSqm !== undefined && `שטח ≥ ${options.minAreaSqm}`,
+    options.minUnits !== undefined && `דירות ≥ ${options.minUnits}`,
+    options.minFloors !== undefined && `קומות ≥ ${options.minFloors}`,
+    options.minCap400Sqm !== undefined && `תקרה ≥ ${options.minCap400Sqm}`,
+    options.certainFloorsOnly && "קומות ודאיות",
+  ].filter(Boolean) as string[];
 
   const overLimit = liveArea !== null && liveArea.points >= 3 && liveArea.sqm > MAX_AREA_SQM;
 
@@ -234,6 +250,18 @@ export default function DashboardPage() {
             </button>
           )}
 
+          <button
+            onClick={() => setShowControls((v) => !v)}
+            style={{ background: "transparent", color: "#1a1a1a", border: "1px solid #d8d8d3" }}
+          >
+            תנאים והעדפות
+            {(activeConditions.length > 0 || (options.preferences?.length ?? 0) > 0) && (
+              <span style={{ color: "#1f6f4f", fontWeight: 700 }}>
+                {" "}· {activeConditions.length + (options.preferences?.length ?? 0)}
+              </span>
+            )}
+          </button>
+
           <span style={{ color: "#6b655c", fontSize: ".88rem" }}>
             {drawing
               ? liveArea === null
@@ -251,6 +279,22 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {showControls && (
+        <div style={{ marginBottom: "1rem" }}>
+          <SearchControls
+            value={options}
+            onChange={setOptions}
+            onApply={() => searchArea && runSearch(searchArea, options)}
+            disabled={!searchArea || loading}
+          />
+          {!searchArea && (
+            <p style={{ color: "#8a6100", fontSize: ".84rem", margin: ".5rem 0 0" }}>
+              יש לצייר אזור חיפוש כדי להחיל את התנאים.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="card" style={{ marginBottom: "1.2rem", padding: 0, overflow: "hidden" }}>
         <OpportunityMap
@@ -274,6 +318,9 @@ export default function DashboardPage() {
       <div className="card">
         <p style={{ margin: "0 0 .8rem", color: "#6b655c", fontSize: ".9rem" }}>
           {loading ? "טוען…" : `${candidates.length} מועמדים`}
+          {activeConditions.length > 0 && (
+            <span> · תנאי חובה: {activeConditions.join(" · ")}</span>
+          )}
         </p>
         <table>
           <thead>
@@ -283,6 +330,7 @@ export default function DashboardPage() {
               <th>שטח (מ״ר)</th>
               <th>קומות</th>
               <th>מצב</th>
+              <th>נימוק הסדר</th>
               <th />
             </tr>
           </thead>
@@ -316,24 +364,36 @@ export default function DashboardPage() {
                     "—"
                   )}
                 </td>
+                <td style={{ color: "#6b655c", fontSize: ".82rem" }}>
+                  {candidate.why_selected ?? "—"}
+                </td>
                 <td style={{ textAlign: "end" }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); deliver(candidate); }}
-                    disabled={delivering !== null || deliveredIds.has(candidate.id)}
-                    style={{ padding: ".35rem .7rem", fontSize: ".82rem" }}
-                  >
-                    {deliveredIds.has(candidate.id)
-                      ? "במאגר"
-                      : delivering === candidate.id
-                        ? "מוסר…"
-                        : "מסור לי"}
-                  </button>
+                  {(() => {
+                    // מועמד שאינו במסלול המגרשי ייענה ב-409 בכל מקרה, והלחיצה
+                    // בדרך שולחת בקשה לתיק הבניין לחינם. הארכיון הוא המשאב
+                    // הרגיש ביותר שיש לנו — לחיצה שידוע שתיכשל לא תיגע בו.
+                    const blocked = candidate.assessment?.screenable === false;
+                    const owned = deliveredIds.has(candidate.id);
+                    return (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deliver(candidate); }}
+                        disabled={delivering !== null || owned || blocked}
+                        title={blocked ? "אינו במסלול המגרשי — אינו נמסר" : undefined}
+                        style={{ padding: ".35rem .7rem", fontSize: ".82rem" }}
+                      >
+                        {owned ? "במאגר"
+                          : blocked ? "לא במסלול"
+                          : delivering === candidate.id ? "מוסר…"
+                          : "מסור לי"}
+                      </button>
+                    );
+                  })()}
                 </td>
               </tr>
             ))}
             {!loading && candidates.length === 0 && !error && (
               <tr>
-                <td colSpan={6} style={{ color: "#6b655c" }}>
+                <td colSpan={7} style={{ color: "#6b655c" }}>
                   אין מועמדים באזור שסומן.
                 </td>
               </tr>

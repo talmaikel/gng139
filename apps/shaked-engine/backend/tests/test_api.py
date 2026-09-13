@@ -357,3 +357,81 @@ async def test_a_delivery_records_which_rules_and_which_data_it_rested_on(client
     assert row["rules_version"] == rights.RULES_VERSION
     assert row["why_selected"]["status"] == "needs_verification"
     assert row["why_selected"]["floors_low"] == 8
+
+
+# ── C3 · תנאי חובה מול העדפות ──
+
+@pytest.mark.asyncio
+async def test_a_mandatory_minimum_removes_candidates_rather_than_ranking_them(client, session):
+    """‏שני מגרשים, אחד קטן. מינימום שטח **מוציא** את הקטן; העדפה על אותו
+    שדה רק מסדרת ומשאירה את שניהם."""
+    small = await _deliverable_parcel(session, "9501")
+    big = await _deliverable_parcel(session, "9502")
+    small.area_sqm, big.area_sqm = 400.0, 2000.0
+    await session.flush()
+
+    async def ids(body):
+        r = await client.post("/api/v1/candidates/herzliya/search", json=body)
+        assert r.status_code == 200, r.text
+        return [x["id"] for x in r.json()]
+
+    both = await ids({"polygon": INSIDE})
+    assert {str(small.id), str(big.id)} <= set(both)
+
+    filtered = await ids({"polygon": INSIDE, "min_area_sqm": 1000})
+    assert str(big.id) in filtered and str(small.id) not in filtered
+
+    ranked = await ids({"polygon": INSIDE,
+                        "preferences": [{"field": "parcel_area", "direction": "desc"}]})
+    assert {str(small.id), str(big.id)} <= set(ranked)
+    assert ranked.index(str(big.id)) < ranked.index(str(small.id))
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_value_does_not_pass_a_minimum(client, session):
+    """‏`NULL >= 5` הוא NULL ולא TRUE. ״לא ידוע״ אינו ״עומד בתנאי״, ומועמד
+    בלי קביעת קומות נופל מתנאי מינימום קומות — וזו התשובה הנכונה."""
+    known = await _deliverable_parcel(session, "9503")
+    unknown = await _deliverable_parcel(session, "9504")
+    unknown.metadata_json = {**unknown.metadata_json,
+                             "assessment": {**unknown.metadata_json["assessment"],
+                                            "floors_low": None}}
+    await session.flush()
+
+    r = await client.post("/api/v1/candidates/herzliya/search",
+                          json={"polygon": INSIDE, "min_floors": 5})
+    ids = [x["id"] for x in r.json()]
+    assert str(known.id) in ids
+    assert str(unknown.id) not in ids
+
+
+@pytest.mark.asyncio
+async def test_the_reason_names_the_preference_that_decided_the_order(client, session):
+    """‏SEL-01 דורש נימוק **לכל בחירה**, ולא הסבר כללי על המיון."""
+    a = await _deliverable_parcel(session, "9505")
+    b = await _deliverable_parcel(session, "9506")
+    a.area_sqm, b.area_sqm = 2000.0, 400.0
+    await session.flush()
+
+    r = await client.post("/api/v1/candidates/herzliya/search",
+                          json={"polygon": INSIDE,
+                                "preferences": [{"field": "parcel_area", "direction": "desc"}]})
+    rows = {x["id"]: x for x in r.json()}
+    assert "שטח המגרש" in rows[str(a.id)]["why_selected"]
+
+
+@pytest.mark.asyncio
+async def test_certain_floors_only_keeps_the_figure_that_does_not_move(client, session):
+    """יזם שמתכנן לפי מספר הקומות צריך לדעת שהוא אינו זז בטווח הסובלנות."""
+    firm = await _deliverable_parcel(session, "9507")
+    soft = await _deliverable_parcel(session, "9508")
+    for opp, certain in ((firm, True), (soft, False)):
+        opp.metadata_json = {**opp.metadata_json,
+                             "assessment": {**opp.metadata_json["assessment"],
+                                            "floors_certain": certain}}
+    await session.flush()
+
+    r = await client.post("/api/v1/candidates/herzliya/search",
+                          json={"polygon": INSIDE, "certain_floors_only": True})
+    ids = [x["id"] for x in r.json()]
+    assert str(firm.id) in ids and str(soft.id) not in ids

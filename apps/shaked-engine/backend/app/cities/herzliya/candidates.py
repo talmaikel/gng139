@@ -23,6 +23,40 @@ SORTABLE: dict[str, tuple[Any, str]] = {
 }
 
 
+# תנאי חובה — נפרדים מהעדפות **בכוונה**, וזה ההבדל שה-PRD עומד עליו
+# ב-SEL-01: *״המערכת מחילה כללים, תנאי חובה וסדר העדיפויות״*. תנאי חובה
+# מוציא מועמד מהרשימה; העדפה רק מזיזה אותו בה. לערבב ביניהם פירושו או
+# להסתיר מועמדים שהיזם היה רוצה לראות, או להציג מועמדים שאינם רלוונטיים
+# ולקרוא לזה ״מדורג נמוך״.
+MANDATORY: dict[str, tuple[Any, str]] = {
+    "min_area_sqm": (Opportunity.area_sqm, "שטח מגרש מזערי"),
+    "min_units": (Opportunity.existing_units, "מספר דירות קיים מזערי"),
+    "min_floors": (Opportunity.metadata_json["assessment"]["floors_low"].astext.cast(Float),
+                   "מספר קומות מותר מזערי"),
+    "min_cap_400_sqm": (Opportunity.metadata_json["assessment"]["cap_400_sqm"].astext.cast(Float),
+                        'תקרת 400% מזערית במ"ר'),
+}
+
+
+def _mandatory(stmt, filters: dict[str, Any]):
+    """מחיל את תנאי החובה. ערך חסר **אינו** עובר תנאי מזערי.
+
+    ‏`NULL >= 5` הוא NULL ולא TRUE, ולכן שורה בלי קביעת קומות נופלת מאליה
+    כשמבקשים מינימום קומות — וזו התנהגות נכונה: ״לא ידוע״ אינו ״עומד
+    בתנאי״. הכתיבה המפורשת כאן היא כדי שזה לא ייראה כמו מקרה.
+    """
+    for key, (col, _) in MANDATORY.items():
+        if (value := filters.get(key)) is not None:
+            stmt = stmt.where(col >= value)
+
+    # קביעת קומות ודאית: כל רוחב הרחוב בטווח הסובלנות נותן אותה תשובה.
+    # יזם שמתכנן לפי המספר צריך לדעת שהוא אינו זז.
+    if filters.get("certain_floors_only"):
+        stmt = stmt.where(
+            Opportunity.metadata_json["assessment"]["floors_certain"].astext == "true")
+    return stmt
+
+
 def _ordered(stmt, preferences: list[dict[str, Any]]):
     """מיון לקסיקוגרפי לפי סדר ההעדפות, ואז מזהה יציב לשבירת שוויון מלא.
 
@@ -111,8 +145,7 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
     categories = filters.get("categories") or list(QUEUE_ELIGIBLE_CATEGORIES)
     stmt = stmt.where(Opportunity.metadata_json["category"].astext.in_(categories))
 
-    if min_area := filters.get("min_area_sqm"):
-        stmt = stmt.where(Opportunity.area_sqm >= min_area)
+    stmt = _mandatory(stmt, filters)
 
     # מועמד שנפסל בשערים אינו מוצג כלל. מי שאין לו קביעת קומות אינו
     # "מדורג נמוך" אלא אינו בר-מסירה — זו מוכנות, לא העדפה.
