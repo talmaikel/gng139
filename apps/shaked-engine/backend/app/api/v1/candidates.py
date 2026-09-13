@@ -1,6 +1,7 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cities import get_city_rules
@@ -9,6 +10,29 @@ from app.core.security import current_active_user
 from app.models.tenant import User
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
+
+
+class SearchArea(BaseModel):
+    """אזור חיפוש מצויר, GeoJSON Polygon ב-WGS84."""
+    polygon: dict[str, Any]
+    min_area_sqm: float | None = None
+    deliverable_only: bool = False
+    limit: int = Field(default=100, le=500)
+
+
+@router.post("/{city_code}/search")
+async def search_candidates(
+    city_code: str,
+    body: SearchArea,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> list[dict[str, Any]]:
+    """מועמדים בתוך אזור מצויר. פוליגון שאינו תקין או חורג מהעיר נדחה ב-422."""
+    rules = get_city_rules(city_code)
+    try:
+        return await rules.screen_candidates(session, {**body.model_dump(), "polygon": body.polygon})
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
 
 @router.get("/{city_code}")

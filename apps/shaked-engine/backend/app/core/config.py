@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     # Public data sources (see app/sources/client.py and app/evidence.py)
     source_cache_dir: str = ".cache/sources"
     source_cache_ttl_seconds: int = 86400
-    source_max_age_days: int = 30  # evidence older than this cannot decide an eligibility check
+    source_max_age_days: int = 30
+    # מגבלת שטח לאזור חיפוש מצויר. הערך ייקבע בפיילוט (PRD MAP-01);
+    # 250 דונם הוא הערך שה-POC עבד לפיו והוא נקודת המוצא.
+    max_search_area_sqm: float = 250_000  # evidence older than this cannot decide an eligibility check
 
     cors_origins: str = "http://localhost:3000"
 

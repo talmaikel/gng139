@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cities.herzliya.xplan_schema import QUEUE_ELIGIBLE_CATEGORIES
 from app.models.opportunity import Opportunity
+from app.cities.herzliya.boundary import search_polygon_wkt
 
 
 async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, Any]) -> list[dict[str, Any]]:
@@ -24,6 +25,13 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
     stmt = select(Opportunity, geometry_geojson, centroid_lat, centroid_lng).where(
         Opportunity.city_code == "herzliya"
     )
+
+    # אזור חיפוש מצויר. הסינון נעשה ב-PostGIS ולא ב-Python: 699 פוליגונים
+    # הם מעט, אבל המדד המרחבי קיים והשאילתה אמורה להישאר זולה גם כשיהיו יותר.
+    if (poly := filters.get("polygon")) is not None:
+        stmt = stmt.where(
+            func.ST_Intersects(Opportunity.geom, func.ST_GeomFromText(search_polygon_wkt(poly), 4326))
+        )
 
     categories = filters.get("categories") or list(QUEUE_ELIGIBLE_CATEGORIES)
     stmt = stmt.where(Opportunity.metadata_json["category"].astext.in_(categories))
