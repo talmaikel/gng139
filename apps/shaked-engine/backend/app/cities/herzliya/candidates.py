@@ -127,6 +127,13 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
     # ‏`screenable` ולא `deliverable`: המסך מציג מי נשאר במסלול, ולא מי
     # שתנאי הסף שלו כבר נענה במלואו. השניים התבלבלו כאן, והתוצאה הייתה
     # שכל העיר הוצגה כמוכנה למסירה.
+    # ‏SEL-02: *״אותו מגרש אינו נספר שוב בעקבות פוליגון חופף, שינוי כתובת,
+    # שינוי משתמש בחברה או חבילה חדשה״*. הסינון הוא ברמת החברה, כי הזכאות
+    # היא של החברה — שני משתמשים באותה חברה הסורקים פוליגונים חופפים אינם
+    # מקבלים את המגרש פעמיים (ACC-04).
+    if delivered := filters.get("exclude_delivered_ids"):
+        stmt = stmt.where(Opportunity.id.notin_(list(delivered)))
+
     if filters.get("deliverable_only"):
         stmt = stmt.where(Opportunity.metadata_json["assessment"]["screenable"].astext == "true")
 

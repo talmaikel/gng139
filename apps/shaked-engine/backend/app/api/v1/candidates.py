@@ -1,4 +1,5 @@
 from typing import Any, Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -8,6 +9,7 @@ from app.cities import get_city_rules as _get_city_rules
 from app.core.database import get_async_session
 from app.core.security import current_active_user
 from app.models.tenant import User
+from app.services.deliveries import NoCredits, NotDeliverable, deliver, delivered_ids
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -46,10 +48,33 @@ async def search_candidates(
 ) -> list[dict[str, Any]]:
     """מועמדים בתוך אזור מצויר. פוליגון שאינו תקין או חורג מהעיר נדחה ב-422."""
     rules = get_city_rules(city_code)
+    filters = body.model_dump()
+    # מה שכבר נמסר לחברה אינו מוצע שוב כהזדמנות חדשה — הוא נשאר במאגר שלה.
+    filters["exclude_delivered_ids"] = await delivered_ids(session, user.company_id)
     try:
-        return await rules.screen_candidates(session, body.model_dump())
+        return await rules.screen_candidates(session, filters)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+
+
+@router.post("/{city_code}/{opportunity_id}/deliver")
+async def deliver_opportunity(
+    city_code: str,
+    opportunity_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> dict[str, Any]:
+    """מוסר הזדמנות לחברה ומנכה זכאות. קריאה חוזרת אינה מחייבת שוב."""
+    get_city_rules(city_code)
+    try:
+        row, charged = await deliver(session, opportunity_id, user.company_id, user.id)
+    except NotDeliverable as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except NoCredits as e:
+        raise HTTPException(status_code=402, detail=str(e)) from e
+    await session.commit()
+    return {"delivery_id": str(row.id), "opportunity_id": str(row.opportunity_id),
+            "charged": charged, "delivered_at": row.delivered_at.isoformat()}
 
 
 @router.get("/{city_code}")
@@ -66,6 +91,7 @@ async def list_candidates(
     """Pre-filtered candidate opportunities for a given city, applying the city's own strategy."""
     rules = get_city_rules(city_code)
     filters = {
+        "exclude_delivered_ids": await delivered_ids(session, user.company_id),
         "min_area_sqm": min_area_sqm,
         "verification_level": verification_level,
         "deliverable_only": deliverable_only,

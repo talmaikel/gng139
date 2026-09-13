@@ -10,6 +10,8 @@ import uuid
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from sqlalchemy import select
+
 from app.core.database import get_async_session
 from app.core.security import current_active_user
 from app.main import app
@@ -166,3 +168,98 @@ async def test_filter_options_name_the_registered_cities(client):
     body = (await client.get("/api/v1/filters/options")).json()
     assert any(c["code"] == "herzliya" for c in body["cities"])
     assert set(body["verification_levels"]) == {v.value for v in VerificationLevel}
+
+
+# ── SEL-02 · שתי סריקות חופפות, מסירה אחת ──
+
+# פוליגון שני, חופף לראשון בחציו. שני משתמשים באותה חברה מציירים אזורים
+# שונים שנחתכים — זה בדיוק המקרה של ACC-04.
+OVERLAPPING = {"type": "Polygon", "coordinates": [[[34.8415, 32.1605], [34.8445, 32.1605],
+                                                   [34.8445, 32.1625], [34.8415, 32.1625],
+                                                   [34.8415, 32.1605]]]}
+
+
+async def _deliverable_parcel(session, block="9401"):
+    """הזדמנות בתוך שני הפוליגונים, מסומנת כניתנת למסירה."""
+    from app.models.opportunity import Opportunity
+    geom = ("MULTIPOLYGON(((34.8420000 32.1610000,34.8424000 32.1610000,"
+            "34.8424000 32.1613000,34.8420000 32.1613000,34.8420000 32.1610000)))")
+    opp = Opportunity(city_code="herzliya", address=f"רחוב החפיפה {block}", block=block,
+                      block_suffix=0, parcel="1", geom=f"SRID=4326;{geom}",
+                      area_sqm=1200.0, existing_units=8,
+                      verification_level=VerificationLevel.RAW.value,
+                      metadata_json={"category": "primary_candidate",
+                                     "assessment": {"status": "needs_verification",
+                                                    "deliverable": True,
+                                                    "floors_low": 8}})
+    session.add(opp)
+    await session.flush()
+    return opp
+
+
+@pytest.mark.asyncio
+async def test_two_overlapping_scans_deliver_the_parcel_once(client, session):
+    """קריטריון היציאה של A13, מקצה לקצה דרך ה-API.
+
+    משתמש א׳ סורק, מוסר, ומשלם. משתמש ב׳ באותה חברה סורק פוליגון חופף —
+    המגרש כבר אינו מוצע לו כהזדמנות חדשה, ובקשת מסירה חוזרת אינה מחייבת.
+    """
+    from app.models.package import Balance
+    opp = await _deliverable_parcel(session)
+    session.add(Balance(company_id=client.user.company_id, credits_remaining=3))
+    await session.flush()
+
+    def ids(r):
+        return {row["id"] for row in r.json()}
+
+    first = await client.post("/api/v1/candidates/herzliya/search", json={"polygon": INSIDE})
+    assert str(opp.id) in ids(first)
+
+    got = await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")
+    assert got.status_code == 200 and got.json()["charged"] is True
+
+    # משתמש שני באותה חברה, פוליגון חופף
+    second_user = await _user(session)
+    second_user.company_id = client.user.company_id
+    await session.flush()
+    app.dependency_overrides[current_active_user] = lambda: second_user
+
+    again = await client.post("/api/v1/candidates/herzliya/search", json={"polygon": OVERLAPPING})
+    assert str(opp.id) not in ids(again)          # אינו מוצע שוב
+
+    repeat = await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")
+    assert repeat.status_code == 200
+    assert repeat.json()["charged"] is False      # ואינו מחויב שוב
+    assert repeat.json()["delivery_id"] == got.json()["delivery_id"]
+
+    balance = (await session.execute(
+        select(Balance).where(Balance.company_id == client.user.company_id))).scalar_one()
+    assert balance.credits_remaining == 2         # חיוב אחד, לא שניים
+
+
+@pytest.mark.asyncio
+async def test_an_unready_candidate_is_refused_with_409_and_costs_nothing(client, session):
+    """‏ACC-05, דרך ה-API. ‏409 ולא 402: הבעיה אינה שאין יתרה אלא שהמועמד
+    אינו מוכן, ולקוח שיטען עוד זכאות עדיין לא יקבל אותו."""
+    from app.models.package import Balance
+    opp = await _deliverable_parcel(session, "9402")
+    opp.metadata_json = {**opp.metadata_json,
+                         "assessment": {"deliverable": False,
+                                        "threshold_open": ["permit_date"]}}
+    session.add(Balance(company_id=client.user.company_id, credits_remaining=3))
+    await session.flush()
+
+    r = await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")
+    assert r.status_code == 409
+    assert "permit_date" in r.json()["detail"]
+
+    balance = (await session.execute(
+        select(Balance).where(Balance.company_id == client.user.company_id))).scalar_one()
+    assert balance.credits_remaining == 3
+
+
+@pytest.mark.asyncio
+async def test_delivery_without_any_entitlement_is_402(client, session):
+    opp = await _deliverable_parcel(session, "9403")
+    r = await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")
+    assert r.status_code == 402
