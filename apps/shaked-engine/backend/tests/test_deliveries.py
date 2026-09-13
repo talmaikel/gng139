@@ -206,3 +206,91 @@ async def test_the_database_refuses_a_duplicate_even_if_the_code_does_not(sessio
     session.add(Delivery(opportunity_id=opp.id, company_id=c.id, credits_charged=1))
     with pytest.raises(IntegrityError):
         await session.flush()
+
+
+# ── A14 · הלולאה שהייתה פתוחה ──
+
+@pytest.mark.asyncio
+async def test_an_unready_candidate_is_fetched_and_then_delivered(session):
+    """‏`deliver()` סירב, ושום דבר לא משך את התיק. עכשיו רגע המסירה הוא
+    רגע השליפה — חלקה אחת, לפי בקשת לקוח."""
+    c, (u, _) = await _company(session)
+    opp = await _opportunity(session, "9312", deliverable=False,
+                             open_gates=("permit_date",))
+    calls = []
+
+    async def pretend_archive(s, oid):
+        calls.append(oid)
+        row = await s.get(Opportunity, oid)
+        row.metadata_json = {**row.metadata_json,
+                             "assessment": {"deliverable": True, "threshold_open": []}}
+        await s.flush()
+        return True
+
+    delivery, charged = await deliver(session, opp.id, c.id, u.id, on_unready=pretend_archive)
+    assert calls == [opp.id]
+    assert charged is True
+    assert delivery.opportunity_id == opp.id
+
+
+@pytest.mark.asyncio
+async def test_the_archive_is_asked_once_and_not_in_a_loop(session):
+    """אם השליפה לא ענתה על השער, ניסיון נוסף ייפול באותו מקום ורק יפנה
+    לארכיון שוב — וזה בדיוק מה שהפעיל את ההגנה ב-12.09."""
+    c, (u, _) = await _company(session)
+    opp = await _opportunity(session, "9313", deliverable=False, open_gates=("permit_date",))
+    calls = []
+
+    async def useless(s, oid):
+        calls.append(oid)
+        return True                      # טוען שהביא, ולא שינה דבר
+
+    with pytest.raises(NotDeliverable):
+        await deliver(session, opp.id, c.id, u.id, on_unready=useless)
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_candidate_already_ready_never_touches_the_archive(session):
+    c, (u, _) = await _company(session)
+    opp = await _opportunity(session, "9314")
+    calls = []
+
+    async def never(s, oid):
+        calls.append(oid)
+        return True
+
+    await deliver(session, opp.id, c.id, u.id, on_unready=never)
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_a_gate_the_archive_cannot_answer_sends_no_request(session):
+    """‏`residential_share` אין לו מקור פתוח. פנייה לארכיון בשבילו היא
+    בקשה מיותרת, ומיותרות הן מה שסוגר את הדלת."""
+    from app.cities.herzliya.archive_facts import ARCHIVE_ANSWERS, fetch_for_delivery
+    assert "residential_share" not in ARCHIVE_ANSWERS
+    opp = await _opportunity(session, "9315", deliverable=False,
+                             open_gates=("residential_share",))
+    assert await fetch_for_delivery(session, opp.id) is False    # לא נפתח לקוח כלל
+
+
+# ── A15 · מאגר המסירות ──
+
+@pytest.mark.asyncio
+async def test_the_company_repository_shows_what_was_delivered(session):
+    """החצי השני של SEL-02: *״מוצג במאגר החברה בלבד״*."""
+    from app.services.deliveries import for_company
+    a, (ua, _) = await _company(session, "חברה א")
+    b, _ = await _company(session, "חברה ב")
+    opp = await _opportunity(session, "9316")
+    await deliver(session, opp.id, a.id, ua.id,
+                  why={"rank": 1}, rules_version="policy-2026-02")
+
+    mine = await for_company(session, a.id)
+    assert [row["opportunity_id"] for row in mine] == [str(opp.id)]
+    assert mine[0]["address"] == "רחוב המסירה 9316"
+    assert mine[0]["why_selected"] == {"rank": 1}
+    assert mine[0]["rules_version"] == "policy-2026-02"
+    # ובידוד: חברה אחרת אינה רואה דבר
+    assert await for_company(session, b.id) == []

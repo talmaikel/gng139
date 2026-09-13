@@ -31,6 +31,53 @@ def _threshold_open(checks) -> list[str]:
                    if c["id"] in rights.THRESHOLD_IDS and c["status"] == "unknown"})
 
 
+async def _store(opp, a) -> None:
+    """כותב את תוצאת ההערכה על ההזדמנות. משותף לעיר כולה ולהזדמנות אחת."""
+    f = a["floors"]
+    opens = _threshold_open(a["checks"])
+    opp.metadata_json = {
+        **(opp.metadata_json or {}),
+        "assessment": {
+            "status": a["status"],
+            "floors_low": f["low"], "floors_high": f["high"],
+            "floors_certain": f["certain"], "case_by_case": f["case_by_case"],
+            "cap_400_sqm": a["cap_400_sqm"],
+            "cap_400_certainty": a["cap_400_certainty"],
+            "blocking": sorted({c["id"] for c in a["checks"]
+                                if c["status"] in ("failed", "unknown", "routed")}),
+            "threshold_open": opens,
+            # שני דגלים, כי שתי שאלות שונות נשאלו כאן כאחת:
+            #
+            # ‏`screenable` — נשאר במסלול? יש קומות, לא נפסל, לא נותב.
+            #   זה מה שמסך הסינון מציג, וזה מה ש-`deliverable` היה עד כה.
+            #
+            # ‏`deliverable` — אפשר למסור את זה ללקוח? רק אם תנאי הסף
+            #   של §70א **נשאל ונענה**. ‏686 מ-699 מעולם לא נשאלו, כי
+            #   הארכיון לא נמשך — והם דווחו כניתנים למסירה. שער שאין לו
+            #   מקור פתוח (`UNOBTAINABLE`) אינו חוסם: הוא שאלה פתוחה
+            #   בתיק, והסטטוס ממילא needs_verification.
+            "screenable": (screenable := a["status"] in DELIVERABLE and f["low"] is not None),
+            "deliverable": (screenable
+                            and not [i for i in opens if i not in rights.UNOBTAINABLE]),
+        },
+    }
+    flag_modified(opp, "metadata_json")
+
+
+async def refresh_one(session, rules, opportunity_id) -> dict:
+    """הערכה מחדש להזדמנות אחת.
+
+    נדרש ברגע המסירה: אחרי ששולפים תיק בניין עבור לקוח, ההערכה השמורה
+    עדיין מחזיקה את התמונה שלפני השליפה. הרצת העיר כולה שם היא בזבוז של
+    699 חישובים כדי לעדכן שורה אחת.
+    """
+    a = await rules.assess(session, opportunity_id)
+    opp = await session.get(Opportunity, opportunity_id)
+    await _store(opp, a)
+    await session.flush()
+    return opp.metadata_json["assessment"]
+
+
 async def refresh(session, rules, city_code: str = "herzliya") -> dict:
     """מריץ assess() על כל ההזדמנויות ושומר את התוצאה. מחזיר פילוח.
 
@@ -46,34 +93,7 @@ async def refresh(session, rules, city_code: str = "herzliya") -> dict:
     for oid in ids:
         a = await rules.assess(session, oid)
         opp = await session.get(Opportunity, oid)
-        f = a["floors"]
-        opp.metadata_json = {
-            **(opp.metadata_json or {}),
-            "assessment": {
-                "status": a["status"],
-                "floors_low": f["low"], "floors_high": f["high"],
-                "floors_certain": f["certain"], "case_by_case": f["case_by_case"],
-                "cap_400_sqm": a["cap_400_sqm"],
-                "cap_400_certainty": a["cap_400_certainty"],
-                "blocking": sorted({c["id"] for c in a["checks"]
-                                    if c["status"] in ("failed", "unknown", "routed")}),
-                "threshold_open": (opens := _threshold_open(a["checks"])),
-                # שני דגלים, כי שתי שאלות שונות נשאלו כאן כאחת:
-                #
-                # ‏`screenable` — נשאר במסלול? יש קומות, לא נפסל, לא נותב.
-                #   זה מה שמסך הסינון מציג, וזה מה ש-`deliverable` היה עד כה.
-                #
-                # ‏`deliverable` — אפשר למסור את זה ללקוח? רק אם תנאי הסף
-                #   של §70א **נשאל ונענה**. ‏686 מ-699 מעולם לא נשאלו, כי
-                #   הארכיון לא נמשך — והם דווחו כניתנים למסירה. שער שאין לו
-                #   מקור פתוח (`UNOBTAINABLE`) אינו חוסם: הוא שאלה פתוחה
-                #   בתיק, והסטטוס ממילא needs_verification.
-                "screenable": (screenable := a["status"] in DELIVERABLE and f["low"] is not None),
-                "deliverable": (screenable
-                                and not [i for i in opens if i not in rights.UNOBTAINABLE]),
-            },
-        }
-        flag_modified(opp, "metadata_json")
+        await _store(opp, a)
         counts[a["status"]] += 1
         for flag in ("screenable", "deliverable"):
             counts[flag] += 1 if opp.metadata_json["assessment"][flag] else 0

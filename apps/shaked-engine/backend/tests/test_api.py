@@ -263,3 +263,79 @@ async def test_delivery_without_any_entitlement_is_402(client, session):
     opp = await _deliverable_parcel(session, "9403")
     r = await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")
     assert r.status_code == 402
+
+
+# ── C13 · חבילות ויתרה ──
+
+@pytest.mark.asyncio
+async def test_balance_starts_at_zero_rather_than_erroring(client):
+    """חברה חדשה בלי יתרה היא מצב, לא שגיאה. המסך צריך מספר להציג."""
+    body = (await client.get("/api/v1/account/balance")).json()
+    assert body["credits_remaining"] == 0
+    assert body["delivered_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_buying_a_package_adds_entitlement_to_the_company(client, session):
+    """*״הזכאות לשלוש הזדמנויות שייכת לחברה ומשותפת לצוותה״*."""
+    from app.models.package import Package
+    pkg = Package(name="שלוש הזדמנויות", credits=3, price_ils=30_000)
+    session.add(pkg)
+    await session.flush()
+
+    listed = (await client.get("/api/v1/account/packages")).json()
+    assert any(p["id"] == str(pkg.id) for p in listed)
+
+    r = await client.post(f"/api/v1/account/packages/{pkg.id}/purchase")
+    assert r.status_code == 200 and r.json()["credits_remaining"] == 3
+
+    # משתמש אחר באותה חברה רואה את אותה יתרה
+    other = await _user(session)
+    other.company_id = client.user.company_id
+    await session.flush()
+    app.dependency_overrides[current_active_user] = lambda: other
+    assert (await client.get("/api/v1/account/balance")).json()["credits_remaining"] == 3
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_package_is_404_and_changes_no_balance(client):
+    r = await client.post(f"/api/v1/account/packages/{uuid.uuid4()}/purchase")
+    assert r.status_code == 404
+    assert (await client.get("/api/v1/account/balance")).json()["credits_remaining"] == 0
+
+
+@pytest.mark.asyncio
+async def test_an_empty_search_does_not_reduce_entitlement(client, session):
+    """‏ACC-03: *״סריקה ריקה או הפקה שנכשלה אינן מפחיתות זכאות״*. אין נתיב
+    שמנכה חוץ מהמסירה עצמה, וזו הבדיקה ששומרת על כך."""
+    from app.models.package import Balance
+    session.add(Balance(company_id=client.user.company_id, credits_remaining=3))
+    await session.flush()
+
+    # פוליגון בתוך הגבול העירוני שאין בו מועמדים — אחרת התשובה היא 422
+    # על אזור לא חוקי, וזו בדיקה אחרת לגמרי.
+    empty = {"type": "Polygon", "coordinates": [[[34.8100, 32.1600], [34.8120, 32.1600],
+                                                 [34.8120, 32.1615], [34.8100, 32.1615],
+                                                 [34.8100, 32.1600]]]}
+    r = await client.post("/api/v1/candidates/herzliya/search", json={"polygon": empty})
+    assert r.status_code == 200
+    assert (await client.get("/api/v1/account/balance")).json()["credits_remaining"] == 3
+
+
+# ── A15 · מאגר המסירות דרך ה-API ──
+
+@pytest.mark.asyncio
+async def test_what_the_company_bought_is_visible_afterwards(client, session):
+    """לקוח שמשלם ואינו רואה את מה שקנה — זו הייתה המחצית החסרה של SEL-02."""
+    from app.models.package import Balance
+    opp = await _deliverable_parcel(session, "9404")
+    session.add(Balance(company_id=client.user.company_id, credits_remaining=3))
+    await session.flush()
+
+    assert (await client.get("/api/v1/candidates/herzliya/mine")).json() == []
+    await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")
+
+    mine = (await client.get("/api/v1/candidates/herzliya/mine")).json()
+    assert [m["opportunity_id"] for m in mine] == [str(opp.id)]
+    assert mine[0]["address"] == "רחוב החפיפה 9404"
+    assert mine[0]["assessment"]["deliverable"] is True

@@ -19,7 +19,17 @@
    יתרה״*. ‏`assessment.deliverable` הוא בדיוק המבחן הזה, והוא False כל עוד
    שער סף של §70א לא נשאל — כלומר כל עוד לא נמשך תיק הבניין. זה מכוון:
    הארכיון נשלף לפי דרישת לקוח, ורגע המסירה הוא הרגע שבו זה קורה.
+
+‏**`on_unready` הוא הצד השני של אותה החלטה.** בלעדיו הלולאה פתוחה: הלקוח
+לוחץ, מקבל 409, ושום דבר לא מושך את התיק. עם זה, המסירה היא הרגע שבו
+הארכיון נשלף — חלקה אחת, לפי בקשה, בדיוק כפי שמרשם הסיכון מחייב
+(`POC/layer_a/data/DATA_LAW.md`): *״סריקה לפי דרישה שצוברת כיסוי חלקי =
+מטמון. סריקה יזומה של כל העיר = עותק של הארכיון העירוני.״*
+
+ההזרקה היא callable ולא ייבוא של `archive_facts`, כדי שהשירות יישאר
+עירוני-אגנוסטי — ובעיקר כדי שאפשר יהיה לבדוק את הלולאה בלי לגעת בארכיון.
 """
+from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
@@ -38,6 +48,19 @@ class NoCredits(Exception):
     """לחברה לא נותרה זכאות."""
 
 
+def _assessment(opp: Opportunity) -> dict[str, Any]:
+    return (opp.metadata_json or {}).get("assessment") or {}
+
+
+def _is_deliverable(opp: Opportunity) -> bool:
+    return bool(_assessment(opp).get("deliverable"))
+
+
+def _open_gates(opp: Opportunity) -> list[str]:
+    a = _assessment(opp)
+    return a.get("threshold_open") or a.get("blocking") or []
+
+
 async def delivered_ids(session, company_id: UUID) -> set[UUID]:
     """מה שכבר נמסר לחברה. השאילתה שמסננת סריקה חוזרת."""
     return set((await session.execute(
@@ -45,15 +68,50 @@ async def delivered_ids(session, company_id: UUID) -> set[UUID]:
     )).scalars().all())
 
 
+async def for_company(session, company_id: UUID) -> list[dict[str, Any]]:
+    """מה שהחברה כבר קיבלה, עם הנימוק והגרסאות.
+
+    החצי השני של SEL-02. ‏A13 סגר את הראשון — מגרש שנמסר אינו מוצע שוב —
+    ואת זה לא: *״מגרש שכבר נמסר **מוצג במאגר החברה בלבד**״*. בלי הנתיב
+    הזה לקוח משלם ואינו רואה את מה שקנה.
+    """
+    rows = (await session.execute(
+        select(Delivery, Opportunity)
+        .join(Opportunity, Opportunity.id == Delivery.opportunity_id)
+        .where(Delivery.company_id == company_id)
+        .order_by(Delivery.delivered_at.desc())
+    )).all()
+    return [{
+        "delivery_id": str(d.id),
+        "opportunity_id": str(d.opportunity_id),
+        "address": o.address,
+        "block": o.block,
+        "parcel": o.parcel,
+        "delivered_at": d.delivered_at.isoformat() if d.delivered_at else None,
+        "credits_charged": d.credits_charged,
+        "rules_version": d.rules_version,
+        "data_version": d.data_version,
+        "why_selected": d.why_selected,
+        "assessment": (o.metadata_json or {}).get("assessment"),
+    } for d, o in rows]
+
+
 async def deliver(session, opportunity_id: UUID, company_id: UUID,
                   user_id: UUID | None = None, *,
                   why: dict[str, Any] | None = None,
-                  rules_version: str = "", data_version: str = "") -> tuple[Delivery, bool]:
+                  rules_version: str = "", data_version: str = "",
+                  on_unready: Callable[[Any, UUID], Awaitable[bool]] | None = None,
+                  ) -> tuple[Delivery, bool]:
     """מוסר הזדמנות לחברה. מחזיר (השורה, האם חויבה זכאות).
 
     אידמפוטנטי: קריאה שנייה על אותו צמד מחזירה את השורה הקיימת עם
     ``charged=False``, בלי לגעת ביתרה ובלי לשנות את `delivered_at` — מה
     שנמסר נמסר, וגם מי קיבל אותו ומתי אינו משתנה בדיעבד.
+
+    ‏`on_unready(session, opportunity_id) -> bool` נקרא **פעם אחת** כשהמועמד
+    אינו מוכן. אם הוא מחזיר True, ההערכה נקראת מחדש והמסירה מנוסה שוב.
+    ניסיון אחד ולא לולאה: אם השליפה לא ענתה על השער, ניסיון נוסף ייפול
+    באותו מקום ורק יפנה לארכיון שוב.
     """
     existing = (await session.execute(
         select(Delivery).where(Delivery.opportunity_id == opportunity_id,
@@ -65,9 +123,12 @@ async def deliver(session, opportunity_id: UUID, company_id: UUID,
     opp = await session.get(Opportunity, opportunity_id)
     if opp is None:
         raise NotDeliverable(f"הזדמנות {opportunity_id} אינה קיימת")
-    assessment = (opp.metadata_json or {}).get("assessment") or {}
-    if not assessment.get("deliverable"):
-        open_gates = assessment.get("threshold_open") or assessment.get("blocking") or []
+
+    if not _is_deliverable(opp) and on_unready is not None:
+        if await on_unready(session, opportunity_id):
+            await session.refresh(opp)
+    if not _is_deliverable(opp):
+        open_gates = _open_gates(opp)
         raise NotDeliverable(
             "המועמד אינו מוכן למסירה ולכן אינו צורך יתרה (ACC-05). "
             + (f"שערי סף פתוחים: {', '.join(open_gates)}" if open_gates

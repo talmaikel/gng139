@@ -9,7 +9,9 @@ from app.cities import get_city_rules as _get_city_rules
 from app.core.database import get_async_session
 from app.core.security import current_active_user
 from app.models.tenant import User
-from app.services.deliveries import NoCredits, NotDeliverable, deliver, delivered_ids
+from app.cities.herzliya.archive_facts import fetch_for_delivery
+from app.services.deliveries import (NoCredits, NotDeliverable, deliver, delivered_ids,
+                                     for_company)
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -57,6 +59,17 @@ async def search_candidates(
         raise HTTPException(status_code=422, detail=str(e)) from e
 
 
+@router.get("/{city_code}/mine")
+async def my_deliveries(
+    city_code: str,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> list[dict[str, Any]]:
+    """מאגר המסירות של החברה — ‏SEL-02: *״מוצג במאגר החברה בלבד״*."""
+    get_city_rules(city_code)
+    return await for_company(session, user.company_id)
+
+
 @router.post("/{city_code}/{opportunity_id}/deliver")
 async def deliver_opportunity(
     city_code: str,
@@ -64,10 +77,16 @@ async def deliver_opportunity(
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user),
 ) -> dict[str, Any]:
-    """מוסר הזדמנות לחברה ומנכה זכאות. קריאה חוזרת אינה מחייבת שוב."""
+    """מוסר הזדמנות לחברה ומנכה זכאות. קריאה חוזרת אינה מחייבת שוב.
+
+    מועמד שתנאי הסף שלו לא נשאל — תיק הבניין נשלף **כאן**, בבקשה הזו,
+    ואז המסירה מנוסה שוב. השליפה, ההערכה מחדש והמסירה הן עסקה אחת: תיק
+    שנשלף ומסירה שנכשלה אחריו אינם יכולים להישאר במצבים שונים.
+    """
     get_city_rules(city_code)
     try:
-        row, charged = await deliver(session, opportunity_id, user.company_id, user.id)
+        row, charged = await deliver(session, opportunity_id, user.company_id, user.id,
+                                     on_unready=fetch_for_delivery)
     except NotDeliverable as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     except NoCredits as e:

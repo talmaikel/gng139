@@ -120,7 +120,10 @@ async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveCl
                 result["requests"] += len(reqs)
             except Exception:                       # תקלה בתיק אחד אינה מפילה את השאר
                 result["failed"] += 1
-        await session.commit()
+        # ‏flush ולא commit: הבעלות על הטרנזקציה היא של הקורא. במסלול
+        # המסירה השליפה, ההערכה מחדש והמסירה חייבות להיות עסקה אחת —
+        # commit כאן היה מקבע תיק שנשלף גם אם המסירה נכשלה אחריו.
+        await session.flush()
     finally:
         if own:
             await client.close()
@@ -147,6 +150,40 @@ async def _write(session, oid: UUID, f: dict, page: dict, tik_id: str) -> None:
             opportunity_id=oid, field=field, value=value,
             certainty=Certainty.DERIVED.value, source_url=url, retrieved_at=when,
             location=loc, method="שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא"))
+
+
+# השערים שתיק הבניין יכול לענות עליהם. שער פתוח שאינו כאן — אין טעם
+# לפנות לארכיון בשבילו, וכל פנייה מיותרת היא בדיוק מה שהפעיל את ההגנה
+# ב-12.09.
+ARCHIVE_ANSWERS = frozenset({"permit_date", "strengthened", "occupied", "post_2005_permit"})
+
+
+async def fetch_for_delivery(session, opportunity_id: UUID, client=None) -> bool:
+    """שליפת תיק אחד ברגע שלקוח מבקש את החלקה. מחזיר האם משהו השתנה.
+
+    זו הלולאה שהייתה פתוחה: ‏`deliver()` סירב למועמד שתנאי הסף שלו לא
+    נשאל, ושום דבר לא שאל. עכשיו **רגע המסירה הוא רגע השליפה** — חלקה
+    אחת, לפי בקשה מפורשת של לקוח, ונשמרת לתמיד. זה בדיוק המטמון שמרשם
+    הסיכון מחייב, להבדיל מהסריקה היזומה שהארכיון חסם.
+
+    אם השער הפתוח אינו כזה שהתיק עונה עליו — לא נשלחת בקשה בכלל.
+    """
+    from app.cities.herzliya.assessments import refresh_one
+    from app.cities.herzliya.rules import HerzliyaCityRules
+
+    opp = await session.get(Opportunity, opportunity_id)
+    if opp is None:
+        return False
+    assessment = (opp.metadata_json or {}).get("assessment") or {}
+    open_gates = set(assessment.get("threshold_open") or assessment.get("blocking") or [])
+    if not (open_gates & ARCHIVE_ANSWERS):
+        return False
+
+    out = await enrich(session, [opportunity_id], client)
+    if not out.get("fetched"):
+        return False
+    await refresh_one(session, HerzliyaCityRules(), opportunity_id)
+    return True
 
 
 async def _main(argv=None):
