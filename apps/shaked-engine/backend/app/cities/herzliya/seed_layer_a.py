@@ -58,6 +58,10 @@ def _rows(key, surv, front, geo, sources, archive):
             return None
         return dict(field=field, value=value, certainty=certainty.value,
                     source_url=src["url"], retrieved_at=datetime.fromisoformat(src["retrieved_at"]),
+                    # מתי המקור מדווח שהוא עודכן — שונה ממתי אנחנו שלפנו אותו.
+                    # שכבת החלקות נושאת SYS_DATE, והוא נע בין 2020 ל-2026.
+                    source_updated_at=(geo.get("source_updated_at")
+                                       if source_id == "govmap_parcels" else None),
                     location=location, method=method)
 
     cat = str(surv.get("cat"))
