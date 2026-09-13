@@ -16,7 +16,14 @@ XPLAN_SPECIAL_OVERLAP_THRESHOLD = float(os.getenv('XPLAN_SPECIAL_OVERLAP_THRESHO
 XPLAN_METRO_STATION_BUFFER_M = float(os.getenv('XPLAN_METRO_STATION_BUFFER_M', '500'))
 ARCHIVE_INTERVAL_SECONDS = float(os.getenv('ARCHIVE_INTERVAL_SECONDS', '10'))
 SOURCE_MAX_AGE_DAYS = int(os.getenv('SOURCE_MAX_AGE_DAYS', '30'))
-POLICY_URL = 'https://handasa.herzliya.muni.il/wp-content/uploads/2025/09/מדיניות-בניה-חלופת-שקד-מאושרת-בועדה-המקומית-769-מונגשת.pdf'
+# מסמך המדיניות המצוטט בכל שער ב-rules.py. נבדק 13.09.2026: מחזיר 200,
+# והטקסט זהה ל-layer_a/data/policy_shaked_apr2026.pdf.
+# הכתובת הקודמת (‎/2025/09/‎, ועדה 769) החזירה 404 — כלומר כל תיק שנמסר
+# ציטט קישור מת. אותה כתובת נמצאת גם ב-layer_a/data/documents.json,
+# ולכן check_documents.py יתפוס אם היא תישבר שוב.
+# אזהרה: גרסת ועדה 769 מספטמבר 2025 אינה זהה — שם תקרת הדירות היא
+# 32 יח"ד לדונם, ולא מכפיל 2.8–3.18 על המצב הקיים. אין להשתמש בה.
+POLICY_URL = 'https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/%D7%9E%D7%93%D7%99%D7%A0%D7%99%D7%95%D7%AA-%D7%91%D7%A0%D7%99%D7%94-%D7%97%D7%9C%D7%95%D7%A4%D7%AA-%D7%A9%D7%A7%D7%93-%D7%90%D7%A4%D7%A8%D7%99%D7%9C-2026.pdf'
 RULE_VERSION = 'herzliya-policy-2026-02-17-v2'
 TEMPLATE_VERSION = 'dossier-1'
 CITY_PROFILES = {
