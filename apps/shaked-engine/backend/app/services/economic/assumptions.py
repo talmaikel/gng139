@@ -45,6 +45,33 @@ class EconomicAssumptionSet:
     demolition_cost_per_unit_ils: Assumption
     soft_cost_ratio: Assumption
     developer_profit_target_ratio: Assumption
+
+    # ── שטח נמכר מול שטח בנוי ──
+    main_area_ratio: Assumption
+    underground_ratio: Assumption
+    underground_cost_per_sqm_ils: Assumption
+
+    # ── פיצוי הדיירים ──
+    # The single largest deduction from the developer's share, and until now
+    # `average_existing_unit_sqm` was a bare `70.0` default inside
+    # FeasibilityInput that the worker never passed and the dossier never
+    # reported. Between a 55 sqm and a 95 sqm average the projected profit
+    # moves by millions on a typical candidate. It is MISSING rather than
+    # ESTIMATE because it is knowable: it is in the gramushka and the
+    # building permit, and guessing it is exactly what the PRD forbids.
+    average_existing_unit_sqm: Assumption
+    tenant_compensation_sqm_per_existing_unit: Assumption
+    tenant_rent_months: Assumption
+    tenant_monthly_rent_ils: Assumption
+    tenant_moving_cost_ils: Assumption
+    tenant_legal_cost_per_unit_ils: Assumption
+
+    # ── שיעורים ──
+    marketing_ratio: Assumption
+    guarantees_ratio: Assumption
+    finance_ratio: Assumption
+    betterment_levy_ratio: Assumption
+    vat_rate: Assumption
     # The single largest deduction from the developer's share, and until now
     # it was a bare `70.0` default inside FeasibilityInput that the worker
     # never passed and the dossier never reported. Between a 55 sqm and a
@@ -82,16 +109,57 @@ class EconomicAssumptionSet:
 
 HERZLIYA_2026_V1 = EconomicAssumptionSet(
     city_code="herzliya",
-    version="2026-v1",
+    version="2026-v2",
     effective_date=date(2026, 1, 1),
     sale_price_per_sqm_ils=Assumption(45_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm"),
-    construction_cost_per_sqm_ils=Assumption(8_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm"),
+    construction_cost_per_sqm_ils=Assumption(
+        10_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm",
+        source="‏8,000 לא היה ריאלי; טווח 9,500-11,000 לבנייה רוויה עם חניון"),
     demolition_cost_per_unit_ils=Assumption(150_000.0, AssumptionStatus.ESTIMATE, "ILS/unit"),
     soft_cost_ratio=Assumption(0.15, AssumptionStatus.ESTIMATE, "ratio"),
     developer_profit_target_ratio=Assumption(0.20, AssumptionStatus.ESTIMATE, "ratio"),
+
+    main_area_ratio=Assumption(
+        0.78, AssumptionStatus.ESTIMATE, "ratio",
+        source="תקרת 400% כוללת שטחי שירות וממ״ד (§70ב(א)(1)); רק העיקרי נמכר במחיר דירה"),
+    underground_ratio=Assumption(
+        0.40, AssumptionStatus.ESTIMATE, "ratio",
+        source="חניון תת-קרקעי אינו נספר בתקרה אך נבנה ומשולם"),
+    underground_cost_per_sqm_ils=Assumption(6_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm"),
+
     average_existing_unit_sqm=Assumption(
         70.0, AssumptionStatus.MISSING, "sqm",
         source="נדרש מהגרמושקה או מהיתר הבנייה — 70 הוא מציין מקום לחישוב, לא נתון"),
+    tenant_compensation_sqm_per_existing_unit=Assumption(
+        25.0, AssumptionStatus.ESTIMATE, "sqm", source="תוספת מקובלת בהתחדשות עירונית"),
+    tenant_rent_months=Assumption(
+        42.0, AssumptionStatus.ESTIMATE, "months", source="תקופת בנייה 3.5 שנים"),
+    tenant_monthly_rent_ils=Assumption(
+        7_500.0, AssumptionStatus.ESTIMATE, "ILS/month",
+        source="שכ״ד לדירת 4 חדרים בהרצליה — טווח, לא נתון שנשלף"),
+    tenant_moving_cost_ils=Assumption(
+        10_000.0, AssumptionStatus.ESTIMATE, "ILS/unit", source="שתי הובלות"),
+    tenant_legal_cost_per_unit_ils=Assumption(
+        30_000.0, AssumptionStatus.ESTIMATE, "ILS/unit",
+        source="עו״ד ושמאי לדיירים, על חשבון היזם"),
+
+    marketing_ratio=Assumption(
+        0.025, AssumptionStatus.ESTIMATE, "ratio",
+        source="שיווק ותיווך, טווח מקובל 2%-3% מההכנסות"),
+    guarantees_ratio=Assumption(
+        0.0125, AssumptionStatus.ESTIMATE, "ratio",
+        source="ערבויות חוק המכר וביטוח, 1%-1.5% מההכנסות"),
+    finance_ratio=Assumption(
+        0.06, AssumptionStatus.ESTIMATE, "ratio",
+        source="ליווי בנקאי וריבית, טווח מקובל 5%-7% מהעלויות"),
+    # ‏50% מההשבחה. בפינוי-בינוי ובתמ״א 38 היו פטורים; **האם קיים פטור
+    # בחלופת שקד לפי תיקון 139 טרם נבדק.** הוא לבדו יכול להכריע פרויקט,
+    # ולכן הוא MISSING עם ערך 0 — לא מנוכה בשקט, וגם לא מדווח כמוכן.
+    betterment_levy_ratio=Assumption(
+        0.0, AssumptionStatus.MISSING, "ratio",
+        source="היטל השבחה 50% מההשבחה — קיומו של פטור בתיקון 139 שאלה פתוחה לעו״ד"),
+    vat_rate=Assumption(0.18, AssumptionStatus.DATA, "ratio",
+                        source="שיעור המע״מ בישראל"),
 )
 
 ASSUMPTIONS_BY_CITY: dict[str, EconomicAssumptionSet] = {

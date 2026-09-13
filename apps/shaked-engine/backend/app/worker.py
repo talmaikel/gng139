@@ -176,6 +176,20 @@ async def generate_dossier_handler(payload: dict) -> dict:
                     # schema default of 70 sqm -- the largest single deduction
                     # from the developer's share, undeclared and unreported.
                     average_existing_unit_sqm=assumptions.average_existing_unit_sqm.value,
+                    tenant_compensation_sqm_per_existing_unit=(
+                        assumptions.tenant_compensation_sqm_per_existing_unit.value),
+                    main_area_ratio=assumptions.main_area_ratio.value,
+                    underground_ratio=assumptions.underground_ratio.value,
+                    underground_cost_per_sqm=assumptions.underground_cost_per_sqm_ils.value,
+                    tenant_rent_months=assumptions.tenant_rent_months.value,
+                    tenant_monthly_rent_ils=assumptions.tenant_monthly_rent_ils.value,
+                    tenant_moving_cost_ils=assumptions.tenant_moving_cost_ils.value,
+                    tenant_legal_cost_per_unit_ils=assumptions.tenant_legal_cost_per_unit_ils.value,
+                    marketing_ratio=assumptions.marketing_ratio.value,
+                    guarantees_ratio=assumptions.guarantees_ratio.value,
+                    finance_ratio=assumptions.finance_ratio.value,
+                    betterment_levy_ratio=assumptions.betterment_levy_ratio.value,
+                    vat_rate=assumptions.vat_rate.value,
                 ),
                 missing_inputs=assumptions.blocking(),
             )
