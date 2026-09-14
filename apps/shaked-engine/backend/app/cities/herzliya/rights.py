@@ -60,8 +60,6 @@ PARKING_URL = (
     "%D7%AA%D7%A7%D7%9F-%D7%97%D7%A0%D7%99%D7%94-2025-"
     "%D7%9B%D7%95%D7%9C%D7%9C-%D7%94%D7%97%D7%9C%D7%98%D7%AA-%D7%94%D7%95%D7%A2%D7%93%D7%94.pdf"
 )
-RULE_VERSION = "herzliya-shaked-2026-02-17"
-
 # שני הקבועים נשענים על מדידה ידנית ב-GovMap (D1, 14.09.2026):
 # ‏POC/layer_a/validation/street_width.csv ו-d1_followup.json.
 #
