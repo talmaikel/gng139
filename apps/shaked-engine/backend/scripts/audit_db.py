@@ -10,6 +10,7 @@
 
     .venv/bin/python scripts/audit_db.py
 """
+import argparse
 import asyncio
 import json
 import sys
@@ -66,8 +67,9 @@ def _ratios(o: Opportunity) -> list[str]:
     return bad
 
 
-async def main() -> int:
+async def main(args) -> int:
     findings: list[str] = []
+    fatal: list[str] = []
     async with AsyncSessionLocal() as s:
         # ── ב · ביקורת המיון: לדרג כמו שהלקוח ידרג, ולקרוא את הראש ──
         for name, (col, label) in SORTABLE.items():
@@ -102,6 +104,28 @@ async def main() -> int:
             select(func.count(func.distinct(FieldEvidence.opportunity_id)))
             .where(FieldEvidence.source_url.like("%complot.co.il%")))).scalar_one()
 
+        # ── שערי CI ──
+        #
+        # מופרדים מ-`findings` **בכוונה**. ממצא הוא ״מספר נראה מוזר״ —
+        # מדווחים ומסתכלים. שער הוא ״המוצר אינו עובד״ — אין מה לשקול.
+        # ב-14.09.2026 כל 699 ההזדמנויות איבדו את ההערכה השמורה כי
+        # הזריעה רצה בלי שלב ההערכה, ואף בדיקה לא נצבעה באדום: המסך
+        # היה מציג רשימה ריקה ליזם, בלי שגיאה ובלי סימן.
+        if args.require_assessment and total:
+            without = await count(Opportunity.metadata_json["assessment"].is_(None))
+            if without:
+                fatal.append(
+                    f"{without} מתוך {total} הזדמנויות בלי ההערכה השמורה. "
+                    "הזריעה רצה בלי שלב ההערכה — ההצלה היא "
+                    "`refresh()` מ-app/cities/herzliya/assessments.py")
+        if total and deliverable < args.min_deliverable:
+            fatal.append(
+                f"ניתנים למסירה: {deliverable}, מתחת לרצפה {args.min_deliverable}. "
+                "אין מה למסור ללקוח.")
+        if total and screenable < args.min_screenable:
+            fatal.append(
+                f"נשארים במסלול: {screenable}, מתחת לרצפה {args.min_screenable}.")
+
         print("\n── שלמות ──")
         for k, v in [("סה״כ", total), ("screenable", screenable), ("deliverable", deliverable),
                      ("בלי ספירת דירות", no_units), ("בלי תקרת 400%", no_cap),
@@ -118,15 +142,30 @@ async def main() -> int:
                 findings.append(f"שלמות · {k}: {got[k]} מול בסיס {want} — ירידה")
 
     print("\n" + ("=" * 50))
+    if fatal:
+        print(f"🟥 {len(fatal)} כשלים חוסמים")
+        for f in fatal:
+            print("  ·", f)
     if findings:
         print(f"⚠️  {len(findings)} ממצאים")
         for f in findings:
             print("  ·", f)
-    else:
+    if not fatal and not findings:
         print("✅ אין ממצאים במסד")
-    print(json.dumps({"findings": findings}, ensure_ascii=False))
-    return 1 if findings else 0
+    print(json.dumps({"fatal": fatal, "findings": findings}, ensure_ascii=False))
+
+    # ‏2 = המוצר שבור · 1 = יש מה להסתכל עליו · 0 = נקי.
+    # שני קודים ולא אחד, כדי שה-CI יוכל להיכשל על השני ולא על הראשון:
+    # ממצא שמפיל בנייה מאמן אנשים להתעלם מהבדיקה.
+    return 2 if fatal else (1 if findings else 0)
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    ap = argparse.ArgumentParser(description="ביקורת נתונים — קריאה בלבד")
+    ap.add_argument("--require-assessment", action="store_true",
+                    help="כשל חוסם אם הזדמנות כלשהי חסרת ההערכה השמורה")
+    ap.add_argument("--min-deliverable", type=int, default=0,
+                    help="רצפה לכמות הניתנים למסירה; מתחתיה כשל חוסם")
+    ap.add_argument("--min-screenable", type=int, default=0,
+                    help="רצפה לכמות הנשארים במסלול המגרשי")
+    sys.exit(asyncio.run(main(ap.parse_args())))
