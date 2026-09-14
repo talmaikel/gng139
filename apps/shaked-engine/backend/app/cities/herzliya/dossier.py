@@ -38,6 +38,7 @@ from app.services.economic.betterment import (
 )
 from app.services.market_data.repository import find_latest_valuation
 from app.services.economic.calculator import calculate_feasibility
+from app.services.economic.construction_costs import resolve_construction_cost_per_sqm
 from app.services.economic.schemas import FeasibilityInput
 from app.services.evidence_store import fields_for, stale_fields
 
@@ -435,10 +436,15 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
     #
     # ‏**מה שלא השתנה:** שדה שאין לו בכלל ערך עדיין חוסם. זה לא ויתור
     # על הכלל אלא צמצום שלו למה שבאמת חסר.
+    #
+    # B2: construction_cost_per_sqm_ils gets the same treatment -- it is
+    # unconditionally MISSING in the library (see assumptions.py), and the
+    # resolution below (developer figure > appraisers' survey by building
+    # height > that placeholder) decides whether it actually blocks.
     SOFTENED = {"betterment_base_ils"}
     if live["unit_area"]["value"] is not None:
         SOFTENED = SOFTENED | {"average_existing_unit_sqm"}
-    blocking = [k for k in a.blocking() if k not in SOFTENED]
+    blocking = [k for k in a.blocking() if k not in SOFTENED and k != "construction_cost_per_sqm_ils"]
     base = {
         "assumptions_version": a.version,
         "assumptions_effective_date": a.effective_date.isoformat(),
@@ -454,12 +460,35 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
                 "is_deliverable": False,
                 "why": "אין תקרת זכויות מבוססת, ולכן לא מחושב תרחיש (DOS-03)"}
 
+    # B2: the same resolution worker.py uses for the on-demand pipeline --
+    # a.construction_cost_per_sqm_ils is a placeholder only (see
+    # assumptions.py) and must never decide a scenario directly. `floors`
+    # lets this pick the survey's actual height band for this building
+    # instead of averaging across all three; worker.py has no rights
+    # assessment to read a floor count from, so it always averages.
+    #
+    # `floors_low` rather than `floors_high`: `rights.floors()` scans the
+    # street-width measurement's tolerance band and returns the minimum and
+    # maximum permitted floor count across it. `floors_low` is the
+    # conservative, guaranteed-at-least figure; `floors_high` is the
+    # optimistic end of the same uncertainty. Pricing construction off the
+    # optimistic count would understate cost whenever the true width lands
+    # on the low side of the tolerance band.
+    floors_range = assessment.get("floors") or {}
+    floors = floors_range.get("low")
+    construction_cost = resolve_construction_cost_per_sqm(opp.city_code, None, floors=floors)
+    if construction_cost.value_ils_per_sqm is None:
+        blocking.append("construction_cost_per_sqm_ils")
+        construction_cost_per_sqm = a.construction_cost_per_sqm_ils.value
+    else:
+        construction_cost_per_sqm = construction_cost.value_ils_per_sqm
+
     inputs = FeasibilityInput(
             plot_area_sqm=opp.area_sqm,
             existing_units=opp.existing_units,
             buildable_area_sqm=cap,
             sale_price_per_sqm=live["sale_price"]["value"],
-            construction_cost_per_sqm=a.construction_cost_per_sqm_ils.value,
+            construction_cost_per_sqm=construction_cost_per_sqm,
             soft_cost_ratio=a.soft_cost_ratio.value,
             demolition_cost_per_unit=a.demolition_cost_per_unit_ils.value,
             developer_profit_target_ratio=a.developer_profit_target_ratio.value,
@@ -483,7 +512,26 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
     result = calculate_feasibility(inputs, missing_inputs=blocking)
     betterment = _betterment(inputs, a, live, cap,
                              _numeric(fields.get("existing_area")), result)
-    return {**base, "scenario": result.model_dump(),
+    return {**base,
+            # דורס את הערך-מציין-מקום מ-a.report(): הנתון בפועל הגיע
+            # מהרזולוציה למעלה (סקר השמאים לפי גובה בניין), לא מההנחה
+            # הגרסתית.
+            "assumptions": {
+                **base["assumptions"],
+                "construction_cost_per_sqm_ils": {
+                    "value": construction_cost_per_sqm,
+                    "status": construction_cost.status,
+                    "unit": "ILS/sqm",
+                    "source": construction_cost.source,
+                    "method": construction_cost.method,
+                    "as_of_date": (
+                        construction_cost.as_of_date.isoformat() if construction_cost.as_of_date else None
+                    ),
+                    "label": ASSUMPTION_LABEL.get("construction_cost_per_sqm_ils",
+                                                  "construction_cost_per_sqm_ils"),
+                },
+            },
+            "scenario": result.model_dump(),
             "live_inputs": live,
             "betterment": betterment,
             "inputs_missing": result.inputs_missing,

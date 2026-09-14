@@ -10,15 +10,21 @@ from pydantic import ValidationError
 from app.services.economic.assumptions import (
     Assumption, AssumptionStatus, get_assumptions)
 from app.services.economic.calculator import calculate_feasibility as calc
+from app.services.economic.construction_costs import resolve_construction_cost_per_sqm
 from app.services.economic.schemas import FeasibilityInput as FI
 
 # מועמד טיפוסי במלאי: 952 מ״ר מגרש, 7 דירות, תקרת 400% = 3,396 מ״ר.
 # המחירים נלקחים מספריית ההנחות ולא נכתבים כאן שוב — שני מקורות אמת היו
 # מאפשרים לספרייה להתעדכן בעוד הבדיקות ממשיכות לאשר את הערכים הישנים.
 _A = get_assumptions("herzliya")
+# עלות הבנייה **אינה** נלקחת מ-`_A.construction_cost_per_sqm_ils` — השדה הזה
+# הוא כיום מציין מקום בלבד (B2). מה שהתסריט האמיתי משתמש בו הוא התוצאה של
+# `resolve_construction_cost_per_sqm`, בדיוק כפי ש-worker.py קורא לה.
+_CONSTRUCTION_COST_PER_SQM = resolve_construction_cost_per_sqm(
+    "herzliya", developer_value=None).value_ils_per_sqm
 BASE = dict(plot_area_sqm=952.0, existing_units=7, buildable_area_sqm=3396.0,
             sale_price_per_sqm=_A.sale_price_per_sqm_ils.value,
-            construction_cost_per_sqm=_A.construction_cost_per_sqm_ils.value)
+            construction_cost_per_sqm=_CONSTRUCTION_COST_PER_SQM)
 
 
 # ── ECO-01 · החישוב ──
@@ -37,7 +43,7 @@ def test_construction_is_paid_on_everything_built_and_sold_on_main_area_only():
     """תקרת ה-400% כוללת שטחי שירות וממ״ד — נבנים, לא נמכרים במחיר דירה.
     והחניון התת-קרקעי אינו נספר בתקרה כלל אבל כן משולם."""
     r = calc(FI(**BASE))
-    assert r.total_construction_cost_ils == 3396.0 * _A.construction_cost_per_sqm_ils.value
+    assert r.total_construction_cost_ils == 3396.0 * _CONSTRUCTION_COST_PER_SQM
     assert r.constructed_area_sqm == 3396.0 * 1.40                # ועוד חניון
     assert r.total_underground_cost_ils > 0
     assert r.sellable_main_sqm == pytest.approx(3396.0 * 0.78)    # ורק זה נמכר
@@ -92,12 +98,17 @@ def test_a_building_that_cannot_rehouse_its_own_tenants_says_so(session=None):
 
 
 def test_the_target_is_compared_and_not_assumed():
-    """המועמד הטיפוסי מחזיר ~17% — **מתחת** ליעד המקובל של 20%. הבדיקה
-    הזו ציפתה בתחילה שהוא יעבור, וזו הייתה ההנחה ולא הממצא."""
+    """המועמד הטיפוסי מחזיר כ-34.5% -- **מעל** היעד המקובל של 20%.
+
+    לפני B2 המספר נשען על עלות בנייה שהוערכה ידנית (10,000 ₪/מ״ר, טווח לא
+    מבוסס), וההחזר נראה גבולי -- כ-17%, מתחת ליעד. אחרי שעלות הבנייה
+    הוחלפה בסקר עלויות אמיתי של לשכת שמאי מקרקעין בישראל (יוני 2026, ממוצע
+    ~7,367 ₪/מ״ר להרצליה+רמת השרון), אותו מועמד בדיוק נמצא **מעל** היעד.
+    זו הייתה ההערכה שהשתנתה, לא הפרויקט."""
     r = calc(FI(**BASE))
-    assert 0.15 < r.profit_margin_on_cost_ratio < 0.20
-    assert not calc(FI(**BASE, developer_profit_target_ratio=0.20)).meets_developer_target
-    assert calc(FI(**BASE, developer_profit_target_ratio=0.10)).meets_developer_target
+    assert 0.30 < r.profit_margin_on_cost_ratio < 0.40
+    assert calc(FI(**BASE, developer_profit_target_ratio=0.20)).meets_developer_target
+    assert not calc(FI(**BASE, developer_profit_target_ratio=0.40)).meets_developer_target
 
 
 # ── ECO-02 · ״לעולם לא להציג אומדן כנתון מאומת״ ──
@@ -121,7 +132,14 @@ def test_a_missing_assumption_blocks_delivery_without_blocking_the_calculation()
     שום הנחה לא נשאה אותו ושום קוד לא קרא אותו. תסריט על מציין מקום עדיין
     שימושי לחשיבה; הוא פשוט אינו נמסר."""
     a = get_assumptions("herzliya")
-    assert a.blocking() == ["average_existing_unit_sqm", "betterment_base_ils"]
+    # construction_cost_per_sqm_ils is MISSING here too -- at the raw
+    # assumptions-library level, before worker.py/dossier.py resolve it via
+    # the developer's own figure or the appraisers' regional survey (B2, see
+    # services/economic/construction_costs.py). This assertion is about the
+    # library alone, not that resolution.
+    assert a.blocking() == [
+        "average_existing_unit_sqm", "betterment_base_ils", "construction_cost_per_sqm_ils",
+    ]
     r = calc(FI(**BASE), missing_inputs=a.blocking())
     assert r.projected_profit_ils > 0          # חושב
     assert r.is_deliverable is False           # ולא נמסר
