@@ -117,6 +117,25 @@ class AsyncPublicClient:
         self._write_cache(key, response.content, meta)
         return response.content, meta
 
+    async def get_ephemeral(
+        self,
+        url: str,
+        params: dict[str, Any] | None = None,
+        *,
+        headers: dict | None = None,
+    ) -> tuple[bytes, dict[str, Any]]:
+        """Fetch without retaining the response body on disk.
+
+        Architectural plans are processed in memory and must be deleted after
+        extraction under ``DATA_LAW.md``. Removing the URL's legacy cache entry
+        first also cleans up a copy that an older version may have written.
+        """
+        url = final_url(url, params)
+        key = hashlib.sha256(url.encode()).hexdigest()
+        self._delete_cache(key)
+        response = await self._fetch("GET", url, headers=headers)
+        return response.content, self._meta(url, response)
+
     async def json(self, url: str, params: dict[str, Any] | None = None, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
         body, meta = await self.get(url, params, **kwargs)
         return self._parse_json(body, meta), meta
@@ -216,3 +235,8 @@ class AsyncPublicClient:
         tmp = meta_path.with_suffix(".tmp")
         tmp.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
         tmp.replace(meta_path)
+
+    def _delete_cache(self, key: str) -> None:
+        """Remove only the exact cached response identified by ``key``."""
+        for suffix in (".bin", ".json", ".tmp"):
+            (self.cache_dir / f"{key}{suffix}").unlink(missing_ok=True)

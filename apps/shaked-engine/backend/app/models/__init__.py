@@ -1,4 +1,5 @@
 from app.models.building import Building
+from app.models.dwelling_unit import DwellingUnit
 from app.models.evidence import FieldEvidence
 from app.models.market_data import MarketValuationRun, PropertyTransaction
 from app.models.opportunity import Opportunity
@@ -13,6 +14,7 @@ __all__ = [
     "Opportunity",
     "FieldEvidence",
     "Building",
+    "DwellingUnit",
     "Package",
     "Delivery",
     "PropertyTransaction",

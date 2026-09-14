@@ -1,3 +1,5 @@
+import hashlib
+
 import httpx
 import pytest
 
@@ -36,6 +38,34 @@ async def test_cache_retains_original_retrieval_time(tmp_path):
     _, first = await client.json("https://example.org")
     _, second = await client.json("https://example.org")
     assert first == second and len(calls) == 1
+
+
+async def test_ephemeral_fetch_never_writes_response_body(tmp_path):
+    client, _ = make_client(
+        tmp_path, lambda request: httpx.Response(200, content=b"protected-plan")
+    )
+    body, meta = await client.get_ephemeral("https://example.org/plan.pdf")
+    assert body == b"protected-plan"
+    assert meta["sha256"] == hashlib.sha256(body).hexdigest()
+    assert list(tmp_path.iterdir()) == []
+
+
+async def test_ephemeral_fetch_removes_legacy_cache_for_exact_url(tmp_path):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, content=b"current-plan")
+
+    client, _ = make_client(tmp_path, handler)
+    url = "https://example.org/plan.pdf"
+    await client.get(url)
+    assert list(tmp_path.iterdir())
+
+    body, _ = await client.get_ephemeral(url)
+    assert body == b"current-plan"
+    assert len(calls) == 2
+    assert list(tmp_path.iterdir()) == []
 
 
 # ---- added with the port ---------------------------------------------------------

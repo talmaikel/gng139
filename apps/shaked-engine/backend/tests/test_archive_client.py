@@ -57,6 +57,7 @@ async def test_download_refuses_an_untrusted_host_before_any_request(tmp_path):
         await client.download(ArchiveDocument(tik_id="1", url="https://evil.example.com/permit.pdf"))
     assert calls == []
     assert await client.download(ArchiveDocument(tik_id="1", url="https://archive.gis-net.co.il/Herzeliya/p.pdf")) == b"%PDF-1.4"
+    assert list(tmp_path.iterdir()) == []
 
 
 async def test_streets_keep_herzliya_only_and_drop_duplicates(tmp_path):

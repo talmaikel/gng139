@@ -188,11 +188,17 @@ class HerzliyaArchiveClient:
         return [ArchiveDocument(tik_id=tik_id, url=url) for url in links]
 
     async def download_with_source(self, document: ArchiveDocument) -> tuple[bytes, dict[str, Any]]:
-        """The document's bytes and its source record (URL, retrieval time, SHA-256), for evidence."""
+        """Fetch a plan ephemerally and return only bytes plus source metadata.
+
+        ``DATA_LAW.md`` allows retaining extracted facts, not the architectural
+        plan itself. ``get_ephemeral`` therefore bypasses the persistent public
+        source cache and removes any legacy cache entry for this exact URL.
+        The caller processes the returned bytes in memory.
+        """
         host = httpx.URL(document.url).host
         if host not in ALLOWED_DOCUMENT_HOSTS:
             raise HerzliyaArchiveError(f"Refusing to download from untrusted host: {host}")
-        return await self._public.get(document.url)
+        return await self._public.get_ephemeral(document.url)
 
     async def download(self, document: ArchiveDocument) -> bytes:
         content, _ = await self.download_with_source(document)

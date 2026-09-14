@@ -25,6 +25,7 @@ The main user flow is:
 | Backend API | `backend/app/api/` | Authentication, candidates, filters, dossiers and feasibility endpoints |
 | City rules | `backend/app/cities/` | City-specific screening and archive integrations behind shared interfaces |
 | Evidence | `backend/app/evidence.py`, `backend/app/models/evidence.py` | Source, retrieval time and certainty for observed fields |
+| Dwelling units | `backend/app/models/dwelling_unit.py`, `backend/app/services/dwelling_units.py` | Per-apartment permitted areas, provenance, review state and resolution |
 | Geometry | `backend/app/geo.py` | Israeli-grid conversion and parcel/building spatial operations |
 | Document pipeline | `backend/app/pipeline/` | PDF processing, OCR and structured extraction |
 | Economic service | `backend/app/services/economic/` | Versioned assumptions and feasibility calculations |
@@ -40,9 +41,15 @@ documents, extracted building information, versioned economic assumptions and
 local comparable sales. Missing required planning inputs remain explicit and
 block a completed feasibility result; they are not silently replaced by facts.
 
-AI-assisted document extraction is treated as reviewable evidence. Source
-records, derived values and calculation assumptions retain their status so a
-consumer can distinguish data from estimates.
+When a permit page contains a dwelling schedule, the extractor records one row
+per apartment with its permitted area, unit label, floor, source, retrieval
+time, document digest, extraction method and review state. OCR and AI readings
+remain candidates until a person confirms them. A complete confirmed schedule
+may replace the city-wide existing-unit-area assumption; an incomplete or
+unreviewed schedule is displayed but cannot silently drive a deliverable
+scenario. A footprint-derived average remains an explicitly labelled estimate.
+The plan is processed in memory and is not written to the source cache; only
+the extracted facts and the document digest are retained.
 
 ## Comparable-sales pipeline
 
@@ -87,21 +94,23 @@ The principal entities are:
 - `tenants` and `users` for company-scoped access.
 - `opportunities` and `buildings` for parcel and building identity.
 - `field_evidence` for sourced observations and certainty.
+- `dwelling_units` for per-apartment permitted areas and review status.
 - `packages`, `balances`, `reservations` and `deliveries` for the commercial
   workflow.
 - `task_queue` for asynchronous work.
 - `property_transactions` for factual comparable-sale records.
 - `market_valuation_runs` for dated calculation snapshots.
 
-Migration `0007_add_market_data` adds the two market-data tables after the
-delivery-ledger migration.
+Migration `0008_dwelling_units` follows the market-data migration and adds
+the per-apartment records.
 
 ## Verification
 
-The backend test suite covers the market-data coordinate conversion, upstream
-record filtering, room segmentation, outlier handling, explicit-unit-mix
-blending and concurrency-safe transaction upserts. Database-backed tests run
-when a compatible test database is available.
+The backend test suite covers market-data valuation as well as dwelling-unit
+schedule parsing, count conflicts, plausibility checks, review gates and
+fallback behavior. Database-backed tests run when a compatible test database
+is available.
 
-Before production use, market-source terms, valuation methodology and material
-commercial assumptions should be reviewed by the appropriate professional.
+Before production use, source terms, extraction quality, valuation methodology
+and material commercial assumptions should be reviewed by the appropriate
+professional.
