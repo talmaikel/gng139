@@ -165,6 +165,64 @@ def _select_buildable_area(extraction_results: list[dict], plot_area_sqm: float 
     return None, "insufficient_planning_basis"
 
 
+def _select_observed_floor_count(extraction_results: list[dict]) -> dict:
+    """Summarize explicit whole-building floor counts read from permit sheets.
+
+    This is intentionally an observation, not a Shaked-eligibility decision.
+    A permit sheet can be old, and legal floor counting can treat pilotis or a
+    small upper floor differently. Conflicting documents therefore produce a
+    conflict instead of one silently winning.
+    """
+    candidates = [r for r in extraction_results if r.get("declared_floor_count") is not None]
+    if not candidates:
+        return {
+            "value": None,
+            "status": "missing",
+            "requires_human_review": True,
+            "has_conflict": False,
+            "candidates": [],
+            "notes": "No explicit whole-building floor count was read from the scanned permit sheets.",
+        }
+
+    values = {int(r["declared_floor_count"]) for r in candidates}
+    audit_candidates = [
+        {
+            "value": int(r["declared_floor_count"]),
+            "page_ref": r.get("page_ref"),
+            "source_url": r.get("source_url"),
+            "method": r.get("method"),
+            "confidence": r.get("confidence"),
+        }
+        for r in candidates
+    ]
+    if len(values) > 1:
+        return {
+            "value": None,
+            "status": "conflict",
+            "requires_human_review": True,
+            "has_conflict": True,
+            "candidates": audit_candidates,
+            "notes": "Different permit sheets state different whole-building floor counts; no value was selected automatically.",
+        }
+
+    value = values.pop()
+    best = max(candidates, key=lambda r: float(r.get("confidence") or 0.0))
+    return {
+        "value": value,
+        "status": "observed_unverified",
+        "requires_human_review": True,
+        "has_conflict": False,
+        "candidates": audit_candidates,
+        "page_ref": best.get("page_ref"),
+        "source_url": best.get("source_url"),
+        "method": best.get("method"),
+        "confidence": best.get("confidence"),
+        "notes": (
+            "Explicitly stated on a scanned permit sheet. This is not yet a legal/planning floor-count determination and must be human-verified before eligibility use."
+        ),
+    }
+
+
 async def _opportunity_centroid(session, opportunity_id: uuid.UUID) -> tuple[float, float]:
     statement = select(
         func.ST_Y(func.ST_Centroid(Opportunity.geom)),
@@ -265,6 +323,7 @@ async def generate_dossier_handler(payload: dict) -> dict:
                         "source_url": document_source.get("url"),
                         "units_read": len(extraction.units),
                         "declared_unit_count": extraction.declared_unit_count,
+                        "declared_floor_count": extraction.declared_floor_count,
                         "units_total_area_sqm": extraction.units_total_area_sqm,
                     }
                 )
@@ -274,6 +333,7 @@ async def generate_dossier_handler(payload: dict) -> dict:
                     best_schedule_plausible_count = len(usable_units)
 
         dossier["extraction_results"] = extraction_results
+        dossier["observed_floor_count"] = _select_observed_floor_count(extraction_results)
 
         # Persist the per-apartment detail itself, not just its sum: tenant
         # compensation is allocated per household, and a total cannot be
@@ -456,6 +516,7 @@ async def generate_dossier_handler(payload: dict) -> dict:
             # A schedule was read but nobody has confirmed it yet: the areas
             # are in the dossier and must not be acted on until they are.
             or any(u.requires_human_review for u in stored_units)
+            or dossier["observed_floor_count"]["requires_human_review"]
         )
 
         # This handler now writes (dwelling_units); it used to be read-only.
