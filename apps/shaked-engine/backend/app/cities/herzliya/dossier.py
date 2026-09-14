@@ -32,6 +32,9 @@ from app.models.opportunity import Opportunity
 from app.models.package import Delivery
 from app.services.dwelling_units import load_units, resolve_existing_unit_area
 from app.services.economic.assumptions import get_assumptions
+from app.services.economic.betterment import (
+    breakeven_betterment, breakeven_land_value_per_right,
+)
 from app.services.market_data.repository import find_latest_valuation
 from app.services.economic.calculator import calculate_feasibility
 from app.services.economic.schemas import FeasibilityInput
@@ -212,7 +215,13 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
     valuation = await find_latest_valuation(
         session, opportunity_id=opp.id,
         max_age_days=get_settings().source_max_age_days)
-    if valuation and valuation.blended_price_per_sqm_ils:
+    # ‏**`is_unit_mix_adjusted` — הגייט הזה הוא של חן, מ-PR #12.**
+    # ‏B1 מחשב מחיר משוקלל *מתוך* תמהיל דירות. משקל שנגזר מתמהיל מומצא
+    # מייבא הנחה בשקט ומציג אותה כנתון מעסקאות. הגרסה הראשונה שלי
+    # השתמשה בכל הערכה שנמצאה, וכך החלישה כלל שהוא בנה ב-B1. כשהתמהיל
+    # אינו מפורש ומלא — נשארים על הנחת העיר, וההערכה עדיין נחשפת בתיק.
+    if (valuation and valuation.blended_price_per_sqm_ils
+            and valuation.is_unit_mix_adjusted):
         out["sale_price"] = {
             "value": valuation.blended_price_per_sqm_ils,
             "resolved": True,
@@ -228,7 +237,13 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
         out["sale_price"] = {
             "value": a.sale_price_per_sqm_ils.value, "resolved": False,
             "certainty": Certainty.ESTIMATE.value,
-            "label": "אומדן אחיד לעיר — לא נמצאה הערכת שווי עדכנית לחלקה",
+            "label": ("אומדן אחיד לעיר — יש הערכת שווי לחלקה, אך תמהיל "
+                      "הדירות אינו מפורש ומלא, ולכן המחיר המשוקלל אינו מכריע"
+                      if valuation else
+                      "אומדן אחיד לעיר — לא נמצאה הערכת שווי עדכנית לחלקה"),
+            # ההערכה נחשפת גם כשאינה מכריעה: היזם רואה את העסקאות.
+            "valuation_present": valuation is not None,
+            "comparable_count": valuation.comparable_count if valuation else None,
         }
 
     # ── שטח דירה קיימת · B3 ──
@@ -258,6 +273,71 @@ def _numeric(field: dict | None) -> float | None:
         return None
 
 
+# שלוש הקטגוריות שהסף מפצל אליהן. הן אינן ניסוח אלא שדה מדורג, כי
+# המשמעות שלהן שונה לחלוטין: ״אין סף״ אינו ״גבולי מאוד״.
+NO_THRESHOLD, RESILIENT, MARGINAL = "no_threshold", "resilient", "marginal"
+BETTERMENT_CATEGORY_LABEL = {
+    NO_THRESHOLD: "לא כדאי בשום שיעור השבחה — הבעיה אינה ההיטל",
+    RESILIENT: "עמיד — ההשבחה צריכה להיות גבוהה במיוחד כדי לאיין את הכדאיות",
+    MARGINAL: "גבולי — ההשבחה היא שתכריע",
+}
+# מתחת לזה הסף נמוך מכדי לספוג שווי קרקע סביר באזור מרכזי. אומדן גס
+# ומכוון ככזה: הוא מדרג בין מועמדים ואינו קובע כדאיות.
+MARGINAL_LAND_VALUE_ILS = 10_000.0
+
+
+def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None) -> dict[str, Any]:
+    """‏B11 · הסף, ולא אומדן של ההשבחה.
+
+    מפורט ב-`POC/layer_a/data/BETTERMENT_BASE.md`. בקצרה: אנחנו לא
+    יודעים את ההשבחה ולא נמציא אותה. אנחנו יודעים את **כל** שאר
+    הקלטים, ולכן אפשר לחשב את ההשבחה שמאפסת את הרווח ולומר אותה.
+
+    וההיפוך הוא מה שהופך את זה לשימושי: הסף מתורגם ל**שווי מ״ר
+    זכויות** — המקדם היחיד שחסר בשיטה שחברות יזמיות מריצות בפועל.
+    ‏״229 מיליון״ אינו מספר שיזם שופט; ״33,705 ₪ למ״ר זכויות״ כן.
+    """
+    rate = a.betterment_levy_rate.value
+    threshold = breakeven_betterment(
+        lambda x: calculate_feasibility(
+            inputs.model_copy(update={"betterment_base_ils": x}),
+            missing_inputs=[]).projected_profit_ils,
+        rate=rate)
+
+    added = cap - cap / 4 if cap else None          # התקרה היא 400% מהקיים
+    per_right = breakeven_land_value_per_right(
+        threshold, existing_area_sqm=existing_area,
+        existing_value_per_sqm_ils=live["sale_price"]["value"],
+        new_rights_sqm=cap)
+
+    if threshold is None:
+        category = NO_THRESHOLD
+    elif per_right is None or per_right >= MARGINAL_LAND_VALUE_ILS:
+        category = RESILIENT
+    else:
+        category = MARGINAL
+
+    return {
+        "rate": rate,
+        "breakeven_ils": threshold,
+        "breakeven_per_added_sqm_ils": threshold / added if threshold and added else None,
+        # המספר שיזם שופט בשנייה.
+        "breakeven_land_value_per_right_ils": per_right,
+        "category": category,
+        "category_label": BETTERMENT_CATEGORY_LABEL[category],
+        "note": ("הסף אינו שומה ואינו אומדן של ההשבחה. הוא אומר עד היכן "
+                 "הפרויקט סופג אותה. שיעור ההיטל — רבע ההשבחה לפי "
+                 "§19(ב)(10א) — ודאי; הבסיס אינו, ולכן מוצג סף ולא מספר."),
+        # **הסף יורש את כל הקלטים של המחשבון.** כשאחד מהם עדיין אינו
+        # מוכרע — שטח דירה ממוצע, למשל — הסף זז איתו. שתיקה על כך
+        # הייתה הופכת מספר תלוי-הנחה למספר שנראה נחרץ.
+        "rests_on_unresolved_inputs": sorted(
+            k for k, v in {"שטח דירה קיימת ממוצע": live["unit_area"]["resolved"],
+                           "מחיר מכירה למ״ר": live["sale_price"]["resolved"]}.items()
+            if not v),
+    }
+
+
 async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) -> dict[str, Any]:
     """התרחיש הגנרי — ‏PRD 6.4. **אינו דוח שמאי חתום, וזה נכתב בתיק.**"""
     cap = assessment.get("cap_400_sqm")
@@ -285,8 +365,7 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
                 "is_deliverable": False,
                 "why": "אין תקרת זכויות מבוססת, ולכן לא מחושב תרחיש (DOS-03)"}
 
-    result = calculate_feasibility(
-        FeasibilityInput(
+    inputs = FeasibilityInput(
             plot_area_sqm=opp.area_sqm,
             existing_units=opp.existing_units,
             buildable_area_sqm=cap,
@@ -311,11 +390,12 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             betterment_levy_rate=a.betterment_levy_rate.value,
             betterment_base_ils=a.betterment_base_ils.value,
             vat_rate=a.vat_rate.value,
-        ),
-        missing_inputs=blocking,
     )
+    result = calculate_feasibility(inputs, missing_inputs=blocking)
+    betterment = _betterment(inputs, a, live, cap, _numeric(fields.get("existing_area")))
     return {**base, "scenario": result.model_dump(),
             "live_inputs": live,
+            "betterment": betterment,
             "inputs_missing": result.inputs_missing,
             "not_delivered_reason": _not_delivered(result.inputs_missing),
             "is_deliverable": result.is_deliverable,

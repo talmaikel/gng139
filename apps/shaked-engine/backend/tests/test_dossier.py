@@ -254,7 +254,7 @@ async def test_a_stored_valuation_replaces_the_city_wide_estimate(session):
             status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
             fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
             comparable_count=17, comparable_sales=[], room_estimates=[],
-            blended_price_per_sqm_ils=52_300.0),
+            blended_price_per_sqm_ils=52_300.0, is_unit_mix_adjusted=True),
         parameters={"unit_mix_state": "x", "targets": []})
     await session.flush()
 
@@ -312,3 +312,119 @@ async def test_a_partial_schedule_is_shown_but_still_blocks(session):
     assert unit["value"] == 64.0                     # מוצג
     assert unit["resolved"] is False                 # ואינו מכריע
     assert "average_existing_unit_sqm" in d["economics"]["inputs_missing"]
+
+
+@pytest.mark.asyncio
+async def test_a_valuation_without_an_explicit_unit_mix_does_not_decide(session):
+    """‏**הגייט של חן, מ-PR #12.**
+
+    ‏B1 מחשב מחיר משוקלל *מתוך* תמהיל דירות. הערכה שלא הותאמה לתמהיל
+    מפורש נושאת משקלים שנגזרו מהנחה — ולהציג אותה כמחיר מעסקאות זה
+    לייבא הנחה בשקט. הגרסה הראשונה שלי לא בדקה את זה.
+    """
+    from datetime import date, datetime, timezone
+
+    from app.services.market_data.repository import add_valuation_run
+    from app.services.market_data.schemas import MarketValuation, ValuationStatus
+
+    c, _, opp = await _delivered(session, block="9644")
+    add_valuation_run(
+        session, opportunity_id=opp.id,
+        valuation=MarketValuation(
+            status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
+            fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
+            comparable_count=9, comparable_sales=[], room_estimates=[],
+            blended_price_per_sqm_ils=61_000.0, is_unit_mix_adjusted=False),
+        parameters={"unit_mix_state": "inferred", "targets": []})
+    await session.flush()
+
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    price = d["economics"]["live_inputs"]["sale_price"]
+    assert price["resolved"] is False
+    assert price["value"] != 61_000.0            # לא הוכרע
+    assert price["valuation_present"] is True    # אבל כן נחשף
+    assert price["comparable_count"] == 9
+    assert "תמהיל" in price["label"]
+
+
+# ── B11 · סף ההשבחה ──
+
+@pytest.mark.asyncio
+async def test_the_dossier_says_how_much_betterment_the_project_survives(session):
+    """לא מעריכים את ההשבחה — מחשבים עד היכן היא נספגת, ומתרגמים
+    את זה לשווי מ״ר זכויות, שהוא המספר שיזם שופט."""
+    c, _, opp = await _delivered(session, block="9645")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    b = d["economics"]["betterment"]
+
+    assert b["rate"] == 0.25                         # §19(ב)(10א)
+    assert b["category"] in {"no_threshold", "resilient", "marginal"}
+    assert "שומה" in b["note"]                       # נאמר במפורש שזו אינה שומה
+    # והסף אומר על מה הוא עדיין נשען ולא מוצג כנחרץ
+    assert "שטח דירה קיימת ממוצע" in b["rests_on_unresolved_inputs"]
+
+    if b["breakeven_ils"] is not None:
+        assert b["breakeven_ils"] > 0
+        assert b["breakeven_per_added_sqm_ils"] > 0
+    else:
+        # ״אין סף״ הוא ממצא ולא כישלון: אין שיעור השבחה שמציל את החלקה
+        assert b["category"] == "no_threshold"
+        assert "אינה ההיטל" in b["category_label"]
+
+
+def test_the_breakeven_is_solved_numerically_and_not_by_the_formula():
+    """‏`profit(0) / rate` נראה נכון ושוגה בכ-1.5%, כי ההיטל גורר
+    עלויות נגזרות. הבדיקה מוודאת שהסף באמת מאפס את הרווח."""
+    from app.services.economic.betterment import breakeven_betterment
+
+    # רווח לינארי בהיטל, פלוס גרירה של 5% על ההיטל עצמו
+    def profit(base):
+        return 60_000_000 - 0.25 * base * 1.05
+
+    rate = 0.25
+    be = breakeven_betterment(profit, rate=rate)
+    assert be is not None
+    assert abs(profit(be)) < 1.0                     # מאפס בפועל
+    assert abs(be - 60_000_000 / rate) > 1_000_000   # והנוסחה הייתה שוגה
+
+
+def test_a_project_that_loses_money_at_zero_betterment_has_no_threshold():
+    from app.services.economic.betterment import breakeven_betterment
+
+    assert breakeven_betterment(lambda _b: -5_000_000, rate=0.25) is None
+
+
+def test_the_reference_calculation_from_a_developer_is_reproduced_exactly():
+    """חישוב ההתייחסות שהתקבל מחברה יזמית. **שני המספרים אינם מחירי
+    דירות:** ‏26,000 הוא שווי הנכס כפי שהוא לכל מ״ר בנוי, ו-12,000 הוא
+    רכיב הקרקע לכל מ״ר זכויות — לפני שבונים עליו."""
+    from app.services.economic.betterment import REFERENCE, betterment_from_land_values
+
+    r = REFERENCE
+    e = betterment_from_land_values(
+        existing_area_sqm=r["existing_area_sqm"],
+        existing_value_per_sqm_ils=r["existing_value_per_sqm_ils"],
+        new_rights_sqm=r["new_rights_sqm"],
+        land_value_per_right_ils=r["land_value_per_right_ils"])
+    assert e.betterment_ils == pytest.approx(r["betterment_ils"], abs=1)
+    assert e.levy(0.25) == pytest.approx(r["levy_ils"], abs=1)
+
+
+def test_the_developer_method_is_numerically_fragile_and_says_so():
+    """הממצא המרכזי על השיטה: הפרש בין שני מספרים גדולים. ‏10% במקדם
+    אחד מזיזים את ההיטל ב-47%."""
+    from app.services.economic.betterment import (
+        REFERENCE, betterment_from_land_values, sensitivity,
+    )
+
+    r = REFERENCE
+    def levy(existing_value, land_value):
+        return betterment_from_land_values(
+            existing_area_sqm=r["existing_area_sqm"],
+            existing_value_per_sqm_ils=existing_value,
+            new_rights_sqm=r["new_rights_sqm"],
+            land_value_per_right_ils=land_value).levy(0.25)
+
+    s = sensitivity(levy, r["existing_value_per_sqm_ils"], r["land_value_per_right_ils"])
+    swing = abs(s["land_value_up_ils"] / s["base_ils"] - 1)
+    assert swing > 0.40, "‏10% בשווי מ״ר זכויות חייבים להזיז את ההיטל בהרבה"
