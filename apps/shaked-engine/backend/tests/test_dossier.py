@@ -193,8 +193,12 @@ async def test_the_scenario_says_it_is_not_a_signed_appraisal(session):
     c, _, opp = await _delivered(session)
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
     assert "שמאי" in d["economics"]["disclaimer"]
-    assert d["economics"]["is_deliverable"] is False      # הנחות MISSING חוסמות
-    assert "betterment_base_ils" in d["economics"]["inputs_missing"]
+    # ‏**השתנה ב-14.09 בהחלטת בועז.** היעדר שומת השבחה כבר אינו חוסם:
+    # במקומה מוצג הסף, שהוא אמירה שלמה ולא חוסר. מה שלא השתנה —
+    # התיק אומר במפורש שאינו דוח שמאי חתום.
+    assert "betterment_base_ils" not in d["economics"]["inputs_missing"]
+    assert d["economics"]["betterment"]["breakeven_ils"] is not None \
+        or d["economics"]["betterment"]["category"] == "no_threshold"
 
 
 # ── DOS-04 · גרסאות ──
@@ -293,11 +297,18 @@ async def test_a_verified_complete_schedule_stops_blocking_delivery(session):
     assert unit["per_unit_detail_available"] is True
     assert "אומת ידנית" in unit["label"]
     assert "average_existing_unit_sqm" not in d["economics"]["inputs_missing"]
+    # ‏`resolved` עדיין מבחין בין מאושר לנקרא, גם כששניהם אינם חוסמים.
+    assert d["economics"]["scenario"] is not None
 
 
 @pytest.mark.asyncio
-async def test_a_partial_schedule_is_shown_but_still_blocks(session):
-    """לוח מאושר שמכסה דירה אחת מתוך רבות מדווח — ואינו מכריע."""
+async def test_a_partial_schedule_is_shown_and_marked_unverified(session):
+    """לוח מאושר שמכסה דירה אחת מתוך רבות מדווח, ומסומן כלא-מכריע.
+
+    ‏**החסימה ירדה ב-14.09 בהחלטת בועז**, כי הכלל ״רק מאושר מכריע״
+    הפך את השדה לבלתי-פתיר בייצור — אין מסך שבו אדם מאשר. הסימון
+    נשאר: ‏`resolved=False`, והתווית אומרת מאיפה המספר הגיע.
+    """
     from app.models.dwelling_unit import DwellingUnit
 
     c, _, opp = await _delivered(session, block="9643")
@@ -310,8 +321,9 @@ async def test_a_partial_schedule_is_shown_but_still_blocks(session):
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
     unit = d["economics"]["live_inputs"]["unit_area"]
     assert unit["value"] == 64.0                     # מוצג
-    assert unit["resolved"] is False                 # ואינו מכריע
-    assert "average_existing_unit_sqm" in d["economics"]["inputs_missing"]
+    assert unit["resolved"] is False                 # ומסומן כלא-מכריע
+    assert "average_existing_unit_sqm" not in d["economics"]["inputs_missing"]
+    assert "לוח דירות" in unit["label"]              # והתווית אומרת מאיפה
 
 
 @pytest.mark.asyncio
@@ -428,3 +440,77 @@ def test_the_developer_method_is_numerically_fragile_and_says_so():
     s = sensitivity(levy, r["existing_value_per_sqm_ils"], r["land_value_per_right_ils"])
     swing = abs(s["land_value_up_ils"] / s["base_ils"] - 1)
     assert swing > 0.40, "‏10% בשווי מ״ר זכויות חייבים להזיז את ההיטל בהרבה"
+
+
+@pytest.mark.asyncio
+async def test_the_levy_estimate_needs_prices_of_existing_flats_not_new_ones(session):
+    """‏**מחיר דירה חדשה ומחיר דירה קיימת אינם אותו מספר.**
+
+    ההכנסות מחושבות לפי מחיר דירה חדשה. שווי המצב הקיים — הצד ה״לפני״
+    של ההשבחה — הוא מחיר דירה **קיימת**, והוא נמוך משמעותית. השוואת
+    השניים באותו מספר הראתה ״אין השבחה״ בכל תשע החלקות.
+
+    עסקאות ההשוואה של B1 הן בדירות קיימות, ולכן הן המקור הנכון —
+    ובלעדיהן אין אומדן, יש רק סף.
+    """
+    from datetime import date, datetime, timezone
+
+    from app.services.market_data.repository import add_valuation_run
+    from app.services.market_data.schemas import MarketValuation, ValuationStatus
+
+    c, _, opp = await _delivered(session, block="9646")
+
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    b = d["economics"]["betterment"]
+    assert d["economics"]["live_inputs"]["existing_price"]["resolved"] is False
+    assert b["estimate"] is None                     # אין עסקאות → אין אומדן
+    assert "אין אומדן" in d["economics"]["live_inputs"]["existing_price"]["label"]
+
+    add_valuation_run(
+        session, opportunity_id=opp.id,
+        valuation=MarketValuation(
+            status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
+            fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
+            comparable_count=23, comparable_sales=[], room_estimates=[],
+            blended_price_per_sqm_ils=26_000.0, is_unit_mix_adjusted=True),
+        parameters={"unit_mix_state": "explicit", "targets": []})
+    await session.flush()
+
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    b = d["economics"]["betterment"]
+    assert d["economics"]["live_inputs"]["existing_price"]["value"] == 26_000.0
+
+    # ‏**ועדיין אין אומדן — וזו המסקנה.** אותה הערכה מזינה גם את
+    # ההכנסות (מחיר דירה חדשה) וגם את הצד ה״לפני״ (מחיר דירה קיימת).
+    # עסקאות GovMap אינן מסוננות לחדש מול יד שנייה, וכשאותו מספר עומד
+    # בשני הצדדים — ״אין השבחה״ בכל חלקה. הסף אינו תלוי בכך.
+    assert b["estimate"] is None
+    assert "אינם מופרדים" in b["estimate_withheld_because"]
+    assert b["levy"]["viable_up_to_ils"] is not None or b["category"] == "no_threshold"
+
+
+@pytest.mark.asyncio
+async def test_the_levy_is_given_as_a_range_and_a_ceiling(session):
+    """היזם מקבל שני מספרים: כמה צפוי, ועד כמה נסבל."""
+    c, _, opp = await _delivered(session, block="9647")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    levy = d["economics"]["betterment"]["levy"]
+
+    assert levy["rate"] == 0.25
+    if levy["viable_up_to_ils"] is not None:
+        assert levy["viable_up_to_ils"] > 0
+    if levy["estimate_ils"] is not None:
+        assert levy["low_ils"] <= levy["estimate_ils"] <= levy["high_ils"]
+
+
+def test_the_residual_land_value_is_what_the_developer_can_pay():
+    """‏12,000 בגיליון היזמי הוא הנחה. כאן הוא נגזר: מה שנשאר מההכנסות
+    אחרי כל העלויות ואחרי הרווח הנדרש."""
+    from app.services.economic.betterment import residual_land_value
+
+    land = residual_land_value(
+        total_revenue_ils=100e6, total_cost_ils=80e6, land_cost_ils=30e6,
+        finance_ratio=0.05, developer_profit_target_ratio=0.20)
+    # בדיקת ההיפוך: עם הקרקע הזו, ההכנסות הן בדיוק עלות ועוד רווח היעד
+    cost = ((80e6 / 1.05 - 30e6) + land) * 1.05
+    assert cost == pytest.approx(100e6 / 1.20, rel=1e-9)
