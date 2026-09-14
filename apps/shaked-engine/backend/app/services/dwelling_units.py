@@ -38,6 +38,13 @@ from app.pipeline.extractor import DwellingUnitReading
 # noise to be tuned away.
 UNIT_COUNT_TOLERANCE = 0
 
+# D3 fallback for parcels where no apartment schedule/gramoshka is available.
+# This is deliberately separate from the new-project `main_area_ratio` even
+# though both are currently 78%: one describes an existing building estimate,
+# the other describes sellable area in the future project. Until D3 is
+# validated against real permit schedules this remains an ESTIMATE, not DATA.
+FOOTPRINT_EXISTING_MAIN_AREA_RATIO = 0.78
+
 
 @dataclass
 class UnitAreaResolution:
@@ -61,6 +68,12 @@ class UnitAreaResolution:
     # other 27, so the disagreement has to block the average from deciding
     # rather than merely annotate it.
     has_unit_count_conflict: bool = False
+    # Aggregate fallback detail for buildings with no per-unit schedule.
+    # These fields are estimates only and must never be mistaken for an
+    # as-built or per-household measurement.
+    estimated_main_area_sqm: float | None = None
+    estimated_common_service_area_sqm: float | None = None
+    estimated_main_area_ratio: float | None = None
 
     @property
     def may_decide(self) -> bool:
@@ -199,10 +212,12 @@ def resolve_existing_unit_area(
        and carries per-unit detail, so per-household compensation is possible.
     2. A schedule still awaiting review. Displayed, never decides -- so a
        dossier cannot quietly rest on an unreviewed OCR reading.
-    3. The footprint-derived building area divided by the municipal unit
-       count. An `ESTIMATE`: it rests on `existing_area`, which is
-       `footprint x floors x k` with k calibrated against a single permit.
-       Never decides, and carries no per-unit detail.
+    3. When no schedule exists, split the footprint-derived `existing_area`
+       into estimated main/private area and estimated common/service area.
+       `existing_area` is already `footprint x floors x k`, where k is the
+       separate gross-to-counted-area calibration. The 78% ratio below is a
+       second, explicitly estimated split from counted area to main/private
+       area. It never decides and carries no per-unit detail.
     """
     notes: list[str] = []
     units = list(units)
@@ -263,13 +278,19 @@ def resolve_existing_unit_area(
         )
 
     if existing_area_sqm and municipal_unit_count:
-        average = round(existing_area_sqm / municipal_unit_count, 2)
+        estimated_main_area = round(existing_area_sqm * FOOTPRINT_EXISTING_MAIN_AREA_RATIO, 2)
+        estimated_common_area = round(existing_area_sqm - estimated_main_area, 2)
+        average = round(estimated_main_area / municipal_unit_count, 2)
         notes.append(
-            f"No per-apartment schedule was extracted. The average is "
-            f"{existing_area_sqm} sqm (footprint x floors x k) divided by "
-            f"{municipal_unit_count} unit(s) -- a uniform average that matches no "
-            "individual apartment, resting on a k calibrated against a single permit. "
-            "It may not be used to allocate compensation per household."
+            f"No per-apartment schedule was extracted. The footprint fallback first gives "
+            f"{existing_area_sqm} sqm of counted existing area (footprint x floors x k). "
+            f"Because there is no gramoshka, D3 applies an explicit ESTIMATE of "
+            f"{FOOTPRINT_EXISTING_MAIN_AREA_RATIO:.0%} main/private area: "
+            f"{estimated_main_area} sqm main/private and {estimated_common_area} sqm "
+            f"common/service area. Dividing only the estimated main/private area by "
+            f"{municipal_unit_count} unit(s) gives {average} sqm per unit. This ratio is "
+            "not DATA until validated against real permit schedules and may not be used "
+            "to allocate compensation per household."
         )
         return UnitAreaResolution(
             average_existing_unit_sqm=average,
@@ -278,6 +299,9 @@ def resolve_existing_unit_area(
             per_unit_detail_available=False,
             unit_count=municipal_unit_count,
             notes=notes,
+            estimated_main_area_sqm=estimated_main_area,
+            estimated_common_service_area_sqm=estimated_common_area,
+            estimated_main_area_ratio=FOOTPRINT_EXISTING_MAIN_AREA_RATIO,
         )
 
     notes.append("Neither a per-apartment schedule nor a footprint-derived area was available.")
