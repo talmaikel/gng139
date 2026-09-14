@@ -239,3 +239,35 @@ def test_a_quarter_of_the_units_must_be_small_and_a_tenth_of_those_micro():
 def test_the_mix_is_infeasible_when_the_average_flat_falls_below_the_small_band():
     assert R.unit_mix(20, sellable_main=3000.0)["mix_feasible"] is False   # 46.9 מ"ר
     assert R.unit_mix(20, sellable_main=4000.0)["mix_feasible"] is True    # 62.5 מ"ר
+
+
+def test_the_gis_name_for_the_green_area_reaches_the_policy_floor():
+    """‏**שם אחד, שתי מערכות, ושלוש חלקות שאיבדו זכות.**
+
+    מסמך המדיניות קורא לאזור ״הירוק״; שכבת ה-GIS קוראת לו ״בית ספר
+    ירוק (שם זמני)״. ההשוואה הייתה מחרוזת מדויקת, ולכן `allocation()`
+    החזיר ״אינו ברשימות הרצפה״ — ושלוש חלקות יצאו בלי רצפת ההפרשה
+    לשב״צ, כלומר **נראו רווחיות יותר משהן**.
+
+    נמצא בביקורת הלילית של 14.09.2026.
+    """
+    from app.cities.herzliya import rights
+
+    gis, policy = "בית ספר ירוק (שם זמני)", "הירוק"
+    assert rights.canonical_area(gis) == policy
+    assert policy in rights.ALLOCATION_FLOOR_400
+
+    same = rights.allocation(10_000.0, gis)
+    as_policy = rights.allocation(10_000.0, policy)
+    assert same == as_policy, "שני השמות חייבים להחזיר את אותה הפרשה"
+    assert same[0] == 1_000.0                       # ‏10% ≥ רצפת 400
+
+
+def test_an_unknown_registration_area_says_so_and_allocates_nothing():
+    """אזור שאינו מוכר אינו מקבל רצפה בשקט — הוא אומר את שמו בנימוק,
+    כדי שהשם החדש ייראה בתיק ויגיע לאדם שיחליט אם למפות אותו."""
+    from app.cities.herzliya import rights
+
+    area, why = rights.allocation(10_000.0, "שכונה שאינה במדיניות")
+    assert area is None
+    assert "שכונה שאינה במדיניות" in why
