@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>מדידת חזיתות · הרצליה</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -75,6 +76,16 @@ a.map:hover{border-bottom-color:var(--blue)}
 code{font-family:var(--mono);font-size:.88em;background:var(--rule-2);padding:.1rem .3rem;border-radius:.2rem}
 .who{display:flex;gap:.6rem;align-items:end;flex-wrap:wrap;margin-bottom:1.2rem}
 .who label{max-width:12rem}
+.mono{font-family:var(--mono);font-size:.9em}
+.exportbar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:.9rem 0}
+.exportbar button{font-family:var(--body);font-weight:600;font-size:.9rem;padding:.5rem 1rem;
+  border:1px solid var(--blue);border-radius:.35rem;background:var(--blue);color:var(--paper);cursor:pointer}
+.exportbar button:hover{filter:brightness(1.08)}
+.exportbar button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.copied{font-size:.85rem;color:var(--ok);font-family:var(--mono)}
+#csv{width:100%;min-height:11rem;font-family:var(--mono);font-size:.8rem;line-height:1.5;
+  padding:.7rem;border:1px solid var(--rule);border-radius:.4rem;background:var(--card);color:var(--ink);
+  white-space:pre;overflow-x:auto;resize:vertical}
 </style>
 
 <div class="wrap" dir="rtl" lang="he">
@@ -122,6 +133,17 @@ code{font-family:var(--mono);font-size:.88em;background:var(--rule-2);padding:.1
   <h2>הרשימה</h2>
   <p class="status" id="status">טוען…</p>
   <div id="rows"></div>
+</section>
+
+<section>
+  <h2>ייצוא</h2>
+  <p class="note">כשסיימתם — לחצו "העתק" והדביקו בצ׳אט, או "הורד" כדי לשמור את <span class="mono">street_width.csv</span> ישירות. השורות למטה מתעדכנות תוך כדי הקלדה.</p>
+  <div class="exportbar">
+    <button id="copy" type="button">העתק CSV</button>
+    <button id="download" type="button">הורד CSV</button>
+    <span id="copied" class="copied"></span>
+  </div>
+  <textarea id="csv" readonly spellcheck="false" dir="ltr"></textarea>
 </section>
 
 <p class="foot">
@@ -185,6 +207,32 @@ function recompute(id){
   const [cls, txt] = verdict(p, [g('a'),g('b'),g('c')]);
   const v = document.getElementById('v-'+id);
   v.className = 'verdict ' + cls; v.textContent = txt;
+  buildCsv();
+}
+
+const HEAD = ['parcel','address','role','tool_width_m','itm_x','itm_y','govmap_url',
+              'm1_start','m2_middle','m3_end','other_frontage','note','measured_by'];
+
+function q(s){
+  s = (s===null||s===undefined) ? '' : String(s);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+
+function buildCsv(){
+  const who = $('#who').value.trim();
+  const lines = [HEAD.join(',')];
+  P.forEach(p=>{
+    const id = p.key.replace('/','-');
+    const g = f => {
+      const el = document.querySelector(`input[data-k="${id}"][data-f="${f}"]`);
+      return el ? el.value.trim() : '';
+    };
+    const filled = g('a') || g('b') || g('c') || g('note');
+    lines.push([p.key, p.addr, p.role, p.width===null?'':p.width.toFixed(1), p.x, p.y,
+                `https://www.govmap.gov.il/?c=${p.x},${p.y}&z=10`,
+                g('a'), g('b'), g('c'), '', g('note'), filled ? who : ''].map(q).join(','));
+  });
+  $('#csv').value = lines.join('\n');
 }
 
 function collect(id){
@@ -193,13 +241,32 @@ function collect(id){
            who:$('#who').value||'', at:new Date().toISOString() };
 }
 
+const LOCAL_KEY = 'street_width_measurements';
+
+function saveLocal(id){
+  try{
+    const all = JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}');
+    all[id] = collect(id);
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(all));
+    $('#status').textContent = 'נשמר בדפדפן הזה · ' + new Date().toLocaleTimeString('he-IL');
+  }catch(e){ $('#status').textContent = 'שמירה מקומית נכשלה — העתיקו את המספרים ידנית'; }
+}
+
+function loadLocal(){
+  try{
+    const all = JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}');
+    Object.entries(all).forEach(([id,d]) => fill(id, d||{}));
+  }catch(e){}
+}
+
 function queueSave(id){
+  saveLocal(id);
   if(!db) return;
   clearTimeout(saveTimer[id]);
   saveTimer[id] = setTimeout(async ()=>{
     try{ await db.doc('measurements/'+id).set(collect(id));
-         $('#status').textContent = 'נשמר · ' + new Date().toLocaleTimeString('he-IL');
-    }catch(e){ $('#status').textContent = 'לא נשמר: ' + (e.code||'שגיאה') + ' — המספרים על המסך נשארים'; }
+         $('#status').textContent = 'נשמר בענן · ' + new Date().toLocaleTimeString('he-IL');
+    }catch(e){ $('#status').textContent = 'לא נשמר בענן: ' + (e.code||'שגיאה') + ' — נשמר מקומית בדפדפן'; }
   }, 700);
 }
 
@@ -213,15 +280,38 @@ function fill(id, d){
 }
 
 render();
-$('#status').textContent = 'עובד מקומית — עדיין לא מחובר לשמירה';
+loadLocal();
+buildCsv();
+$('#status').textContent = 'נשמר מקומית בדפדפן הזה בלבד — כל שינוי נשמר אוטומטית';
 
-claude.use('db').then(x=>{
-  db = x;
-  if(!db){ $('#status').textContent = 'שמירה לא זמינה בתצוגה הזו — המדידות לא יישמרו, העתיקו אותן ידנית'; return; }
-  $('#status').textContent = 'מחובר · כל שינוי נשמר אוטומטית';
-  db.collection('measurements').onSnapshot(
-    s => s.docs.forEach(d => fill(d.id, d.data()||{})),
-    e => { $('#status').textContent = 'הסנכרון נפסק (' + e.code + ') — מה שהוקלד כבר נשמר'; }
-  );
+$('#who').addEventListener('input', buildCsv);
+
+$('#copy').addEventListener('click', async ()=>{
+  const ta = $('#csv');
+  try{ await navigator.clipboard.writeText(ta.value); }
+  catch(e){ ta.select(); document.execCommand('copy'); }
+  $('#copied').textContent = 'הועתק ✓';
+  setTimeout(()=>{ $('#copied').textContent = ''; }, 2500);
 });
+
+$('#download').addEventListener('click', ()=>{
+  const blob = new Blob(['﻿' + $('#csv').value], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'street_width.csv';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+});
+
+if(typeof claude !== 'undefined'){
+  claude.use('db').then(x=>{
+    db = x;
+    if(!db) return;
+    $('#status').textContent = 'מחובר · כל שינוי נשמר בענן וגם מקומית';
+    db.collection('measurements').onSnapshot(
+      s => s.docs.forEach(d => fill(d.id, d.data()||{})),
+      e => { $('#status').textContent = 'הסנכרון בענן נפסק (' + e.code + ') — מה שהוקלד נשמר מקומית'; }
+    );
+  }).catch(()=>{});
+}
 </script>
