@@ -29,17 +29,30 @@ MUTS = [
    "certainty, method = Certainty.MISSING, method", "certainty, method = certainty, method"),
   ("services/evidence_store.py", "שדות שאינם מכריעים נכנסים להכרעה",
    "if usable(f, get_settings().source_max_age_days, now)}", "if True}"),
+  # ‏B14 · שלושת המשטחים
+  ("cities/herzliya/exports.py", "האקסל כותב את מחיר העיר ולא את המחיר לחלקה",
+   '"price": g("sale_price_per_sqm_ils")', '"price": 45_000.0'),
+  ("cities/herzliya/exports.py", "ה-PDF מדפיס רווח שאינו הרווח",
+   '''line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪''',
+   '''line(f'רווח: {s["projected_profit_ils"] * 1.02:,.0f} ₪'''),
 ]
 root = pathlib.Path("app")
+# ‏**עד 14.09 הסקריפט רק הדפיס.** מוטציה ששרדה הדפיסה ״X שרד״, והשלב ב-CI
+# נשאר ירוק — כלומר בדיקה שנמחקה או נחלשה לא הייתה עוצרת דבר. גם ביטוי
+# שלא נמצא נכשל: הקוד זז, והמוטציה בודקת עכשיו אוויר.
+failed = []
 for rel, name, old, new in MUTS:
     p = root / rel
     src = p.read_text(encoding="utf-8")
     if old not in src:
-        print(f"  ?  {name}: הביטוי לא נמצא"); continue
+        print(f"  ?  {name}: הביטוי לא נמצא"); failed.append(name); continue
     shutil.copy(p, "/tmp/bak.py")
     p.write_text(src.replace(old, new, 1), encoding="utf-8")
     r = subprocess.run([sys.argv[1], "-m", "pytest", "-q", "-x", "--no-header"],
                        capture_output=True, text=True)
     shutil.copy("/tmp/bak.py", p)
     print(f"  {'V נתפס' if r.returncode else 'X שרד '}  {name}")
+    if not r.returncode:
+        failed.append(name)
+sys.exit(1 if failed else 0)
 
