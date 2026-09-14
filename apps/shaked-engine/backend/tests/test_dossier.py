@@ -523,5 +523,104 @@ async def test_the_dossier_prices_parking_from_the_appraisers_survey(session):
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
     ug = d["economics"]["assumptions"]["underground_cost_per_sqm_ils"]
     assert ug["value"] == 3_900.0
-    assert ug["status"] == "data"
+    # אותו סטטוס כמו העלות העילית מאותו סקר — סקר אזורי אינו נתון הפרויקט
+    assert ug["status"] == "estimate"
+    assert ug["status"] == d["economics"]["assumptions"]["construction_cost_per_sqm_ils"]["status"]
     assert "שמאי" in ug["source"]
+
+
+# ── A20 · טבלת ההנחות אינה סותרת את התרחיש שמעליה ──
+
+async def _with_resolved_inputs(session, block):
+    """חלקה שיש לה גם מחיר מעסקאות וגם שטח דירה מלוח — שני הקלטים שבהם
+    הטבלה הציגה את ערך העיר בזמן שהתרחיש חושב מהערך לחלקה."""
+    from datetime import date, datetime, timezone
+
+    from app.models.dwelling_unit import DwellingUnit
+    from app.services.market_data.repository import add_valuation_run
+    from app.services.market_data.schemas import MarketValuation, ValuationStatus
+
+    c, _, opp = await _delivered(session, block=block)
+    add_valuation_run(
+        session, opportunity_id=opp.id,
+        valuation=MarketValuation(
+            status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
+            fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
+            comparable_count=17, comparable_sales=[], room_estimates=[],
+            blended_price_per_sqm_ils=52_300.0, is_unit_mix_adjusted=True),
+        parameters={"unit_mix_state": "x", "targets": []})
+    # דירה אחת מאומתת מתוך כמה — מוצגת, ואינה מכריעה לבניין
+    session.add(DwellingUnit(
+        opportunity_id=opp.id, source_key="permit#unit1", unit_label="1",
+        area_sqm=64.0, certainty=Certainty.MANUALLY_VERIFIED,
+        requires_human_review=False, method="manual"))
+    await session.flush()
+    return c, opp
+
+
+@pytest.mark.asyncio
+async def test_every_assumption_row_shows_the_value_the_scenario_used(session):
+    """‏*״התרחיש חושב עם 52,300 ₪, והטבלה מתחתיו אומרת 45,000 · אומדן.״*
+
+    כל שורה שנפתרת לחלקה מציגה את הערך שנפתר, עם המקור שלו. הסטטוס
+    נגזר מ-`resolved`: לוח מאומת-ידנית שמכסה דירה אחת אינו ״נתון״ לבניין.
+    """
+    c, opp = await _with_resolved_inputs(session, "9650")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    econ = d["economics"]
+    rows, live = econ["assumptions"], econ["live_inputs"]
+
+    price = rows["sale_price_per_sqm_ils"]
+    assert price["value"] == live["sale_price"]["value"] == 52_300.0
+    assert price["status"] == "data"
+    assert "17 עסקאות" in price["source"]
+
+    unit = rows["average_existing_unit_sqm"]
+    assert unit["value"] == live["unit_area"]["value"] == 64.0
+    assert live["unit_area"]["resolved"] is False
+    assert unit["status"] == "estimate"            # מוצג, ולא מוצג כנתון
+    assert "לוח דירות" in unit["source"]
+
+    # צורת השורה אחידה בכל הטבלה — המסך והאקסל קוראים את חמשת השדות
+    for key, r in rows.items():
+        assert {"value", "status", "unit", "source", "label"} <= r.keys(), key
+        assert r["value"] is not None, key
+        assert r["status"] in {"data", "estimate", "missing"}, key
+
+
+@pytest.mark.asyncio
+async def test_without_resolved_inputs_the_row_says_the_city_default_was_used(session):
+    """כשאין נתון לחלקה, השורה מציגה את ערך העיר — כי זה מה שהתרחיש
+    השתמש בו — והמקור אומר למה, ולא שם שדה ריק."""
+    c, _, opp = await _delivered(session, block="9651")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    rows, live = d["economics"]["assumptions"], d["economics"]["live_inputs"]
+
+    assert rows["sale_price_per_sqm_ils"]["status"] == "estimate"
+    assert rows["sale_price_per_sqm_ils"]["source"] == live["sale_price"]["label"]
+    if live["unit_area"]["value"] is None:
+        assert rows["average_existing_unit_sqm"]["status"] == "missing"
+    assert rows["average_existing_unit_sqm"]["source"] == live["unit_area"]["label"]
+
+
+@pytest.mark.asyncio
+async def test_the_spreadsheet_of_a_real_dossier_matches_its_screen(session):
+    """הבדיקה הקיימת ב-test_exports משווה אקסל לחישוב על ערכי הספרייה,
+    ולכן עברה גם כשהאקסל הדפיס 45,000 והמסך 52,300. כאן — תיק אמיתי,
+    עם קלטים שנפתרו לחלקה: האקסל קורא את טבלת ההנחות, והמספרים שלו
+    חייבים להיות המספרים שהיזם רואה על המסך."""
+    from tests.test_exports import _evaluate_sheet
+
+    c, opp = await _with_resolved_inputs(session, "9652")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    screen = d["economics"]["scenario"]
+    assert screen is not None, "הבדיקה צריכה תרחיש מחושב"
+
+    sheet = _evaluate_sheet(d)
+    assert sheet["price"] == 52_300.0
+    assert sheet["avg_unit"] == 64.0
+    for sheet_key, calc_key in (("revenue", "total_revenue_ils"),
+                                ("tenant_cost", "total_tenant_cost_ils"),
+                                ("total_cost", "total_cost_ils"),
+                                ("profit", "projected_profit_ils")):
+        assert sheet[sheet_key] == pytest.approx(screen[calc_key], rel=1e-6), sheet_key

@@ -82,7 +82,8 @@ def test_the_underground_rate_comes_from_the_same_survey_row():
 
     r = resolve_underground_cost_per_sqm("herzliya")
     assert r.value_ils_per_sqm == 3_900.0
-    assert r.status == "data"                     # מספר אחד, בלי רמות גובה
+    # סקר אזורי — אומדן, כמו העלות העילית מאותה טבלה. רק מספר של היזם הוא נתון.
+    assert r.status == "estimate"
     assert "ביסוס" in r.source                    # הסקר מסייג שהביסוס אינו בתוכו
 
 
