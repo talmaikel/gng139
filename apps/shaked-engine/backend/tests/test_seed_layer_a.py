@@ -174,8 +174,15 @@ async def test_reseeding_does_not_erase_a_building_file_fetched_on_demand(sessio
     from app.models.opportunity import Opportunity
     from sqlalchemy import select
 
+    # ‏**זריעה ראשונה, כי מסד נקי הוא המצב הנכון להניח.** הבדיקה הזו
+    # קראה כאן `scalar_one()` על מסד שהיא לא זרעה, ולכן עברה רק על
+    # מחשב שכבר יש בו נתונים. היא נפלה בהרצה הראשונה של ה-CI —
+    # `NoResultFound` — וזה בדיוק מה ש-CI נועד לתפוס: בדיקה שתלויה
+    # במצב מקומי אינה בודקת את הקוד אלא את המחשב שעליו היא רצה.
+    await seed(limit=None)
     opp = (await session.execute(
-        select(Opportunity).where(Opportunity.city_code == "herzliya").limit(1))).scalar_one()
+        select(Opportunity).where(Opportunity.city_code == "herzliya").limit(1))).scalars().first()
+    assert opp is not None, "הזריעה לא יצרה אף הזדמנות בהרצליה"
     session.add(FieldEvidence(
         opportunity_id=opp.id, field="permit_date", value="1978-01-01",
         certainty=Certainty.DERIVED.value,

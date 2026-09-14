@@ -1,0 +1,104 @@
+# ‏CI · שקדן
+#
+# עד 14.09.2026 לא היה כאן שום CI, וזה התגלה בדרך הגרועה: הזריעה רצה
+# בלי שלב ההערכה שאחריה, כל 699 ההזדמנויות איבדו את
+# `metadata_json.assessment`, והמסך היה מציג ליזם רשימה ריקה — בלי
+# שגיאה, בלי בדיקה אדומה, בלי שום דבר שנראה שבור.
+#
+# ‏`pytest` לא יכול היה לתפוס את זה: הוא רץ על מסד בדיקות עם פיקסטורות,
+# והתקלה הייתה **במסד האמיתי אחרי זריעה**. לכן העבודה כאן אינה רק
+# להריץ בדיקות אלא **לזרוע את כל 699 ולשאול את המסד אם יש מה למכור.**
+#
+# הזריעה עובדת בלי רשת — כל 23 קבצי המקור נמצאים ב-POC/layer_a/data.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/shaked-engine/backend
+
+    services:
+      db:
+        image: postgis/postgis:17-3.4
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_USER: ci
+          POSTGRES_DB: shaked_engine
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://ci:ci@localhost:5432/shaked_engine
+      DATABASE_URL_SYNC: postgresql://ci:ci@localhost:5432/shaked_engine
+      JWT_SECRET: ci-only-not-a-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/shaked-engine/backend/requirements*.txt
+
+      - name: התקנה
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: מיגרציות
+        run: |
+          test "$(alembic heads | wc -l)" -eq 1 || { echo "::error::שני ראשי מיגרציה"; exit 1; }
+          alembic upgrade head
+
+      - name: בדיקות
+        run: python -m pytest -q
+
+      - name: מוטציות
+        run: python tests/mutations.py python
+
+      # ── מכאן והלאה: לא ״האם הקוד עובד״ אלא ״האם יש מוצר״ ──
+      - name: זריעה מלאה
+        run: python -m app.cities.herzliya.seed_layer_a
+
+      # ‏**שני קודי יציאה, ולכן שני טיפולים.** הגרסה הראשונה הריצה את
+      # הסקריפט ישירות, וכל יציאה שאינה אפס הפילה את הבנייה — כולל
+      # ״ממצא״. זה ביטל בדיוק את ההפרדה שהסקריפט נבנה בשבילה: תוך
+      # שבוע כולם היו לומדים שאדום פירושו ״עוד יחס מוזר״ ומתעלמים.
+      - name: יש מה למכור?
+        run: |
+          set +e
+          python scripts/audit_db.py --require-assessment --min-deliverable 1 --min-screenable 400
+          code=$?
+          set -e
+          case "$code" in
+            0) echo "נקי" ;;
+            1) echo "::warning title=ממצאי איכות נתונים::יש יחסים שאינם אפשריים פיזית — מדווח, לא חוסם" ;;
+            *) echo "::error title=אין מוצר::הזדמנויות בלי הערכה שמורה, או אפס ניתנים למסירה"; exit 1 ;;
+          esac
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/shaked-engine/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/shaked-engine/frontend/package-lock.json
+      - run: npm ci
+      - name: טיפוסים
+        run: npx tsc --noEmit
+      - name: בנייה
+        run: npm run build
