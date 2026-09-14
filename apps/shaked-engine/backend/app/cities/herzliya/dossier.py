@@ -26,10 +26,13 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.cities.herzliya import rights
+from app.core.config import get_settings
 from app.evidence import DECIDING, Certainty
 from app.models.opportunity import Opportunity
 from app.models.package import Delivery
+from app.services.dwelling_units import load_units, resolve_existing_unit_area
 from app.services.economic.assumptions import get_assumptions
+from app.services.market_data.repository import find_latest_valuation
 from app.services.economic.calculator import calculate_feasibility
 from app.services.economic.schemas import FeasibilityInput
 from app.services.evidence_store import fields_for, stale_fields
@@ -87,6 +90,13 @@ ASSUMPTION_LABEL = {
     "betterment_levy_rate": "שיעור היטל ההשבחה",
     "betterment_base_ils": "ההשבחה שעליה מוטל ההיטל",
     "vat_rate": "מס ערך מוסף",
+}
+
+_UNIT_AREA_SOURCE = {
+    "verified_schedule": "לוח דירות מהיתר, אומת ידנית",
+    "unverified_schedule": "לוח דירות מהיתר — נקרא ולא אומת",
+    "footprint_average": "ממוצע מטביעת הרגל — אינו מתאים לאף דירה בפועל",
+    "none": "לא נמצא לוח דירות ולא שטח בנוי",
 }
 
 CERTAINTY_LABEL = {
@@ -184,21 +194,94 @@ def _not_delivered(missing: list[str]) -> str | None:
             f"מה שאינו ידוע: {names}.")
 
 
-def _economics(opp: Opportunity, assessment: dict) -> dict[str, Any]:
+async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> dict[str, Any]:
+    """שני קלטים שיש להם מקור אמיתי לכל חלקה — ולא הנחה אחידה לעיר.
+
+    **זה התפר שנוצר משתי עבודות מקבילות.** ‏B1 בנה הערכת שווי לכל חלקה
+    מעסקאות שכנות, ו-B3 בנה חילוץ שטח דירה מהגרמושקה — ושניהם נכתבו אל
+    המסלול של ה-worker. התיק שהמסך מציג ללקוח המשיך לקרוא
+    ‏`45,000 ₪/מ״ר` ו-`70 מ״ר` מספריית ההנחות, כלומר **העבודה של שניהם
+    לא הייתה נראית ליזם.**
+
+    הפונקציה קוראת בלבד ואינה פונה לרשת: נקודת קצה שמושכת עסקאות בזמן
+    בקשה הופכת פתיחת תיק לתלויה בשרת חיצוני.
+    """
+    out: dict[str, Any] = {}
+
+    # ── מחיר מכירה · B1 ──
+    valuation = await find_latest_valuation(
+        session, opportunity_id=opp.id,
+        max_age_days=get_settings().source_max_age_days)
+    if valuation and valuation.blended_price_per_sqm_ils:
+        out["sale_price"] = {
+            "value": valuation.blended_price_per_sqm_ils,
+            "resolved": True,
+            "certainty": Certainty.DERIVED.value,
+            "label": f"‏{valuation.comparable_count} עסקאות ברדיוס "
+                     f"{valuation.radius_m} מ׳, נכון ל-{valuation.as_of_date}",
+            "source_url": valuation.source_url,
+            "as_of_date": str(valuation.as_of_date),
+            "comparable_count": valuation.comparable_count,
+            "warnings": list(valuation.warnings),
+        }
+    else:
+        out["sale_price"] = {
+            "value": a.sale_price_per_sqm_ils.value, "resolved": False,
+            "certainty": Certainty.ESTIMATE.value,
+            "label": "אומדן אחיד לעיר — לא נמצאה הערכת שווי עדכנית לחלקה",
+        }
+
+    # ── שטח דירה קיימת · B3 ──
+    resolution = resolve_existing_unit_area(
+        await load_units(session, opp.id),
+        municipal_unit_count=opp.existing_units,
+        existing_area_sqm=_numeric(fields.get("existing_area")),
+    )
+    out["unit_area"] = {
+        # ‏`may_decide` הוא של B3 ולא שלנו: ודאות מכריעה, לוח שלם, ובלי
+        # סתירה מול הספירה העירונית. אנחנו רק מכבדים אותו.
+        "value": resolution.average_existing_unit_sqm,
+        "resolved": resolution.may_decide,
+        "certainty": resolution.certainty.value,
+        "label": _UNIT_AREA_SOURCE.get(resolution.source, resolution.source),
+        "per_unit_detail_available": resolution.per_unit_detail_available,
+        "unit_count": resolution.unit_count,
+        "notes": list(resolution.notes),
+    }
+    return out
+
+
+def _numeric(field: dict | None) -> float | None:
+    try:
+        return float((field or {}).get("value"))
+    except (TypeError, ValueError):
+        return None
+
+
+async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) -> dict[str, Any]:
     """התרחיש הגנרי — ‏PRD 6.4. **אינו דוח שמאי חתום, וזה נכתב בתיק.**"""
     cap = assessment.get("cap_400_sqm")
     a = get_assumptions(opp.city_code)
+    live = await _resolve_live_inputs(session, opp, fields, a)
+
+    # ‏**החוסמים נגזרים מהמצב בפועל ולא מהספרייה.** ‏`a.blocking()` מחזיר
+    # את מה שמסומן `MISSING` בספרייה — נכון כברירת מחדל לעיר, ושגוי
+    # לחלקה שיש לה לוח דירות מאושר. נתון שנפתר לחלקה הזו יורד מהרשימה;
+    # נתון שלא — נשאר, וממשיך לחסום מסירה.
+    blocking = [k for k in a.blocking()
+                if not (k == "average_existing_unit_sqm" and live["unit_area"]["resolved"])]
     base = {
         "assumptions_version": a.version,
         "assumptions_effective_date": a.effective_date.isoformat(),
         "assumptions": {k: {**v, "label": ASSUMPTION_LABEL.get(k, k)}
                         for k, v in a.report().items()},
+        "live_inputs": live,
         "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
                       "ואינה קובעת זכויות או היתכנות מאושרת.",
     }
     if not cap or not opp.existing_units or not opp.area_sqm:
-        return {**base, "scenario": None, "inputs_missing": a.blocking(),
-                "not_delivered_reason": _not_delivered(a.blocking()),
+        return {**base, "scenario": None, "inputs_missing": blocking,
+                "not_delivered_reason": _not_delivered(blocking),
                 "is_deliverable": False,
                 "why": "אין תקרת זכויות מבוססת, ולכן לא מחושב תרחיש (DOS-03)"}
 
@@ -207,12 +290,13 @@ def _economics(opp: Opportunity, assessment: dict) -> dict[str, Any]:
             plot_area_sqm=opp.area_sqm,
             existing_units=opp.existing_units,
             buildable_area_sqm=cap,
-            sale_price_per_sqm=a.sale_price_per_sqm_ils.value,
+            sale_price_per_sqm=live["sale_price"]["value"],
             construction_cost_per_sqm=a.construction_cost_per_sqm_ils.value,
             soft_cost_ratio=a.soft_cost_ratio.value,
             demolition_cost_per_unit=a.demolition_cost_per_unit_ils.value,
             developer_profit_target_ratio=a.developer_profit_target_ratio.value,
-            average_existing_unit_sqm=a.average_existing_unit_sqm.value,
+            average_existing_unit_sqm=(live["unit_area"]["value"]
+                                       or a.average_existing_unit_sqm.value),
             tenant_compensation_sqm_per_existing_unit=a.tenant_compensation_sqm_per_existing_unit.value,
             main_area_ratio=a.main_area_ratio.value,
             underground_ratio=a.underground_ratio.value,
@@ -228,9 +312,10 @@ def _economics(opp: Opportunity, assessment: dict) -> dict[str, Any]:
             betterment_base_ils=a.betterment_base_ils.value,
             vat_rate=a.vat_rate.value,
         ),
-        missing_inputs=a.blocking(),
+        missing_inputs=blocking,
     )
     return {**base, "scenario": result.model_dump(),
+            "live_inputs": live,
             "inputs_missing": result.inputs_missing,
             "not_delivered_reason": _not_delivered(result.inputs_missing),
             "is_deliverable": result.is_deliverable,
@@ -248,7 +333,7 @@ async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> 
 
     assessment = await city_rules.assess(session, opportunity_id)
     fields = await fields_for(session, opportunity_id)
-    economics = _economics(opp, assessment)
+    economics = await _economics(session, opp, assessment, fields)
 
     return {
         "identity": {
