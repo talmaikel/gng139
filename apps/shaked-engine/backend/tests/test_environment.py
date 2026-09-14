@@ -67,3 +67,26 @@ def test_pip_installs_where_the_interpreter_reads():
     assert Path(pip.__file__).is_relative_to(Path(sys.prefix)), (
         f"‏pip נטען מ-{pip.__file__}, מחוץ ל-{sys.prefix}"
     )
+
+
+def test_the_suite_never_points_at_the_development_database():
+    """‏**הבדיקה הזו קיימת כי זה קרה, פעמיים באותו יום.**
+
+    ‏`tests/conftest.py` מפנה את כל ההרצה למסד נפרד. בלי ההפניה, קוד
+    ייצור שנקרא מתוך בדיקה — `seed()` למשל — פותח סשן משלו ו**מקמט**,
+    והקומיט בורח מהגלגול-אחורה של הפיקסטורה. ב-14.09.2026 כל הרצה של
+    הסוויטה מחקה את `metadata_json.assessment` מכל 699 ההזדמנויות,
+    ומסך ההדגמה היה מתרוקן — בלי שגיאה ובלי בדיקה אדומה.
+
+    אם מישהו יסיר את ההפניה, זו הבדיקה שתיפול.
+    """
+    from urllib.parse import urlsplit
+
+    from app.core.config import get_settings
+
+    for url in (get_settings().database_url, get_settings().database_url_sync):
+        name = urlsplit(url).path.lstrip("/")
+        assert name.endswith("_test"), (
+            f"הסוויטה מכוונת ל-{name!r} ולא למסד בדיקות. "
+            "הרצה כזו מוחקת נתונים מהמסד שעליו רצה ההדגמה."
+        )

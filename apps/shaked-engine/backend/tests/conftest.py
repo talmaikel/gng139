@@ -1,8 +1,88 @@
+import os
+from urllib.parse import urlsplit, urlunsplit
+
 import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
+
+
+# ── הסוויטה אינה נוגעת במסד הפיתוח ──
+#
+# ‏**זה קרה, פעמיים באותו יום.** הפיקסטורה `session` למטה זהירה: היא
+# מגלגלת הכול אחורה. אבל קוד ייצור שנקרא מתוך בדיקה פותח סשן משלו דרך
+# ‏`AsyncSessionLocal` ו**מקמט** — והקומיט הזה בורח מהגלגול אחורה.
+# ‏`test_seed_layer_a` קורא ל-`seed()`, הזריעה רצה בלי שלב ההערכה
+# שאחריה, וכל 699 ההזדמנויות במסד הפיתוח איבדו את
+# ‏`metadata_json.assessment`.
+#
+# התוצאה: **כל הרצה של הסוויטה רוקנה את מסך ההדגמה** — בלי שגיאה, בלי
+# בדיקה אדומה, בלי שאיש התכוון. אבחנתי בטעות ״מישהו הריץ את הזריעה
+# ביד״; איש לא הריץ. `pytest` הריץ.
+#
+# ההפניה כאן קודמת לכל ייבוא של `app.core.database`, כי המנוע שם נבנה
+# בזמן ייבוא מתוך ההגדרות.
+def _redirect_to_a_test_database() -> str:
+    def swap(url: str) -> str:
+        parts = urlsplit(url)
+        name = parts.path.lstrip("/") or "shaked_engine"
+        if name.endswith("_test"):
+            return url
+        return urlunsplit(parts._replace(path=f"/{name}_test"))
+
+    settings = get_settings()
+    os.environ["DATABASE_URL"] = swap(settings.database_url)
+    os.environ["DATABASE_URL_SYNC"] = swap(settings.database_url_sync)
+    get_settings.cache_clear()
+    return os.environ["DATABASE_URL_SYNC"]
+
+
+TEST_SYNC_URL = _redirect_to_a_test_database()
+
+
+def _create_and_migrate(sync_url: str) -> None:
+    """יוצר את מסד הבדיקות אם אינו קיים, ומגר אותו.
+
+    בלי זה כל אחד היה צריך להריץ שתי פקודות ביד לפני הבדיקה הראשונה,
+    וההודעה על מסד חסר הייתה נראית כמו תקלה.
+    """
+    import psycopg2
+    from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+    parts = urlsplit(sync_url)
+    name = parts.path.lstrip("/")
+    admin = urlunsplit(parts._replace(path="/postgres"))
+    conn = psycopg2.connect(admin)
+    try:
+        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (name,))
+            if cur.fetchone() is None:
+                cur.execute(f'CREATE DATABASE "{name}"')
+    finally:
+        conn.close()
+
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config("alembic.ini")
+    cfg.set_main_option("sqlalchemy.url", sync_url)
+    command.upgrade(cfg, "head")
+
+
+def pytest_sessionstart(session):  # noqa: ARG001
+    try:
+        _create_and_migrate(TEST_SYNC_URL)
+    except Exception as exc:                       # אין שרת, אין הרשאה
+        name = urlsplit(TEST_SYNC_URL).path.lstrip("/")
+        print(
+            f"\n[conftest] לא ניתן להכין את מסד הבדיקות ({type(exc).__name__}).\n"
+            f"           הבדיקות שנשענות על מסד ידלגו — הן לא ייכשלו, וזה נראה ירוק.\n"
+            f"           פעם אחת, ממשתמש שיש לו הרשאת superuser:\n"
+            f"             createdb -O $(whoami) {name}\n"
+            f'             psql -d {name} -c "CREATE EXTENSION IF NOT EXISTS postgis;"\n'
+        )
 
 
 async def no_wait(_seconds: float) -> None:
