@@ -69,8 +69,21 @@ jobs:
       - name: זריעה מלאה
         run: python -m app.cities.herzliya.seed_layer_a
 
+      # ‏**שני קודי יציאה, ולכן שני טיפולים.** הגרסה הראשונה הריצה את
+      # הסקריפט ישירות, וכל יציאה שאינה אפס הפילה את הבנייה — כולל
+      # ״ממצא״. זה ביטל בדיוק את ההפרדה שהסקריפט נבנה בשבילה: תוך
+      # שבוע כולם היו לומדים שאדום פירושו ״עוד יחס מוזר״ ומתעלמים.
       - name: יש מה למכור?
-        run: python scripts/audit_db.py --require-assessment --min-deliverable 1 --min-screenable 400
+        run: |
+          set +e
+          python scripts/audit_db.py --require-assessment --min-deliverable 1 --min-screenable 400
+          code=$?
+          set -e
+          case "$code" in
+            0) echo "נקי" ;;
+            1) echo "::warning title=ממצאי איכות נתונים::יש יחסים שאינם אפשריים פיזית — מדווח, לא חוסם" ;;
+            *) echo "::error title=אין מוצר::הזדמנויות בלי הערכה שמורה, או אפס ניתנים למסירה"; exit 1 ;;
+          esac
 
   frontend:
     runs-on: ubuntu-latest
