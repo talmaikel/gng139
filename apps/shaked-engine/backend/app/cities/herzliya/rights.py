@@ -42,7 +42,7 @@ from dataclasses import dataclass, field as dc_field
 # הפרסום של אפריל 2026 — זהה אות-באות, 14 עמודים, 13,838 תווים. כל שינוי
 # בטבלת רוחב הרחוב, בתקרות הקטגוריה או בתקן החניה מחייב העלאה כאן, אחרת
 # תיק שנמסר לא יידע לפי מה הוא חושב.
-RULES_VERSION = "herzliya-policy-2026-02"
+RULES_VERSION = "herzliya-policy-2026-02+w2026-09-14"
 
 POLICY_URL = (
     "https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/"
@@ -62,8 +62,20 @@ PARKING_URL = (
 )
 RULE_VERSION = "herzliya-shaked-2026-02-17"
 
-TOLERANCE_M = 1.0        # הנחה, לא מדידה. ראה validation/street_width.csv
-RELIABLE_MAX_M = 15.0    # מעליו מדידת הפער אינה אמינה — וגם אינה נדרשת
+# שני הקבועים נשענים על מדידה ידנית ב-GovMap (D1, 14.09.2026):
+# ‏POC/layer_a/validation/street_width.csv ו-d1_followup.json.
+#
+# ‏TOLERANCE_M — ב-9 רחובות שהמנוע נתן להם עד 12.1 מ׳, השגיאה מול המדידה
+# הייתה עד 0.8 מ׳ (חציון 0.5, בלי הטיה). שני מודדים על אותן שלוש חלקות
+# נבדלו עד 0.8 מ׳ (ממוצע 0.4). ‏1.0 מכסה את שניהם.
+TOLERANCE_M = 1.0
+#
+# ‏RELIABLE_MAX_M — מעליו מדידת הפער מגזימה, ולא בגבולות הסבילות: הראשונים
+# 14.0→10.8, מלכי יהודה 20.6→11.3, שווידלסון 33.0→10.4, ורופין 10 קיבלה
+# 29.1 כשהחזית שלה 9.9. הקרן בורחת מעבר לחלקה שממול, ולכן השגיאה חד-כיוונית:
+# הערך הוא חסם עליון, לא מדידה. ‏12.1 הוא הערך הגבוה ביותר שאומת, ו-12 הוא
+# גם הגבול שממנו הטבלה נותנת 9 קומות.
+RELIABLE_MAX_M = 12.0
 UNBOUND = float("inf")   # הרחוב אינו מגביל; תקרת הקטגוריה קובעת
 
 # מדיניות §5, "גובה אל מול חתך הרחוב" (עמ׳ 8). (גבול עליון כולל, מקסימום קומות)
@@ -267,9 +279,17 @@ def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M
                               _width_text(width_m) + " — לא תותר תוספת"))
         return r
 
+    # מעל RELIABLE_MAX_M הרחוב האמיתי עשוי להיות צר בהרבה, ולכן התחום נפתח
+    # כלפי מטה עד השורה הממוספרת הראשונה בטבלה. בלי זה, 33 מ׳ יצא ״9 קומות,
+    # עבר״ — וארלוזורוב 5 נמדדה 8.
+    unreliable = width_m > RELIABLE_MAX_M
+    if unreliable:
+        seen.append(min(STREET_TABLE[0][1], ceiling))
+
     r.floors_low, r.floors_high = min(seen), max(seen)
-    r.floors_certain = len(seen) == total and r.floors_low == r.floors_high
-    r.case_by_case = width_m > RELIABLE_MAX_M
+    r.floors_certain = none_hits + undefined_hits == 0 and r.floors_low == r.floors_high
+    # ״בחינה נקודתית״ נכונה רק לרחוב שידוע שהוא מעל 15 מ׳, ומדידת פער כזו אינה אמינה.
+    r.case_by_case = not unreliable and width_m > STREET_TABLE[-1][0]
 
     # **שני דברים שונים, ולא סטטוס אחד.** ‏11.5 מ׳ נופל בבירור בשורת
     # ״10-12״ ומקבל 8 קומות — המדיניות מוגדרת לחלוטין. מה שאינו ודאי הוא
@@ -288,6 +308,9 @@ def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M
     bits = [_width_text(width_m)]
     if policy_silent:
         bits.append(f"{100*(none_hits+undefined_hits)//total}% מתחום המדידה ללא מספר במדיניות")
+    elif unreliable and not r.floors_certain:
+        bits.append(f"מדידת הפער מגזימה ברחובות רחבים — הרחוב עשוי להיות צר בהרבה; "
+                    f"{r.floors_low:g} עד {r.floors_high:g} קומות; מדידה בשטח תכריע")
     elif not r.floors_certain:
         bits.append(f"טווח ±{tol:g} מ׳ חוצה שורות בטבלה — {r.floors_low:g} עד {r.floors_high:g} קומות; "
                     "מדידה בשטח תכריע")

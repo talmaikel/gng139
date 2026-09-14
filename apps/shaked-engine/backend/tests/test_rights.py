@@ -98,7 +98,7 @@ def test_the_policy_gap_and_our_measurement_are_told_apart():
         return next(c.status for c in R.floors(w, CAT).checks if c.id == "street_width")
     assert status(8.5) == "undefined"            # המדיניות שותקת
     assert status(11.5) == "needs_measurement"   # אנחנו לא מדדנו מספיק טוב
-    assert status(20.0) == "passed"              # מעל 15 — הרחוב אינו מגביל
+    assert status(20.0) == "needs_measurement"   # מדידת פער רחבה אינה מוכיחה רחוב רחב
 
 
 def test_the_category_ceiling_caps_the_street_table():
@@ -114,10 +114,45 @@ def test_the_narrow_end_of_the_band_counts_not_just_the_centre():
     assert (r.floors_low, r.floors_high) == (7, 8)
     assert not r.floors_certain          # התחום נוגע בפער 8–9
 
-def test_above_fifteen_metres_the_street_stops_binding():
+def test_the_policy_still_stops_binding_above_fifteen_metres():
+    """הטבלה עצמה לא השתנתה: רחוב שרוחבו באמת מעל 15 מ׳ אינו מגביל."""
+    assert R.floors_for_width(33.0) == R.UNBOUND
+
+
+def test_a_wide_gap_measurement_does_not_lift_the_street_limit():
+    """הבדיקה הזו קבעה פעם ש-33 מ׳ הם ״9 קומות, ודאי, בחינה נקודתית״.
+    ארלוזורוב 5 קיבלה 33.0 לחזית שווידלסון, ובמדידה ידנית החזית 10.4 מ׳ —
+    8 קומות. מעל RELIABLE_MAX_M הערך הוא חסם עליון, לא מדידה."""
     r = R.floors(33.0, CAT)
-    assert r.floors_low == r.floors_high == 9.0     # תקרת הקטגוריה
-    assert r.case_by_case
+    assert (r.floors_low, r.floors_high) == (7, 9)
+    assert not r.floors_certain
+    assert not r.case_by_case        # ״נקודתית״ הסתירה את ״דורש מדידה״ במסכים
+    check = next(c for c in r.checks if c.id == "street_width")
+    assert check.status == "needs_measurement"
+    assert "מדידה בשטח תכריע" in check.detail
+
+
+# מנוע מול מדידה ידנית ב-GovMap של אותה חזית, חציון שלוש נקודות.
+# מקור: POC/layer_a/validation/street_width.csv ו-d1_followup.json (14.09.2026).
+MEASURED = [
+    (9.0, 8.2), (9.0, 9.7), (9.0, 8.92), (10.0, 10.5), (10.0, 10.0), (10.0, 10.0),
+    (10.2, 10.2), (11.8, 11.3), (12.1, 11.5), (14.0, 10.8), (14.9, 14.98),
+    (17.3, 16.0), (20.6, 11.3), (29.1, 9.9), (31.7, 16.7), (33.0, 10.4), (37.2, 18.3),
+]
+
+
+@pytest.mark.parametrize("engine,measured", MEASURED)
+def test_the_reported_range_holds_for_every_street_measured_by_hand(engine, measured):
+    """לכל רחוב שנמדד ביד: אם המדיניות נותנת לו מספר, הטווח שהמנוע מדווח
+    מכיל אותו. אם לא — המנוע לא מדווח ודאות."""
+    r = R.floors(engine, CAT)
+    truth = R.floors_for_width(measured)
+    status = next(c.status for c in r.checks if c.id == "street_width")
+    if truth in (None, "undefined"):
+        assert status != "passed"
+    else:
+        truth = min(truth, 9.0)
+        assert r.floors_low <= truth <= r.floors_high
 
 def test_the_low_category_binds_below_every_row_of_the_street_table():
     r = R.floors(20.0, "התחדשות מגרשית מוטת מגורים נמוכה")
