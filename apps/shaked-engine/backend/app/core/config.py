@@ -1,5 +1,7 @@
 from functools import lru_cache
+from secrets import token_urlsafe
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,10 +10,14 @@ class Settings(BaseSettings):
 
     environment: str = "development"
 
-    database_url: str = "postgresql+asyncpg://shaked:shaked@localhost:5432/shaked_engine"
-    database_url_sync: str = "postgresql://shaked:shaked@localhost:5432/shaked_engine"
+    # Development defaults rely on local/peer authentication and contain no
+    # repository-stored credentials. Deployments should set both URLs.
+    database_url: str = "postgresql+asyncpg://localhost/shaked_engine"
+    database_url_sync: str = "postgresql://localhost/shaked_engine"
 
-    jwt_secret: str = "change-me-to-a-long-random-string"
+    # Keeps a zero-config development process usable without publishing a
+    # shared key. Deployments must provide a stable JWT_SECRET explicitly.
+    jwt_secret: str = Field(default_factory=lambda: token_urlsafe(32))
     jwt_lifetime_seconds: int = 3600
 
     openai_api_key: str | None = None
@@ -27,6 +33,10 @@ class Settings(BaseSettings):
     # מגבלת שטח לאזור חיפוש מצויר. הערך ייקבע בפיילוט (PRD MAP-01);
     # 250 דונם הוא הערך שה-POC עבד לפיו והוא נקודת המוצא.
     max_search_area_sqm: float = 250_000
+
+    market_data_radius_m: int = Field(default=500, ge=100, le=2_000)
+    market_data_lookback_months: int = Field(default=12, ge=1, le=36)
+    market_data_cache_days: int = Field(default=7, ge=0, le=30)
 
     # ‏localhost ו-127.0.0.1 הם מקורות שונים לדפדפן, ושניהם בשימוש בהרצה
     # מקומית — origin אחד בלבד נכשל ב-CORS בלי שהשרת מדווח על כלום.

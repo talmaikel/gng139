@@ -36,7 +36,7 @@ openai>=1.35
 
 # --- Utilities ---
 python-dotenv>=1.0
-httpx>=0.27
+httpx[socks]>=0.27
 
 # --- ייצוא התיק (DOS-04) ---
 # ‏xlsxwriter כותב נוסחאות חיות ולא תוצאות, כדי שהיזם יוכל לשנות הנחה
