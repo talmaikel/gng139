@@ -20,6 +20,7 @@
 ‏**ACC-08:** *״בקשה של חברה ללא הרשאה לתיק נדחית גם כשמזהה התיק ידוע״*.
 הבדיקה כאן היא על רישום מסירה, ו-404 ולא 403 — ‏403 מאשר שהמזהה קיים.
 """
+import re
 from typing import Any
 from uuid import UUID
 
@@ -127,6 +128,36 @@ async def _entitlement(session, opportunity_id: UUID, company_id: UUID) -> Deliv
     return row
 
 
+# ‏B8 · שמות מהמקורות הגיעו ליזם כמו שהם: ״LEGAL_AREA״, ״amudim״,
+# ״15.5 מ׳ residential״, ״סכום num_aprt״. במסד הם נשארים — הם המיקום
+# המדויק בתוך המקור, ומי שבודק אותנו צריך אותם. בתיק מוצג שם בעברית,
+# והשם המקורי בסוגריים כשהוא מה שמאתרים לפיו.
+_SOURCE_TERMS = {
+    # שמות שדות בשכבות — נשארים בסוגריים, כי לפיהם מאתרים את השדה במקור
+    "LEGAL_AREA": "השטח הרשום בשכבת החלקות (LEGAL_AREA)",
+    "amudim": "שדה קומת העמודים בשכבת הכתובות (amudim)",
+    "num_aprt": "מספר הדירות (num_aprt)",
+    "Num_floors": "מספר הקומות (Num_floors)",
+    "WFS": "שליפה משכבת החלקות הרשמית (WFS)",
+    # סוג הדרך ב-OpenStreetMap — תיאור, לא מזהה, ולכן בלי סוגריים
+    "residential": "רחוב מגורים",
+    "living_street": "רחוב משולב",
+    "tertiary": "דרך שלישונית",
+    "secondary": "דרך משנית",
+    "primary": "דרך ראשית",
+    "unclassified": "דרך לא מסווגת",
+}
+_SOURCE_TOKEN = re.compile(r"(?<![A-Za-z_])(" + "|".join(sorted(_SOURCE_TERMS, key=len, reverse=True))
+                           + r")(?![A-Za-z_0-9])")
+
+
+def _readable(text: str | None) -> str | None:
+    """מיקום או שיטה של ראיה, בעברית. מילה שאינה במילון נשארת כמו שהיא."""
+    if not text:
+        return text
+    return _SOURCE_TOKEN.sub(lambda m: _SOURCE_TERMS[m.group(1)], text)
+
+
 def _evidence_rows(fields: dict[str, dict]) -> list[dict[str, Any]]:
     """כל שדה מהותי עם מקורו, מועדו וודאותו — ‏DOS-02.
 
@@ -145,8 +176,8 @@ def _evidence_rows(fields: dict[str, dict]) -> list[dict[str, Any]]:
             "decides": f.get("certainty") in DECIDING,
             "source_url": source.get("url"),
             "retrieved_at": source.get("retrieved_at"),
-            "location": f.get("location"),
-            "method": f.get("method"),
+            "location": _readable(f.get("location")),
+            "method": _readable(f.get("method")),
         })
     return out
 
@@ -185,6 +216,45 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
                  "היעדר מסמך מצוין במפורש ואינו מוצג כארכיון מלא, "
                  "ונתון חסר אינו מוחלף באומדן ואינו נספר כאפס."),
     }
+
+
+def _scenario_caveats(assessment: dict, fields: dict, live: dict) -> list[dict[str, str]]:
+    """על מה הרווח נשען ואינו ודאי — **משפטים מוכנים, נכתבים פעם אחת בשרת.** (B8)
+
+    במעבר של B8 על 6537/120: פרק הזכויות כותב שהתקרה ״מנופחת״, והתרחיש
+    מתחתיו מציג רווח של 43 מיליון ₪ בלי מילה על כך — במסך, ב-PDF ובאקסל.
+    הסייג היה בתיק, רק לא ליד המספר שהוא מסייג. אותו דבר למחיר המכירה
+    ולשטח הדירה: שניהם אומדן, והתרחיש לא אמר את זה באף משטח.
+
+    סדר הרשימה הוא סדר ההשפעה: התקרה מכפילה כל שגיאה פי ארבע, ולכן ראשונה.
+    מי שמרנדר מדפיס ‏`text` כמו שהוא, כמו ‏`not_delivered_reason`.
+    """
+    out: list[dict[str, str]] = []
+    if assessment.get("cap_400_sqm") and not assessment.get("cap_400_reliable"):
+        post_2005 = (fields.get("post_2005_permit") or {}).get("value")
+        if post_2005 is True:
+            text = ("הרווח מחושב על תקרת 400% שייתכן שהיא מנופחת: בתיק הבניין יש היתר "
+                    "מאחרי 18.5.2005, ולא ידוע כמה שטח הוסיף. תוספת כזו מוחרגת מהבסיס "
+                    "(§70ב(א)(1)(ב)), ואם יש כזו — התקרה והרווח נמוכים מהמוצג.")
+        else:
+            text = ("הרווח מחושב על תקרת 400% שייתכן שהיא מנופחת: לא נבדק בתיק הבניין "
+                    "אם הותרה תוספת בנייה אחרי 18.5.2005. תוספת כזו מוחרגת מהבסיס "
+                    "(§70ב(א)(1)(ב)), ואם יש כזו — התקרה והרווח נמוכים מהמוצג.")
+        out.append({"id": "cap_400_unreliable", "text": text})
+
+    area = fields.get("existing_area") or {}
+    if assessment.get("cap_400_sqm") and assessment.get("cap_400_certainty") not in DECIDING:
+        how = f" ({area['method']})" if area.get("method") else ""
+        out.append({"id": "existing_area_estimate",
+                    "text": f"השטח הבנוי הקיים, שעליו נשענת התקרה, הוא אומדן{how} ולא מדידה."})
+
+    for key, name in (("sale_price", "sale_price_per_sqm_ils"),
+                      ("unit_area", "average_existing_unit_sqm")):
+        item = live.get(key) or {}
+        if not item.get("resolved"):
+            out.append({"id": f"{name}_unresolved",
+                        "text": f"{ASSUMPTION_LABEL[name]}: {item.get('label')}."})
+    return out
 
 
 def _not_delivered(missing: list[str]) -> str | None:
@@ -540,6 +610,7 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             a, live, construction_cost, construction_cost_per_sqm,
             underground_cost, underground_cost_per_sqm),
         "live_inputs": live,
+        "caveats": _scenario_caveats(assessment, fields, live),
         "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
                       "ואינה קובעת זכויות או היתכנות מאושרת.",
     }

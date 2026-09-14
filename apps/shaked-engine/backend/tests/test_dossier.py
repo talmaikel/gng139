@@ -624,3 +624,77 @@ async def test_the_spreadsheet_of_a_real_dossier_matches_its_screen(session):
                                 ("total_cost", "total_cost_ils"),
                                 ("profit", "projected_profit_ils")):
         assert sheet[sheet_key] == pytest.approx(screen[calc_key], rel=1e-6), sheet_key
+
+
+# ── B8 · אין בתיק מספר בלי מקור ──
+
+@pytest.mark.asyncio
+async def test_every_assumption_row_names_where_it_came_from(session):
+    """במעבר של B8, שלוש שורות הוצגו עם מקור ״—״: הריסה, עלויות רכות
+    ויעד רווח. הנחת עבודה היא מקור לגיטימי — בתנאי שכתוב שזו הנחת עבודה."""
+    c, _, opp = await _delivered(session, block="9670")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    empty = [r["label"] for r in d["economics"]["assumptions"].values()
+             if not (r.get("source") or "").strip()]
+    assert empty == []
+
+
+async def _delivered_with(session, block, **override):
+    c, u = await _company(session)
+    opp = await _opportunity(session, block, **{**READY, **override})
+    from app.cities.herzliya.assessments import refresh_one
+    await refresh_one(session, HerzliyaCityRules(), opp.id)
+    await deliver(session, opp.id, c.id, u.id,
+                  rules_version="herzliya-policy-2026-02", data_version="2026-09-13")
+    return c, opp
+
+
+@pytest.mark.asyncio
+async def test_the_scenario_says_its_cap_may_be_inflated(session):
+    """‏6537/120: פרק הזכויות אמר ״התקרה מנופחת״, והתרחיש מתחתיו הציג
+    רווח בלי מילה. הסייג צריך לנסוע עם הרווח, לא להישאר בפרק אחר."""
+    c, opp = await _delivered_with(session, "9671", post_2005_permit=True)
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    assert d["rights"]["cap_400_reliable"] is False
+    caveats = {x["id"]: x["text"] for x in d["economics"]["caveats"]}
+    assert "18.5.2005" in caveats["cap_400_unreliable"]
+    assert "בתיק הבניין יש היתר" in caveats["cap_400_unreliable"]
+    assert list(caveats)[0] == "cap_400_unreliable"      # ההשפעה הגדולה ראשונה
+    # היתר אחרי המועד אינו הוכחה לתוספת שטח — הניסוח אינו קובע שהיא מנופחת
+    assert "ייתכן" in d["rights"]["cap_400_basis"]
+
+
+@pytest.mark.asyncio
+async def test_a_checked_cap_carries_no_inflation_caveat(session):
+    c, opp = await _delivered_with(session, "9672", post_2005_permit=False)
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    ids = [x["id"] for x in d["economics"]["caveats"]]
+    assert d["rights"]["cap_400_reliable"] is True
+    assert "cap_400_unreliable" not in ids
+    # השטח הקיים עדיין אומדן, והשיטה נאמרת במילים
+    area = next(x["text"] for x in d["economics"]["caveats"] if x["id"] == "existing_area_estimate")
+    assert "טביעת רגל" in area
+
+
+@pytest.mark.asyncio
+async def test_an_unresolved_price_is_a_caveat_and_a_resolved_one_is_not(session):
+    c, opp = await _with_resolved_inputs(session, "9673")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    ids = [x["id"] for x in d["economics"]["caveats"]]
+    assert "sale_price_per_sqm_ils_unresolved" not in ids     # 17 עסקאות
+    assert "average_existing_unit_sqm_unresolved" in ids      # דירה אחת מתוך רבות
+
+
+def test_a_source_field_name_reaches_the_developer_in_hebrew():
+    """‏B8 · שמות שדות וסוגי דרכים מהמקורות הגיעו ליזם באנגלית."""
+    from app.cities.herzliya.dossier import _readable
+    assert _readable("גוש 6537 חלקה 120 · LEGAL_AREA") == \
+        "גוש 6537 חלקה 120 · השטח הרשום בשכבת החלקות (LEGAL_AREA)"
+    assert _readable("גוש 6537 חלקה 120 · amudim").endswith("(amudim)")
+    assert _readable("15.5 מ׳ residential (הנוטרים) · 20.0 מ׳ living_street (החנית)") == \
+        "15.5 מ׳ רחוב מגורים (הנוטרים) · 20.0 מ׳ רחוב משולב (החנית)"
+    assert _readable("סכום num_aprt בנקודות הכתובת") == "סכום מספר הדירות (num_aprt) בנקודות הכתובת"
+    # מילה שאינה במילון, ומילה שמכילה מילה מהמילון — לא נוגעים
+    assert _readable("תיק 1613 · 6 בקשות") == "תיק 1613 · 6 בקשות"
+    assert _readable("residential_zoning") == "residential_zoning"
+    assert _readable(None) is None
