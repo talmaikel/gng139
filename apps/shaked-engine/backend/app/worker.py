@@ -9,8 +9,10 @@ import logging
 import uuid
 
 import pymupdf
+from sqlalchemy import func, select
 
 from app.cities.herzliya.archive_client import HerzliyaArchiveClient
+from app.core.config import get_settings
 from app.core.database import AsyncSessionLocal
 from app.core.queue import TaskQueueWorker
 from app.models.opportunity import Opportunity
@@ -19,9 +21,12 @@ from app.pipeline.preprocessor import preprocess_blueprint
 from app.services.economic.assumptions import get_assumptions
 from app.services.economic.calculator import calculate_feasibility
 from app.services.economic.schemas import FeasibilityInput
+from app.services.market_data.govmap import MarketDataUnavailable
+from app.services.market_data.service import get_or_refresh_market_valuation
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("shaked.worker")
+settings = get_settings()
 
 # Courtesy caps so one dossier job can't hammer a municipal archive server.
 MAX_TIK_IDS = 5
@@ -85,6 +90,15 @@ def _select_buildable_area(extraction_results: list[dict], plot_area_sqm: float 
     return None, "insufficient_planning_basis"
 
 
+async def _opportunity_centroid(session, opportunity_id: uuid.UUID) -> tuple[float, float]:
+    statement = select(
+        func.ST_Y(func.ST_Centroid(Opportunity.geom)),
+        func.ST_X(func.ST_Centroid(Opportunity.geom)),
+    ).where(Opportunity.id == opportunity_id)
+    row = (await session.execute(statement)).one()
+    return float(row[0]), float(row[1])
+
+
 async def generate_dossier_handler(payload: dict) -> dict:
     """
     Assemble a dossier for one opportunity: pull real municipal archive
@@ -115,6 +129,35 @@ async def generate_dossier_handler(payload: dict) -> dict:
             "address": opportunity.address,
             "city_code": opportunity.city_code,
         }
+
+        # Market transactions are intentionally fetched only here, after an
+        # opportunity was selected for a dossier. Layer A remains a cheap,
+        # citywide screen; this is the expensive/on-demand final-three step.
+        latitude, longitude = await _opportunity_centroid(session, opportunity_id)
+        market_result = None
+        try:
+            market_result = await get_or_refresh_market_valuation(
+                session,
+                opportunity_id=opportunity_id,
+                latitude=latitude,
+                longitude=longitude,
+                city_code=opportunity.city_code,
+                metadata=opportunity.metadata_json,
+                radius_m=settings.market_data_radius_m,
+                lookback_months=settings.market_data_lookback_months,
+                cache_days=settings.market_data_cache_days,
+            )
+            dossier["market_valuation"] = market_result.valuation.model_dump(mode="json")
+            dossier["market_valuation"]["cache_hit"] = market_result.cache_hit
+            await session.commit()
+        except MarketDataUnavailable as exc:
+            # A public upstream with no SLA must not destroy an otherwise
+            # useful dossier. The fallback stays explicit and auditable.
+            dossier["market_valuation"] = {
+                "status": "unavailable",
+                "error": str(exc),
+                "fallback": "versioned_city_assumption",
+            }
 
         plot_area_sqm = float(opportunity.area_sqm) if opportunity.area_sqm else None
 
@@ -162,12 +205,18 @@ async def generate_dossier_handler(payload: dict) -> dict:
             )
         else:
             assumptions = get_assumptions(opportunity.city_code)
+            market_price = (
+                market_result.valuation.blended_price_per_sqm_ils
+                if market_result and market_result.valuation.is_unit_mix_adjusted
+                else None
+            )
+            sale_price_per_sqm = market_price or assumptions.sale_price_per_sqm_ils.value
             feasibility = calculate_feasibility(
                 FeasibilityInput(
                     plot_area_sqm=plot_area_sqm,
                     existing_units=opportunity.existing_units,
                     buildable_area_sqm=buildable_area_sqm,
-                    sale_price_per_sqm=assumptions.sale_price_per_sqm_ils.value,
+                    sale_price_per_sqm=sale_price_per_sqm,
                     construction_cost_per_sqm=assumptions.construction_cost_per_sqm_ils.value,
                     soft_cost_ratio=assumptions.soft_cost_ratio.value,
                     demolition_cost_per_unit=assumptions.demolition_cost_per_unit_ils.value,
@@ -204,6 +253,26 @@ async def generate_dossier_handler(payload: dict) -> dict:
                 "assumptions_version": assumptions.version,
                 "assumptions_effective_date": assumptions.effective_date.isoformat(),
                 **assumptions.report(),
+                "sale_price_per_sqm_ils": {
+                    "value": sale_price_per_sqm,
+                    "status": "estimate",
+                    "unit": "ILS/sqm",
+                    "source": (
+                        market_result.valuation.source_url
+                        if market_price and market_result
+                        else assumptions.sale_price_per_sqm_ils.source
+                    ),
+                    "as_of_date": (
+                        market_result.valuation.as_of_date.isoformat()
+                        if market_price and market_result
+                        else assumptions.effective_date.isoformat()
+                    ),
+                    "method": (
+                        "local_comparable_sales_weighted_by_explicit_unit_mix"
+                        if market_price
+                        else "versioned_city_fallback_no_explicit_unit_mix"
+                    ),
+                },
             }
 
         # True whenever a human needs to confirm a figure before this dossier
