@@ -25,8 +25,15 @@ from app.core.database import AsyncSessionLocal
 from app.models.evidence import FieldEvidence
 from app.models.opportunity import Opportunity
 
+# **השטח הבנוי נקרא מהראיה ולא מההערכה.** הגרסה הראשונה גזרה אותו מ-
+# ‏`cap_400_sqm / 4`, כלומר מתוך ההערכה השמורה — ולכן כשההערכה נמחקה,
+# הבדיקה שהייתה תופסת את הספירות השבורות פשוט לא רצה, בדיוק ברגע
+# שהמסד היה במצב הגרוע ביותר. הראיה `existing_area` קיימת ל-699 תמיד.
+EXISTING_AREA = "existing_area"
+
 # מעל זה ספירת הדירות אינה שמישה. חציון 94, אחוזון 90 הוא 166.
 MAX_SQM_PER_UNIT = 200.0
+MIN_SQM_PER_UNIT = 25.0
 SENTINELS = {999, -1}
 TOP = 10
 
@@ -35,7 +42,7 @@ def _assess(o: Opportunity, key: str):
     return ((o.metadata_json or {}).get("assessment") or {}).get(key)
 
 
-def _ratios(o: Opportunity) -> list[str]:
+def _ratios(o: Opportunity, built: float | None = None) -> list[str]:
     """מה שחייב להתקיים פיזית. כל הפרה כאן היא ממצא, לא רעש.
 
     **הגרסה הראשונה של הפונקציה הזו ייצרה 21 ממצאים, ורובם היו שקר.**
@@ -47,23 +54,27 @@ def _ratios(o: Opportunity) -> list[str]:
     """
     bad = []
     u, a, floors = o.existing_units, o.area_sqm, _assess(o, "floors_low")
-    cap = _assess(o, "cap_400_sqm")
+    if built is None and (cap := _assess(o, "cap_400_sqm")):
+        built = float(cap) / 4             # התקרה היא 400% מהשטח הקיים
 
     if u in SENTINELS:
         bad.append(f"ספירת דירות היא ערך זקיף ({u})")
-    if u and a and u > 0 and a / u > MAX_SQM_PER_UNIT:
-        bad.append(f"{a / u:,.0f} מ״ר מגרש לדירה — מעל {MAX_SQM_PER_UNIT:.0f}")
 
-    if cap and a and floors and float(a) > 0 and float(floors) > 0:
-        existing = float(cap) / 4          # התקרה היא 400% מהשטח הקיים
-        coverage = existing / (float(a) * float(floors))
+    # **שני הסימנים הם על אותו יחס, בשני כיוונים.** ‏`usable_units`
+    # פוסל מעל 200 מ״ר בנוי לדירה — שם הספירה נמוכה מדי (בניין בן 15
+    # קומות שרשום כארבע דירות). מתחת ל-25 היא גבוהה מדי, וזה כיוון
+    # שלא נבדק עד 14.09: גורדון 7 נושא 99 דירות על 553 מ״ר בנוי.
+    if built and u and u > 0:
+        per_unit = built / u
+        if per_unit > MAX_SQM_PER_UNIT:
+            bad.append(f"{per_unit:,.0f} מ״ר בנוי לדירה — מעל {MAX_SQM_PER_UNIT:.0f}")
+        elif per_unit < MIN_SQM_PER_UNIT:
+            bad.append(f"{per_unit:,.0f} מ״ר בנוי לדירה — קטן מדירה אפשרית")
+
+    if built and a and floors and float(a) > 0 and float(floors) > 0:
+        coverage = built / (float(a) * float(floors))
         if coverage > 1.0:
             bad.append(f"תכסית {coverage:.0%} — שטח בנוי גדול ממגרש × קומות")
-
-    if cap and u and u > 0:
-        per_unit = (float(cap) / 4) / u    # שטח בנוי קיים לדירה
-        if per_unit < 25:
-            bad.append(f"{per_unit:,.0f} מ״ר בנוי לדירה — קטן מדירה אפשרית")
     return bad
 
 
@@ -71,6 +82,12 @@ async def main(args) -> int:
     findings: list[str] = []
     fatal: list[str] = []
     async with AsyncSessionLocal() as s:
+        built = {
+            e.opportunity_id: float(e.value)
+            for e in (await s.execute(
+                select(FieldEvidence).where(FieldEvidence.field == EXISTING_AREA))).scalars()
+            if e.value not in (None, "")
+        }
         # ── ב · ביקורת המיון: לדרג כמו שהלקוח ידרג, ולקרוא את הראש ──
         for name, (col, label) in SORTABLE.items():
             rows = (await s.execute(
@@ -79,11 +96,12 @@ async def main(args) -> int:
             )).scalars().all()
             print(f"\n── מיון לפי {label} ({name}) · {len(rows)} ראשונות ──")
             for o in rows:
-                bad = _ratios(o)
+                bad = _ratios(o, built.get(o.id))
                 mark = "  !! " if bad else "     "
-                print(f"{mark}{o.block}/{o.parcel}  שטח={o.area_sqm or 0:,.0f}  "
-                      f"דירות={o.existing_units}  קומות={_assess(o, 'floors_low')}  "
-                      f"תקרה={_assess(o, 'cap_400_sqm')}")
+                b = built.get(o.id)
+                print(f"{mark}{o.block}/{o.parcel}  מגרש={o.area_sqm or 0:,.0f}  "
+                      f"בנוי={b and f'{b:,.0f}' or '—'}  דירות={o.existing_units}  "
+                      f"קומות={_assess(o, 'floors_low')}  תקרה={_assess(o, 'cap_400_sqm')}")
                 for b in bad:
                     findings.append(f"{name} · {o.block}/{o.parcel}: {b}")
                     print(f"        → {b}")
