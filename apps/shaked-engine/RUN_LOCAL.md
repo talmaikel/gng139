@@ -22,11 +22,13 @@ psql -d shaked_engine -c "CREATE EXTENSION IF NOT EXISTS postgis"
 
 ```bash
 cd apps/shaked-engine/backend
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
+# ‏--seed חשוב: בלעדיו אין pip **בתוך** ה-venv, ו-`pip install` יפעיל את
+# ה-pip של המערכת — יצהיר הצלחה, והחבילה לא תהיה שם. זה קרה, פעמיים.
+uv venv --python 3.12 --seed .venv
+uv pip install --python .venv/bin/python -r requirements.txt -r requirements-dev.txt
 cp .env.example .env
-.venv/bin/alembic upgrade head        # צריך להגיע ל-0004_merge_heads
-.venv/bin/python -m pytest -q         # 51 עוברות
+.venv/bin/alembic upgrade head        # צריך להגיע ל-0007_add_market_data
+.venv/bin/python -m pytest -q         # 251 עוברות
 .venv/bin/uvicorn app.main:app --port 8000
 ```
 
@@ -89,3 +91,24 @@ curl -X POST localhost:8000/api/v1/auth/register -H 'Content-Type: application/j
 והוא נשמר עכשיו ב-`field_evidence.source_updated_at`. **גיל השליפה שלנו
 וגיל הנתון במקור הם שני דברים שונים**, והעמודה הזו היא מה שיאפשר בעתיד
 להחליט לפי השני ולא רק לפי הראשון.
+
+## אם הסביבה מתנהגת מוזר
+
+הסימן: ‏`pip install` מדווח הצלחה, ו-`import` נכשל.
+
+```bash
+.venv/bin/python --version     # איזו גרסה רצה
+.venv/bin/pip --version        # ולאיזו pip שייך — חייבות להיות זהות
+ls .venv/lib/                  # חייבת להיות תיקייה אחת בלבד
+```
+
+שלוש בדיקות ב-`tests/test_environment.py` אוכפות את זה, ונכשלות עם הוראות
+התיקון. אם הן נכשלות — לבנות מחדש, זה שלושים שניות:
+
+```bash
+rm -rf .venv && uv venv --python 3.12 --seed .venv
+uv pip install --python .venv/bin/python -r requirements.txt -r requirements-dev.txt
+```
+
+**‏`requirements.txt` מספיק בפני עצמו** — נבדק: venv נקי ממנו בלבד מריץ את
+כל 251 הבדיקות.
