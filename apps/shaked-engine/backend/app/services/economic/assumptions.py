@@ -114,8 +114,8 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
     effective_date=date(2026, 1, 1),
     sale_price_per_sqm_ils=Assumption(45_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm"),
     construction_cost_per_sqm_ils=Assumption(
-        10_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm",
-        source="‏8,000 לא היה ריאלי; טווח 9,500-11,000 לבנייה רוויה עם חניון"),
+        1_860.0, AssumptionStatus.DATA, "ILS/sqm",
+        source="מדד תשומות הבנייה"),
     demolition_cost_per_unit_ils=Assumption(150_000.0, AssumptionStatus.ESTIMATE, "ILS/unit"),
     soft_cost_ratio=Assumption(0.15, AssumptionStatus.ESTIMATE, "ratio"),
     developer_profit_target_ratio=Assumption(0.20, AssumptionStatus.ESTIMATE, "ratio"),
