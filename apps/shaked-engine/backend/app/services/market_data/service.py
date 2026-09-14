@@ -9,8 +9,29 @@ from app.services.market_data.repository import (
     find_fresh_valuation,
     upsert_transactions,
 )
-from app.services.market_data.schemas import MarketDataResult, targets_from_metadata
+from app.services.market_data.schemas import (
+    MarketDataResult,
+    TargetUnit,
+    targets_from_metadata,
+)
 from app.services.market_data.valuation import calculate_market_valuation
+
+
+def market_valuation_parameters(
+    metadata: dict | None,
+) -> tuple[list[TargetUnit], dict, str | None]:
+    """Build the canonical parameter set used to identify a valuation snapshot.
+
+    Dossier generation and market-data refresh must use the exact same parameter
+    fingerprint. Keeping it here prevents the final delivered dossier from
+    looking up a different cache key than the one B1 persisted.
+    """
+    targets, unit_mix_state, unit_mix_warning = targets_from_metadata(metadata)
+    parameters = {
+        "unit_mix_state": unit_mix_state,
+        "targets": [target.model_dump(mode="json") for target in targets],
+    }
+    return targets, parameters, unit_mix_warning
 
 
 async def get_or_refresh_market_valuation(
@@ -26,11 +47,7 @@ async def get_or_refresh_market_valuation(
     lookback_months: int = 12,
     cache_days: int = 7,
 ) -> MarketDataResult:
-    targets, unit_mix_state, unit_mix_warning = targets_from_metadata(metadata)
-    parameters = {
-        "unit_mix_state": unit_mix_state,
-        "targets": [target.model_dump(mode="json") for target in targets],
-    }
+    targets, parameters, unit_mix_warning = market_valuation_parameters(metadata)
     cached = await find_fresh_valuation(
         session,
         opportunity_id=opportunity_id,

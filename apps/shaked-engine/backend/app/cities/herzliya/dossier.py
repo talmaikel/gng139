@@ -26,6 +26,7 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.cities.herzliya import rights
+from app.core.config import get_settings
 from app.evidence import DECIDING, Certainty
 from app.models.opportunity import Opportunity
 from app.models.package import Delivery
@@ -33,13 +34,12 @@ from app.services.economic.assumptions import get_assumptions
 from app.services.economic.calculator import calculate_feasibility
 from app.services.economic.schemas import FeasibilityInput
 from app.services.evidence_store import fields_for, stale_fields
+from app.services.market_data.repository import find_fresh_valuation
+from app.services.market_data.schemas import MarketValuation
+from app.services.market_data.service import market_valuation_parameters
 
 TEMPLATE_VERSION = "dossier-1"
 
-# שמות השדות בעברית, **בשרת ולא בדפדפן**. הגרסה הראשונה החזיקה אותם
-# ב-`labels.ts` בלבד, וה-PDF — המסמך שהלקוח באמת מקבל ביד — הדפיס
-# ‏`renewal_policy_category` ו-`scope_buildings`. כל צרכן של התיק מקבל
-# עכשיו את התווית מאותו מקום.
 FIELD_LABEL = {
     "parcel_area": "שטח המגרש",
     "units": "מספר דירות קיים",
@@ -60,12 +60,6 @@ FIELD_LABEL = {
     "post_2005_permit": "היתר אחרי 18.5.2005",
 }
 
-# ההנחות הכלכליות. **התווית חיה כאן ולא בדפדפן.** עד היום היא הייתה
-# ב-`frontend/src/lib/labels.ts` בלבד, והמפה נשרה מהקוד: `betterment_levy_ratio`
-# שונה ל-`betterment_levy_rate` ונוסף `betterment_base_ils`, והמסך המשיך
-# להציג את המזהה הגולמי ליזם — בלי שגיאה, בלי בדיקה אדומה, בדיוק בשורה
-# שמסבירה למה התרחיש אינו נמסר. ‏`test_labels.py` הופך את הנשירה הזו
-# לבדיקה שנופלת.
 ASSUMPTION_LABEL = {
     "sale_price_per_sqm_ils": "מחיר מכירה למ״ר",
     "construction_cost_per_sqm_ils": "עלות בנייה למ״ר",
@@ -143,27 +137,18 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
     unknown = [{"id": c["id"], "label": c["label"], "detail": c.get("detail")}
                for c in assessment["checks"] if c["status"] == "unknown"]
     missing = [n for n, f in fields.items() if f.get("certainty") == Certainty.MISSING.value]
-    # ״מעולם לא נשאל״ ו״אין לו מקור פתוח״ הופיעו שניהם על אותו שדה, וזה
-    # קורא כמו רשלנות: שער שאין לו מקור לא ״לא נשאל״ — הוא נשאל ואין
-    # ממי לקבל תשובה. כל שדה מופיע בקטגוריה אחת בלבד.
     never_asked = sorted(set(rights.THRESHOLD_IDS) - set(fields) - set(rights.UNOBTAINABLE))
     return {
         "unknown_gates": unknown,
-        # שער שאין לו מקור פתוח — גבול הנתונים, לא עבודה חסרה.
-        # ‏`{id, label}` ולא אחד מהם: התווית היא מה שמודפס, והמזהה הוא מה
-        # שאפשר לסנן ולבדוק לפיו. רשימה של תוויות בלבד אינה ניתנת לבדיקה.
         "unobtainable": _named(sorted(set(rights.UNOBTAINABLE)
                                       & {c["id"] for c in assessment["checks"]
                                          if c["status"] == "unknown"})),
         "checked_and_not_found": _named(sorted(missing)),
         "never_asked": _named(never_asked),
         "stale_sources": _named(assessment.get("stale_fields", [])),
-        # גם כאן `{id, label}`: היום אף מסך אינו מרנדר את השדה הזה, ומחר
-        # מישהו כן — ואז מזהה גולמי חוזר למסך דרך הדלת האחורית.
         "economic_inputs_missing": [
             {"id": k, "label": ASSUMPTION_LABEL.get(k, k)}
             for k in economics.get("inputs_missing", [])],
-        # ‏DOS-03: התיק אינו מציג את עצמו כארכיון מלא.
         "note": ("התיק מבוסס על מקורות ציבוריים ועל תיק הבניין העירוני. "
                  "היעדר מסמך מצוין במפורש ואינו מוצג כארכיון מלא, "
                  "ונתון חסר אינו מוחלף באומדן ואינו נספר כאפס."),
@@ -171,12 +156,7 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
 
 
 def _not_delivered(missing: list[str]) -> str | None:
-    """המשפט שהיזם קורא כשהתרחיש אינו נמסר — **נכתב פעם אחת, בשרת.**
-
-    היה כתוב שלוש פעמים: ב-PDF, ב-Excel ובמסך. שלושתם צירפו את
-    ‏`inputs_missing` כמזהים גולמיים, ושלושתם היו צריכים להשתנות בנפרד
-    כדי לתקן. מי שמרנדר מדפיס עכשיו מחרוזת מוכנה ואינו מחבר נוסח משלו.
-    """
+    """המשפט שהיזם קורא כשהתרחיש אינו נמסר — **נכתב פעם אחת, בשרת.**"""
     if not missing:
         return None
     names = ", ".join(ASSUMPTION_LABEL.get(k, k) for k in missing)
@@ -184,15 +164,48 @@ def _not_delivered(missing: list[str]) -> str | None:
             f"מה שאינו ידוע: {names}.")
 
 
-def _economics(opp: Opportunity, assessment: dict) -> dict[str, Any]:
+def _market_sale_price(a, valuation: MarketValuation | None) -> tuple[float, dict[str, Any]]:
+    """בחר מחיר פרויקטלי בלי להמציא תמהיל דירות.
+
+    B1 מחשב מחיר משוקלל רק כאשר `planned_unit_mix` מלא ומפורש. B10
+    משתמש בו אם הוא קיים; אחרת אומדני 3/4/5 חדרים עדיין נחשפים בתיק,
+    אבל החישוב נשאר על הנחת העיר המתועדת ולא ממציא משקל ביניהם.
+    """
+    fallback = {
+        **a.report()["sale_price_per_sqm_ils"],
+        "label": ASSUMPTION_LABEL["sale_price_per_sqm_ils"],
+        "method": "versioned_city_fallback_no_fresh_complete_unit_mix",
+        "as_of_date": a.effective_date.isoformat(),
+    }
+    if (valuation is None or not valuation.is_unit_mix_adjusted
+            or valuation.blended_price_per_sqm_ils is None):
+        return a.sale_price_per_sqm_ils.value, fallback
+
+    return valuation.blended_price_per_sqm_ils, {
+        "value": valuation.blended_price_per_sqm_ils,
+        "status": "estimate",
+        "unit": "ILS/sqm",
+        "source": valuation.source_url,
+        "label": ASSUMPTION_LABEL["sale_price_per_sqm_ils"],
+        "method": "local_comparable_sales_weighted_by_explicit_unit_mix",
+        "as_of_date": valuation.as_of_date.isoformat(),
+    }
+
+
+def _economics(opp: Opportunity, assessment: dict,
+               market_valuation: MarketValuation | None = None) -> dict[str, Any]:
     """התרחיש הגנרי — ‏PRD 6.4. **אינו דוח שמאי חתום, וזה נכתב בתיק.**"""
     cap = assessment.get("cap_400_sqm")
     a = get_assumptions(opp.city_code)
+    sale_price_per_sqm, sale_price_assumption = _market_sale_price(a, market_valuation)
+    assumptions_report = {k: {**v, "label": ASSUMPTION_LABEL.get(k, k)}
+                          for k, v in a.report().items()}
+    assumptions_report["sale_price_per_sqm_ils"] = sale_price_assumption
     base = {
         "assumptions_version": a.version,
         "assumptions_effective_date": a.effective_date.isoformat(),
-        "assumptions": {k: {**v, "label": ASSUMPTION_LABEL.get(k, k)}
-                        for k, v in a.report().items()},
+        "assumptions": assumptions_report,
+        "market_valuation": market_valuation.model_dump(mode="json") if market_valuation else None,
         "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
                       "ואינה קובעת זכויות או היתכנות מאושרת.",
     }
@@ -207,7 +220,7 @@ def _economics(opp: Opportunity, assessment: dict) -> dict[str, Any]:
             plot_area_sqm=opp.area_sqm,
             existing_units=opp.existing_units,
             buildable_area_sqm=cap,
-            sale_price_per_sqm=a.sale_price_per_sqm_ils.value,
+            sale_price_per_sqm=sale_price_per_sqm,
             construction_cost_per_sqm=a.construction_cost_per_sqm_ils.value,
             soft_cost_ratio=a.soft_cost_ratio.value,
             demolition_cost_per_unit=a.demolition_cost_per_unit_ils.value,
@@ -234,9 +247,21 @@ def _economics(opp: Opportunity, assessment: dict) -> dict[str, Any]:
             "inputs_missing": result.inputs_missing,
             "not_delivered_reason": _not_delivered(result.inputs_missing),
             "is_deliverable": result.is_deliverable,
-            # תקרת ה-400% נשענת על אומדן שטח קיים, וזה נכתב ולא נבלע.
             "buildable_basis": assessment.get("cap_400_basis"),
             "buildable_certainty": assessment.get("cap_400_certainty")}
+
+
+async def _latest_market_valuation(session, opp: Opportunity) -> MarketValuation | None:
+    settings = get_settings()
+    _, parameters, _ = market_valuation_parameters(opp.metadata_json)
+    return await find_fresh_valuation(
+        session,
+        opportunity_id=opp.id,
+        max_age_days=settings.market_data_cache_days,
+        radius_m=settings.market_data_radius_m,
+        lookback_months=settings.market_data_lookback_months,
+        parameters=parameters,
+    )
 
 
 async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> dict[str, Any]:
@@ -248,7 +273,8 @@ async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> 
 
     assessment = await city_rules.assess(session, opportunity_id)
     fields = await fields_for(session, opportunity_id)
-    economics = _economics(opp, assessment)
+    market_valuation = await _latest_market_valuation(session, opp)
+    economics = _economics(opp, assessment, market_valuation)
 
     return {
         "identity": {
@@ -264,7 +290,6 @@ async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> 
         "evidence": _evidence_rows(fields),
         "economics": economics,
         "gaps": _gaps(assessment, fields, economics),
-        # ‏DOS-04: גרסת נתונים, כללים ותבנית.
         "versions": {
             "rules_version": delivery.rules_version or rights.RULES_VERSION,
             "data_version": delivery.data_version,
