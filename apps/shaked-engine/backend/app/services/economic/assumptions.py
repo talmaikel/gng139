@@ -131,7 +131,11 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
     underground_ratio=Assumption(
         0.40, AssumptionStatus.ESTIMATE, "ratio",
         source="חניון תת-קרקעי אינו נספר בתקרה אך נבנה ומשולם"),
-    underground_cost_per_sqm_ils=Assumption(6_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm"),
+    # ‏**גיבוי בלבד.** להרצליה המספר נקבע ב-`construction_costs.py` מסקר
+    # לשכת שמאי המקרקעין (3,900 ₪). הערך כאן משמש רק עיר שהסקר לא מכסה.
+    underground_cost_per_sqm_ils=Assumption(
+        6_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm",
+        source="גיבוי לעיר שאינה בסקר השמאים — להרצליה נקבע ב-construction_costs.py"),
 
     average_existing_unit_sqm=Assumption(
         70.0, AssumptionStatus.MISSING, "sqm",

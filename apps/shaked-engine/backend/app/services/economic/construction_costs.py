@@ -9,13 +9,15 @@ Real Estate Appraisers' construction-cost survey (REPORT_SOURCE), a real,
 dated, cited figure rather than an invented one.
 
 The survey breaks each region into three building-height bands (low-rise,
-high-rise, multi-story) plus a separate underground rate; this module
-returns their straight average as one representative above-ground figure,
-because the feasibility schema has no building-height input to pick a band
-with. That averaging is why the resolved fallback is reported as an
-ESTIMATE, not DATA, even though every number behind it is a real, cited
-survey figure -- and why a developer's own figure, once supplied, always
-wins: it is not an estimate of the market, it is their own number.
+high-rise, multi-story) plus a separate underground rate. When a floor count
+is known, `cost_for_floors` picks the survey's own band for that building;
+only when it is not (the archive-driven worker path) does the fallback average
+the three. Either way the above-ground figure is reported as an ESTIMATE --
+a band choice or an average, not a figure measured for this building -- and a
+developer's own figure, once supplied, always wins.
+
+The underground rate has no bands, so `resolve_underground_cost_per_sqm`
+returns it as DATA.
 """
 
 from dataclasses import dataclass
@@ -140,4 +142,31 @@ def resolve_construction_cost_per_sqm(
         source="No developer figure and no appraisers' survey entry for this city",
         method="none",
         as_of_date=None,
+    )
+
+
+def resolve_underground_cost_per_sqm(city_code: str) -> ConstructionCostResolution:
+    """עלות מ״ר תת-קרקעי — מאותו סקר, מאותה שורה בטבלה.
+
+    הטבלה החזיקה את המספר הזה מהיום הראשון (3,900 ₪ להרצליה), והמחשבון
+    לא קרא אותו: הוא המשיך לקרוא 6,000 מספריית ההנחות. כלומר חצי מהסקר
+    נטען ולא שימש, ועלות החניון נופחה ב-54% — כ-6.7 מיליון ₪ בפרויקט
+    טיפוסי.
+
+    **אין כאן רמות גובה** — הסקר נותן מספר אחד לתת-קרקעי, ולכן הוא נמסר
+    כפי שהוא ומסומן `data`, בניגוד לעלות העילית שנבחרת מתוך שלוש רמות.
+    הסקר מציין שהמספר **אינו כולל ביסוס**: הביסוס מגולם בעלות העילית.
+    """
+    region = REGIONAL_CONSTRUCTION_COSTS.get(city_code)
+    if region is None:
+        return ConstructionCostResolution(
+            value_ils_per_sqm=None, status="missing",
+            source="No appraisers' survey entry for this city",
+            method="none", as_of_date=None)
+    return ConstructionCostResolution(
+        value_ils_per_sqm=region.underground_ils_per_sqm,
+        status="data",
+        source=f"{REPORT_SOURCE} ({region.region_label}, מ״ר תת-קרקעי, אינו כולל ביסוס)",
+        method="appraisers_survey_underground",
+        as_of_date=REPORT_EFFECTIVE_DATE,
     )

@@ -514,3 +514,14 @@ def test_the_residual_land_value_is_what_the_developer_can_pay():
     # בדיקת ההיפוך: עם הקרקע הזו, ההכנסות הן בדיוק עלות ועוד רווח היעד
     cost = ((80e6 / 1.05 - 30e6) + land) * 1.05
     assert cost == pytest.approx(100e6 / 1.20, rel=1e-9)
+
+
+@pytest.mark.asyncio
+async def test_the_dossier_prices_parking_from_the_appraisers_survey(session):
+    """התיק שהלקוח רואה משתמש ב-3,900 ₪ ולא ב-6,000 שבספרייה."""
+    c, _, opp = await _delivered(session, block="9648")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    ug = d["economics"]["assumptions"]["underground_cost_per_sqm_ils"]
+    assert ug["value"] == 3_900.0
+    assert ug["status"] == "data"
+    assert "שמאי" in ug["source"]
