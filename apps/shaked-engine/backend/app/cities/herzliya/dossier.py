@@ -60,6 +60,35 @@ FIELD_LABEL = {
     "post_2005_permit": "היתר אחרי 18.5.2005",
 }
 
+# ההנחות הכלכליות. **התווית חיה כאן ולא בדפדפן.** עד היום היא הייתה
+# ב-`frontend/src/lib/labels.ts` בלבד, והמפה נשרה מהקוד: `betterment_levy_ratio`
+# שונה ל-`betterment_levy_rate` ונוסף `betterment_base_ils`, והמסך המשיך
+# להציג את המזהה הגולמי ליזם — בלי שגיאה, בלי בדיקה אדומה, בדיוק בשורה
+# שמסבירה למה התרחיש אינו נמסר. ‏`test_labels.py` הופך את הנשירה הזו
+# לבדיקה שנופלת.
+ASSUMPTION_LABEL = {
+    "sale_price_per_sqm_ils": "מחיר מכירה למ״ר",
+    "construction_cost_per_sqm_ils": "עלות בנייה למ״ר",
+    "demolition_cost_per_unit_ils": "הריסה ליחידת דיור",
+    "soft_cost_ratio": "עלויות רכות",
+    "developer_profit_target_ratio": "יעד רווח ליזם",
+    "main_area_ratio": "שיעור השטח העיקרי",
+    "underground_ratio": "שיעור חניון תת-קרקעי",
+    "underground_cost_per_sqm_ils": "עלות חניון למ״ר",
+    "average_existing_unit_sqm": "שטח דירה קיימת ממוצע",
+    "tenant_compensation_sqm_per_existing_unit": "תוספת שטח לדייר",
+    "tenant_rent_months": "חודשי שכירות לדיירים",
+    "tenant_monthly_rent_ils": "שכר דירה חודשי לדייר",
+    "tenant_moving_cost_ils": "הובלות לדייר",
+    "tenant_legal_cost_per_unit_ils": "עורך דין ושמאי לדייר",
+    "marketing_ratio": "שיווק ותיווך",
+    "guarantees_ratio": "ערבויות וביטוח",
+    "finance_ratio": "מימון",
+    "betterment_levy_rate": "שיעור היטל ההשבחה",
+    "betterment_base_ils": "ההשבחה שעליה מוטל ההיטל",
+    "vat_rate": "מס ערך מוסף",
+}
+
 CERTAINTY_LABEL = {
     "official": "רשמי", "derived": "נגזר", "manually_verified": "אומת ידנית",
     "community": "קהילתי", "ocr_candidate": "קריאת OCR", "ai_candidate": "קריאת מודל",
@@ -137,6 +166,20 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
     }
 
 
+def _not_delivered(missing: list[str]) -> str | None:
+    """המשפט שהיזם קורא כשהתרחיש אינו נמסר — **נכתב פעם אחת, בשרת.**
+
+    היה כתוב שלוש פעמים: ב-PDF, ב-Excel ובמסך. שלושתם צירפו את
+    ‏`inputs_missing` כמזהים גולמיים, ושלושתם היו צריכים להשתנות בנפרד
+    כדי לתקן. מי שמרנדר מדפיס עכשיו מחרוזת מוכנה ואינו מחבר נוסח משלו.
+    """
+    if not missing:
+        return None
+    names = ", ".join(ASSUMPTION_LABEL.get(k, k) for k in missing)
+    return ("התרחיש אינו נמסר כתוצאה, משום שאינו נשען על הנחה שלמה. "
+            f"מה שאינו ידוע: {names}.")
+
+
 def _economics(opp: Opportunity, assessment: dict) -> dict[str, Any]:
     """התרחיש הגנרי — ‏PRD 6.4. **אינו דוח שמאי חתום, וזה נכתב בתיק.**"""
     cap = assessment.get("cap_400_sqm")
@@ -144,12 +187,14 @@ def _economics(opp: Opportunity, assessment: dict) -> dict[str, Any]:
     base = {
         "assumptions_version": a.version,
         "assumptions_effective_date": a.effective_date.isoformat(),
-        "assumptions": a.report(),
+        "assumptions": {k: {**v, "label": ASSUMPTION_LABEL.get(k, k)}
+                        for k, v in a.report().items()},
         "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
                       "ואינה קובעת זכויות או היתכנות מאושרת.",
     }
     if not cap or not opp.existing_units or not opp.area_sqm:
         return {**base, "scenario": None, "inputs_missing": a.blocking(),
+                "not_delivered_reason": _not_delivered(a.blocking()),
                 "is_deliverable": False,
                 "why": "אין תקרת זכויות מבוססת, ולכן לא מחושב תרחיש (DOS-03)"}
 
@@ -183,6 +228,7 @@ def _economics(opp: Opportunity, assessment: dict) -> dict[str, Any]:
     )
     return {**base, "scenario": result.model_dump(),
             "inputs_missing": result.inputs_missing,
+            "not_delivered_reason": _not_delivered(result.inputs_missing),
             "is_deliverable": result.is_deliverable,
             # תקרת ה-400% נשענת על אומדן שטח קיים, וזה נכתב ולא נבלע.
             "buildable_basis": assessment.get("cap_400_basis"),

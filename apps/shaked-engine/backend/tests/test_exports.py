@@ -9,6 +9,7 @@ import re
 import pytest
 
 from app.cities.herzliya import exports
+from app.cities.herzliya.dossier import _not_delivered
 from app.services.economic.assumptions import get_assumptions
 from app.services.economic.calculator import calculate_feasibility
 from app.services.economic.schemas import FeasibilityInput
@@ -49,6 +50,7 @@ def _with_economics():
         "assumptions": A.report(), "assumptions_version": A.version,
         "assumptions_effective_date": A.effective_date.isoformat(),
         "inputs_missing": A.blocking(), "is_deliverable": False,
+        "not_delivered_reason": _not_delivered(A.blocking()),
         "disclaimer": "אינה דוח שמאי חתום.",
         "scenario": calculate_feasibility(_inputs(), missing_inputs=A.blocking()).model_dump(),
     }
@@ -170,3 +172,19 @@ def test_a_font_without_hebrew_is_refused_rather_than_drawing_boxes():
     finally:
         exports.FONT_CANDIDATES[:] = original
     assert any(os.path.exists(p) for p in exports.FONT_CANDIDATES)
+
+
+def test_the_export_never_prints_a_code_identifier_to_the_developer():
+    """‏A8 · המשפט שמסביר למה אין תרחיש הופיע ב-PDF וב-Excel עם מזהי
+    פייתון גולמיים. הוא נכתב עכשיו בשרת פעם אחת, ושני הייצואים מדפיסים
+    אותו. הבדיקה מוודאת ששניהם באמת עברו — ולא רק אחד מהם."""
+    import io, zipfile
+    d = _with_economics()
+    sentence = d["economics"]["not_delivered_reason"]
+    assert sentence and A.blocking()
+
+    sheet = zipfile.ZipFile(io.BytesIO(exports.excel(d))).read(
+        "xl/sharedStrings.xml").decode("utf-8")
+    assert sentence in sheet
+    for ident in A.blocking():
+        assert ident not in sheet, f"מזהה קוד הודלף ל-Excel: {ident}"

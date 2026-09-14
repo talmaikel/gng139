@@ -7,7 +7,7 @@ import { use } from "react";
 import { ApiError, downloadDossier, getDossier,
          type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
 import {
-  ASSUMPTION_LABEL, ASSUMPTION_STATUS, CERTAINTY_LABEL, FIELD_LABEL, GATE_STATUS, label,
+  ASSUMPTION_STATUS, GATE_STATUS,
 } from "@/lib/labels";
 
 const CITY = "herzliya";
@@ -71,13 +71,15 @@ function EvidenceTable({ rows }: { rows: EvidenceRow[] }) {
         {rows.map((r) => (
           <tr key={r.field}>
             {/* התווית מגיעה מהשרת — מקור אמת אחד ל-PDF, ל-Excel ולמסך.
-                המפה המקומית נשארת כגיבוי לשדה שנוסף ולא תורגם עדיין. */}
-            <td style={{ fontWeight: 600 }}>{r.label ?? label(FIELD_LABEL, r.field)}</td>
+                המפה המקומית הוסרה: ״גיבוי״ שאיש אינו רואה כשהוא נכנס
+                לפעולה אינו גיבוי אלא באג שקט. אם השרת לא שלח תווית,
+                בדיקת `test_labels.py` כבר נפלה. */}
+            <td style={{ fontWeight: 600 }}>{r.label}</td>
             <td>{r.value === null || r.value === undefined ? "—"
               : typeof r.value === "boolean" ? (r.value ? "כן" : "לא")
               : typeof r.value === "number" ? r.value.toLocaleString("he-IL")
               : String(r.value)}</td>
-            <td>{r.certainty_label ?? label(CERTAINTY_LABEL, r.certainty)}</td>
+            <td>{r.certainty_label}</td>
             <td style={{ color: r.decides ? "#1f5f55" : "#8a6100", fontWeight: 600 }}>
               {r.decides ? "כן" : "לא"}
             </td>
@@ -290,12 +292,12 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
           <p style={{ color: "#8a6100" }}>{d.economics.why ?? "לא חושב תרחיש."}</p>
         )}
 
-        {!d.economics.is_deliverable && (
+        {/* המשפט נכתב בשרת ולא כאן. הוא הופיע קודם בשלושה נוסחים —
+            במסך, ב-PDF וב-Excel — וכל שלושתם צירפו מזהי קוד. */}
+        {!d.economics.is_deliverable && d.economics.not_delivered_reason && (
           <div style={{ marginTop: "1rem", padding: ".7rem .9rem", borderRadius: 8,
                         background: "#fbf4e4", color: "#8a6100" }}>
-            <strong>התרחיש אינו נמסר כתוצאה.</strong>{" "}
-            הנחות שאינן ידועות:{" "}
-            {d.economics.inputs_missing.map((k) => label(ASSUMPTION_LABEL, k)).join(" · ")}
+            {d.economics.not_delivered_reason}
           </div>
         )}
 
@@ -309,7 +311,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                 const st = ASSUMPTION_STATUS[a.status] ?? { label: a.status, colour: "#5c5750" };
                 return (
                   <tr key={k}>
-                    <td>{label(ASSUMPTION_LABEL, k)}</td>
+                    <td>{a.label}</td>
                     <td style={{ fontVariantNumeric: "tabular-nums" }}>
                       {a.value.toLocaleString("he-IL")} <span style={{ color: "#6b655c" }}>{a.unit}</span>
                     </td>

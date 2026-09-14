@@ -163,8 +163,9 @@ def pdf(d: dict[str, Any]) -> bytes:
     else:
         line(econ.get("why", "לא חושב תרחיש."), 9.5, (0.54, 0.20, 0.12))
     if not econ["is_deliverable"]:
-        line("התרחיש אינו נמסר כתוצאה. הנחות שאינן ידועות: "
-             + ", ".join(econ["inputs_missing"]), 9, (0.54, 0.38, 0.00))
+        # נופל למשפט הקצר ולא נעלם: סייג שנעלם קורא כמו תרחיש שנמסר.
+        line(econ.get("not_delivered_reason") or "התרחיש אינו נמסר כתוצאה.",
+             9, (0.54, 0.38, 0.00))
     rule()
 
     # ── פערים ──
@@ -346,10 +347,10 @@ def excel(d: dict[str, Any]) -> bytes:
     sc.merge_range(tail + 2, 0, tail + 2, 2,
                    "התאים הכחולים הם קלטים — שינוי בהם מעדכן את כל החישוב. "
                    "תא ריק פירושו נתון שאינו ידוע, ולא אפס.", note)
-    if d["economics"]["inputs_missing"]:
+    if not d["economics"].get("is_deliverable", True):
         sc.merge_range(tail + 3, 0, tail + 3, 2,
-                       "התרחיש אינו נמסר כתוצאה. הנחות שאינן ידועות: "
-                       + ", ".join(d["economics"]["inputs_missing"]), note)
+                       d["economics"].get("not_delivered_reason")
+                       or "התרחיש אינו נמסר כתוצאה.", note)
     v = d["versions"]
     sc.merge_range(tail + 4, 0, tail + 4, 2,
                    f'כללים {v["rules_version"]} · נתונים {v["data_version"] or "—"} · '

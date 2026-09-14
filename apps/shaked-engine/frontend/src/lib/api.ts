@@ -345,10 +345,14 @@ export interface Dossier {
   evidence: EvidenceRow[];
   economics: {
     scenario: Record<string, number | boolean | string[]> | null;
-    assumptions: Record<string, { value: number; status: string; unit: string; source: string | null }>;
+    assumptions: Record<string, {
+      value: number; status: string; unit: string; source: string | null; label: string;
+    }>;
     assumptions_version: string;
     assumptions_effective_date: string;
     inputs_missing: string[];
+    /** המשפט שהיזם קורא כשאין תרחיש — מחובר בשרת, לא כאן. */
+    not_delivered_reason: string | null;
     is_deliverable: boolean;
     disclaimer: string;
     buildable_basis?: string | null;
