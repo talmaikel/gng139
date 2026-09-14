@@ -365,7 +365,7 @@ export interface Dossier {
     checked_and_not_found: { id: string; label: string }[];
     never_asked: { id: string; label: string }[];
     stale_sources: { id: string; label: string }[];
-    economic_inputs_missing: string[];
+    economic_inputs_missing: { id: string; label: string }[];
     note: string;
   };
   versions: { rules_version: string; data_version: string; template_version: string };

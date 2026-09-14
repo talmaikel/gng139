@@ -158,7 +158,11 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
         "checked_and_not_found": _named(sorted(missing)),
         "never_asked": _named(never_asked),
         "stale_sources": _named(assessment.get("stale_fields", [])),
-        "economic_inputs_missing": economics.get("inputs_missing", []),
+        # גם כאן `{id, label}`: היום אף מסך אינו מרנדר את השדה הזה, ומחר
+        # מישהו כן — ואז מזהה גולמי חוזר למסך דרך הדלת האחורית.
+        "economic_inputs_missing": [
+            {"id": k, "label": ASSUMPTION_LABEL.get(k, k)}
+            for k in economics.get("inputs_missing", [])],
         # ‏DOS-03: התיק אינו מציג את עצמו כארכיון מלא.
         "note": ("התיק מבוסס על מקורות ציבוריים ועל תיק הבניין העירוני. "
                  "היעדר מסמך מצוין במפורש ואינו מוצג כארכיון מלא, "
