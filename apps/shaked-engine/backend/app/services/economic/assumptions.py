@@ -121,9 +121,17 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
     construction_cost_per_sqm_ils=Assumption(
         7_366.67, AssumptionStatus.MISSING, "ILS/sqm",
         source="Placeholder only -- no developer figure and no appraisers' survey entry for this city"),
-    demolition_cost_per_unit_ils=Assumption(150_000.0, AssumptionStatus.ESTIMATE, "ILS/unit"),
-    soft_cost_ratio=Assumption(0.15, AssumptionStatus.ESTIMATE, "ratio"),
-    developer_profit_target_ratio=Assumption(0.20, AssumptionStatus.ESTIMATE, "ratio"),
+    # ‏B8 · שלוש השורות האלה הוצגו בתיק עם מקור ריק (״—״). אין להן מקור
+    # שנשלף, ולכן המקור אומר בדיוק את זה — ולא מצטט טווח ״מקובל״ שאיש לא בדק.
+    demolition_cost_per_unit_ils=Assumption(
+        150_000.0, AssumptionStatus.ESTIMATE, "ILS/unit",
+        source="הנחת עבודה — לא נשלפה ממקור; היזם מחליף בהצעת מחיר"),
+    soft_cost_ratio=Assumption(
+        0.15, AssumptionStatus.ESTIMATE, "ratio",
+        source="הנחת עבודה, כשיעור מעלות הבנייה — לא נשלפה ממקור"),
+    developer_profit_target_ratio=Assumption(
+        0.20, AssumptionStatus.ESTIMATE, "ratio",
+        source="הנחת עבודה — קובע אם התרחיש ״עומד ביעד״ ואת סף ההשבחה; אינו משנה את הרווח"),
 
     main_area_ratio=Assumption(
         0.78, AssumptionStatus.ESTIMATE, "ratio",
