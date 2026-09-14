@@ -213,8 +213,9 @@ def test_footprint_average_is_an_estimate_that_cannot_decide():
     assert resolution.certainty is Certainty.ESTIMATE
     assert resolution.may_decide is False
     assert resolution.per_unit_detail_available is False
-    assert resolution.average_existing_unit_sqm == pytest.approx(50.34, abs=0.01)
-    assert any("uniform average" in note for note in resolution.notes)
+    assert resolution.average_existing_unit_sqm == pytest.approx(42.79, abs=0.01)
+    assert resolution.estimated_main_area_ratio == 0.85
+    assert any("not DATA" in note for note in resolution.notes)
 
 
 def test_nothing_available_is_reported_as_missing_not_guessed():
