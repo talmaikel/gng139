@@ -1,6 +1,7 @@
 # מרשם המסמכים הקובעים
 
 מה מותר לאסוף ומה מותר לשמור — מרשם נפרד: [`DATA_LAW.md`](DATA_LAW.md).
+היטל השבחה בחלופת שקד — [`BETTERMENT_LEVY.md`](BETTERMENT_LEVY.md).
 המרשם הזה עוסק במסמכי המדיניות בלבד, שכולם מפורסמים לציבור.
 
 נסרק שיטתית ב-13.09.2026 מתוך `handasa.herzliya.muni.il` (sitemap ← `/urbanrenewal/`).

@@ -216,7 +216,8 @@ INPUT_ROWS = [
     ("marketing", "שיווק ותיווך", "יחס מההכנסות"),
     ("guarantees", "ערבויות וביטוח", "יחס מההכנסות"),
     ("finance", "מימון", "יחס מהעלויות"),
-    ("levy", "היטל השבחה", "יחס מההכנסות"),
+    ("levy_rate", "היטל השבחה — שיעור", "יחס מההשבחה"),
+    ("levy_base", "ההשבחה (שומה)", "₪"),
 ]
 
 FIRST_INPUT_ROW = 2                       # אחרי הכותרת
@@ -237,7 +238,7 @@ OUTPUT_ROWS = [
      "={units}*({rent_months}*{rent}+{moving}+{legal})", "₪"),
     ("marketing_cost", "שיווק ותיווך", "={revenue}*{marketing}", "₪"),
     ("guarantee_cost", "ערבויות וביטוח", "={revenue}*{guarantees}", "₪"),
-    ("levy_cost", "היטל השבחה", "={revenue}*{levy}", "₪"),
+    ("levy_cost", "היטל השבחה", "={levy_base}*{levy_rate}", "₪"),
     ("before_finance", "סך עלויות לפני מימון",
      "={land}+{build_cost}+{under}+{soft_cost}+{demo_cost}+{tenant_cost}"
      "+{marketing_cost}+{guarantee_cost}+{levy_cost}", "₪"),
@@ -265,7 +266,8 @@ def _scenario_inputs(d: dict[str, Any]) -> dict[str, float | None]:
         "rent_months": g("tenant_rent_months"), "rent": g("tenant_monthly_rent_ils"),
         "moving": g("tenant_moving_cost_ils"), "legal": g("tenant_legal_cost_per_unit_ils"),
         "marketing": g("marketing_ratio"), "guarantees": g("guarantees_ratio"),
-        "finance": g("finance_ratio"), "levy": g("betterment_levy_ratio"),
+        "finance": g("finance_ratio"),
+        "levy_rate": g("betterment_levy_rate"), "levy_base": g("betterment_base_ils"),
     }
 
 

@@ -71,7 +71,9 @@ def _inputs():
         tenant_moving_cost_ils=A.tenant_moving_cost_ils.value,
         tenant_legal_cost_per_unit_ils=A.tenant_legal_cost_per_unit_ils.value,
         marketing_ratio=A.marketing_ratio.value, guarantees_ratio=A.guarantees_ratio.value,
-        finance_ratio=A.finance_ratio.value, betterment_levy_ratio=A.betterment_levy_ratio.value,
+        finance_ratio=A.finance_ratio.value,
+        betterment_levy_rate=A.betterment_levy_rate.value,
+        betterment_base_ils=A.betterment_base_ils.value,
         vat_rate=A.vat_rate.value,
     )
 

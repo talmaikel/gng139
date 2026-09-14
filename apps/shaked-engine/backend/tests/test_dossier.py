@@ -193,7 +193,7 @@ async def test_the_scenario_says_it_is_not_a_signed_appraisal(session):
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
     assert "שמאי" in d["economics"]["disclaimer"]
     assert d["economics"]["is_deliverable"] is False      # הנחות MISSING חוסמות
-    assert "betterment_levy_ratio" in d["economics"]["inputs_missing"]
+    assert "betterment_base_ils" in d["economics"]["inputs_missing"]
 
 
 # ── DOS-04 · גרסאות ──

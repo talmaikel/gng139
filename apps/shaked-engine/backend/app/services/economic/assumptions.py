@@ -70,7 +70,8 @@ class EconomicAssumptionSet:
     marketing_ratio: Assumption
     guarantees_ratio: Assumption
     finance_ratio: Assumption
-    betterment_levy_ratio: Assumption
+    betterment_levy_rate: Assumption
+    betterment_base_ils: Assumption
     vat_rate: Assumption
     # The single largest deduction from the developer's share, and until now
     # it was a bare `70.0` default inside FeasibilityInput that the worker
@@ -109,7 +110,7 @@ class EconomicAssumptionSet:
 
 HERZLIYA_2026_V1 = EconomicAssumptionSet(
     city_code="herzliya",
-    version="2026-v2",
+    version="2026-v3",
     effective_date=date(2026, 1, 1),
     sale_price_per_sqm_ils=Assumption(45_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm"),
     construction_cost_per_sqm_ils=Assumption(
@@ -152,12 +153,28 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
     finance_ratio=Assumption(
         0.06, AssumptionStatus.ESTIMATE, "ratio",
         source="ליווי בנקאי וריבית, טווח מקובל 5%-7% מהעלויות"),
-    # ‏50% מההשבחה. בפינוי-בינוי ובתמ״א 38 היו פטורים; **האם קיים פטור
-    # בחלופת שקד לפי תיקון 139 טרם נבדק.** הוא לבדו יכול להכריע פרויקט,
-    # ולכן הוא MISSING עם ערך 0 — לא מנוכה בשקט, וגם לא מדווח כמוכן.
-    betterment_levy_ratio=Assumption(
-        0.0, AssumptionStatus.MISSING, "ratio",
-        source="היטל השבחה 50% מההשבחה — קיומו של פטור בתיקון 139 שאלה פתוחה לעו״ד"),
+    # ── היטל השבחה: השיעור ידוע בוודאות, הבסיס לא ──
+    #
+    # תיקון 139 הוסיף את סעיף 19(ב)(10א) לתוספת השלישית, וקבע שיעור
+    # **מופחת** לתכנית לפי סימן ד׳ — מסלול הריסה (§70ב) ומסלול חיזוק
+    # (§70ד): *״יחול היטל בשיעור **רבע ההשבחה**״*, ולא מחצית. השיעור חל
+    # על כל ההשבחה מאותה תכנית, גם אם נכללו בה הוראות לפי §62א.
+    #
+    # שלושה סייגים שנמצאו באותו מקור:
+    #   · אינו חל על מתחם פינוי-בינוי (ס״ק (ה))
+    #   · חל רק על מימוש **בהיתר**, לא במכר
+    #   · רשות מקומית רשאית להפחית לשמינית או לפטור מלא, בהחלטת מועצה
+    #     רוחבית אחת לשלוש שנים (§19(ב)(ב2)) — **לא נמצא פרסום כזה
+    #     בהרצליה**, וזו שאלה לפרוטוקולי המועצה.
+    betterment_levy_rate=Assumption(
+        0.25, AssumptionStatus.DATA, "ratio",
+        source="‏§19(ב)(10א)(א) לתוספת השלישית, שנוסף בתיקון 139 — רבע ההשבחה"),
+
+    # **זה מה שחסר.** ההיטל הוא רבע מ*ההשבחה* — עליית שווי המקרקעין
+    # שנובעת מהתכנית — ולא אחוז מההכנסות. את ההשבחה עצמה קובע שמאי.
+    betterment_base_ils=Assumption(
+        0.0, AssumptionStatus.MISSING, "ILS",
+        source="ההשבחה עצמה — עליית שווי המקרקעין בשל התכנית. נדרשת שומה"),
     vat_rate=Assumption(0.18, AssumptionStatus.DATA, "ratio",
                         source="שיעור המע״מ בישראל"),
 )

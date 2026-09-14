@@ -52,8 +52,13 @@ class FeasibilityInput(BaseModel):
     marketing_ratio: float = Field(default=0.025, ge=0, description="Marketing and brokerage, as a ratio of revenue")
     guarantees_ratio: float = Field(default=0.0125, ge=0, description="Sales Law guarantees and insurance, as a ratio of revenue")
     finance_ratio: float = Field(default=0.06, ge=0, description="Bank accompaniment and interest, as a ratio of all other costs")
-    betterment_levy_ratio: float = Field(default=0.0, ge=0,
-        description="Betterment levy as a ratio of revenue. Whether amendment 139 carries an exemption is UNRESOLVED")
+    # ‏§19(ב)(10א)(א) לתוספת השלישית, שנוסף בתיקון 139: **רבע ההשבחה**
+    # לתכנית לפי סימן ד׳, ולא מחצית. השיעור ידוע; ההשבחה עצמה — עליית
+    # שווי המקרקעין בשל התכנית — היא שומה, ולכן היא קלט נפרד.
+    betterment_levy_rate: float = Field(default=0.25, ge=0, le=1,
+        description="Statutory rate on the betterment — a quarter under amendment 139")
+    betterment_base_ils: float = Field(default=0.0, ge=0,
+        description="The betterment itself (rise in land value from the plan). Needs an appraiser")
 
     # ── מע״מ ──
     # מחיר שוק מצוטט כולל מע״מ; עלויות מוצגות נטו. בלי יישור, המרווח מנופח

@@ -121,11 +121,11 @@ def test_a_missing_assumption_blocks_delivery_without_blocking_the_calculation()
     שום הנחה לא נשאה אותו ושום קוד לא קרא אותו. תסריט על מציין מקום עדיין
     שימושי לחשיבה; הוא פשוט אינו נמסר."""
     a = get_assumptions("herzliya")
-    assert a.blocking() == ["average_existing_unit_sqm", "betterment_levy_ratio"]
+    assert a.blocking() == ["average_existing_unit_sqm", "betterment_base_ils"]
     r = calc(FI(**BASE), missing_inputs=a.blocking())
     assert r.projected_profit_ils > 0          # חושב
     assert r.is_deliverable is False           # ולא נמסר
-    assert "betterment_levy_ratio" in r.inputs_missing
+    assert "betterment_base_ils" in r.inputs_missing
 
 
 def test_a_scenario_built_only_on_known_inputs_is_deliverable():
@@ -146,8 +146,10 @@ def test_every_figure_in_the_library_is_marked_and_dated():
     a = get_assumptions("herzliya")
     assert a.version and a.effective_date
     assert all(x["status"] in {s.value for s in AssumptionStatus} for x in a.report().values())
-    # ‏DATA שמורה למי שיש לה מקור חיצוני קשיח. היום רק המע״מ.
-    assert [n for n, x in a.report().items() if x["status"] == "data"] == ["vat_rate"]
+    # ‏DATA שמורה למי שיש לה מקור חיצוני קשיח. היום שתיים: שיעור המע״מ,
+    # ושיעור היטל ההשבחה — רבע ההשבחה לפי §19(ב)(10א), שנוסף בתיקון 139.
+    assert sorted(n for n, x in a.report().items() if x["status"] == "data") == \
+        ["betterment_levy_rate", "vat_rate"]
     # וכל הנחה שאינה DATA חייבת להסביר מאיפה המספר, או להיות MISSING.
     for name, x in a.report().items():
         assert x["source"] or x["status"] == "estimate", name
@@ -210,8 +212,13 @@ def test_the_betterment_levy_is_never_silently_zero_in_the_report():
     """‏0 כערך ו-MISSING כסטטוס: לא מנוכה בשקט, וגם לא מדווח כמוכן.
     הוא לבדו יכול להפוך פרויקט, ולכן אסור לו להיעלם."""
     a = get_assumptions("herzliya")
-    assert a.betterment_levy_ratio.status is AssumptionStatus.MISSING
-    assert a.betterment_levy_ratio.value == 0.0
-    with_levy = calc(FI(**BASE, betterment_levy_ratio=0.10))
+    # השיעור ידוע בוודאות — רבע ההשבחה, §19(ב)(10א) שנוסף בתיקון 139.
+    assert a.betterment_levy_rate.status is AssumptionStatus.DATA
+    assert a.betterment_levy_rate.value == 0.25
+    assert "139" in (a.betterment_levy_rate.source or "")
+    # **ההשבחה עצמה** היא מה שחסר, והיא שומה ולא נגזרת של המכירה.
+    assert a.betterment_base_ils.status is AssumptionStatus.MISSING
+    assert a.betterment_base_ils.value == 0.0
+    with_levy = calc(FI(**BASE, betterment_base_ils=8_000_000))
     assert with_levy.betterment_levy_ils > 0
     assert with_levy.profit_margin_on_cost_ratio < calc(FI(**BASE)).profit_margin_on_cost_ratio

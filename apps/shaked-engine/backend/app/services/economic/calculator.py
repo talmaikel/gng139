@@ -30,11 +30,12 @@ profit on cost for a typical candidate:**
    underground parking that the cap does not count but the developer still
    pays for.
 
-What remains unresolved is the betterment levy: whether amendment 139
-carries an exemption is a question for counsel, and it is large enough to
-decide a project on its own. It enters as a ratio that defaults to zero and
-is marked MISSING in the assumptions library, so a scenario that ignores it
-cannot be reported as deliverable.
+The betterment levy is now half-known and the model says which half.
+Amendment 139 added §19(ב)(10א) to the Third Schedule and set **a quarter
+of the betterment** for a plan under סימן ד׳ — not the standard half. That
+rate is DATA. The betterment itself, the rise in land value the plan
+causes, is a valuation and stays MISSING, so a scenario that ignores it
+still cannot be reported as deliverable.
 """
 
 from app.services.economic.schemas import FeasibilityInput, FeasibilityResult
@@ -83,7 +84,8 @@ def calculate_feasibility(inputs: FeasibilityInput,
     )
     total_marketing_ils = total_revenue_ils * inputs.marketing_ratio
     total_guarantees_ils = total_revenue_ils * inputs.guarantees_ratio
-    betterment_levy_ils = total_revenue_ils * inputs.betterment_levy_ratio
+    # רבע מההשבחה, ולא אחוז מההכנסות. הבסיס הוא שומה ולא נגזרת של המכירה.
+    betterment_levy_ils = inputs.betterment_base_ils * inputs.betterment_levy_rate
 
     # מימון נגזר מכל השאר, ולכן הוא מחושב אחרון ואינו נכנס לבסיס של עצמו.
     cost_before_finance = (land_cost_ils + total_construction_cost_ils
