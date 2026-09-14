@@ -599,7 +599,17 @@ async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> 
     opp = await session.get(Opportunity, opportunity_id)
     if opp is None:
         raise NotEntitled("ההזדמנות אינה קיימת")
+    return await assemble(session, city_rules, opp, delivery)
 
+
+async def assemble(session, city_rules, opp: Opportunity, delivery: Delivery | None) -> dict[str, Any]:
+    """התיק עצמו, **בלי בדיקת הרשאה**. ‏`build` הוא הדרך היחידה ללקוח.
+
+    נפרד מ-`build` בשביל ‏`scripts/check_surfaces.py` (B14): ה-CI זורע
+    חלקות ואינו מוסר אותן לאף חברה, ובכל זאת צריך לבנות להן תיק ולהשוות
+    את המסך ל-PDF ולאקסל. בלי מסירה, שדות המסירה ריקים ולא ממוצאים.
+    """
+    opportunity_id = opp.id
     assessment = await city_rules.assess(session, opportunity_id)
     fields = await fields_for(session, opportunity_id)
     economics = await _economics(session, opp, assessment, fields)
@@ -620,13 +630,14 @@ async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> 
         "gaps": _gaps(assessment, fields, economics),
         # ‏DOS-04: גרסת נתונים, כללים ותבנית.
         "versions": {
-            "rules_version": delivery.rules_version or rights.RULES_VERSION,
-            "data_version": delivery.data_version,
+            "rules_version": (delivery and delivery.rules_version) or rights.RULES_VERSION,
+            "data_version": delivery.data_version if delivery else None,
             "template_version": TEMPLATE_VERSION,
         },
         "delivery": {
-            "delivered_at": delivery.delivered_at.isoformat() if delivery.delivered_at else None,
-            "why_selected": delivery.why_selected,
+            "delivered_at": (delivery.delivered_at.isoformat()
+                             if delivery and delivery.delivered_at else None),
+            "why_selected": delivery.why_selected if delivery else None,
         },
         "stale_fields": stale_fields(fields),
     }
