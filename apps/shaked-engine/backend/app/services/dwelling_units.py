@@ -30,6 +30,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.evidence import DECIDING, Certainty
 from app.models.dwelling_unit import DwellingUnit
 from app.pipeline.extractor import DwellingUnitReading
+from app.services.economic.existing_area_assumptions import (
+    D5_EXISTING_PRIVATE_AREA_RATIO,
+)
 
 # How far the permit-sheet unit count may differ from the municipal address
 # layer before the dossier calls it a conflict. Kept at zero: these two
@@ -38,12 +41,9 @@ from app.pipeline.extractor import DwellingUnitReading
 # noise to be tuned away.
 UNIT_COUNT_TOLERANCE = 0
 
-# D3 fallback for parcels where no apartment schedule/gramoshka is available.
-# This is deliberately separate from the new-project `main_area_ratio` even
-# though both are currently 78%: one describes an existing building estimate,
-# the other describes sellable area in the future project. Until D3 is
-# validated against real permit schedules this remains an ESTIMATE, not DATA.
-FOOTPRINT_EXISTING_MAIN_AREA_RATIO = 0.78
+# Compatibility name for existing callers/tests. The value itself lives in a
+# sourced, dated D5 assumption object rather than as a magic number here.
+FOOTPRINT_EXISTING_MAIN_AREA_RATIO = D5_EXISTING_PRIVATE_AREA_RATIO.value
 
 
 @dataclass
@@ -74,6 +74,8 @@ class UnitAreaResolution:
     estimated_main_area_sqm: float | None = None
     estimated_common_service_area_sqm: float | None = None
     estimated_main_area_ratio: float | None = None
+    estimated_main_area_ratio_source: str | None = None
+    estimated_main_area_ratio_status: str | None = None
 
     @property
     def may_decide(self) -> bool:
@@ -203,6 +205,8 @@ def resolve_existing_unit_area(
     *,
     municipal_unit_count: int | None,
     existing_area_sqm: float | None,
+    existing_private_area_ratio: float | None = None,
+    existing_private_area_ratio_source: str | None = None,
 ) -> UnitAreaResolution:
     """Decide the average existing unit area, and how far it may be trusted.
 
@@ -213,11 +217,11 @@ def resolve_existing_unit_area(
     2. A schedule still awaiting review. Displayed, never decides -- so a
        dossier cannot quietly rest on an unreviewed OCR reading.
     3. When no schedule exists, split the footprint-derived `existing_area`
-       into estimated main/private area and estimated common/service area.
-       `existing_area` is already `footprint x floors x k`, where k is the
-       separate gross-to-counted-area calibration. The 78% ratio below is a
-       second, explicitly estimated split from counted area to main/private
-       area. It never decides and carries no per-unit detail.
+       using a sourced ESTIMATE from D5. A caller may override that ratio for
+       sensitivity/developer input, but the result stays ESTIMATE and never
+       decides by itself. `existing_area` is already `footprint x floors x k`;
+       until the target-area definition of k is fully reconstructed this
+       second split must be presented as an explicit assumption, not DATA.
     """
     notes: list[str] = []
     units = list(units)
@@ -278,19 +282,31 @@ def resolve_existing_unit_area(
         )
 
     if existing_area_sqm and municipal_unit_count:
-        estimated_main_area = round(existing_area_sqm * FOOTPRINT_EXISTING_MAIN_AREA_RATIO, 2)
+        ratio = (
+            D5_EXISTING_PRIVATE_AREA_RATIO.value
+            if existing_private_area_ratio is None
+            else existing_private_area_ratio
+        )
+        if not 0 < ratio <= 1:
+            raise ValueError("existing_private_area_ratio must be greater than 0 and at most 1")
+
+        ratio_source = (
+            D5_EXISTING_PRIVATE_AREA_RATIO.source
+            if existing_private_area_ratio is None
+            else (existing_private_area_ratio_source or "developer override; no external source supplied")
+        )
+        estimated_main_area = round(existing_area_sqm * ratio, 2)
         estimated_common_area = round(existing_area_sqm - estimated_main_area, 2)
         average = round(estimated_main_area / municipal_unit_count, 2)
         notes.append(
             f"No per-apartment schedule was extracted. The footprint fallback first gives "
             f"{existing_area_sqm} sqm of counted existing area (footprint x floors x k). "
-            f"Because there is no gramoshka, D3 applies an explicit ESTIMATE of "
-            f"{FOOTPRINT_EXISTING_MAIN_AREA_RATIO:.0%} main/private area: "
-            f"{estimated_main_area} sqm main/private and {estimated_common_area} sqm "
-            f"common/service area. Dividing only the estimated main/private area by "
-            f"{municipal_unit_count} unit(s) gives {average} sqm per unit. This ratio is "
-            "not DATA until validated against real permit schedules and may not be used "
-            "to allocate compensation per household."
+            f"An explicit ESTIMATE of {ratio:.0%} private/main area is then applied: "
+            f"{estimated_main_area} sqm private/main and {estimated_common_area} sqm "
+            f"residual common/service area. Dividing only the estimated private/main area by "
+            f"{municipal_unit_count} unit(s) gives {average} sqm per unit. The ratio source is: "
+            f"{ratio_source}. This is not DATA, may not allocate compensation per household, "
+            "and must not by itself upgrade an opportunity to ready."
         )
         return UnitAreaResolution(
             average_existing_unit_sqm=average,
@@ -301,7 +317,9 @@ def resolve_existing_unit_area(
             notes=notes,
             estimated_main_area_sqm=estimated_main_area,
             estimated_common_service_area_sqm=estimated_common_area,
-            estimated_main_area_ratio=FOOTPRINT_EXISTING_MAIN_AREA_RATIO,
+            estimated_main_area_ratio=ratio,
+            estimated_main_area_ratio_source=ratio_source,
+            estimated_main_area_ratio_status=D5_EXISTING_PRIVATE_AREA_RATIO.status.value,
         )
 
     notes.append("Neither a per-apartment schedule nor a footprint-derived area was available.")
