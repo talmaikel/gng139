@@ -200,3 +200,48 @@ def test_the_rejected_count_does_not_survive_in_the_opportunity_column():
     assert usable_units({"apt": 28, "gross": 4000}) == 28
     assert usable_units({"apt": 999, "gross": 2910}) is None
     assert usable_units({"apt": 7, "gross": 11447}) is None      # 1,094 מ"ר לדירה
+
+
+# ── שחזור תיקי הארכיון ──
+
+def test_a_fetched_building_file_is_reproducible_from_the_repo():
+    """שליפת תיק מוגבלת בקצב, והמדיניות מחייבת לשמור אותה **לתמיד** —
+    אבל היא נכתבה למסד בלבד, כלומר חיה על מכונה אחת. מכונה חדשה שתזרע
+    מאפס קיבלה 5 מועמדים מוכנים במקום 9, בלי הסבר."""
+    from app.cities.herzliya.seed_layer_a import FETCHED_FILE, _fetched_rows
+
+    fetched = _load(FETCHED_FILE)
+    assert fetched, "קובץ התיקים שנשלפו ריק — ‏`--export` לא רץ"
+
+    key = next(iter(fetched))
+    rows = {r["field"]: r for r in _fetched_rows(key, fetched[key])}
+    assert rows, f"{key} אינו מייצר שורות ראיה"
+    for r in rows.values():
+        assert r["source_url"] and r["retrieved_at"] and r["location"]
+        assert r["certainty"] == Certainty.DERIVED.value
+
+
+def test_the_export_carries_facts_only_and_never_the_page_itself():
+    """‏DATA_LAW: עובדות נגזרות מותרות ללא הגבלה; ‏HTML גולמי נשמר פנימית
+    עם TTL ואינו מוצג; שמות מבקשים אינם נקראים מלכתחילה. הקובץ הזה יושב
+    **בגיט**, ולכן הגבול נאכף בבדיקה ולא בזיכרון."""
+    from app.cities.herzliya.archive_facts import ARCHIVE_FIELDS
+    from app.cities.herzliya.seed_layer_a import FETCHED_FILE
+
+    for key, entry in _load(FETCHED_FILE).items():
+        assert set(entry) <= {"fields", "source_url", "location", "method", "retrieved_at"}, key
+        assert set(entry["fields"]) <= set(ARCHIVE_FIELDS), key
+        # לא HTML, ולא שורות בקשה עם עמודת שם
+        assert "html" not in entry and "requests" not in entry, key
+
+
+def test_an_entry_without_provenance_is_not_written_at_all():
+    """אותו כלל כמו בכל ראיה: בלי מקור, מיקום ומועד — אין שורה."""
+    from app.cities.herzliya.seed_layer_a import _fetched_rows
+
+    full = {"fields": {"permit_date": "1978-01-01"}, "source_url": "https://x.test/a",
+            "location": "גוש 1 חלקה 1", "retrieved_at": "2026-09-13T10:00:00+00:00"}
+    assert _fetched_rows("1/1", full)
+    for missing in ("source_url", "location", "retrieved_at"):
+        assert _fetched_rows("1/1", {**full, missing: None}) == []
+    assert _fetched_rows("1/1", None) == []

@@ -13,6 +13,7 @@
 """
 import argparse
 import asyncio
+import json
 import re
 from datetime import date, datetime, timezone
 from typing import Any
@@ -221,14 +222,67 @@ async def fetch_for_delivery(session, opportunity_id: UUID, client=None) -> bool
     return True
 
 
+# ── שחזור: מה שנשלף חי חייב לשרוד מכונה חדשה ──
+
+FETCHED_FILE = "archive_fetched.json"
+
+# השדות שמקורם בתיק הבניין, וששווה לשמור בגיט. כולם **עובדות נגזרות** —
+# מותר לשמור אותן ללא הגבלה לפי `DATA_LAW.md`. ‏HTML גולמי, שמות מבקשים
+# וחתימות אינם כאן ולא יהיו.
+ARCHIVE_FIELDS = ("permit_date", "strengthened", "occupied", "post_2005_permit")
+
+
+async def export_fetched(session, city_code: str = "herzliya") -> dict:
+    """כותב את ראיות הארכיון שבמסד לקובץ, לפי גוש/חלקה.
+
+    שליפת תיק עולה לנו: היא מוגבלת בקצב, והמדיניות מחייבת לשמור אותה
+    **לתמיד**. אבל היא נכתבה עד כה למסד בלבד — כלומר חיה על מכונה אחת.
+    מכונה חדשה שתזרע מאפס תקבל רק את מה שבקובץ הישן, ומספר המועמדים
+    המוכנים יירד בלי הסבר. זה קרה: ‏9 ירדו ל-5.
+    """
+    from sqlalchemy import select
+
+    rows = (await session.execute(
+        select(Opportunity.block, Opportunity.parcel, FieldEvidence)
+        .join(FieldEvidence, FieldEvidence.opportunity_id == Opportunity.id)
+        .where(Opportunity.city_code == city_code,
+               FieldEvidence.field.in_(ARCHIVE_FIELDS),
+               FieldEvidence.source_url.like("%complot%"))
+    )).all()
+
+    out: dict[str, dict] = {}
+    for block, parcel, ev in rows:
+        entry = out.setdefault(f"{block}/{parcel}", {"fields": {}})
+        entry["fields"][ev.field] = ev.value
+        entry.setdefault("source_url", ev.source_url)
+        entry.setdefault("location", ev.location)
+        entry.setdefault("method", ev.method)
+        stamp = ev.retrieved_at.isoformat() if ev.retrieved_at else None
+        if stamp and stamp > entry.get("retrieved_at", ""):
+            entry["retrieved_at"] = stamp
+
+    # אותו שורש שהזורע משתמש בו, כדי ששניהם לא יסטו.
+    from app.cities.herzliya.seed_layer_a import LAYER_A
+
+    path = LAYER_A / FETCHED_FILE
+    path.write_text(json.dumps(out, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
+    return {"parcels": len(out), "path": str(path)}
+
+
 async def _main(argv=None):
     """‏`enrich()` נכתב ולא הייתה לו דרך הרצה, ולכן גם לא רצה מעולם על
     הזדמנות אמיתית. הרשימה הקצרה נמסרת במפורש — אין כאן ״כל העיר״."""
     from app.core.database import AsyncSessionLocal
-    ap = argparse.ArgumentParser(description="העשרת רשימה קצרה מתיקי הבניין")
-    ap.add_argument("ids", nargs="+", help=f"מזהי הזדמנות · עד {MAX_SHORTLIST}")
+    ap = argparse.ArgumentParser(description="העשרה מתיקי הבניין, וייצוא לשחזור")
+    ap.add_argument("ids", nargs="*", help=f"מזהי הזדמנות · עד {MAX_SHORTLIST}")
+    ap.add_argument("--export", action="store_true",
+                    help="כתיבת ראיות הארכיון שבמסד לקובץ, כדי שזריעה חדשה תשחזר אותן")
     a = ap.parse_args(argv)
     async with AsyncSessionLocal() as session:
+        if a.export:
+            return await export_fetched(session)
+        if not a.ids:
+            ap.error("יש לציין מזהי הזדמנות, או --export")
         out = await enrich(session, [UUID(x) for x in a.ids])
         await session.commit()
     return out

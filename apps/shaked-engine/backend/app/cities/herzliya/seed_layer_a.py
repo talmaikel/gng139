@@ -58,9 +58,30 @@ MAX_SQM_PER_UNIT = 200.0
 ARCHIVE_HOST = "complot.co.il"
 STRENGTHENING = re.compile(r'תמ["״]?א\s*38|חיזוק|רעידות אדמה')
 
+# תיקי בניין שנשלפו לפי בקשת לקוח, מיוצאים כדי שזריעה על מכונה חדשה
+# תשחזר אותם. בלעדיו מספר המועמדים המוכנים יורד בלי הסבר — קרה: 9 → 5.
+FETCHED_FILE = "archive_fetched.json"
+
 
 def _load(name: str):
     return json.loads((LAYER_A / name).read_text(encoding="utf-8"))
+
+
+def _fetched_rows(key: str, entry: dict | None) -> list[dict]:
+    """שורות ראיה מתיק שנשלף חי. גוברות על מה שנגזר מהקובץ הישן.
+
+    הן נכתבות **אחרי** `_rows`, ולכן דורסות אותו על אותו שדה — התיק
+    שנשלף היום טרי יותר מהסריקה של אתמול.
+    """
+    if not entry:
+        return []
+    at = datetime.fromisoformat(entry["retrieved_at"]) if entry.get("retrieved_at") else None
+    return [dict(field=field, value=value, certainty=Certainty.DERIVED.value,
+                 source_url=entry["source_url"], retrieved_at=at,
+                 source_updated_at=None, location=entry.get("location"),
+                 method=entry.get("method"))
+            for field, value in (entry.get("fields") or {}).items()
+            if at and entry.get("source_url") and entry.get("location")]
 
 
 def usable_units(surv: dict) -> int | None:
@@ -214,6 +235,13 @@ async def seed(limit=None):
     sources = _load("source_fetched.json")
     facts = {f["tik"]: f for f in _load("archive_facts.json")}
     ptik = _load("parcel_tiks.json")
+    # תיקים שנשלפו חי, לפי בקשת לקוח. הם עולים לנו יותר מכל מקור אחר,
+    # והמדיניות מחייבת לשמור אותם לתמיד — ולכן הם בגיט ולא רק במסד.
+    # ‏`python -m app.cities.herzliya.archive_facts --export` מייצא אותם.
+    try:
+        fetched = _load(FETCHED_FILE)
+    except FileNotFoundError:
+        fetched = {}
 
     keys = [k for k in surv if k in geo][: limit or None]
     written = skipped = evidence_rows = 0
@@ -278,6 +306,7 @@ async def seed(limit=None):
                 )
             )
             rows = _rows(key, surv[key], front.get(key, {}), g, sources, archive)
+            rows += _fetched_rows(key, fetched.get(key))
             for r in rows:
                 session.add(FieldEvidence(opportunity_id=opp_id, **r))
             evidence_rows += len(rows)
