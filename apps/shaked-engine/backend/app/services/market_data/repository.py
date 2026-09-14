@@ -80,3 +80,36 @@ def add_valuation_run(
             fetched_at=valuation.fetched_at,
         )
     )
+
+
+async def find_latest_valuation(
+    session: AsyncSession,
+    *,
+    opportunity_id: uuid.UUID,
+    max_age_days: int,
+) -> MarketValuation | None:
+    """The most recent valuation for this parcel, whatever it was run with.
+
+    Distinct from `find_fresh_valuation`, and deliberately so. That one is a
+    *cache* lookup: it must match radius, lookback and the exact unit-mix
+    parameters, because a hit lets the caller skip a live fetch and a
+    different mix is a different question.
+
+    This one is a *reader*. The dossier endpoint is not allowed to fetch --
+    no network at request time -- so it asks a narrower question: is there a
+    recent valuation for this parcel at all? A valuation run for a slightly
+    different unit mix is still a far better price than a city-wide estimate,
+    and the dossier reports the mix it was run with either way.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_age_days)
+    stmt = (
+        select(MarketValuationRun)
+        .where(
+            MarketValuationRun.opportunity_id == opportunity_id,
+            MarketValuationRun.created_at >= cutoff,
+        )
+        .order_by(MarketValuationRun.created_at.desc())
+        .limit(1)
+    )
+    run = (await session.execute(stmt)).scalar_one_or_none()
+    return MarketValuation.model_validate(run.result_json) if run else None

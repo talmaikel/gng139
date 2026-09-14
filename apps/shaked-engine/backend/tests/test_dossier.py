@@ -180,8 +180,9 @@ async def test_an_economic_scenario_without_a_rights_ceiling_is_not_invented(ses
     # ההערכה מחושבת מחדש בבנייה, ולכן התקרה כן קיימת — הבדיקה על ההתנהגות
     # כשאין: התרחיש יוצא None ולא אפסים.
     from app.cities.herzliya.dossier import _economics
-    bare = _economics(Opportunity(city_code="herzliya", address="x", area_sqm=None,
-                                  existing_units=None), {"cap_400_sqm": None})
+    # ההזדמנות האמיתית ולא אובייקט מנותק: מאז חיבור B1 ו-B3 הפונקציה
+    # קוראת גם לוח דירות והערכת שווי, וזה חלק מההתנהגות שנבדקת כאן.
+    bare = await _economics(session, opp, {"cap_400_sqm": None}, {})
     assert bare["scenario"] is None and bare["is_deliverable"] is False
     assert "DOS-03" in bare["why"]
     assert d["economics"]["assumptions"]
@@ -221,3 +222,93 @@ async def test_a_gate_appears_in_one_gap_category_only(session):
     assert not never_asked & unobtainable
     # והתווית בעברית נוסעת יחד עם המזהה, כדי שה-PDF לא ידפיס שם שדה
     assert all(x["label"] and not x["label"].isascii() for x in g["unobtainable"])
+
+
+# ── חיבור B1 ו-B3 לתיק שהלקוח רואה ──
+#
+# שתי עבודות נבנו אל מסלול ה-worker, והתיק שהמסך מציג המשיך לקרוא
+# ‏45,000 ₪/מ״ר ו-70 מ״ר מספריית ההנחות. הבדיקות כאן הן מה שמונע מהתפר
+# הזה להיפתח שוב: הן נופלות אם התיק יחזור להתעלם מהנתון לחלקה.
+
+@pytest.mark.asyncio
+async def test_without_a_valuation_the_price_is_the_city_wide_estimate(session):
+    c, _, opp = await _delivered(session, block="9640")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    price = d["economics"]["live_inputs"]["sale_price"]
+    assert price["resolved"] is False
+    assert price["certainty"] == "estimate"
+    assert "אומדן אחיד לעיר" in price["label"]
+
+
+@pytest.mark.asyncio
+async def test_a_stored_valuation_replaces_the_city_wide_estimate(session):
+    from datetime import date, datetime, timezone
+
+    from app.services.market_data.repository import add_valuation_run
+    from app.services.market_data.schemas import MarketValuation, ValuationStatus
+
+    c, _, opp = await _delivered(session, block="9641")
+    add_valuation_run(
+        session, opportunity_id=opp.id,
+        valuation=MarketValuation(
+            status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
+            fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
+            comparable_count=17, comparable_sales=[], room_estimates=[],
+            blended_price_per_sqm_ils=52_300.0),
+        parameters={"unit_mix_state": "x", "targets": []})
+    await session.flush()
+
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    price = d["economics"]["live_inputs"]["sale_price"]
+    assert price["resolved"] is True
+    assert price["value"] == 52_300.0
+    from app.evidence import DECIDING
+    assert price["certainty"] in DECIDING
+    assert "17 עסקאות" in price["label"]
+    # והמחיר באמת נכנס לחישוב, ולא רק לתצוגה
+    assert d["economics"]["scenario"]["total_revenue_ils"] > 0
+
+
+@pytest.mark.asyncio
+async def test_a_verified_complete_schedule_stops_blocking_delivery(session):
+    """‏**החוסם יורד רק כשהלוח מכסה את כל הבניין.**
+
+    ‏`may_decide` של B3 דורש ודאות מכריעה, לוח שלם, ובלי סתירה מול
+    הספירה העירונית. התיק מכבד אותו ואינו שופט בעצמו.
+    """
+    from app.models.dwelling_unit import DwellingUnit
+
+    c, _, opp = await _delivered(session, block="9642")
+    assert opp.existing_units, "הבדיקה נשענת על ספירה עירונית קיימת"
+    for i in range(opp.existing_units):
+        session.add(DwellingUnit(
+            opportunity_id=opp.id, source_key=f"permit#unit{i}", unit_label=str(i + 1),
+            area_sqm=64.0 + i, certainty=Certainty.MANUALLY_VERIFIED,
+            requires_human_review=False, method="manual"))
+    await session.flush()
+
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    unit = d["economics"]["live_inputs"]["unit_area"]
+    assert unit["resolved"] is True
+    assert unit["per_unit_detail_available"] is True
+    assert "אומת ידנית" in unit["label"]
+    assert "average_existing_unit_sqm" not in d["economics"]["inputs_missing"]
+
+
+@pytest.mark.asyncio
+async def test_a_partial_schedule_is_shown_but_still_blocks(session):
+    """לוח מאושר שמכסה דירה אחת מתוך רבות מדווח — ואינו מכריע."""
+    from app.models.dwelling_unit import DwellingUnit
+
+    c, _, opp = await _delivered(session, block="9643")
+    session.add(DwellingUnit(
+        opportunity_id=opp.id, source_key="permit#unit1", unit_label="1",
+        area_sqm=64.0, certainty=Certainty.MANUALLY_VERIFIED,
+        requires_human_review=False, method="manual"))
+    await session.flush()
+
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    unit = d["economics"]["live_inputs"]["unit_area"]
+    assert unit["value"] == 64.0                     # מוצג
+    assert unit["resolved"] is False                 # ואינו מכריע
+    assert "average_existing_unit_sqm" in d["economics"]["inputs_missing"]
