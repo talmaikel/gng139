@@ -466,6 +466,14 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
     # lets this pick the survey's actual height band for this building
     # instead of averaging across all three; worker.py has no rights
     # assessment to read a floor count from, so it always averages.
+    #
+    # `floors_low` rather than `floors_high`: `rights.floors()` scans the
+    # street-width measurement's tolerance band and returns the minimum and
+    # maximum permitted floor count across it. `floors_low` is the
+    # conservative, guaranteed-at-least figure; `floors_high` is the
+    # optimistic end of the same uncertainty. Pricing construction off the
+    # optimistic count would understate cost whenever the true width lands
+    # on the low side of the tolerance band.
     floors_range = assessment.get("floors") or {}
     floors = floors_range.get("low")
     construction_cost = resolve_construction_cost_per_sqm(opp.city_code, None, floors=floors)
