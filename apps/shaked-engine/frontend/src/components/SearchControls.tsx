@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Preference, SearchOptions, SortField } from "@/lib/api";
 
 const FIELD_LABEL: Record<SortField, string> = {
@@ -43,15 +44,20 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
   const used = new Set(prefs.map((p) => p.field));
   const available = (Object.keys(FIELD_LABEL) as SortField[]).filter((f) => !used.has(f));
 
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
   function setPrefs(next: Preference[]) {
     onChange({ ...value, preferences: next });
   }
 
-  function move(index: number, by: number) {
+  /** מזיזה את הפריט מ-from ל-to, בכל מרחק — לא רק בין שכנים.
+   *  משמשת גם את הגרירה וגם את כפתורי ↑/↓, כדי ששני הנתיבים ייצרו
+   *  תמיד את אותה תוצאה. */
+  function moveTo(from: number, to: number) {
+    if (to < 0 || to >= prefs.length || from === to) return;
     const next = [...prefs];
-    const target = index + by;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
     setPrefs(next);
   }
 
@@ -100,7 +106,29 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
 
         <div style={{ display: "grid", gap: ".4rem" }}>
           {prefs.map((pref, i) => (
-            <div key={pref.field} style={{ display: "flex", gap: ".4rem", alignItems: "center" }}>
+            <div
+              key={pref.field}
+              draggable
+              onDragStart={() => setDraggedIndex(i)}
+              onDragEnd={() => setDraggedIndex(null)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (draggedIndex !== null) moveTo(draggedIndex, i);
+                setDraggedIndex(null);
+              }}
+              style={{
+                display: "flex", gap: ".4rem", alignItems: "center",
+                opacity: draggedIndex === i ? 0.5 : 1,
+              }}
+            >
+              <span
+                aria-hidden
+                title="גרור לסידור"
+                style={{ cursor: "grab", color: "#9c9481", fontSize: ".9rem", width: "1.1rem", textAlign: "center" }}
+              >
+                ⠿
+              </span>
               <span style={{ color: "#6b655c", fontSize: ".82rem", width: "1.1rem" }}>{i + 1}.</span>
               <strong style={{ fontSize: ".87rem", minWidth: "10.5rem" }}>{FIELD_LABEL[pref.field]}</strong>
               <button
@@ -113,7 +141,7 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
                 {pref.direction === "desc" ? "מהגדול לקטן" : "מהקטן לגדול"}
               </button>
               <button
-                onClick={() => move(i, -1)}
+                onClick={() => moveTo(i, i - 1)}
                 disabled={i === 0}
                 aria-label="העלה"
                 style={{ background: "#eef0ee", color: "#1a1a1a", padding: ".28rem .55rem", fontSize: ".8rem" }}
@@ -121,7 +149,7 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
                 ↑
               </button>
               <button
-                onClick={() => move(i, 1)}
+                onClick={() => moveTo(i, i + 1)}
                 disabled={i === prefs.length - 1}
                 aria-label="הורד"
                 style={{ background: "#eef0ee", color: "#1a1a1a", padding: ".28rem .55rem", fontSize: ".8rem" }}
