@@ -28,6 +28,7 @@ import re
 from datetime import date, datetime
 from pathlib import Path
 
+import sqlalchemy as sa
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 
@@ -297,16 +298,29 @@ async def seed(limit=None):
             # קרה בפועל: ארבעה תיקים שנשלפו להדגמה נמחקו בזריעה שאחריה,
             # ומספר המועמדים המוכנים ירד מ-9 ל-5.
             #
-            # אם התיק כבר בקובץ המקומי, השורה החדשה תדרוס אותו ממילא —
-            # ולכן הסינון הוא על המקור ולא על השדה.
-            await session.execute(
-                delete(FieldEvidence).where(
-                    FieldEvidence.opportunity_id == opp_id,
-                    FieldEvidence.source_url.not_like(f"%{ARCHIVE_HOST}%"),
-                )
-            )
+            # ‏**ומכאן הגיע באג:** כתבתי ש״השורה החדשה תדרוס אותו ממילא״,
+            # והיא אינה דורסת — היא נוספת. השמירה על *כל* שורת ארכיון
+            # פירושה שכל זריעה מוסיפה עותק נוסף של אותה ראיה בדיוק.
+            # אחרי שלושים זריעות היו שלושים שורות `permit_date` זהות
+            # לאותה חלקה, עם אותו ערך ואותו מקור.
+            #
+            # התיקון אינו לחזור למחוק הכל: תיק שנשלף חי ועוד לא יוצא
+            # לקובץ עדיין חייב לשרוד. נמחקות רק שורות שאנחנו עומדים
+            # לכתוב מחדש — אותו שדה, אותו מקור — ולכן אין מה לאבד.
             rows = _rows(key, surv[key], front.get(key, {}), g, sources, archive)
             rows += _fetched_rows(key, fetched.get(key))
+
+            conditions = [FieldEvidence.source_url.not_like(f"%{ARCHIVE_HOST}%")]
+            rewriting = {r["field"] for r in rows
+                         if ARCHIVE_HOST in (r.get("source_url") or "")}
+            if rewriting:
+                conditions.append(sa.and_(
+                    FieldEvidence.source_url.like(f"%{ARCHIVE_HOST}%"),
+                    FieldEvidence.field.in_(rewriting)))
+            await session.execute(
+                delete(FieldEvidence).where(
+                    FieldEvidence.opportunity_id == opp_id, sa.or_(*conditions))
+            )
             for r in rows:
                 session.add(FieldEvidence(opportunity_id=opp_id, **r))
             evidence_rows += len(rows)
