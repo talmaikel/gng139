@@ -1,32 +1,15 @@
-# בעלות על קבצים — נאכף ע"י GitHub ב-Pull Requests.
+# ‏**ריק במכוון.** אל תוסיפו שורות בלי לקרוא את זה.
 #
-# כל שורה: תבנית נתיב, ואחריה מי שנדרש לאשר שינוי בו.
-# השורה האחרונה שמתאימה לקובץ היא הקובעת — לכן הכללי למעלה והספציפי למטה.
+# הקובץ הזה החזיק `* @talmaikel` — כלומר כל Pull Request, בכל קובץ, ביקש
+# אוטומטית ביקורת מטל, ו-GitHub שלח לו מייל על כל אחד. ביום אחד זה היו
+# עשרות מיילים, גם על PR-ים שלא נגעו בשום דבר שלו.
 #
-# החליפו את שמות המשתמש בשמות ה-GitHub האמיתיים לפני השימוש.
-# כדי שזה יאכוף בפועל צריך גם: Settings → Branches → Add rule על main
-#   ✓ Require a pull request before merging
-#   ✓ Require review from Code Owners
-
-# ברירת מחדל — כל שינוי שלא נתפס למטה
-*                                   @talmaikel
-
-# ── זרם א׳ · הגשר, הכללים והנתונים ──
-/POC/app/rules.py                   @OWNER-A
-/POC/app/bridge.py                  @OWNER-A
-/POC/app/config.py                  @OWNER-A
-/POC/layer_a/                       @OWNER-A
-
-# ── זרם ב׳ · הנחות, תמורה וכלכלה ──
-/POC/app/assumptions.py             @OWNER-B
-/POC/app/compensation.py            @OWNER-B
-
-# ── זרם ג׳ · אפליקציה וממשק ──
-/POC/static/                        @OWNER-C
-/POC/app/main.py                    @OWNER-C
-
-# ── משותפים · דורשים שני מאשרים ──
-# models.py משנה את החוזה בין כל השלושה
-/POC/app/models.py                  @OWNER-A @OWNER-B @OWNER-C
-# exports.py — ב׳ אחראי לתוכן, ג׳ לפורמט
-/POC/app/exports.py                 @OWNER-B @OWNER-C
+# שאר השורות הצביעו על `/POC/app/*` — נתיבים שכבר אינם הקוד הפעיל — ועל
+# משתמשים שאינם קיימים (`@OWNER-A`, `@OWNER-B`, `@OWNER-C`). הן לא אכפו
+# כלום, כי אין הגנת ענף על main.
+#
+# חלוקת הבעלות על קבצים בין הזרמים כתובה בתכנית העבודה (issue #6), והיא
+# מוסכמה בין אנשים ולא אכיפה של GitHub. אם תרצו לאכוף אותה, צריך שני
+# דברים יחד: שמות GitHub אמיתיים כאן, **וגם** Settings → Branches → rule
+# על main עם "Require review from Code Owners". בלי השני, הקובץ רק שולח
+# מיילים.
