@@ -113,9 +113,14 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
     version="2026-v3",
     effective_date=date(2026, 1, 1),
     sale_price_per_sqm_ils=Assumption(45_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm"),
+    # Superseded by `services/economic/construction_costs.py`: the developer's
+    # own figure, then the appraisers' regional survey, decide this value now
+    # (see worker.py). This entry only feeds a scenario when neither is
+    # available -- for Herzliya the survey always covers it, so in practice
+    # this is dead weight kept for cities the survey doesn't reach yet.
     construction_cost_per_sqm_ils=Assumption(
-        1_860.0, AssumptionStatus.DATA, "ILS/sqm",
-        source="מדד תשומות הבנייה"),
+        7_366.67, AssumptionStatus.MISSING, "ILS/sqm",
+        source="Placeholder only -- no developer figure and no appraisers' survey entry for this city"),
     demolition_cost_per_unit_ils=Assumption(150_000.0, AssumptionStatus.ESTIMATE, "ILS/unit"),
     soft_cost_ratio=Assumption(0.15, AssumptionStatus.ESTIMATE, "ratio"),
     developer_profit_target_ratio=Assumption(0.20, AssumptionStatus.ESTIMATE, "ratio"),

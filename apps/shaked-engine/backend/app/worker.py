@@ -27,6 +27,7 @@ from app.services.dwelling_units import (
 )
 from app.services.economic.assumptions import get_assumptions
 from app.services.economic.calculator import calculate_feasibility
+from app.services.economic.construction_costs import resolve_construction_cost_per_sqm
 from app.services.economic.schemas import FeasibilityInput
 from app.services.market_data.govmap import MarketDataUnavailable
 from app.services.market_data.service import get_or_refresh_market_valuation
@@ -193,6 +194,7 @@ async def generate_dossier_handler(payload: dict) -> dict:
     should swallow.
     """
     opportunity_id = uuid.UUID(payload["opportunity_id"])
+    developer_construction_cost_per_sqm_ils = payload.get("construction_cost_per_sqm_ils")
 
     async with AsyncSessionLocal() as session:
         opportunity = await session.get(Opportunity, opportunity_id)
@@ -376,13 +378,30 @@ async def generate_dossier_handler(payload: dict) -> dict:
                 blocking_inputs,
                 average_existing_unit_report,
             ) = _average_existing_unit_input(assumptions, unit_area)
+
+            # B2: the developer's own figure, then the appraisers' regional
+            # survey, decide this before the versioned per-city assumption
+            # ever gets a say -- see construction_costs.py. This pipeline has
+            # no rights assessment to read a floor count from (unlike
+            # dossier.py), so it always averages the survey's three height
+            # bands rather than picking one.
+            construction_cost = resolve_construction_cost_per_sqm(
+                opportunity.city_code, developer_construction_cost_per_sqm_ils
+            )
+            blocking_inputs = [name for name in blocking_inputs if name != "construction_cost_per_sqm_ils"]
+            if construction_cost.value_ils_per_sqm is None:
+                blocking_inputs.append("construction_cost_per_sqm_ils")
+                construction_cost_per_sqm = assumptions.construction_cost_per_sqm_ils.value
+            else:
+                construction_cost_per_sqm = construction_cost.value_ils_per_sqm
+
             feasibility = calculate_feasibility(
                 FeasibilityInput(
                     plot_area_sqm=plot_area_sqm,
                     existing_units=opportunity.existing_units,
                     buildable_area_sqm=buildable_area_sqm,
                     sale_price_per_sqm=sale_price_per_sqm,
-                    construction_cost_per_sqm=assumptions.construction_cost_per_sqm_ils.value,
+                    construction_cost_per_sqm=construction_cost_per_sqm,
                     soft_cost_ratio=assumptions.soft_cost_ratio.value,
                     demolition_cost_per_unit=assumptions.demolition_cost_per_unit_ils.value,
                     developer_profit_target_ratio=assumptions.developer_profit_target_ratio.value,
@@ -421,6 +440,20 @@ async def generate_dossier_handler(payload: dict) -> dict:
                 "assumptions_version": assumptions.version,
                 "assumptions_effective_date": assumptions.effective_date.isoformat(),
                 **assumptions.report(),
+                # Overrides the placeholder entry from assumptions.report():
+                # this dossier's actual figure came from the developer or the
+                # appraisers' survey, resolved above, not the versioned
+                # per-city assumption.
+                "construction_cost_per_sqm_ils": {
+                    "value": construction_cost_per_sqm,
+                    "status": construction_cost.status,
+                    "unit": "ILS/sqm",
+                    "source": construction_cost.source,
+                    "method": construction_cost.method,
+                    "as_of_date": (
+                        construction_cost.as_of_date.isoformat() if construction_cost.as_of_date else None
+                    ),
+                },
                 "sale_price_per_sqm_ils": {
                     "value": sale_price_per_sqm,
                     "status": "estimate",

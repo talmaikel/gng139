@@ -22,6 +22,23 @@ router = APIRouter(prefix="/dossiers", tags=["dossiers"])
 
 class BatchDossierRequest(BaseModel):
     opportunity_ids: list[uuid.UUID] = Field(min_length=1, max_length=3)
+    # B2: the developer's own construction cost beats the appraisers'
+    # regional survey fallback (see services/economic/construction_costs.py)
+    # whenever supplied. One figure for the whole batch -- a developer
+    # running several candidates at once is pricing them against the same
+    # contractor quote, not a different one per parcel.
+    construction_cost_per_sqm_ils: float | None = Field(
+        default=None, gt=0,
+        description="Developer-supplied construction cost per sqm (ILS), applied to every opportunity in the batch",
+    )
+
+
+class GenerateDossierRequest(BaseModel):
+    construction_cost_per_sqm_ils: float | None = Field(
+        default=None, gt=0,
+        description="Developer-supplied construction cost per sqm (ILS). "
+                     "Overrides the appraisers' regional survey fallback (B2)",
+    )
 
 
 class DwellingUnitReviewRequest(BaseModel):
@@ -206,11 +223,15 @@ async def generate_dossier_batch(
             status_code=404, detail={"missing_opportunity_ids": missing_ids}
         )
 
+    batch_payload: dict[str, Any] = {}
+    if request.construction_cost_per_sqm_ils is not None:
+        batch_payload["construction_cost_per_sqm_ils"] = request.construction_cost_per_sqm_ils
+
     tasks = [
         await enqueue(
             session,
             task_type="generate_dossier",
-            payload={"opportunity_id": str(opportunity_id)},
+            payload={"opportunity_id": str(opportunity_id), **batch_payload},
             company_id=user.company_id,
         )
         for opportunity_id in request.opportunity_ids
@@ -231,14 +252,19 @@ async def generate_dossier_batch(
 @router.post("/{opportunity_id}/generate")
 async def generate_dossier(
     opportunity_id: uuid.UUID,
+    request: GenerateDossierRequest | None = None,
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user),
 ) -> dict[str, Any]:
     """Enqueue an asynchronous dossier-generation job for one opportunity."""
+    payload: dict[str, Any] = {"opportunity_id": str(opportunity_id)}
+    if request and request.construction_cost_per_sqm_ils is not None:
+        payload["construction_cost_per_sqm_ils"] = request.construction_cost_per_sqm_ils
+
     task = await enqueue(
         session,
         task_type="generate_dossier",
-        payload={"opportunity_id": str(opportunity_id)},
+        payload=payload,
         company_id=user.company_id,
     )
     await session.commit()

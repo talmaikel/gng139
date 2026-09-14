@@ -94,6 +94,24 @@ service-level guarantee. The integration is isolated behind the market-data
 service so it can be replaced by a licensed provider without changing the
 valuation logic.
 
+## Construction-cost resolution
+
+Hard construction cost per square metre for the feasibility calculator is
+resolved in this order:
+
+1. A developer-supplied figure, passed when a dossier is requested. It is
+   treated as the developer's own data for their own project and needs no
+   external citation.
+2. A regional average from the Israeli Association of Real Estate
+   Appraisers' construction-cost survey (June 2026), when the opportunity's
+   city is covered by it. Reported as an estimate, since it averages three
+   building-height bands the calculator does not otherwise distinguish.
+3. Otherwise the figure is reported missing, which blocks the scenario from
+   being marked deliverable rather than silently substituting a guess.
+
+Whichever source is used, the resolved value, its status and its source are
+carried into the dossier's assumptions report rather than left implicit.
+
 ## Data model
 
 The principal entities are:
