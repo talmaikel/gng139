@@ -251,6 +251,24 @@ async def test_the_archive_is_asked_once_and_not_in_a_loop(session):
 
 
 @pytest.mark.asyncio
+async def test_without_credits_the_archive_is_not_asked_at_all(session):
+    """הסדר היה: שולפים תיק, ואז בודקים יתרה. חברה ביתרה 0 גרמה לפנייה
+    לארכיון בשביל תיק שלא יימסר לה. עכשיו — 402 לפני כל פנייה."""
+    c, (u, _) = await _company(session, credits=0)
+    opp = await _opportunity(session, "9319", deliverable=False, open_gates=("permit_date",))
+    calls = []
+
+    async def archive(s, oid):
+        calls.append(oid)
+        return True
+
+    with pytest.raises(NoCredits):
+        await deliver(session, opp.id, c.id, u.id, on_unready=archive)
+    assert calls == []
+    assert await delivered_ids(session, c.id) == set()
+
+
+@pytest.mark.asyncio
 async def test_a_candidate_already_ready_never_touches_the_archive(session):
     c, (u, _) = await _company(session)
     opp = await _opportunity(session, "9314")

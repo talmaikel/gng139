@@ -87,6 +87,13 @@ def _why_not(opp: Opportunity) -> str:
     return "ההערכה אינה מסומנת כניתנת למסירה"
 
 
+async def _credits(session, company_id: UUID) -> int:
+    balance = (await session.execute(
+        select(Balance.credits_remaining).where(Balance.company_id == company_id)
+    )).scalar_one_or_none()
+    return balance or 0
+
+
 async def delivered_ids(session, company_id: UUID) -> set[UUID]:
     """מה שכבר נמסר לחברה. השאילתה שמסננת סריקה חוזרת."""
     return set((await session.execute(
@@ -180,6 +187,14 @@ async def deliver(session, opportunity_id: UUID, company_id: UUID,
         raise NotDeliverable(f"הזדמנות {opportunity_id} אינה קיימת")
 
     if not _is_deliverable(opp) and on_unready is not None:
+        # ‏**אין שליפה בשביל מי שאינו יכול לקבל את התוצאה.** הסדר היה:
+        # שולפים את התיק, ורק אחר כך בודקים יתרה. כלומר חברה ביתרה 0 שלחצה
+        # על מועמד לא מוכן גרמה לפנייה לארכיון העירוני — המשאב הרגיש ביותר
+        # שיש לנו — בשביל תיק שלא יימסר לה. נמצא בהכנת ההדגמה (A21): שלב
+        # ״מסירה רביעית → 402״ היה פונה לארכיון לפני ה-402.
+        # מי שיש לו יתרה אינו מושפע: הסדר עבורו לא השתנה.
+        if await _credits(session, company_id) < 1:
+            raise NoCredits("לא נותרה זכאות לחברה")
         if await on_unready(session, opportunity_id):
             await session.refresh(opp)
     if not _is_deliverable(opp):
