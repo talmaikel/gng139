@@ -9,7 +9,9 @@ Last updated: 2026-09-14
 
 Shaked Engine is a B2B PropTech application for screening and packaging urban
 renewal opportunities under Israel's Shaked Alternative (חלופת שקד). The first
-supported city is Herzliya.
+supported city is Herzliya. Tel Aviv-Yafo is stubbed in `app/cities/tel_aviv/`
+as a parked future expansion, not active work — see
+[`app/cities/tel_aviv/README.md`](../backend/app/cities/tel_aviv/README.md).
 
 The main user flow is:
 

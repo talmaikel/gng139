@@ -40,3 +40,11 @@
 ## ‏POC
 
 [`POC/`](POC/) הוא התייחסות בלבד, לא בסיס הפיתוח. הכל ב-`apps/shaked-engine`.
+
+## תל אביב-יפו — הרחבה עתידית, לא בתחום העבודה
+
+מה שנלמד מניסוי דוד המלך 23/25/27 מרוכז ב-
+[`POC/data/cities/tel-aviv/README.md`](POC/data/cities/tel-aviv/README.md), ומה שנדרש
+כדי להפעיל את תל אביב במנוע ב-
+[`apps/shaked-engine/backend/app/cities/tel_aviv/README.md`](apps/shaked-engine/backend/app/cities/tel_aviv/README.md).
+אין לפתח את זה עד להחלטה נפרדת.

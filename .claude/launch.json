@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev"],
       "cwd": "apps/shaked-engine/frontend",
       "port": 3000
+    },
+    {
+      "name": "tel-aviv-review",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-X", "utf8", "scripts/serve_tel_aviv_review.py"],
+      "cwd": "POC",
+      "port": 8091
     }
   ]
 }
