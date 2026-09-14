@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import ENUM, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -59,7 +59,7 @@ class DwellingUnit(Base):
     rooms: Mapped[str | None] = mapped_column(String(20))
 
     certainty: Mapped[Certainty] = mapped_column(
-        Enum(
+        ENUM(
             Certainty,
             name="evidence_certainty",
             create_type=False,
