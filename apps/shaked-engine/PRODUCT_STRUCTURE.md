@@ -27,6 +27,7 @@ The main user flow is:
 | Evidence | `backend/app/evidence.py`, `backend/app/models/evidence.py` | Source, retrieval time and certainty for observed fields |
 | Geometry | `backend/app/geo.py` | Israeli-grid conversion and parcel/building spatial operations |
 | Document pipeline | `backend/app/pipeline/` | PDF processing, OCR and structured extraction |
+| Dwelling units | `backend/app/models/dwelling_unit.py`, `backend/app/services/dwelling_units.py` | Per-apartment permitted areas with provenance, certainty and review gates |
 | Economic service | `backend/app/services/economic/` | Versioned assumptions and feasibility calculations |
 | Market-data service | `backend/app/services/market_data/` | On-demand comparable sales and room-level price estimates |
 | Background worker | `backend/app/worker.py` | Dossier generation outside the request cycle |
@@ -43,6 +44,17 @@ block a completed feasibility result; they are not silently replaced by facts.
 AI-assisted document extraction is treated as reviewable evidence. Source
 records, derived values and calculation assumptions retain their status so a
 consumer can distinguish data from estimates.
+
+When a permit contains a labelled apartment schedule, the worker stores one
+row per dwelling unit. Unreviewed OCR/AI readings may be displayed but cannot
+make a dossier deliverable; a complete manually confirmed schedule may drive
+the existing-unit average and per-household allocation. If no schedule is
+available, a footprint-based average remains an explicit non-deciding estimate.
+
+Current limitation: the extractor records each unit's permitted total area and
+floor, but does not yet split principal area from service area, and there is no
+review endpoint/UI that can turn a candidate row into a manually confirmed
+row. Accordingly, this is B3 groundwork rather than completion of B3.
 
 ## Comparable-sales pipeline
 
@@ -87,6 +99,8 @@ The principal entities are:
 - `tenants` and `users` for company-scoped access.
 - `opportunities` and `buildings` for parcel and building identity.
 - `field_evidence` for sourced observations and certainty.
+- `dwelling_units` for per-apartment permitted areas, provenance and review
+  status.
 - `packages`, `balances`, `reservations` and `deliveries` for the commercial
   workflow.
 - `task_queue` for asynchronous work.
@@ -94,14 +108,15 @@ The principal entities are:
 - `market_valuation_runs` for dated calculation snapshots.
 
 Migration `0007_add_market_data` adds the two market-data tables after the
-delivery-ledger migration.
+delivery-ledger migration. Migration `0008_dwelling_units` then adds the
+per-apartment table without creating a second Alembic head.
 
 ## Verification
 
 The backend test suite covers the market-data coordinate conversion, upstream
 record filtering, room segmentation, outlier handling, explicit-unit-mix
-blending and concurrency-safe transaction upserts. Database-backed tests run
-when a compatible test database is available.
+blending, concurrency-safe transaction upserts and the dwelling-unit decision
+rules. Database-backed tests run when a compatible test database is available.
 
 Before production use, market-source terms, valuation methodology and material
 commercial assumptions should be reviewed by the appropriate professional.
