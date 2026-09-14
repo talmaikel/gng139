@@ -130,3 +130,70 @@ def sensitivity(estimate_fn: Callable[[float, float], float],
         "existing_value_up_ils": estimate_fn(existing_value * (1 + step), land_value),
         "existing_value_down_ils": estimate_fn(existing_value * (1 - step), land_value),
     }
+
+
+def residual_land_value(
+    *,
+    total_revenue_ils: float,
+    total_cost_ils: float,
+    land_cost_ils: float,
+    finance_ratio: float,
+    developer_profit_target_ratio: float,
+) -> float:
+    """שווי הקרקע שנותר אחרי שכל העלויות והרווח היזמי כוסו.
+
+    **זה המקדם ש-12,000 בגיליון היזמי מנחש, וכאן הוא נגזר.**
+
+    יזם יכול לשלם על הקרקע את מה שנשאר מההכנסות אחרי כל העלויות ואחרי
+    הרווח שהוא דורש. אם ההכנסות חייבות לכסות עלות ועוד רווח יעד::
+
+        הכנסות = (1 + רווח_יעד) × עלות_כוללת
+        עלות_כוללת = (עלויות_ללא_קרקע + קרקע) × (1 + מימון)
+
+    ומכאן::
+
+        קרקע = הכנסות / ((1 + רווח_יעד)(1 + מימון)) − עלויות_ללא_קרקע
+
+    **זה חילוץ אחד, לא שניים.** הצד ה״קיים״ של ההשבחה מגיע מעסקאות
+    שכנות אמיתיות (B1) ולא מחילוץ שני, ולכן השגיאה אינה מתעצמת פעמיים
+    כפי שהיא מתעצמת בשומה שמחלצת את שני הצדדים.
+    """
+    before_finance_excl_land = total_cost_ils / (1 + finance_ratio) - land_cost_ils
+    affordable = total_revenue_ils / ((1 + developer_profit_target_ratio) * (1 + finance_ratio))
+    return affordable - before_finance_excl_land
+
+
+def levy_range(
+    *,
+    breakeven_betterment_ils: float | None,
+    estimate: BettermentEstimate | None,
+    rate: float,
+    swing: float = 0.10,
+) -> dict:
+    """הטווח שהיזם צריך לראות: **עד כמה נסבל, וכמה צפוי.**
+
+    התקרה נגזרת מהסף ואינה מוסיפה הנחה. האומדן והטווח סביבו נגזרים
+    משווי הקרקע השיורי, ולכן הם נושאים את רגישותו — ‏10% במקדם מזיזים
+    את ההיטל בעשרות אחוזים, וזה נאמר במספרים ולא במילים.
+    """
+    ceiling = breakeven_betterment_ils * rate if breakeven_betterment_ils else None
+    out = {
+        "rate": rate,
+        "viable_up_to_ils": ceiling,
+        "estimate_ils": None, "low_ils": None, "high_ils": None,
+        "within_range": None,
+    }
+    if estimate is None:
+        return out
+
+    mid = estimate.levy(rate)
+    # הטווח אינו ±10% על ההיטל אלא ±10% על **המקדם**, וזה לא אותו דבר:
+    # ההיטל הוא הפרש, ולכן הוא זז הרבה יותר מהמקדם שהזיז אותו.
+    low_after = estimate.after_ils * (1 - swing)
+    high_after = estimate.after_ils * (1 + swing)
+    out["estimate_ils"] = mid
+    out["low_ils"] = max(low_after - estimate.before_ils, 0.0) * rate
+    out["high_ils"] = max(high_after - estimate.before_ils, 0.0) * rate
+    if ceiling is not None:
+        out["within_range"] = out["high_ils"] <= ceiling
+    return out

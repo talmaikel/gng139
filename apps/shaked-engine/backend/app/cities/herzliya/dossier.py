@@ -33,7 +33,8 @@ from app.models.package import Delivery
 from app.services.dwelling_units import load_units, resolve_existing_unit_area
 from app.services.economic.assumptions import get_assumptions
 from app.services.economic.betterment import (
-    breakeven_betterment, breakeven_land_value_per_right,
+    betterment_from_land_values, breakeven_betterment,
+    breakeven_land_value_per_right, levy_range, residual_land_value,
 )
 from app.services.market_data.repository import find_latest_valuation
 from app.services.economic.calculator import calculate_feasibility
@@ -252,6 +253,24 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
         municipal_unit_count=opp.existing_units,
         existing_area_sqm=_numeric(fields.get("existing_area")),
     )
+    # ‏**מחיר דירה חדשה ומחיר דירה קיימת אינם אותו מספר, ובלבלתי ביניהם.**
+    # ההכנסות מחושבות לפי מחיר דירה **חדשה**. שווי המצב הקיים — הצד
+    # ה״לפני״ של ההשבחה — הוא מחיר דירה **קיימת** באזור, והוא נמוך
+    # משמעותית. השוואת השניים באותו מספר הראתה שווי קיים גבוה משווי
+    # הזכויות החדשות, כלומר ״אין השבחה״ בכל תשע החלקות.
+    #
+    # עסקאות ההשוואה של B1 הן עסקאות בדירות **קיימות**, ולכן הן המקור
+    # הנכון לצד ה״לפני״. **בלי אותן עסקאות אין אומדן** — יש רק סף.
+    # לא ממציאים כאן יחס בין ישן לחדש.
+    out["existing_price"] = (
+        {"value": valuation.blended_price_per_sqm_ils, "resolved": True,
+         "certainty": Certainty.DERIVED.value,
+         "label": f"‏{valuation.comparable_count} עסקאות בדירות קיימות ברדיוס "
+                  f"{valuation.radius_m} מ׳"}
+        if valuation and valuation.blended_price_per_sqm_ils
+        else {"value": None, "resolved": False, "certainty": Certainty.MISSING.value,
+              "label": "אין עסקאות השוואה בדירות קיימות — אין אומדן להשבחה, רק סף"})
+
     out["unit_area"] = {
         # ‏`may_decide` הוא של B3 ולא שלנו: ודאות מכריעה, לוח שלם, ובלי
         # סתירה מול הספירה העירונית. אנחנו רק מכבדים אותו.
@@ -286,7 +305,8 @@ BETTERMENT_CATEGORY_LABEL = {
 MARGINAL_LAND_VALUE_ILS = 10_000.0
 
 
-def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None) -> dict[str, Any]:
+def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
+                result=None) -> dict[str, Any]:
     """‏B11 · הסף, ולא אומדן של ההשבחה.
 
     מפורט ב-`POC/layer_a/data/BETTERMENT_BASE.md`. בקצרה: אנחנו לא
@@ -305,10 +325,47 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None) 
         rate=rate)
 
     added = cap - cap / 4 if cap else None          # התקרה היא 400% מהקיים
+    existing_price = live["existing_price"]["value"]
     per_right = breakeven_land_value_per_right(
         threshold, existing_area_sqm=existing_area,
-        existing_value_per_sqm_ils=live["sale_price"]["value"],
+        existing_value_per_sqm_ils=existing_price,
         new_rights_sqm=cap)
+
+    # ── אומדן ראשוני, בשיטה שחברות יזמיות מריצות — ובמקדם נגזר ──
+    #
+    # הגיליון שהתקבל מחברה יזמית מניח 12,000 ₪ למ״ר זכויות. כאן המספר
+    # הזה **נגזר** במקום להיות מונח: שווי הקרקע השיורי הוא מה שנשאר
+    # מההכנסות אחרי כל העלויות ואחרי הרווח היזמי הנדרש.
+    # ‏**האומדן מנוע, וזו מסקנה ולא מגבלה טכנית.**
+    #
+    # השיטה דורשת שני מחירים **שונים**: מחיר דירה חדשה (הכנסות) ומחיר
+    # דירה קיימת (הצד ה״לפני״). היום שניהם מגיעים מאותו
+    # ‏`blended_price_per_sqm_ils` — עסקאות ההשוואה של GovMap, שאינן
+    # מסוננות לחדש מול יד שנייה. כשאותו מספר משמש בשני הצדדים, שווי
+    # המצב הקיים יוצא גבוה משווי הזכויות החדשות ו״אין השבחה״ בכל חלקה.
+    #
+    # להזין יחס מומצא בין ישן לחדש היה מייצר אומדן שנראה מבוסס ואינו.
+    # **הסף אינו תלוי בזה** ומוצג בכל מקרה.
+    estimate = None
+    prices_are_distinct = (existing_price is not None
+                           and live["sale_price"]["value"] != existing_price)
+    if existing_area and cap and prices_are_distinct and result is not None:
+        land = residual_land_value(
+            total_revenue_ils=result.total_revenue_ils,
+            total_cost_ils=result.total_cost_ils,
+            land_cost_ils=result.land_cost_ils,
+            finance_ratio=a.finance_ratio.value,
+            developer_profit_target_ratio=a.developer_profit_target_ratio.value)
+        if land > 0:
+            estimate = betterment_from_land_values(
+                existing_area_sqm=existing_area,
+                existing_value_per_sqm_ils=existing_price,
+                new_rights_sqm=cap,
+                land_value_per_right_ils=land / cap)
+            estimate.notes.append(
+                f"שווי מ״ר זכויות נגזר ולא הונח: {land / cap:,.0f} ₪ — "
+                "מה שנשאר מההכנסות אחרי כל העלויות ואחרי הרווח היזמי")
+    band = levy_range(breakeven_betterment_ils=threshold, estimate=estimate, rate=rate)
 
     if threshold is None:
         category = NO_THRESHOLD
@@ -319,6 +376,21 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None) 
 
     return {
         "rate": rate,
+        "levy": band,
+        "estimate": None if estimate is None else {
+            "betterment_ils": estimate.betterment_ils,
+            "before_ils": estimate.before_ils,
+            "after_ils": estimate.after_ils,
+            "land_value_per_right_ils": estimate.after_ils / estimate.new_rights_sqm,
+            "notes": estimate.notes,
+        },
+        "estimate_withheld_because": (
+            None if estimate is not None else
+            ("אין עסקאות השוואה בדירות קיימות באזור"
+             if existing_price is None else
+             "מחיר דירה חדשה ומחיר דירה קיימת מגיעים מאותן עסקאות ואינם "
+             "מופרדים. בלי הפרדה, אומדן ההשבחה יוצא אפס בכל חלקה — "
+             "והסף שלמטה אינו תלוי בכך")),
         "breakeven_ils": threshold,
         "breakeven_per_added_sqm_ils": threshold / added if threshold and added else None,
         # המספר שיזם שופט בשנייה.
@@ -348,8 +420,24 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
     # את מה שמסומן `MISSING` בספרייה — נכון כברירת מחדל לעיר, ושגוי
     # לחלקה שיש לה לוח דירות מאושר. נתון שנפתר לחלקה הזו יורד מהרשימה;
     # נתון שלא — נשאר, וממשיך לחסום מסירה.
-    blocking = [k for k in a.blocking()
-                if not (k == "average_existing_unit_sqm" and live["unit_area"]["resolved"])]
+    # ‏**החלטה מסחרית, 14.09.2026, בועז.** שני שדות ירדו מרשימת החוסמים
+    # ולא נעלמו: הם מוצגים בתיק עם תווית שאומרת בדיוק מה מצבם.
+    #
+    # ‏`average_existing_unit_sqm` — הלוח מחולץ מהגרמושקה, ואין עדיין
+    #   מסך שבו אדם מאשר אותו. הכלל ״רק מאושר מכריע״ הפך את השדה
+    #   לבלתי-פתיר בייצור: **שום קוד במערכת אינו מסמן
+    #   `requires_human_review=False`.** לחסום על סמך מסך שלא נבנה
+    #   פירושו להסתיר עבודה שנעשתה.
+    #
+    # ‏`betterment_base_ils` — אינו נדרש יותר: במקומו מוצג הסף, שהוא
+    #   אמירה שלמה ולא חוסר. ״כדאי כל עוד ההיטל מתחת ל-X״ אינו ניחוש.
+    #
+    # ‏**מה שלא השתנה:** שדה שאין לו בכלל ערך עדיין חוסם. זה לא ויתור
+    # על הכלל אלא צמצום שלו למה שבאמת חסר.
+    SOFTENED = {"betterment_base_ils"}
+    if live["unit_area"]["value"] is not None:
+        SOFTENED = SOFTENED | {"average_existing_unit_sqm"}
+    blocking = [k for k in a.blocking() if k not in SOFTENED]
     base = {
         "assumptions_version": a.version,
         "assumptions_effective_date": a.effective_date.isoformat(),
@@ -392,7 +480,8 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             vat_rate=a.vat_rate.value,
     )
     result = calculate_feasibility(inputs, missing_inputs=blocking)
-    betterment = _betterment(inputs, a, live, cap, _numeric(fields.get("existing_area")))
+    betterment = _betterment(inputs, a, live, cap,
+                             _numeric(fields.get("existing_area")), result)
     return {**base, "scenario": result.model_dump(),
             "live_inputs": live,
             "betterment": betterment,
