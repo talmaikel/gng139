@@ -72,3 +72,22 @@ def test_developer_figure_beats_an_uncovered_city_too():
     r = resolve_construction_cost_per_sqm("some_other_city", developer_value=8_800.0)
     assert r.value_ils_per_sqm == 8_800.0
     assert r.status == "data"
+
+
+def test_the_underground_rate_comes_from_the_same_survey_row():
+    """הטבלה החזיקה 3,900 ₪ להרצליה מהיום הראשון, והמחשבון המשיך לקרוא
+    6,000 מספריית ההנחות — חצי מהסקר נטען ולא שימש, ועלות החניון נופחה
+    ב-54%."""
+    from app.services.economic.construction_costs import resolve_underground_cost_per_sqm
+
+    r = resolve_underground_cost_per_sqm("herzliya")
+    assert r.value_ils_per_sqm == 3_900.0
+    assert r.status == "data"                     # מספר אחד, בלי רמות גובה
+    assert "ביסוס" in r.source                    # הסקר מסייג שהביסוס אינו בתוכו
+
+
+def test_a_city_the_survey_does_not_cover_gets_no_borrowed_underground_rate():
+    from app.services.economic.construction_costs import resolve_underground_cost_per_sqm
+
+    r = resolve_underground_cost_per_sqm("haifa")
+    assert r.value_ils_per_sqm is None and r.status == "missing"

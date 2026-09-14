@@ -27,7 +27,9 @@ from app.services.dwelling_units import (
 )
 from app.services.economic.assumptions import get_assumptions
 from app.services.economic.calculator import calculate_feasibility
-from app.services.economic.construction_costs import resolve_construction_cost_per_sqm
+from app.services.economic.construction_costs import (
+    resolve_construction_cost_per_sqm, resolve_underground_cost_per_sqm,
+)
 from app.services.economic.schemas import FeasibilityInput
 from app.services.market_data.govmap import MarketDataUnavailable
 from app.services.market_data.service import get_or_refresh_market_valuation
@@ -395,6 +397,10 @@ async def generate_dossier_handler(payload: dict) -> dict:
             else:
                 construction_cost_per_sqm = construction_cost.value_ils_per_sqm
 
+            underground_cost = resolve_underground_cost_per_sqm(opportunity.city_code)
+            underground_cost_per_sqm = (underground_cost.value_ils_per_sqm
+                                        or assumptions.underground_cost_per_sqm_ils.value)
+
             feasibility = calculate_feasibility(
                 FeasibilityInput(
                     plot_area_sqm=plot_area_sqm,
@@ -415,7 +421,7 @@ async def generate_dossier_handler(payload: dict) -> dict:
                         assumptions.tenant_compensation_sqm_per_existing_unit.value),
                     main_area_ratio=assumptions.main_area_ratio.value,
                     underground_ratio=assumptions.underground_ratio.value,
-                    underground_cost_per_sqm=assumptions.underground_cost_per_sqm_ils.value,
+                    underground_cost_per_sqm=underground_cost_per_sqm,
                     tenant_rent_months=assumptions.tenant_rent_months.value,
                     tenant_monthly_rent_ils=assumptions.tenant_monthly_rent_ils.value,
                     tenant_moving_cost_ils=assumptions.tenant_moving_cost_ils.value,
@@ -453,6 +459,13 @@ async def generate_dossier_handler(payload: dict) -> dict:
                     "as_of_date": (
                         construction_cost.as_of_date.isoformat() if construction_cost.as_of_date else None
                     ),
+                },
+                "underground_cost_per_sqm_ils": {
+                    "value": underground_cost_per_sqm,
+                    "status": underground_cost.status,
+                    "unit": "ILS/sqm",
+                    "source": underground_cost.source,
+                    "method": underground_cost.method,
                 },
                 "sale_price_per_sqm_ils": {
                     "value": sale_price_per_sqm,

@@ -38,7 +38,9 @@ from app.services.economic.betterment import (
 )
 from app.services.market_data.repository import find_latest_valuation
 from app.services.economic.calculator import calculate_feasibility
-from app.services.economic.construction_costs import resolve_construction_cost_per_sqm
+from app.services.economic.construction_costs import (
+    resolve_construction_cost_per_sqm, resolve_underground_cost_per_sqm,
+)
 from app.services.economic.schemas import FeasibilityInput
 from app.services.evidence_store import fields_for, stale_fields
 
@@ -483,6 +485,11 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
     else:
         construction_cost_per_sqm = construction_cost.value_ils_per_sqm
 
+    # החניון מאותה שורה בסקר. עיר שהסקר לא מכסה נופלת להנחת הספרייה.
+    underground_cost = resolve_underground_cost_per_sqm(opp.city_code)
+    underground_cost_per_sqm = (underground_cost.value_ils_per_sqm
+                                or a.underground_cost_per_sqm_ils.value)
+
     inputs = FeasibilityInput(
             plot_area_sqm=opp.area_sqm,
             existing_units=opp.existing_units,
@@ -497,7 +504,7 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             tenant_compensation_sqm_per_existing_unit=a.tenant_compensation_sqm_per_existing_unit.value,
             main_area_ratio=a.main_area_ratio.value,
             underground_ratio=a.underground_ratio.value,
-            underground_cost_per_sqm=a.underground_cost_per_sqm_ils.value,
+            underground_cost_per_sqm=underground_cost_per_sqm,
             tenant_rent_months=a.tenant_rent_months.value,
             tenant_monthly_rent_ils=a.tenant_monthly_rent_ils.value,
             tenant_moving_cost_ils=a.tenant_moving_cost_ils.value,
@@ -529,6 +536,19 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
                     ),
                     "label": ASSUMPTION_LABEL.get("construction_cost_per_sqm_ils",
                                                   "construction_cost_per_sqm_ils"),
+                },
+                "underground_cost_per_sqm_ils": {
+                    "value": underground_cost_per_sqm,
+                    "status": underground_cost.status if underground_cost.value_ils_per_sqm
+                              else a.underground_cost_per_sqm_ils.status.value,
+                    "unit": "ILS/sqm",
+                    "source": underground_cost.source if underground_cost.value_ils_per_sqm
+                              else a.underground_cost_per_sqm_ils.source,
+                    "method": underground_cost.method,
+                    "as_of_date": (underground_cost.as_of_date.isoformat()
+                                   if underground_cost.as_of_date else None),
+                    "label": ASSUMPTION_LABEL.get("underground_cost_per_sqm_ils",
+                                                  "underground_cost_per_sqm_ils"),
                 },
             },
             "scenario": result.model_dump(),
