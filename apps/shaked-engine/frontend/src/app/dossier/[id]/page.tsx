@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { use } from "react";
 import { ApiError, downloadDossier, getDossier,
@@ -98,6 +99,7 @@ function EvidenceTable({ rows }: { rows: EvidenceRow[] }) {
 
 export default function DossierPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [d, setD] = useState<Dossier | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<"pdf" | "xlsx" | null>(null);
@@ -118,11 +120,14 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     getDossier(CITY, id)
       .then(setD)
-      .catch((e) =>
+      .catch((e) => {
+        // ‏401 = צריך להתחבר, לא תקלה להציג.
+        if (e instanceof ApiError && e.status === 401) { router.replace("/login"); return; }
         setError(e instanceof ApiError && e.status === 404
           ? "התיק אינו במאגר החברה."
-          : e instanceof ApiError ? e.detail : "לא ניתן לטעון את התיק."));
-  }, [id]);
+          : e instanceof ApiError ? e.detail : "לא ניתן לטעון את התיק.");
+      });
+  }, [id, router]);
 
   if (error) {
     return (

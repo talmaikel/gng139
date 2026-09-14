@@ -19,6 +19,7 @@ import {
   type SearchOptions,
 } from "@/lib/api";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import Balance from "@/components/Balance";
 import DeliveredTable from "@/components/DeliveredTable";
@@ -85,6 +86,19 @@ const OpportunityMap = dynamic(() => import("@/components/Map"), { ssr: false })
 const DEFAULT_CITY = "herzliya";
 
 export default function DashboardPage() {
+  const router = useRouter();
+
+  /** ‏401 פירושו שאין טוקן תקף — לא תקלה שצריך להציג, אלא התחברות שצריך
+   *  לבקש. בלי זה מי שפותח קישור לאפליקציה רואה מסך ריק עם הודעת שגיאה
+   *  מתחת למפה, ומסיק שהיא שבורה. */
+  const signInIfUnauthorized = useCallback((e: unknown) => {
+    if (e instanceof ApiError && e.status === 401) {
+      router.replace("/login");
+      return true;
+    }
+    return false;
+  }, [router]);
+
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -110,9 +124,12 @@ export default function DashboardPage() {
     setError(null);
     getCandidates(DEFAULT_CITY)
       .then(setCandidates)
-      .catch((e) => setError(e instanceof ApiError ? e.detail : "לא ניתן לטעון מועמדים. האם השרת רץ?"))
+      .catch((e) => {
+        if (signInIfUnauthorized(e)) return;
+        setError(e instanceof ApiError ? e.detail : "לא ניתן לטעון מועמדים. האם השרת רץ?");
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [signInIfUnauthorized]);
 
   /** יתרה ומאגר נטענים יחד: שניהם משתנים בכל מסירה, ושניהם של החברה. */
   const loadAccount = useCallback(() => {

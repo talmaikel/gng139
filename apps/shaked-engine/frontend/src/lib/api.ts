@@ -1,4 +1,7 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+// ריק = אותו מקור. ‏Next מעביר את `/api/*` לשרת (ראה `next.config.js`),
+// ולכן האפליקציה עובדת גם ממחשב אחר, מטלפון, ומאחורי מנהרה — ובלי CORS.
+// ‏`NEXT_PUBLIC_API_BASE_URL` נשאר כמוצא אחרון לפריסה שמפרידה את השניים.
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;

@@ -20,7 +20,7 @@ export default function LoginPage() {
       setToken(access_token);
       router.push("/dashboard");
     } catch {
-      setError("Invalid email or password.");
+      setError("כתובת או סיסמה שגויות.");
     } finally {
       setSubmitting(false);
     }
@@ -28,32 +28,41 @@ export default function LoginPage() {
 
   return (
     <main className="page">
-      <div className="card" style={{ maxWidth: 360, margin: "3rem auto" }}>
-        <h1>Sign in</h1>
+      <div className="card" style={{ maxWidth: 380, margin: "3.5rem auto" }}>
+        {/* מסך ההתחברות הוא הדבר הראשון שכל אחד רואה — ועד כה הוא היה
+            באנגלית בעוד כל השאר עברית. */}
+        <p style={{ margin: 0, color: "#6b655c", fontSize: ".82rem", letterSpacing: ".08em" }}>
+          חלופת שקד · הרצליה
+        </p>
+        <h1 style={{ margin: ".15rem 0 1.2rem" }}>כניסה</h1>
         <form onSubmit={handleSubmit}>
           <div className="form-field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">דואר אלקטרוני</label>
             <input
               id="email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              dir="ltr"
+              style={{ textAlign: "start" }}
             />
           </div>
           <div className="form-field">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">סיסמה</label>
             <input
               id="password"
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              dir="ltr"
+              style={{ textAlign: "start" }}
             />
           </div>
-          {error && <p style={{ color: "#b3261e" }}>{error}</p>}
+          {error && <p style={{ color: "#a8321e", fontSize: ".88rem" }}>{error}</p>}
           <button type="submit" disabled={submitting}>
-            {submitting ? "Signing in..." : "Sign in"}
+            {submitting ? "מתחבר…" : "כניסה"}
           </button>
         </form>
       </div>
