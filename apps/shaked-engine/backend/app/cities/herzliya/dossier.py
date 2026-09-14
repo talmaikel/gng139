@@ -31,7 +31,7 @@ from app.evidence import DECIDING, Certainty
 from app.models.opportunity import Opportunity
 from app.models.package import Delivery
 from app.services.dwelling_units import load_units, resolve_existing_unit_area
-from app.services.economic.assumptions import get_assumptions
+from app.services.economic.assumptions import AssumptionStatus, get_assumptions
 from app.services.economic.betterment import (
     betterment_from_land_values, breakeven_betterment,
     breakeven_land_value_per_right, levy_range, residual_land_value,
@@ -413,6 +413,62 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     }
 
 
+def _assumption_rows(a, live: dict, construction_cost, construction_cost_per_sqm,
+                     underground_cost, underground_cost_per_sqm) -> dict[str, dict]:
+    """טבלת ״כל ההנחות״ — **השורה מציגה את הערך שהתרחיש השתמש בו.** (A20)
+
+    לפני כן הטבלה נבנתה מספריית ההנחות של העיר, והתרחיש מעליה חושב
+    מקלטים שנפתרו לחלקה: התרחיש השתמש ב-‏52,300 ₪ מעסקאות ובשטח דירה
+    מהגרמושקה, והטבלה מתחתיו הציגה ״45,000 · אומדן״ ו-״70 מ״ר · חסר״.
+    יזם שמשווה את שתיהן רואה מסמך שסותר את עצמו. **וגם האקסל קורא את
+    הטבלה הזו** (`exports._scenario_inputs`), כך שהסתירה עברה לנוסחאות.
+
+    ארבע שורות נפתרות לכל חלקה; כל השאר נשארות מהספרייה כמו שהן.
+    צורת השורה זהה בכולן: ‏`value`, ‏`status` (‏data / estimate / missing),
+    ‏`unit`, ‏`source`, ‏`label`. **‏`value` לעולם אינו ריק** — כשאין נתון
+    לחלקה, זה ערך הספרייה שהתרחיש באמת השתמש בו, והסטטוס אומר את זה.
+    """
+    rows = {k: {**v, "label": ASSUMPTION_LABEL.get(k, k)} for k, v in a.report().items()}
+
+    def row(key: str, value, status: str, source: str | None, **extra) -> None:
+        rows[key] = {"value": value, "status": status,
+                     "unit": getattr(a, key).unit, "source": source,
+                     "label": ASSUMPTION_LABEL.get(key, key), **extra}
+
+    # ‏**הסטטוס נגזר מ-`resolved` ולא מהוודאות.** לוח מאומת-ידנית שמכסה
+    # דירה אחת מתוך שמונה נושא ודאות מכריעה ובכל זאת אינו מכריע לבניין;
+    # ‏`resolved` הוא ההכרעה של B3 ושל הגייט של חן, ולכן הוא הקובע כאן.
+    price = live["sale_price"]
+    row("sale_price_per_sqm_ils", price["value"],
+        "data" if price["resolved"] else a.sale_price_per_sqm_ils.status.value,
+        price["label"])
+
+    unit = live["unit_area"]
+    if unit["value"] is not None:
+        row("average_existing_unit_sqm", unit["value"],
+            "data" if unit["resolved"] else AssumptionStatus.ESTIMATE.value,
+            unit["label"])
+    else:
+        row("average_existing_unit_sqm", a.average_existing_unit_sqm.value,
+            a.average_existing_unit_sqm.status.value, unit["label"])
+
+    # עלות הבנייה: סקר השמאים לפי גובה הבניין, לא מציין-המקום בספרייה.
+    row("construction_cost_per_sqm_ils", construction_cost_per_sqm,
+        construction_cost.status, construction_cost.source,
+        method=construction_cost.method,
+        as_of_date=(construction_cost.as_of_date.isoformat()
+                    if construction_cost.as_of_date else None))
+
+    found = underground_cost.value_ils_per_sqm is not None
+    row("underground_cost_per_sqm_ils", underground_cost_per_sqm,
+        underground_cost.status if found else a.underground_cost_per_sqm_ils.status.value,
+        underground_cost.source if found else a.underground_cost_per_sqm_ils.source,
+        method=underground_cost.method,
+        as_of_date=(underground_cost.as_of_date.isoformat()
+                    if underground_cost.as_of_date else None))
+    return rows
+
+
 async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) -> dict[str, Any]:
     """התרחיש הגנרי — ‏PRD 6.4. **אינו דוח שמאי חתום, וזה נכתב בתיק.**"""
     cap = assessment.get("cap_400_sqm")
@@ -447,21 +503,6 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
     if live["unit_area"]["value"] is not None:
         SOFTENED = SOFTENED | {"average_existing_unit_sqm"}
     blocking = [k for k in a.blocking() if k not in SOFTENED and k != "construction_cost_per_sqm_ils"]
-    base = {
-        "assumptions_version": a.version,
-        "assumptions_effective_date": a.effective_date.isoformat(),
-        "assumptions": {k: {**v, "label": ASSUMPTION_LABEL.get(k, k)}
-                        for k, v in a.report().items()},
-        "live_inputs": live,
-        "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
-                      "ואינה קובעת זכויות או היתכנות מאושרת.",
-    }
-    if not cap or not opp.existing_units or not opp.area_sqm:
-        return {**base, "scenario": None, "inputs_missing": blocking,
-                "not_delivered_reason": _not_delivered(blocking),
-                "is_deliverable": False,
-                "why": "אין תקרת זכויות מבוססת, ולכן לא מחושב תרחיש (DOS-03)"}
-
     # B2: the same resolution worker.py uses for the on-demand pipeline --
     # a.construction_cost_per_sqm_ils is a placeholder only (see
     # assumptions.py) and must never decide a scenario directly. `floors`
@@ -490,21 +531,42 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
     underground_cost_per_sqm = (underground_cost.value_ils_per_sqm
                                 or a.underground_cost_per_sqm_ils.value)
 
+    base = {
+        "assumptions_version": a.version,
+        "assumptions_effective_date": a.effective_date.isoformat(),
+        # ‏**A20.** טבלת ההנחות מציגה את מה שהתרחיש השתמש בו, לא את
+        # ברירת המחדל של העיר. ראו `_assumption_rows`.
+        "assumptions": _assumption_rows(
+            a, live, construction_cost, construction_cost_per_sqm,
+            underground_cost, underground_cost_per_sqm),
+        "live_inputs": live,
+        "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
+                      "ואינה קובעת זכויות או היתכנות מאושרת.",
+    }
+    if not cap or not opp.existing_units or not opp.area_sqm:
+        return {**base, "scenario": None, "inputs_missing": blocking,
+                "not_delivered_reason": _not_delivered(blocking),
+                "is_deliverable": False,
+                "why": "אין תקרת זכויות מבוססת, ולכן לא מחושב תרחיש (DOS-03)"}
+
+    # ‏**התרחיש קורא את הטבלה, ולא את המקורות שמאחוריה.** כך הטבלה
+    # שמוצגת ליזם והקלט של החישוב הם אותו אובייקט, ואינם יכולים להיפרד
+    # שוב כשמישהו יוסיף מקור חדש לאחד מהם.
+    used = {k: v["value"] for k, v in base["assumptions"].items()}
     inputs = FeasibilityInput(
             plot_area_sqm=opp.area_sqm,
             existing_units=opp.existing_units,
             buildable_area_sqm=cap,
-            sale_price_per_sqm=live["sale_price"]["value"],
-            construction_cost_per_sqm=construction_cost_per_sqm,
+            sale_price_per_sqm=used["sale_price_per_sqm_ils"],
+            construction_cost_per_sqm=used["construction_cost_per_sqm_ils"],
             soft_cost_ratio=a.soft_cost_ratio.value,
             demolition_cost_per_unit=a.demolition_cost_per_unit_ils.value,
             developer_profit_target_ratio=a.developer_profit_target_ratio.value,
-            average_existing_unit_sqm=(live["unit_area"]["value"]
-                                       or a.average_existing_unit_sqm.value),
+            average_existing_unit_sqm=used["average_existing_unit_sqm"],
             tenant_compensation_sqm_per_existing_unit=a.tenant_compensation_sqm_per_existing_unit.value,
             main_area_ratio=a.main_area_ratio.value,
             underground_ratio=a.underground_ratio.value,
-            underground_cost_per_sqm=underground_cost_per_sqm,
+            underground_cost_per_sqm=used["underground_cost_per_sqm_ils"],
             tenant_rent_months=a.tenant_rent_months.value,
             tenant_monthly_rent_ils=a.tenant_monthly_rent_ils.value,
             tenant_moving_cost_ils=a.tenant_moving_cost_ils.value,
@@ -520,37 +582,6 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
     betterment = _betterment(inputs, a, live, cap,
                              _numeric(fields.get("existing_area")), result)
     return {**base,
-            # דורס את הערך-מציין-מקום מ-a.report(): הנתון בפועל הגיע
-            # מהרזולוציה למעלה (סקר השמאים לפי גובה בניין), לא מההנחה
-            # הגרסתית.
-            "assumptions": {
-                **base["assumptions"],
-                "construction_cost_per_sqm_ils": {
-                    "value": construction_cost_per_sqm,
-                    "status": construction_cost.status,
-                    "unit": "ILS/sqm",
-                    "source": construction_cost.source,
-                    "method": construction_cost.method,
-                    "as_of_date": (
-                        construction_cost.as_of_date.isoformat() if construction_cost.as_of_date else None
-                    ),
-                    "label": ASSUMPTION_LABEL.get("construction_cost_per_sqm_ils",
-                                                  "construction_cost_per_sqm_ils"),
-                },
-                "underground_cost_per_sqm_ils": {
-                    "value": underground_cost_per_sqm,
-                    "status": underground_cost.status if underground_cost.value_ils_per_sqm
-                              else a.underground_cost_per_sqm_ils.status.value,
-                    "unit": "ILS/sqm",
-                    "source": underground_cost.source if underground_cost.value_ils_per_sqm
-                              else a.underground_cost_per_sqm_ils.source,
-                    "method": underground_cost.method,
-                    "as_of_date": (underground_cost.as_of_date.isoformat()
-                                   if underground_cost.as_of_date else None),
-                    "label": ASSUMPTION_LABEL.get("underground_cost_per_sqm_ils",
-                                                  "underground_cost_per_sqm_ils"),
-                },
-            },
             "scenario": result.model_dump(),
             "live_inputs": live,
             "betterment": betterment,

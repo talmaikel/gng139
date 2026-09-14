@@ -153,8 +153,12 @@ def resolve_underground_cost_per_sqm(city_code: str) -> ConstructionCostResoluti
     נטען ולא שימש, ועלות החניון נופחה ב-54% — כ-6.7 מיליון ₪ בפרויקט
     טיפוסי.
 
-    **אין כאן רמות גובה** — הסקר נותן מספר אחד לתת-קרקעי, ולכן הוא נמסר
-    כפי שהוא ומסומן `data`, בניגוד לעלות העילית שנבחרת מתוך שלוש רמות.
+    **מסומן `estimate`, כמו העלות העילית מאותו סקר.** בגרסה הראשונה סומן
+    ‏`data`, בנימוק שאין כאן בחירה בין רמות גובה. הנימוק שגוי: העלות
+    העילית מסומנת `estimate` גם כשמספר הקומות ידוע ואין ממוצע — כי סקר
+    אזורי הוא טענה על השוק ולא הנתון של הפרויקט; רק מספר שהיזם מסר הוא
+    ‏`data`. שתי שורות מאותה טבלה בתיק, אחת ״נתון״ ואחת ״אומדן״, סתרו
+    זו את זו (A20).
     הסקר מציין שהמספר **אינו כולל ביסוס**: הביסוס מגולם בעלות העילית.
     """
     region = REGIONAL_CONSTRUCTION_COSTS.get(city_code)
@@ -165,7 +169,7 @@ def resolve_underground_cost_per_sqm(city_code: str) -> ConstructionCostResoluti
             method="none", as_of_date=None)
     return ConstructionCostResolution(
         value_ils_per_sqm=region.underground_ils_per_sqm,
-        status="data",
+        status="estimate",
         source=f"{REPORT_SOURCE} ({region.region_label}, מ״ר תת-קרקעי, אינו כולל ביסוס)",
         method="appraisers_survey_underground",
         as_of_date=REPORT_EFFECTIVE_DATE,
