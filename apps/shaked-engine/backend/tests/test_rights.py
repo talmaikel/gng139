@@ -361,3 +361,24 @@ def test_an_unknown_registration_area_says_so_and_allocates_nothing():
     area, why = rights.allocation(10_000.0, "שכונה שאינה במדיניות")
     assert area is None
     assert "שכונה שאינה במדיניות" in why
+
+
+# ── G1 · 15.09 · הנוסח אומר מה נמדד ומה לא ──
+
+def test_a_verified_wide_street_says_it_was_measured_and_still_does_not_decide():
+    """הדר ויגאל אלון: ‏13.8 מ׳ נמדד ב-v2 ומסומן ״מכריע״ בטבלת המקורות, והשער
+    כתב ״מדידת הפער מגזימה — הרחוב עשוי להיות צר בהרבה״, נוסח של האלגוריתם הקודם."""
+    r = R.floors(13.8, CAT, verified=True)
+    detail = next(c.detail for c in r.checks if c.id == "street_width")
+    assert "נמדד בשיטה המאומתת" in detail
+    assert "צר בהרבה" not in detail
+    old = next(c.detail for c in R.floors(13.8, CAT, verified=False).checks if c.id == "street_width")
+    assert "האלגוריתם הקודם" in old                                  # הלא-מאומת נשאר כמו שהיה
+
+
+def test_the_seventy_percent_gate_says_where_the_answer_is():
+    """בועז שאל אם ״מגורים א/ב״ עונה על זה. הייעוד הוא התנאי הראשון; כאן נבדק
+    שימוש כדין בשטח הבנוי, והמקור הוא טבלת השטחים בהיתר."""
+    gate = next(c for c in R.threshold_checks({}) if c.id == "residential_share")
+    assert gate.status == "unknown"
+    assert "טבלת השטחים בהיתר" in gate.detail and "97%" not in gate.detail
