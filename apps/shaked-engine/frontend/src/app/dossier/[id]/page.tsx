@@ -124,7 +124,7 @@ function BettermentBlock({ b }: { b: Betterment }) {
         </div>
         {b.breakeven_land_value_per_right_ils != null && (
           <div>
-            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שווי מ״ר זכויות שמאפס את הרווח</div>
+            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שווי מ״ר זכויות שבו הרווח יורד למזערי</div>
             <strong style={{ fontSize: "1.3rem" }}>{ils(b.breakeven_land_value_per_right_ils)}</strong>
           </div>
         )}
@@ -326,6 +326,14 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                 <strong style={{ fontSize: "1.3rem" }}>{sqm(s.developer_allocation_sqm)}</strong>
               </div>
             </div>
+
+            {/* ‏E1 · מעל או מתחת ל-16%, במילים ולא רק בצבע. המשפט מהשרת, כמו ב-PDF ובאקסל. */}
+            {d.economics.profit_verdict && (
+              <p style={{ margin: "-.4rem 0 1rem", fontWeight: 600, fontSize: ".9rem",
+                          color: s.meets_developer_target ? "#1f5f55" : "#8a6100" }}>
+                {d.economics.profit_verdict}
+              </p>
+            )}
 
             {/* ‏C14 · הסייג צמוד למספר שהוא מסייג. הנוסח מהשרת, כמו
                 ‏`not_delivered_reason` — אותו משפט במסך, ב-PDF ובאקסל. */}
