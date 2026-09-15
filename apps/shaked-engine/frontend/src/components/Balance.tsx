@@ -62,7 +62,9 @@ export default function Balance({ balance, packages }: Props) {
       }}
     >
       <strong style={{ fontSize: "1.05rem", color: empty ? "#8a6100" : "#1f5f55" }}>
-        {empty ? "לא נותרה זכאות לחברה" : `נותרו ${remaining} הזדמנויות לחברה`}
+        {empty ? "לא נותרה זכאות לחברה"
+          : remaining === 1 ? "נותרה הזדמנות אחת לחברה"
+          : `נותרו ${remaining} הזדמנויות לחברה`}
       </strong>
 
       <span style={{ color: "#6b655c", fontSize: ".88rem" }}>

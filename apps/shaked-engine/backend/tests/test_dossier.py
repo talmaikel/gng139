@@ -885,6 +885,19 @@ async def test_a_threshold_with_existing_prices_is_still_rated(session):
     assert b["category"] in {"resilient", "marginal"}
 
 
+@pytest.mark.asyncio
+async def test_the_levy_note_does_not_deny_an_estimate_shown_above_it(session):
+    """‏A27 · מתחת לאומדן של 1.2–6.5 מיליון נכתב ״מוצג סף ולא מספר״."""
+    c, opp = await _with_resolved_inputs(session, "9677")
+    with_estimate = (await build(session, HerzliyaCityRules(), opp.id, c.id))["economics"]["betterment"]
+    c2, _, opp2 = await _delivered(session, block="9678")
+    without = (await build(session, HerzliyaCityRules(), opp2.id, c2.id))["economics"]["betterment"]
+
+    assert with_estimate["estimate"] is not None and without["estimate"] is None
+    assert "שיטת היזם" in with_estimate["note"] and "סף ולא מספר" not in with_estimate["note"]
+    assert "סף ולא מספר" in without["note"] and "שיטת היזם" not in without["note"]
+
+
 def test_a_source_field_name_reaches_the_developer_in_hebrew():
     """‏B8 · שמות שדות וסוגי דרכים מהמקורות הגיעו ליזם באנגלית."""
     from app.cities.herzliya.dossier import _readable
