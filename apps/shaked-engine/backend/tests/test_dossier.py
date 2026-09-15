@@ -974,3 +974,47 @@ def test_a_source_field_name_reaches_the_developer_in_hebrew():
     assert _readable("תיק 1613 · 6 בקשות") == "תיק 1613 · 6 בקשות"
     assert _readable("residential_zoning") == "residential_zoning"
     assert _readable(None) is None
+
+
+# ── P1 · מחיר דירה חדשה לפי גוש ──
+
+def test_the_block_table_keeps_only_prices_of_flats_that_can_be_sold_today():
+    from app.cities.herzliya import new_build_prices as nbp
+    assert nbp.for_block("6536").price_per_sqm_ils == 39_500      # הדר 19
+    assert nbp.for_block("6532").price_per_sqm_ils == 38_000      # הרצוג 3
+    assert nbp.for_block("6537") is None                          # אלוף יגאל אלון 40: לא בטבלה
+    for future in ("7650", "6605", "6590", "6615"):               # עתודות ותחזיות — אינן מחיר היום
+        assert nbp.for_block(future) is None
+    assert nbp.sale_price("6537", 42_000) == (42_000, None)
+
+
+@pytest.mark.asyncio
+async def test_a_parcel_in_a_priced_block_uses_the_block_price_on_every_surface(session, monkeypatch):
+    """הטבלה מחליפה את 42,000 בגוש שלה — בתרחיש, בטבלת ההנחות, באקסל ובמסך
+    התמהיל — ועדיין אומדן, עם האמינות שהדו״ח נתן."""
+    from app.cities.herzliya import exports, new_build_prices as nbp
+    from app.cities.herzliya.surfaces import _cells
+    monkeypatch.setitem(nbp.NEW_BUILD_PRICE_BY_BLOCK, "9684",
+                        nbp.BlockPrice(39_500, "שכונת בדיקה", "בינוני"))
+
+    c, _, opp = await _delivered(session, block="9684")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    econ = d["economics"]
+    price = econ["live_inputs"]["sale_price"]
+    assert price["value"] == 39_500 and price["resolved"] is False and price["basis"] == "block_table"
+    assert "גוש 9684" in price["label"] and "אמינות: בינוני" in price["label"]
+    row = econ["assumptions"]["sale_price_per_sqm_ils"]
+    assert row["value"] == 39_500 and row["status"] == "estimate"
+    cav = next(x["text"] for x in econ["caveats"] if x["id"] == "sale_price_per_sqm_ils_unresolved")
+    assert "גוש 9684" in cav
+
+    from tests.test_exports import _evaluate_sheet
+    assert _evaluate_sheet(d)["price"] == 39_500
+
+    # מסך התמהיל על אותו מחיר
+    from app.services.unit_mix import service
+    assert service._economic_input(opp, buildable_area_sqm=d["rights"]["cap_400_sqm"],
+                                   average_existing_unit_sqm=80.0,
+                                   compensation_sqm=25.0)[0].sale_price_per_sqm == 39_500
+    strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
+    assert any("גוש 9684" in s for s in strings)

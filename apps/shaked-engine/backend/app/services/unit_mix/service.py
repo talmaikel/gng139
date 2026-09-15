@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.cities.herzliya import new_build_prices
 from app.models.opportunity import Opportunity
 from app.services.dwelling_units import load_units, resolve_existing_unit_area
 from app.services.economic.assumptions import get_assumptions
@@ -98,7 +99,8 @@ def _economic_input(
     )
     # The optimizer overwrites this with each candidate's revenue per used sqm,
     # which is this same price while every size sells at it (_unit_types).
-    sale_price = a.sale_price_per_sqm_ils.value
+    # P1: the dossier's price for this block, so both screens stay on one price.
+    sale_price, _ = new_build_prices.sale_price(opportunity.block, a.sale_price_per_sqm_ils.value)
 
     return (
         FeasibilityInput(
@@ -229,8 +231,9 @@ async def prepare_unit_mix(
         else default_comp
     )
 
-    sale_price = assumptions.sale_price_per_sqm_ils
-    options = _unit_types(sale_price.value)
+    sale_price, block_label = new_build_prices.sale_price(
+        opportunity.block, assumptions.sale_price_per_sqm_ils.value)
+    options = _unit_types(sale_price)
 
     average_existing = sum(existing_areas) / len(existing_areas)
     economic_input, missing, assumptions_version = _economic_input(
@@ -287,9 +290,9 @@ async def prepare_unit_mix(
         "economic_assumptions_version": assumptions_version,
         "existing_units_basis": existing_units_basis,
         "average_existing_unit_sqm": round(sum(existing_areas) / len(existing_areas), 2),
-        "sale_price_per_sqm_ils": sale_price.value,
-        "sale_price_status": sale_price.status.value,
-        "sale_price_source": sale_price.source,
+        "sale_price_per_sqm_ils": sale_price,
+        "sale_price_status": "estimate",
+        "sale_price_source": block_label or assumptions.sale_price_per_sqm_ils.source,
         "tenant_units": best.tenant_units,
         "developer_units": best.developer_units,
         "unused_developer_sqm": best.unused_developer_sqm,

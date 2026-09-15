@@ -27,7 +27,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.cities.herzliya import rights
+from app.cities.herzliya import new_build_prices, rights
 from app.core.config import get_settings
 from app.evidence import DECIDING, Certainty
 from app.models.opportunity import Opportunity
@@ -332,11 +332,17 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
             "warnings": list(valuation.warnings),
         }
     else:
+        # ‏**P1 · 15.09 · מחיר לפי גוש לפני האומדן האחיד לעיר.** טבלת מחירי
+        # דירות חדשות לפי גוש (בועז). גוש שאינו בטבלה נשאר על 42,000. שניהם
+        # אומדן — לא עסקאות של החלקה — ולכן `resolved=False` בשניהם.
+        price, block_label = new_build_prices.sale_price(opp.block, a.sale_price_per_sqm_ils.value)
+        city_label = f"אומדן אחיד לעיר, {a.sale_price_per_sqm_ils.value:,.0f} ₪ — {_CITY_PRICE_BASIS}"
         out["sale_price"] = {
-            "value": a.sale_price_per_sqm_ils.value, "resolved": False,
+            "value": price, "resolved": False,
             "certainty": Certainty.ESTIMATE.value,
+            "basis": "block_table" if block_label else "city_estimate",
             # המספר נקרא מהספרייה ולא נכתב כאן, כדי שהתווית לא תשקר כשהערך ישתנה.
-            "label": (f"אומדן אחיד לעיר, {a.sale_price_per_sqm_ils.value:,.0f} ₪ — {_CITY_PRICE_BASIS}. "
+            "label": ((block_label or city_label) + ". "
                       + ("לא נמצאה הערכת שווי עדכנית לחלקה" if not valuation
                          else "העסקאות ליד החלקה הן של דירות יד שנייה, ולכן אינן קובעות "
                               "מחיר לבניין חדש" if valuation.price_basis != "new_build"

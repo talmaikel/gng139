@@ -40,6 +40,10 @@ MUTS = [
   ("cities/herzliya/exports.py", "ה-PDF מדפיס רווח שאינו הרווח",
    '''line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪''',
    '''line(f'רווח: {s["projected_profit_ils"] * 1.02:,.0f} ₪'''),
+  # ‏P1 · מחיר דירה חדשה לפי גוש
+  ("cities/herzliya/dossier.py", "התיק מתעלם מטבלת הגושים",
+   "price, block_label = new_build_prices.sale_price(opp.block, a.sale_price_per_sqm_ils.value)",
+   "price, block_label = a.sale_price_per_sqm_ils.value, None"),
   # ‏E1 · רווח מזערי 16%, ושיווק ומימון לא על דירות הבעלים
   ("services/economic/calculator.py", "שיווק מחושב שוב על דירות הבעלים",
    "total_marketing_ils = developer_revenue_ils * inputs.marketing_ratio",
