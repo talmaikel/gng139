@@ -399,6 +399,8 @@ export interface Betterment {
   /** ‏`unrated` — אין מחיר דירה קיימת או שטח בנוי קיים, ולכן אין עם מה להשוות את הסף. */
   category: "no_threshold" | "resilient" | "marginal" | "unrated";
   category_label: string;
+  /** שורת ההיטל המוכנה (B13) — אותו משפט במסך, ב-PDF ובאקסל. */
+  summary: string;
   note: string;
   rests_on_unresolved_inputs: string[];
 }

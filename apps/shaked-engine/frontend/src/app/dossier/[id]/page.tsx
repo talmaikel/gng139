@@ -364,10 +364,13 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                     </td>
                   </tr>
                 ))}
+                {/* ‏B13 · שורת ההיטל נכתבת פעם אחת בשרת, וה-PDF והאקסל מדפיסים
+                    אותה כמו שהיא. נוסח מקומי כאן היה נפרד מהם בשקט. */}
                 {d.economics.betterment && (
                   <tr>
-                    <td>היטל השבחה</td>
-                    <td style={{ textAlign: "end", color: "#8a6100" }}>לא נכלל ברווח · ראו תקרה</td>
+                    <td colSpan={2} style={{ color: "#8a6100", fontWeight: 600 }}>
+                      {d.economics.betterment.summary}
+                    </td>
                   </tr>
                 )}
               </tbody>
