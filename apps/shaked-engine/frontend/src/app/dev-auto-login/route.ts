@@ -11,11 +11,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ detail: "Not available" }, { status: 404 });
   }
 
-  const email = process.env.DEV_AUTO_LOGIN_EMAIL;
-  const password = process.env.DEV_AUTO_LOGIN_PASSWORD;
-  if (!email || !password) {
-    return NextResponse.json({ detail: "Dev auto-login is not configured" }, { status: 503 });
-  }
+  // Local-development defaults match the dev account created by RUN_LOCAL.md.
+  // Environment variables can still override them without exposing either
+  // value to browser JavaScript.
+  const email = process.env.DEV_AUTO_LOGIN_EMAIL ?? "dev@shaked.example.com";
+  const password = process.env.DEV_AUTO_LOGIN_PASSWORD ?? "devpass12345";
 
   const body = new URLSearchParams({ username: email, password });
   const response = await fetch(`${API_ORIGIN}/api/v1/auth/jwt/login`, {
