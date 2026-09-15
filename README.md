@@ -1,50 +1,46 @@
-# חלופת שקד · הרצליה
+# Shakdan · Shaked Alternative screening for Herzliya
 
-סריקת הזדמנויות להריסה ובנייה מחדש לפי תיקון 139 (§70א–§70ב), לעיריית הרצליה.
+Shakdan finds and packages urban-renewal opportunities under Israel's **Shaked Alternative**
+(Planning and Building Law, Amendment 139, §70A–§70B: demolish and rebuild at up to 400% of
+the existing built area), starting with the city of Herzliya.
 
-## 📅 תכנית העבודה
+A developer draws an area on the map, sets conditions and preferences, and receives up to
+three **opportunity dossiers**: the §70A threshold chain with a cited source for every gate,
+evidence with provenance for every field, a feasibility scenario ("Report 0"), the betterment
+levy ceiling and estimate, and the gaps that remain open. Dossiers export to PDF and to an
+Excel workbook with live formulas.
 
-**[‏issue #6 · מעקב בטא](https://github.com/talmaikel/gng139/issues/6)** — התכנית הפעילה
-והמקום **היחיד** שבו מסמנים. כל אחד מסמן את מה שסיים; ‏GitHub שומר מי ומתי, וכולם רואים מיד.
+The product itself is in Hebrew. Code, commits, pull requests and repository documentation
+are in English; task tracking in GitHub issues may stay in Hebrew.
 
-גרסה מעוצבת לקריאה: [שקדן · שני עד רביעי](https://claude.ai/code/artifact/a408d8dc-3e07-43ae-b3c1-9df27d89cd5a)
-(דורשת חשבון Claude — **הסימון נעשה ב-issue, לא שם**).
+## Repository layout
 
-## מי על מה
+| Path | What it is |
+|---|---|
+| [`apps/shaked-engine/`](apps/shaked-engine/) | **The product.** FastAPI backend, Next.js frontend, PostgreSQL + PostGIS. All development happens here. |
+| [`POC/`](POC/) | The earlier proof of concept. Reference only — but the engine still seeds parcels from `POC/layer_a/data` and reads the city boundary from it, so do not move or delete it without the migration planned in issue #42. |
+| [`packages/`](packages/) | Shared packages. |
 
-| זרם | מי | קבצים |
-|---|---|---|
-| **A** · המנוע והכללים | בועז | `cities/herzliya/`, `api/v1/candidates.py` |
-| **B** · הכלכלה והנתונים | חן | `services/economic/`, `services/market_data/`, `api/v1/dossiers.py` |
-| **C** · המסכים | טל | `frontend/src/` |
+## Where to start
 
-**קובץ אחד — בעלים אחד.** שני מקומות שכולם נוגעים בהם ודורשים הודעה מראש:
-`alembic/versions/` ו-`requirements.txt`.
+- **Run it locally:** [`apps/shaked-engine/README.md`](apps/shaked-engine/README.md)
+- **How to contribute:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- **What exists and what is next:** [`apps/shaked-engine/PRODUCT_STRUCTURE.md`](apps/shaked-engine/PRODUCT_STRUCTURE.md)
+- **The demo script (Hebrew):** [`apps/shaked-engine/DEMO.md`](apps/shaked-engine/DEMO.md)
+- **Work plan and task tracking:** [issue #6](https://github.com/talmaikel/gng139/issues/6)
 
-## מאיפה מתחילים
+## Two documents you must not bypass
 
-- **להריץ מקומית** — [`apps/shaked-engine/RUN_LOCAL.md`](apps/shaked-engine/RUN_LOCAL.md)
-- **מה המוצר** — [`apps/shaked-engine/PRODUCT_STRUCTURE.md`](apps/shaked-engine/PRODUCT_STRUCTURE.md)
-- **ההדגמה** — [`apps/shaked-engine/DEMO.md`](apps/shaked-engine/DEMO.md)
+- **[`POC/layer_a/data/DATA_LAW.md`](POC/layer_a/data/DATA_LAW.md)** — what may be collected
+  and stored. Facts may be stored freely; permit drawings are deleted after extraction;
+  applicant names are never read; and **the municipal archive is never swept** — building
+  files are fetched one at a time, on a customer's request, at a slow shared pace.
+- **[`POC/layer_a/data/DOCUMENTS.md`](POC/layer_a/data/DOCUMENTS.md)** — the register of the
+  policy documents that decide eligibility, including a warning about a procedure that is
+  still published on the municipal site but is no longer in force.
 
-## שני מסמכים שאסור לעקוף
+## Tel Aviv-Yafo
 
-**[`POC/layer_a/data/DATA_LAW.md`](POC/layer_a/data/DATA_LAW.md)** — מה מותר לאסוף ומה
-מותר לשמור. בקצרה: עובדות מותרות ללא הגבלה; הגרמושקה נמחקת אחרי החילוץ; שמות מבקשים
-אינם נקראים מלכתחילה; ו**אין לסרוק את הארכיון** — תיקים נשלפים לפי בקשת לקוח, אחד-אחד.
-
-**[`POC/layer_a/data/DOCUMENTS.md`](POC/layer_a/data/DOCUMENTS.md)** — מרשם מסמכי
-המדיניות הקובעים, עם בדיקה חודשית אוטומטית. מכיל אזהרה על נוהל שעדיין מפורסם באתר
-העירייה ושכבר אינו בתוקף — מי שיקרא אותו לבדו יפסול את כל המלאי בטעות.
-
-## ‏POC
-
-[`POC/`](POC/) הוא התייחסות בלבד, לא בסיס הפיתוח. הכל ב-`apps/shaked-engine`.
-
-## תל אביב-יפו — הרחבה עתידית, לא בתחום העבודה
-
-מה שנלמד מניסוי דוד המלך 23/25/27 מרוכז ב-
-[`POC/data/cities/tel-aviv/README.md`](POC/data/cities/tel-aviv/README.md), ומה שנדרש
-כדי להפעיל את תל אביב במנוע ב-
+A possible future extension, not in scope. What was learned is in
+[`POC/data/cities/tel-aviv/README.md`](POC/data/cities/tel-aviv/README.md) and
 [`apps/shaked-engine/backend/app/cities/tel_aviv/README.md`](apps/shaked-engine/backend/app/cities/tel_aviv/README.md).
-אין לפתח את זה עד להחלטה נפרדת.
