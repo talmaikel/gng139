@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.services.economic.schemas import FeasibilityInput
+
 
 class UnitTypeOption(BaseModel):
     """A developer-sale apartment type already priced by market-data.
@@ -59,6 +61,12 @@ class UnitMixOptimizationInput(BaseModel):
     buildable_area_sqm: float = Field(gt=0)
     main_area_ratio: float = Field(gt=0, le=1)
 
+    # The already-resolved Generic Report 0 input (construction costs,
+    # financing, tenant costs, levy input, VAT, target margin, etc.). B15
+    # overrides only the fields that the chosen mix actually changes.
+    economic_input: FeasibilityInput
+    economic_missing_inputs: list[str] = Field(default_factory=list)
+
     # User choice. If omitted, a labelled market-default value must be passed
     # by the caller/assumptions layer. There is intentionally no magic B15
     # default in this module.
@@ -73,10 +81,16 @@ class UnitMixOptimizationInput(BaseModel):
     max_results: int = Field(default=10, ge=1, le=100)
 
     @model_validator(mode="after")
-    def unique_type_keys(self):
+    def validate_consistency(self):
         keys = [item.key for item in self.unit_types]
         if len(keys) != len(set(keys)):
             raise ValueError("unit type keys must be unique")
+        if self.economic_input.existing_units != len(self.existing_unit_areas_sqm):
+            raise ValueError("economic_input.existing_units must match the per-apartment schedule")
+        if abs(self.economic_input.buildable_area_sqm - self.buildable_area_sqm) > 1e-6:
+            raise ValueError("economic_input.buildable_area_sqm must match B15 buildable_area_sqm")
+        if abs(self.economic_input.main_area_ratio - self.main_area_ratio) > 1e-9:
+            raise ValueError("economic_input.main_area_ratio must match B15 main_area_ratio")
         return self
 
 
@@ -94,6 +108,16 @@ class UnitMixCandidate(BaseModel):
     small_unit_share: float
     micro_unit_share: float
     gross_developer_revenue_ils: float
+    blended_sale_price_per_sqm_ils: float
+
+    # Exact candidate revenue is passed through Generic Report 0, so ranking
+    # uses the same project costs/finance/tenant/levy model as the dossier.
+    developer_revenue_ils: float
+    total_cost_ils: float
+    projected_profit_ils: float
+    profit_margin_on_cost_ratio: float
+    meets_developer_target: bool
+    economics_deliverable: bool
 
 
 class UnitMixOptimizationResult(BaseModel):
