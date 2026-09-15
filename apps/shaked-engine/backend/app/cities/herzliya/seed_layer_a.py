@@ -193,7 +193,7 @@ def _rows(key, surv, front, geo, sources, archive):
         # נגזר מפוליגוני ייעוד הקרקע בתכניות המקומיות (504-*) ב-XPlan.
         ev("residential_zoning", geo.get("residential_zoning"), "iplan_xplan",
            f"{at} · ייעוד קרקע בתכנית מקומית", Certainty.DERIVED,
-           "חפיפה של מעל 30% עם פוליגון ייעוד שבשמו 'מגורים'"),
+           "מרכז החלקה בתוך פוליגון ייעוד מאושר שבשמו 'מגורים'"),
         ev("in_tama70", geo.get("in_tama70"), "iplan_xplan", at, Certainty.DERIVED,
            'חפיפה של מעל 50% משטח החלקה עם מרחב תמ"א 70'),
         ev("scope_buildings", geo.get("buildings"), "agol_buildings", at, Certainty.DERIVED,

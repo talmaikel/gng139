@@ -179,7 +179,12 @@ def threshold_checks(f: dict) -> list[Check]:
     out.append(Check("residential_share", "לפחות 70% מהשטח הבנוי משמש כדין למגורים",
                      "unknown" if share is None else ("passed" if share >= 0.7 else "failed"),
                      POLICY_URL, 3,
-                     "לא ניתן לגזור ממקורות פתוחים — שכבת השימושים ריקה ב-97% מהנקודות"
+                     # ‏G1 · 15.09 · בועז שאל אם ״מגורים א/ב״ בשכבות העירייה עונה על
+                     # זה. לא: הייעוד הוא התנאי הראשון (השער שלמעלה), וכאן נבדק
+                     # **שימוש כדין בשטח הבנוי** — חנות בקומת קרקע בייעוד מגורים
+                     # נספרת כאן. ‏״97%״ בנוסח הקודם לא נמצא בשום חישוב בריפו.
+                     "הייעוד בתכנית אינו מראה שימוש בפועל. היחס נקבע מטבלת השטחים בהיתר "
+                     "(תיק הבניין) או בביקור, ואין לו מקור פתוח"
                      if share is None else f"{share:.0%}"))
 
     permit, opinion = f.get("permit_date"), f.get("engineer_opinion")
@@ -330,8 +335,11 @@ def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M
         bits.append(f"רוחב מהאלגוריתם הקודם, שהגזים — לא מאומת; "
                     f"{r.floors_low:g} עד {r.floors_high:g} קומות; מדידה בשטח תכריע")
     elif unreliable and r.floors_low != r.floors_high:
-        bits.append(f"מדידת הפער מגזימה ברחובות רחבים — הרחוב עשוי להיות צר בהרבה; "
-                    f"{r.floors_low:g} עד {r.floors_high:g} קומות; מדידה בשטח תכריע")
+        # ‏G1 · 15.09 · הנוסח הקודם נכתב על האלגוריתם הראשון, שהגזים עקבית.
+        # ‏v2 מדויק עד 12 מ׳ (27 מ-29 בתוך ±1), ומעליו עדיין הגזים באחד מעשרה
+        # במדגם. ״הערך נמדד״ ו״אינו מכריע קומות״ הם שני דברים, והתיק אומר שניהם.
+        bits.append(f"נמדד בשיטה המאומתת, אבל מעל {RELIABLE_MAX_M:.0f} מ׳ היא עדיין מגזימה לעיתים "
+                    f"(אחת מעשר במדגם) — {r.floors_low:g} עד {r.floors_high:g} קומות; מדידה בשטח תכריע")
     elif r.floors_low != r.floors_high:
         bits.append(f"טווח ±{tol:g} מ׳ חוצה שורות בטבלה — {r.floors_low:g} עד {r.floors_high:g} קומות; "
                     "מדידה בשטח תכריע")
