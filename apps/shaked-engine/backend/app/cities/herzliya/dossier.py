@@ -21,6 +21,7 @@
 הבדיקה כאן היא על רישום מסירה, ו-404 ולא 403 — ‏403 מאשר שהמזהה קיים.
 """
 import re
+import statistics
 from typing import Any
 from uuid import UUID
 
@@ -343,20 +344,16 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
     # ‏**מחיר דירה חדשה ומחיר דירה קיימת אינם אותו מספר, ובלבלתי ביניהם.**
     # ההכנסות מחושבות לפי מחיר דירה **חדשה**. שווי המצב הקיים — הצד
     # ה״לפני״ של ההשבחה — הוא מחיר דירה **קיימת** באזור, והוא נמוך
-    # משמעותית. השוואת השניים באותו מספר הראתה שווי קיים גבוה משווי
-    # הזכויות החדשות, כלומר ״אין השבחה״ בכל תשע החלקות.
+    # משמעותית.
     #
-    # עסקאות ההשוואה של B1 הן עסקאות בדירות **קיימות**, ולכן הן המקור
-    # הנכון לצד ה״לפני״. **בלי אותן עסקאות אין אומדן** — יש רק סף.
-    # לא ממציאים כאן יחס בין ישן לחדש.
-    out["existing_price"] = (
-        {"value": valuation.blended_price_per_sqm_ils, "resolved": True,
-         "certainty": Certainty.DERIVED.value,
-         "label": f"‏{valuation.comparable_count} עסקאות בדירות קיימות ברדיוס "
-                  f"{valuation.radius_m} מ׳"}
-        if valuation and valuation.blended_price_per_sqm_ils
-        else {"value": None, "resolved": False, "certainty": Certainty.MISSING.value,
-              "label": "אין עסקאות השוואה בדירות קיימות — אין אומדן להשבחה, רק סף"})
+    # ‏**15.09 · החציון של עסקאות ההשוואה, ולא המחיר המשוקלל.** הגרסה
+    # הקודמת לקחה את `blended_price_per_sqm_ils`, שקיים רק כשיש תמהיל
+    # **לבניין החדש** (B15) — כלומר משקלל עסקאות קיימות לפי תמהיל של
+    # פרויקט שעוד לא נבנה, ובפועל לא היה קיים באף תיק. הצד ה״לפני״ הוא
+    # הבניין הקיים, ולכן החציון של עסקאות היד השנייה סביבו (B16: ‏28–40
+    # עסקאות לחלקה, כמעט כולן יד שנייה) הוא המספר הנכון, והוא אינו תלוי
+    # בתמהיל. זה החיבור שחסר כדי שאומדן ההיטל ״בשיטת היזם״ יוצג.
+    out["existing_price"] = _existing_price(valuation)
 
     out["unit_area"] = {
         # ‏`may_decide` הוא של B3 ולא שלנו: ודאות מכריעה, לוח שלם, ובלי
@@ -370,6 +367,26 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
         "notes": list(resolution.notes),
     }
     return out
+
+
+# פחות מזה חציון אינו מייצג; עדיף סף בלבד מאשר אומדן על שלוש עסקאות.
+MIN_EXISTING_COMPARABLES = 5
+
+
+def _existing_price(valuation) -> dict[str, Any]:
+    """מחיר מ״ר של דירה **קיימת** ליד החלקה — הצד ה״לפני״ של ההשבחה."""
+    sales = {c.source_deal_id: c for c in (valuation.comparable_sales if valuation else [])}
+    if len(sales) < MIN_EXISTING_COMPARABLES:
+        return {"value": None, "resolved": False, "certainty": Certainty.MISSING.value,
+                "label": ("אין מספיק עסקאות השוואה בדירות קיימות"
+                          + (f" ({len(sales)} עסקאות)" if sales else "")
+                          + " — אין אומדן להשבחה, רק סף")}
+    median = statistics.median(c.price_per_sqm_ils for c in sales.values())
+    return {"value": round(median), "resolved": True,
+            "certainty": Certainty.DERIVED.value,
+            "comparable_count": len(sales),
+            "label": (f"חציון {len(sales)} עסקאות בדירות קיימות ברדיוס {valuation.radius_m} מ׳, "
+                      f"{valuation.lookback_months} חודשים (GovMap), נכון ל-{valuation.as_of_date}")}
 
 
 def _numeric(field: dict | None) -> float | None:
@@ -530,7 +547,10 @@ def _levy_summary(category: str, band: dict, estimate) -> str:
     text = (f"היטל השבחה: לא ידוע · כדאי כל עוד ההיטל מתחת ל-"
             f"{_millions(band['viable_up_to_ils'])} ({_CATEGORY_SHORT[category]})")
     if estimate is not None and band.get("low_ils") is not None:
-        text += f" · אומדן: {_millions(band['low_ils'])}–{_millions(band['high_ils'])}"
+        # שיטת היזם: שווי המצב החדש פחות הקיים, כפול רבע. הטווח הוא ±10%
+        # בשווי מ״ר הזכויות, ולכן רחב — ההיטל הוא הפרש, והוא רגיש.
+        text += (f" · אומדן: כ-{band['estimate_ils'] / 1e6:,.1f} מיליון ₪ "
+                 f"(טווח {band['low_ils'] / 1e6:,.1f}–{band['high_ils'] / 1e6:,.1f})")
     return text
 
 
