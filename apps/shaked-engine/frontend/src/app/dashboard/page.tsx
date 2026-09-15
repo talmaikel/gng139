@@ -420,20 +420,37 @@ export default function DashboardPage() {
                         </Link>
                       );
                     }
+                    // ‏C14 · המצב נאמר **לפני** הלחיצה, ולא רק על הכפתור בזמנה.
+                    // באזור ההדגמה שלוש השורות הראשונות אינן מוכנות, ו״מסור לי״
+                    // נראה אצלן בדיוק כמו אצל חלקה שהתיק שלה כבר שמור — לחיצה
+                    // בטעות הייתה שולפת תיק מהארכיון באמצע ההדגמה.
+                    const readiness = blocked ? null
+                      : willFetch
+                        ? { text: "ישלוף תיק בניין · עד 20 שניות", colour: "#8a6100" }
+                        : { text: "מוכן למסירה מיידית", colour: "#1f6f4f" };
                     return (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deliver(candidate); }}
-                        disabled={delivering !== null || owned || blocked}
-                        title={blocked ? "אינו במסלול המגרשי — אינו נמסר"
-                          : willFetch ? "תיק הבניין ייושלף מהארכיון — עד 20 שניות"
-                          : undefined}
-                        style={{ padding: ".35rem .7rem", fontSize: ".82rem" }}
-                      >
-                        {blocked ? "לא במסלול"
-                          : delivering === candidate.id
-                            ? (willFetch ? "שולף תיק בניין…" : "מוסר…")
-                            : "מסור לי"}
-                      </button>
+                      <div style={{ display: "inline-flex", flexDirection: "column",
+                                    alignItems: "flex-end", gap: ".2rem" }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); deliver(candidate); }}
+                          disabled={delivering !== null || owned || blocked}
+                          title={blocked ? "אינו במסלול המגרשי — אינו נמסר"
+                            : willFetch ? "תיק הבניין ייושלף מהארכיון — עד 20 שניות"
+                            : undefined}
+                          style={{ padding: ".35rem .7rem", fontSize: ".82rem" }}
+                        >
+                          {blocked ? "לא במסלול"
+                            : delivering === candidate.id
+                              ? (willFetch ? "שולף תיק בניין…" : "מוסר…")
+                              : "מסור לי"}
+                        </button>
+                        {readiness && (
+                          <span style={{ color: readiness.colour, fontSize: ".72rem",
+                                         fontWeight: 600, whiteSpace: "nowrap" }}>
+                            {readiness.text}
+                          </span>
+                        )}
+                      </div>
                     );
                   })()}
                 </td>
