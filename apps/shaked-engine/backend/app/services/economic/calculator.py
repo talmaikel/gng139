@@ -50,6 +50,11 @@ def calculate_feasibility(inputs: FeasibilityInput,
     a scenario built on a placeholder is useful to reason with -- but the
     result carries `is_deliverable=False`, so it cannot be handed to a client
     as though it rested on data.
+
+    B15 may pass `developer_sale_revenue_ils`: the exact revenue of the
+    enumerated developer apartments. In that case Report 0 keeps the same
+    cost model and tenant-land valuation, but stops valuing unused residual
+    area as though it were another apartment for sale.
     """
     # ── שטחים ──
     sellable_main_sqm = inputs.buildable_area_sqm * inputs.main_area_ratio
@@ -65,12 +70,24 @@ def calculate_feasibility(inputs: FeasibilityInput,
 
     # ── הכנסות, נטו ממע״מ ──
     # מחיר שוק מצוטט כולל מע״מ ועלויות מוצגות נטו. בלי היישור הזה המרווח
-    # מנופח בשיעור המע״מ עוד לפני שורת עלות אחת חסרה.
+    # מנופח בשיעור המע״מ מיד, לפני כל שורת עלות חסרה.
     net_price = (inputs.sale_price_per_sqm / (1 + inputs.vat_rate)
                  if inputs.sale_price_includes_vat else inputs.sale_price_per_sqm)
-    total_revenue_ils = sellable_main_sqm * net_price
     land_cost_ils = tenant_allocation_sqm * net_price
-    developer_revenue_ils = total_revenue_ils - land_cost_ils
+
+    if inputs.developer_sale_revenue_ils is None:
+        developer_revenue_ils = developer_allocation_sqm * net_price
+    else:
+        developer_revenue_ils = (
+            inputs.developer_sale_revenue_ils / (1 + inputs.vat_rate)
+            if inputs.sale_price_includes_vat
+            else inputs.developer_sale_revenue_ils
+        )
+
+    # Keep the Report-0 presentation: tenant apartments are shown as value in
+    # revenue and again as the land consideration in cost. B15 replaces only
+    # the developer-sale part with its exact enumerated value.
+    total_revenue_ils = land_cost_ils + developer_revenue_ils
 
     # ── עלויות ──
     total_construction_cost_ils = inputs.buildable_area_sqm * inputs.construction_cost_per_sqm
