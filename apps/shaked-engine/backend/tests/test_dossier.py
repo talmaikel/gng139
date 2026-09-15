@@ -466,27 +466,59 @@ async def test_the_levy_estimate_needs_prices_of_existing_flats_not_new_ones(ses
     assert b["estimate"] is None                     # אין עסקאות → אין אומדן
     assert "אין אומדן" in d["economics"]["live_inputs"]["existing_price"]["label"]
 
+    # ‏**15.09 · הצד ה״לפני״ הוא חציון עסקאות היד השנייה ליד החלקה**, ולא
+    # מחיר משוקלל לפי תמהיל של הבניין החדש. בלי תמהיל, בלי B15 — ועם
+    # מחיר מכירה לדירה חדשה שנשאר אומדן הספרייה, השניים מופרדים והאומדן
+    # ״בשיטת היזם״ מחושב.
     add_valuation_run(
         session, opportunity_id=opp.id,
         valuation=MarketValuation(
             status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
             fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
-            comparable_count=23, comparable_sales=[], room_estimates=[],
-            blended_price_per_sqm_ils=26_000.0, is_unit_mix_adjusted=True),
-        parameters={"unit_mix_state": "explicit", "targets": []})
+            comparable_count=7,
+            comparable_sales=_second_hand_sales([12_353, 29_800, 31_000, 32_883, 34_000, 37_400, 47_800]),
+            room_estimates=[], blended_price_per_sqm_ils=None, is_unit_mix_adjusted=False),
+        parameters={"unit_mix_state": "absent", "targets": []})
     await session.flush()
 
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
-    b = d["economics"]["betterment"]
-    assert d["economics"]["live_inputs"]["existing_price"]["value"] == 26_000.0
+    econ = d["economics"]
+    b = econ["betterment"]
+    existing = econ["live_inputs"]["existing_price"]
+    assert existing["resolved"] is True
+    assert existing["value"] == 32_883                      # חציון — החריג הנמוך אינו מזיז
+    assert "חציון 7 עסקאות" in existing["label"]
+    assert econ["live_inputs"]["sale_price"]["value"] != existing["value"]
 
-    # ‏**ועדיין אין אומדן — וזו המסקנה.** אותה הערכה מזינה גם את
-    # ההכנסות (מחיר דירה חדשה) וגם את הצד ה״לפני״ (מחיר דירה קיימת).
-    # עסקאות GovMap אינן מסוננות לחדש מול יד שנייה, וכשאותו מספר עומד
-    # בשני הצדדים — ״אין השבחה״ בכל חלקה. הסף אינו תלוי בכך.
-    assert b["estimate"] is None
-    assert "אינם מופרדים" in b["estimate_withheld_because"]
-    assert b["levy"]["viable_up_to_ils"] is not None or b["category"] == "no_threshold"
+    assert b["estimate"] is not None
+    assert b["estimate"]["before_ils"] > 0
+    assert "אומדן:" in b["summary"]
+
+
+@pytest.mark.asyncio
+async def test_too_few_nearby_deals_give_a_ceiling_and_no_estimate(session):
+    """שלוש עסקאות אינן חציון מייצג. עדיף סף בלבד מאשר אומדן עליהן."""
+    from datetime import date, datetime, timezone
+
+    from app.services.market_data.repository import add_valuation_run
+    from app.services.market_data.schemas import MarketValuation, ValuationStatus
+
+    c, _, opp = await _delivered(session, block="9677")
+    add_valuation_run(
+        session, opportunity_id=opp.id,
+        valuation=MarketValuation(
+            status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
+            fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
+            comparable_count=3, comparable_sales=_second_hand_sales([30_000, 31_000, 32_000]),
+            room_estimates=[], blended_price_per_sqm_ils=None, is_unit_mix_adjusted=False),
+        parameters={"unit_mix_state": "absent", "targets": []})
+    await session.flush()
+
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    existing = d["economics"]["live_inputs"]["existing_price"]
+    assert existing["resolved"] is False
+    assert "3 עסקאות" in existing["label"]
+    assert d["economics"]["betterment"]["estimate"] is None
 
 
 @pytest.mark.asyncio
@@ -531,6 +563,17 @@ async def test_the_dossier_prices_parking_from_the_appraisers_survey(session):
 
 # ── A20 · טבלת ההנחות אינה סותרת את התרחיש שמעליה ──
 
+def _second_hand_sales(prices):
+    """עסקאות יד שנייה ליד החלקה, במחירי מ״ר נתונים — הצד ה״לפני״ של ההשבחה."""
+    from datetime import date
+
+    from app.services.market_data.schemas import ComparableSale
+    return [ComparableSale(source_deal_id=f"d{i}", deal_date=date(2026, 6, 1),
+                           deal_amount_ils=p * 90, area_sqm=90.0, rooms=4.0,
+                           price_per_sqm_ils=p)
+            for i, p in enumerate(prices)]
+
+
 async def _with_resolved_inputs(session, block):
     """חלקה שיש לה גם מחיר מעסקאות וגם שטח דירה מלוח — שני הקלטים שבהם
     הטבלה הציגה את ערך העיר בזמן שהתרחיש חושב מהערך לחלקה."""
@@ -546,7 +589,9 @@ async def _with_resolved_inputs(session, block):
         valuation=MarketValuation(
             status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
             fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
-            comparable_count=17, comparable_sales=[], room_estimates=[],
+            comparable_count=17,
+            comparable_sales=_second_hand_sales([29_000, 30_500, 31_000, 32_000, 33_500, 35_000]),
+            room_estimates=[],
             blended_price_per_sqm_ils=52_300.0, is_unit_mix_adjusted=True),
         parameters={"unit_mix_state": "x", "targets": []})
     # דירה אחת מאומתת מתוך כמה — מוצגת, ואינה מכריעה לבניין
