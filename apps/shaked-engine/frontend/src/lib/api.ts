@@ -525,6 +525,13 @@ export interface Betterment {
 }
 
 /** התיק המלא. ‏404 גם למי שאינו רשאי וגם למזהה שאינו קיים — ACC-08. */
+/** ‏C15 · כמה שורות מלוח הדירות שבהיתר עוד ממתינות לאישור אדם (B3). */
+export async function getUnitReviewCounts(opportunityId: string): Promise<{ total: number; pending: number }> {
+  const state = await request<{ units: { requires_human_review: boolean }[] }>(
+    `/api/v1/dossiers/${opportunityId}/dwelling-units`);
+  return { total: state.units.length, pending: state.units.filter((u) => u.requires_human_review).length };
+}
+
 export function getDossier(cityCode: string, opportunityId: string): Promise<Dossier> {
   return request<Dossier>(`/api/v1/candidates/${cityCode}/${opportunityId}/dossier`);
 }
