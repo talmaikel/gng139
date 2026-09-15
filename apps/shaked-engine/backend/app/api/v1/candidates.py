@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cities import get_city_rules as _get_city_rules
 from app.core.database import get_async_session
-from app.core.security import current_active_user
+from app.core.security import current_active_user, current_superuser
 from app.models.tenant import User
 from app.cities.herzliya.archive_facts import (ArchiveUnavailable, NoBuildingFile,
                                                fetch_for_delivery)
@@ -54,14 +54,18 @@ class SearchArea(BaseModel):
     limit: int = Field(default=100, le=500)
 
 
+# ‏#89 · **הרשימה המלאה היא לצוות בלבד.** הלקוח מקבל תיקים דרך הסריקה
+# (`scan/preview`, `scan/deliver`) ואינו רואה מועמדים (בועז, 15.09): רשימה
+# עם כתובות ממוינות היא המוצר עצמו בחינם. שני הנתיבים האלה משרתים את מסך
+# הצוות ‏/admin/candidates, ולכן superuser בלבד.
 @router.post("/{city_code}/search")
 async def search_candidates(
     city_code: str,
     body: SearchArea,
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(current_superuser),
 ) -> list[dict[str, Any]]:
-    """מועמדים בתוך אזור מצויר. פוליגון שאינו תקין או חורג מהעיר נדחה ב-422."""
+    """מועמדים בתוך אזור מצויר — מסך הצוות. פוליגון שאינו תקין או חורג מהעיר נדחה ב-422."""
     rules = get_city_rules(city_code)
     filters = body.model_dump()
     # מה שכבר נמסר לחברה אינו מוצע שוב כהזדמנות חדשה — הוא נשאר במאגר שלה.
@@ -333,9 +337,9 @@ async def list_candidates(
         description="רק מועמדים שההערכה שלהם ניתנת למסירה — לא מנותבים למתחמים ולא ללא קביעת קומות"),
     limit: int = Query(default=100, le=500),
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(current_superuser),
 ) -> list[dict[str, Any]]:
-    """Pre-filtered candidate opportunities for a given city, applying the city's own strategy."""
+    """Pre-filtered candidate opportunities for a given city — team screen only (#89)."""
     rules = get_city_rules(city_code)
     filters = {
         "exclude_delivered_ids": await delivered_ids(session, user.company_id),
