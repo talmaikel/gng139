@@ -11,6 +11,10 @@
 המסירות הישנות מ-13.09 נשארות — זו הכרעה נפרדת (A23). וגם התמהיל שחושב
 לחלקות ההדגמה בחזרה (B15), כדי שבהדגמה התיק ייפתח עם ״עוד לא חושב״.
 
+**מה לא נמחק:** מסירה של חלקה שאינה חלקת הדגמה. אלוף יגאל אלון 2 נמסרה
+לחברת ההדגמה ב-15.09 ונשארת כך עד החלטת חן (#87): בלעדיה הסריקה באזור
+ההדגמה מוסרת אותה ראשונה, והתקרה שלה אינה נכנסת במגרש.
+
 **מתי הוא מסרב:** מסד שאינו על המחשב הזה, או חברה שאינה חברת הדגמה.
 במוצר אין ביטול מסירה, וזה נכון; הסקריפט הזה קיים רק למסד ההדגמה המקומי.
 """
@@ -62,7 +66,7 @@ async def main(apply: bool) -> int:
 
         print(f"{company.name} · יתרה {balance.credits_remaining} → {demo.STARTING_CREDITS}")
         for r in rows:
-            print(f"  מסירה שתימחק: {ids[r.opportunity_id]} · {r.delivered_at:%d.%m %H:%M}")
+            print(f"  מסירה שתימחק: {ids[r.opportunity_id]} · {r.delivered_at.astimezone():%d.%m %H:%M}")
         for o in mixed:
             print(f"  תמהיל שיימחק: {ids[o.id]}")
         if not rows and not mixed and balance.credits_remaining == demo.STARTING_CREDITS:

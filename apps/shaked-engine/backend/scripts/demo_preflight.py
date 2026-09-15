@@ -163,7 +163,6 @@ async def check_data() -> None:
     from sqlalchemy import select
 
     from app.cities.herzliya import exports
-    from app.cities.herzliya.candidates import screen_herzliya_candidates
     from app.cities.herzliya.dossier import assemble
     from app.cities.herzliya.rules import HerzliyaCityRules
     from app.cities.herzliya.surfaces import compare
@@ -204,12 +203,22 @@ async def check_data() -> None:
         else:
             report(OK, f"חברת ההדגמה ביתרה {credits}, אף חלקת הדגמה לא נמסרה")
 
-        # המסך שהמציג יראה: אותו אזור, אותם תנאים, בלי מה שכבר נמסר
-        rows = await screen_herzliya_candidates(s, {
-            "polygon": demo.area_polygon(), "limit": 100, "min_units": demo.MIN_UNITS,
-            "preferences": [{"field": demo.SORT_FIELD, "direction": "desc"}],
-            "exclude_delivered_ids": owned})
-        listed = {(r["block"], r["parcel"]): i + 1 for i, r in enumerate(rows)}
+        # ‏S2 · הסריקה שהמציג יריץ: אותו אזור, אותם תנאים, ואותו סדר שהשרת
+        # מוסר בו — מוכנים קודם. היא חייבת למסור בדיוק את שלוש חלקות ההדגמה.
+        from app.api.v1.candidates import SCAN_SIZE, ScanArea, _scan_queue
+        queue = await _scan_queue(s, rules, ScanArea(
+            polygon=demo.area_polygon(), min_units=demo.MIN_UNITS,
+            preferences=[{"field": demo.SORT_FIELD, "direction": "desc"}]), company.id)
+        would = [r["address"] for r in queue[:min(SCAN_SIZE, demo.STARTING_CREDITS)]]
+        expected = [a for _, _, a in demo.DELIVERED]
+        if would == expected:
+            report(OK, "הסריקה באזור ההדגמה תמסור את שלוש חלקות ההדגמה",
+                   f"{len(queue)} מועמדים · " + " · ".join(would))
+        else:
+            report(BLOCK, "הסריקה באזור ההדגמה תמסור חלקות אחרות",
+                   "תמסור: " + " · ".join(would) + " — צפוי: " + " · ".join(expected)
+                   + " (אלוף יגאל אלון 2 אמורה להיות כבר נמסרת לחברת ההדגמה, ראו #87)")
+        listed = {(r["block"], r["parcel"]): i + 1 for i, r in enumerate(queue)}
         for block, parcel, address in wanted:
             if (block, parcel) not in opps:
                 continue
@@ -220,7 +229,7 @@ async def check_data() -> None:
                 report(BLOCK, f"{address} אינה מוכנה למסירה",
                        "המסירה תשלוף תיק מהארכיון בזמן ההדגמה")
             elif where is None and o.id not in owned:
-                report(BLOCK, f"{address} אינה ברשימה שהמסך יציג", "האזור או התנאים השתנו")
+                report(BLOCK, f"{address} אינה בסריקה של אזור ההדגמה", "האזור או התנאים השתנו")
             else:
                 d = await assemble(s, rules, o, None)
                 problems = compare(d, exports.excel(d), exports.pdf(d))
@@ -230,7 +239,7 @@ async def check_data() -> None:
                 elif stale:
                     report(BLOCK, f"{address}: יש מקורות שהתיישנו", ", ".join(stale))
                 else:
-                    report(OK, f"{address} מוכנה · שורה {where} ברשימה · מסך = PDF = אקסל",
+                    report(OK, f"{address} מוכנה · מקום {where} בסריקה · מסך = PDF = אקסל",
                            f"{len(d['economics'].get('caveats') or [])} סייגים בתיק")
                 # ‏B15 · מסך התמהיל עונה לחלקה, בלי לשמור דבר
                 try:
