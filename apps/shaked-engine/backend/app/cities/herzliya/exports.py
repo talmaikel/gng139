@@ -157,9 +157,21 @@ def pdf(d: dict[str, Any]) -> bytes:
                           ("ערבויות וביטוח", "total_guarantees_ils"),
                           ("מימון", "total_finance_ils"),
                           ("היטל השבחה", "betterment_levy_ils")):
+            if key == "betterment_levy_ils" and _levy_unknown(econ):
+                # ‏B13 · ״היטל השבחה: 0 ₪״ נקרא כמו ״אין היטל״. הבסיס דורש
+                # שומה, ולכן מודפס המשפט שהשרת כתב — התקרה, לא אפס.
+                line(econ["betterment"]["summary"], 9, (0.54, 0.38, 0.00), gap=2)
+                continue
             line(f'{name}: {s[key]:,.0f} ₪', 9, gap=2)
         line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪  ·  '
              f'{s["profit_margin_on_cost_ratio"]:.0%} על העלות', 11, (0.06, 0.15, 0.12), gap=5)
+        # ‏B8 · הסייגים נוסעים עם הרווח. פרק הזכויות כתב ״התקרה מנופחת״,
+        # והתרחיש מתחתיו הציג רווח בלי מילה.
+        if econ.get("caveats"):
+            line("על מה הרווח נשען:", 9, (0.54, 0.38, 0.00), gap=2)
+            for cav in econ["caveats"]:
+                line(f'· {cav["text"]}', 8.5, (0.42, 0.40, 0.36), gap=2, indent=10)
+            y[0] -= 3
     else:
         line(econ.get("why", "לא חושב תרחיש."), 9.5, (0.54, 0.20, 0.12))
     if not econ["is_deliverable"]:
@@ -250,26 +262,60 @@ OUTPUT_ROWS = [
 ]
 
 
+# תא קלט ← שורה בטבלת ההנחות. מקור אחד לערך, לסטטוס ולמקור שלו.
+INPUT_ASSUMPTION = {
+    "main_ratio": "main_area_ratio", "under_ratio": "underground_ratio",
+    "price": "sale_price_per_sqm_ils", "vat": "vat_rate",
+    "build": "construction_cost_per_sqm_ils", "under_cost": "underground_cost_per_sqm_ils",
+    "soft": "soft_cost_ratio", "demo": "demolition_cost_per_unit_ils",
+    "avg_unit": "average_existing_unit_sqm", "comp": "tenant_compensation_sqm_per_existing_unit",
+    "rent_months": "tenant_rent_months", "rent": "tenant_monthly_rent_ils",
+    "moving": "tenant_moving_cost_ils", "legal": "tenant_legal_cost_per_unit_ils",
+    "marketing": "marketing_ratio", "guarantees": "guarantees_ratio", "finance": "finance_ratio",
+    "levy_rate": "betterment_levy_rate", "levy_base": "betterment_base_ils",
+}
+STATUS_LABEL = {"data": "נתון", "estimate": "אומדן", "missing": "חסר"}
+
+
+def _levy_unknown(econ: dict[str, Any]) -> bool:
+    """בסיס ההשבחה אינו ידוע, ויש משפט תקרה להדפיס במקום ״0 ₪״."""
+    base = (econ.get("assumptions") or {}).get("betterment_base_ils") or {}
+    return base.get("status") == "missing" and bool((econ.get("betterment") or {}).get("summary"))
+
+
 def _scenario_inputs(d: dict[str, Any]) -> dict[str, float | None]:
     a = d["economics"]["assumptions"]
     ident, rights_ = d["identity"], d["rights"]
-    g = lambda k: a[k]["value"] if k in a else None          # noqa: E731
-    return {
+    out: dict[str, float | None] = {
         "plot": ident.get("area_sqm"), "units": ident.get("existing_units"),
         "buildable": rights_.get("cap_400_sqm"),
-        "main_ratio": g("main_area_ratio"), "under_ratio": g("underground_ratio"),
-        "price": g("sale_price_per_sqm_ils"), "vat": g("vat_rate"),
-        "build": g("construction_cost_per_sqm_ils"),
-        "under_cost": g("underground_cost_per_sqm_ils"),
-        "soft": g("soft_cost_ratio"), "demo": g("demolition_cost_per_unit_ils"),
-        "avg_unit": g("average_existing_unit_sqm"),
-        "comp": g("tenant_compensation_sqm_per_existing_unit"),
-        "rent_months": g("tenant_rent_months"), "rent": g("tenant_monthly_rent_ils"),
-        "moving": g("tenant_moving_cost_ils"), "legal": g("tenant_legal_cost_per_unit_ils"),
-        "marketing": g("marketing_ratio"), "guarantees": g("guarantees_ratio"),
-        "finance": g("finance_ratio"),
-        "levy_rate": g("betterment_levy_rate"), "levy_base": g("betterment_base_ils"),
     }
+    out.update({key: (a[name]["value"] if name in a else None)
+                for key, name in INPUT_ASSUMPTION.items()})
+    # ‏B13 · בסיס השבחה שאינו ידוע הוא תא ריק, לא 0. אקסל מחשב תא ריק כ-0,
+    # ולכן החישוב לא משתנה — משתנה מה שהיזם רואה: שאין כאן מספר.
+    if (a.get("betterment_base_ils") or {}).get("status") == "missing":
+        out["levy_base"] = None
+    return out
+
+
+def _input_provenance(d: dict[str, Any]) -> dict[str, tuple[str, str]]:
+    """לכל תא קלט: הסטטוס שלו ומאיפה הגיע. ‏B8 מצא 22 קלטים בלי מקור באקסל."""
+    a = d["economics"]["assumptions"]
+    out = {key: (STATUS_LABEL.get(a[name]["status"], a[name]["status"]), a[name].get("source") or "")
+           for key, name in INPUT_ASSUMPTION.items() if name in a}
+    evidence = {r["field"]: r for r in d.get("evidence") or []}
+    for key, field in (("plot", "parcel_area"), ("units", "units")):
+        r = evidence.get(field)
+        if r:
+            out[key] = (r.get("certainty_label") or r.get("certainty") or "",
+                        " · ".join(x for x in (r.get("location"), r.get("method")) if x))
+    rights_ = d["rights"]
+    if rights_.get("cap_400_sqm"):
+        certainty = rights_.get("cap_400_certainty")
+        out["buildable"] = ("אומדן" if certainty not in ("official", "derived", "manually_verified")
+                            else "נגזר", rights_.get("cap_400_basis") or "")
+    return out
 
 
 def excel(d: dict[str, Any]) -> bytes:
@@ -311,24 +357,31 @@ def excel(d: dict[str, Any]) -> bytes:
     sc.set_column(0, 0, 34)
     sc.set_column(1, 1, 18)
     sc.set_column(2, 2, 26)
-    sc.write_row(0, 0, ["קלט", "ערך", "יחידה"], head)
+    sc.set_column(3, 3, 10)
+    sc.set_column(4, 4, 70)
+    sc.write_row(0, 0, ["קלט", "ערך", "יחידה", "סטטוס", "מקור"], head)
 
     values = _scenario_inputs(d)
+    provenance = _input_provenance(d)
     for i, (key, lbl, unit) in enumerate(INPUT_ROWS):
         row = FIRST_INPUT_ROW + i
         sc.write(row, 0, lbl)
         v = values.get(key)
         if v is None:
-            # ‏DOS-03: נתון חסר אינו אפס. תא ריק, והנוסחאות שמסתמכות עליו
-            # יחזירו שגיאה גלויה במקום מספר שנראה תקין.
+            # ‏DOS-03: נתון חסר אינו אפס, ולכן התא ריק. **אקסל מחשב תא ריק
+            # כ-0** — הנוסחאות לא יחזירו שגיאה. התא הריק אומר ליזם שאין כאן
+            # מספר, ועמודת הסטטוס אומרת ״חסר״.
             sc.write_blank(row, 1, None, inp)
         else:
             sc.write_number(row, 1, v, inp)
         sc.write(row, 2, unit)
+        status, source = provenance.get(key, ("", ""))
+        sc.write(row, 3, status)
+        sc.write(row, 4, source, note)
 
     out_start = FIRST_INPUT_ROW + len(INPUT_ROWS) + 2
     out_cell = {}
-    sc.write_row(out_start - 1, 0, ["חישוב", "ערך", "יחידה"], head)
+    sc.write_row(out_start - 1, 0, ["חישוב", "ערך", "יחידה", "", ""], head)
     for i, (key, _, _, _) in enumerate(OUTPUT_ROWS):
         out_cell[key] = f"B{out_start + i + 1}"
 
@@ -340,19 +393,28 @@ def excel(d: dict[str, Any]) -> bytes:
         sc.write_formula(row, 1, formula.format(**refs), fmt)
         sc.write(row, 2, unit)
 
+    econ = d["economics"]
     tail = out_start + len(OUTPUT_ROWS) + 2
+    # ‏B8/B13 · הסייגים ומשפט ההיטל, מתחת לרווח ולא בגיליון אחר.
+    lines = ([econ["betterment"]["summary"]] if _levy_unknown(econ) else []) + \
+            [cav["text"] for cav in econ.get("caveats") or []]
+    if lines:
+        sc.merge_range(tail, 0, tail, 4, "על מה הרווח נשען", head)
+        for n, text in enumerate(lines, 1):
+            sc.merge_range(tail + n, 0, tail + n, 4, text, note)
+            sc.set_row(tail + n, 30)
+        tail += len(lines) + 2
+
     sc.write(tail, 0, "הערות", head)
-    sc.set_column(1, 1, 18)
-    sc.merge_range(tail + 1, 0, tail + 1, 2, d["economics"]["disclaimer"], note)
-    sc.merge_range(tail + 2, 0, tail + 2, 2,
+    sc.merge_range(tail + 1, 0, tail + 1, 4, econ["disclaimer"], note)
+    sc.merge_range(tail + 2, 0, tail + 2, 4,
                    "התאים הכחולים הם קלטים — שינוי בהם מעדכן את כל החישוב. "
                    "תא ריק פירושו נתון שאינו ידוע, ולא אפס.", note)
-    if not d["economics"].get("is_deliverable", True):
-        sc.merge_range(tail + 3, 0, tail + 3, 2,
-                       d["economics"].get("not_delivered_reason")
-                       or "התרחיש אינו נמסר כתוצאה.", note)
+    if not econ.get("is_deliverable", True):
+        sc.merge_range(tail + 3, 0, tail + 3, 4,
+                       econ.get("not_delivered_reason") or "התרחיש אינו נמסר כתוצאה.", note)
     v = d["versions"]
-    sc.merge_range(tail + 4, 0, tail + 4, 2,
+    sc.merge_range(tail + 4, 0, tail + 4, 4,
                    f'כללים {v["rules_version"]} · נתונים {v["data_version"] or "—"} · '
                    f'תבנית {v["template_version"]}', note)
 

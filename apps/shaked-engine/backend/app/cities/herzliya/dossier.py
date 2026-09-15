@@ -450,6 +450,10 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     return {
         "rate": rate,
         "levy": band,
+        # ‏B13 · המשפט שמחליף את ״היטל השבחה: 0 ₪״ — **נכתב פעם אחת, בשרת.**
+        # ה-PDF, האקסל והמסך מדפיסים אותו כמו שהוא, כמו `not_delivered_reason`,
+        # ולכן הניסוח אינו יכול להיות שונה בין המשטחים.
+        "summary": _levy_summary(category, band, estimate),
         "estimate": None if estimate is None else {
             "betterment_ils": estimate.betterment_ils,
             "before_ils": estimate.before_ils,
@@ -481,6 +485,29 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
                            "מחיר מכירה למ״ר": live["sale_price"]["resolved"]}.items()
             if not v),
     }
+
+
+_CATEGORY_SHORT = {NO_THRESHOLD: "לא כדאי", RESILIENT: "עמיד", MARGINAL: "גבולי"}
+
+
+def _millions(ils: float) -> str:
+    return f"{ils / 1e6:,.1f} מיליון ₪"
+
+
+def _levy_summary(category: str, band: dict, estimate) -> str:
+    """שורת ההיטל בתיק: **לא ידוע**, ומה כן ידוע — עד כמה הפרויקט סופג אותו.
+
+    ‏״0 ₪״ נקרא כמו ״אין היטל״, והוא שקר: ההיטל הוא רבע מההשבחה, והבסיס
+    דורש שומה. מה שכן אפשר לומר הוא התקרה — ההיטל שמעליו הרווח מתאפס.
+    """
+    if category == NO_THRESHOLD or not band.get("viable_up_to_ils"):
+        return ("היטל השבחה: לא ידוע · הפרויקט אינו כדאי בשום שיעור השבחה — "
+                "הבעיה אינה ההיטל")
+    text = (f"היטל השבחה: לא ידוע · כדאי כל עוד ההיטל מתחת ל-"
+            f"{_millions(band['viable_up_to_ils'])} ({_CATEGORY_SHORT[category]})")
+    if estimate is not None and band.get("low_ils") is not None:
+        text += f" · אומדן: {_millions(band['low_ils'])}–{_millions(band['high_ils'])}"
+    return text
 
 
 def _assumption_rows(a, live: dict, construction_cost, construction_cost_per_sqm,
