@@ -154,6 +154,61 @@ def test_the_reported_range_holds_for_every_street_measured_by_hand(engine, meas
         truth = min(truth, 9.0)
         assert r.floors_low <= truth <= r.floors_high
 
+# אותן חזיתות ועוד 12, ברוחב של frontages_v2 (הקרן נעצרת בחלקה הבנויה שממול).
+# מקור: POC/layer_a/validation/evaluate_widths.py, 15.09.2026. חזיתות צרות מ-8 מ׳
+# אינן כאן — הן אינן street_width אלא street_narrow_frontages.
+MEASURED_V2 = [
+    (9.0, 8.2), (9.0, 9.7), (8.9, 8.92), (10.0, 10.5), (10.0, 10.0), (10.0, 10.0),
+    (10.9, 10.8), (10.2, 10.2), (11.8, 11.3), (11.9, 11.5), (11.6, 11.3), (15.1, 14.98),
+    (9.9, 9.9), (16.7, 16.7), (18.2, 18.3), (10.2, 10.4), (12.4, 11.4), (12.4, 12.0),
+    (13.6, 13.4), (17.9, 11.0), (11.2, 11.4), (15.9, 15.5), (17.0, 12.5), (21.1, 21.0),
+    (21.4, 21.3),
+]
+
+
+@pytest.mark.parametrize("engine,measured", MEASURED_V2)
+def test_the_reported_range_holds_for_every_v2_width_measured_by_hand(engine, measured):
+    """ליברמן (17.9 מול 11) ופינסקר (17.0 מול 12.5) הן הסיבה ש-RELIABLE_MAX_M
+    נשאר 12: רק הטווח שנפתח למטה מכיל אותן."""
+    r = R.floors(engine, CAT)
+    truth = R.floors_for_width(measured)
+    status = next(c.status for c in r.checks if c.id == "street_width")
+    if truth in (None, "undefined"):
+        assert status != "passed"
+    else:
+        assert r.floors_low <= min(truth, 9.0) <= r.floors_high
+
+
+def test_a_fallback_width_is_an_upper_bound_at_any_height():
+    """כשהאלגוריתם החדש לא מצא חזית, הרוחב בא מהקודם — שהגזים גם מתחת ל-12."""
+    trusted = R.floors(11.5, CAT)
+    fallback = R.floors(11.5, CAT, verified=False)
+    assert (trusted.floors_low, trusted.floors_high) == (8, 9)
+    assert (fallback.floors_low, fallback.floors_high) == (7, 9)
+    check = next(c for c in fallback.checks if c.id == "street_width")
+    assert check.status == "needs_measurement"
+    assert "לא מאומת" in check.detail
+
+
+def test_a_narrow_frontage_never_leaves_the_floor_count_certain():
+    """חזית צרה מ-8 מ׳: אם היא רחוב, אין תוספת. גם כשהקטגוריה חוסמת ב-5.5
+    והרוחב הרחב ודאי — המספר אינו ודאי לידה."""
+    low = "התחדשות מגרשית מוטת מגורים נמוכה"
+    assert R.floors(13.5, low).floors_certain is True
+    r = R.floors(13.5, low, narrow="7.3 מ׳ (אחד העם)")
+    assert r.floors_certain is False
+    check = next(c for c in r.checks if c.id == "street_width")
+    assert check.status == "needs_measurement"
+    assert "אחד העם" in check.detail and "אין תוספת" in check.detail
+    assert "חוצה שורות" not in check.detail          # 5.5 עד 5.5 אינו טווח
+
+
+def test_a_parcel_with_only_a_narrow_frontage_says_so():
+    r = R.floors(None, CAT, narrow="6.2 מ׳ (הפרחים)")
+    check = next(c for c in r.checks if c.id == "street_width")
+    assert check.status == "unknown" and "הפרחים" in check.detail
+
+
 def test_the_low_category_binds_below_every_row_of_the_street_table():
     r = R.floors(20.0, "התחדשות מגרשית מוטת מגורים נמוכה")
     assert r.floors_high == 5.5

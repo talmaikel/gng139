@@ -45,7 +45,10 @@ class HerzliyaCityRules(BaseCityRules):
         checks = rights.threshold_checks(d)
         checks.append(_scope_check(d.get("scope_buildings")))
 
-        r = rights.floors(d.get("street_width"), d.get("renewal_policy_category"))
+        # שורה חסרה (זריעה שקדמה ל-frontages_v2) אינה ״לא מאומת״ — היא ההתנהגות הקודמת.
+        r = rights.floors(d.get("street_width"), d.get("renewal_policy_category"),
+                          verified=d.get("street_width_verified") is not False,
+                          narrow=d.get("street_narrow_frontages"))
         checks += r.checks
 
         est = f.get("existing_area") or {}
