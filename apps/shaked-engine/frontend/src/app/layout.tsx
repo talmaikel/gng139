@@ -3,7 +3,7 @@ import "@/styles/globals.css";
 
 export const metadata: Metadata = {
   title: "שקדן · מועמדים",
-  description: "Urban renewal opportunity screening under the Shaked Alternative",
+  description: "איתור מגרשים להתחדשות עירונית במסלול חלופת שקד, לחברות יזמיות",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
