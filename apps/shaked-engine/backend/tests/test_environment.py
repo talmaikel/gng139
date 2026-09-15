@@ -52,8 +52,11 @@ def test_there_is_exactly_one_site_packages_tree():
     if root is None:
         pytest.skip("רץ מחוץ ל-venv")
 
-    trees = sorted(p.name for p in (root / "lib").iterdir()
-                   if p.is_dir() and p.name.startswith("python"))
+    # ‏POSIX: `lib/python3.12/site-packages`. ‏Windows: `Lib/site-packages`,
+    # בלי רמת גרסה — בלי הדפוס השני הבדיקה מוצאת 0 ונכשלת על כל venv תקין.
+    trees = sorted({str(p.relative_to(root)) for pattern in
+                    ("lib/python*/site-packages", "Lib/site-packages")
+                    for p in root.glob(pattern) if p.is_dir()})
     assert len(trees) == 1, (
         f"‏{len(trees)} עצי חבילות ב-venv: {', '.join(trees)}. "
         "‏pip יתקין לאחד והמפרש יקרא מהאחר."
