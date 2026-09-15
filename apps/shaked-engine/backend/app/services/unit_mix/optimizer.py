@@ -3,6 +3,7 @@ from __future__ import annotations
 from itertools import product
 from math import ceil, floor
 
+from app.services.economic.calculator import calculate_feasibility
 from app.services.unit_mix.schemas import (
     UnitMixCandidate,
     UnitMixOptimizationInput,
@@ -33,13 +34,14 @@ def _count_ranges(inputs: UnitMixOptimizationInput, tenant_units: int) -> tuple[
 
 
 def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationResult:
-    """Enumerate policy-compliant developer mixes and rank by gross revenue.
+    """Enumerate Herzliya-compliant mixes and rank them by Report-0 profit.
 
-    This is deliberately a small, deterministic beta optimiser. It consumes
-    existing B3/B6 and B16 outputs and does not repeat scraping or valuation.
-    Full Report-0 profit ranking can be layered on top because construction
-    costs are project-wide while this service resolves the apartment mix and
-    its room-sensitive sales revenue.
+    B15 does not repeat B3/B6 extraction or B16 market acquisition. It consumes
+    those outputs, applies the developer's compensation choice, enumerates
+    feasible mixes and then sends every candidate through the existing Generic
+    Report 0 cost model. The candidate's room-sensitive apartment revenue is
+    passed as an exact override, so unsold residual sqm is not counted as an
+    imaginary apartment.
     """
 
     compensation, compensation_source = _resolved_compensation(inputs)
@@ -55,6 +57,12 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
         "The 10% accessibility requirement is a design requirement, not a separate apartment-size bucket; "
         "B15 does not double-count it in the numerical mix.",
     ]
+
+    if inputs.economic_missing_inputs:
+        warnings.append(
+            "Generic Report 0 still has missing economic inputs; mixes can be compared, "
+            "but the economics are not deliverable until those inputs are resolved."
+        )
 
     if developer_available < 0:
         return UnitMixOptimizationResult(
@@ -75,14 +83,14 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
     tenant_micro = sum(_is_micro(area, inputs) for area in tenant_new_areas)
 
     options = inputs.unit_types
-    # A safe finite bound for every type: neither policy unit cap nor area can
-    # permit more than this many units of a single type.
     per_type_caps = [
         min(max_developer_units, floor(developer_available / option.area_sqm))
         for option in options
     ]
 
+    average_existing = sum(inputs.existing_unit_areas_sqm) / tenant_units
     candidates: list[UnitMixCandidate] = []
+
     for counts_tuple in product(*(range(cap + 1) for cap in per_type_caps)):
         developer_units = sum(counts_tuple)
         if developer_units < min_developer_units or developer_units > max_developer_units:
@@ -113,10 +121,27 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
         if micro_share - 1e-12 > p.max_micro_unit_share:
             continue
 
-        revenue = sum(
+        gross_revenue = sum(
             count * option.area_sqm * option.price_per_sqm_ils
             for count, option in zip(counts_tuple, options)
         )
+        if used_area <= 0 or gross_revenue <= 0:
+            continue
+
+        blended_price = gross_revenue / used_area
+        economic_input = inputs.economic_input.model_copy(
+            update={
+                "average_existing_unit_sqm": average_existing,
+                "tenant_compensation_sqm_per_existing_unit": compensation,
+                "sale_price_per_sqm": blended_price,
+                "developer_sale_revenue_ils": gross_revenue,
+            }
+        )
+        economics = calculate_feasibility(
+            economic_input,
+            missing_inputs=inputs.economic_missing_inputs,
+        )
+
         candidates.append(
             UnitMixCandidate(
                 counts={option.key: count for option, count in zip(options, counts_tuple) if count},
@@ -131,15 +156,27 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
                 micro_units=micro_units,
                 small_unit_share=round(small_share, 4),
                 micro_unit_share=round(micro_share, 4),
-                gross_developer_revenue_ils=round(revenue, 2),
+                gross_developer_revenue_ils=round(gross_revenue, 2),
+                blended_sale_price_per_sqm_ils=round(blended_price, 2),
+                developer_revenue_ils=economics.developer_revenue_ils,
+                total_cost_ils=economics.total_cost_ils,
+                projected_profit_ils=economics.projected_profit_ils,
+                profit_margin_on_cost_ratio=economics.profit_margin_on_cost_ratio,
+                meets_developer_target=economics.meets_developer_target,
+                economics_deliverable=economics.is_deliverable,
             )
         )
 
+    # Product decision: primary objective is absolute developer profit. Profit
+    # on cost is the first tie-breaker, followed by exact developer revenue and
+    # lower unused residual area. This matches the B15 brief while still
+    # exposing margin so the UI can offer a "highest margin" alternative.
     candidates.sort(
         key=lambda c: (
+            c.projected_profit_ils,
+            c.profit_margin_on_cost_ratio,
             c.gross_developer_revenue_ils,
             -c.unused_developer_sqm,
-            c.developer_units,
         ),
         reverse=True,
     )
