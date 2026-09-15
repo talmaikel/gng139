@@ -205,11 +205,15 @@ def threshold_checks(f: dict) -> list[Check]:
     # זמין: בקשת חיזוק שהוגשה ולא הבשילה להיתר פירושה שיזם אחר כבר עובד
     # מול הדיירים. לכן `routed` ולא `failed` — ניתוב, לא פסילה.
     occ = f.get("occupied")
-    out.append(Check("occupied", "לא נמצאה יוזמת התחדשות פעילה של אחר",
+    # ‏R1 · 15.09 · **מה נבדק, ומה לא.** השער נקרא ״לא נמצאה יוזמה של אחר״
+    # ועבר על סמך העדר בקשה בארכיון — ורוב היוזמות מתחילות בהחתמת דיירים,
+    # הרבה לפני בקשה. הסטטוס נשאר (הארכיון נבדק), והנוסח אומר את הגבול.
+    out.append(Check("occupied", "לא נמצאה בקשה פעילה של יזם אחר בארכיון",
                      "unknown" if occ is None else ("passed" if occ is False else "routed"),
                      POLICY_URL, None,
                      None if occ is None else
-                     ("אין בקשת חיזוק פתוחה" if not occ else
+                     ("אין בקשת חיזוק פתוחה בתיק הבניין · החתמת דיירים אינה במקור ציבורי ולא נבדקה"
+                      if not occ else
                       "בקשת חיזוק ללא היתר — יזם אחר כבר מול הדיירים")))
 
     fl, un = f.get("floors"), f.get("units")
