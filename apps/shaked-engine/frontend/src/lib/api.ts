@@ -418,6 +418,8 @@ export interface Dossier {
     disclaimer: string;
     /** על מה הרווח נשען ואינו ודאי, בסדר ההשפעה. משפטים מוכנים מהשרת (B8). */
     caveats: { id: string; text: string }[];
+    /** ‏E1 · מעל או מתחת לרווח היזמי המזערי (16%). משפט מהשרת. */
+    profit_verdict?: string;
     /** ‏B15 · התמהיל שהיזם חישב. מוצג ואינו משנה את הרווח. המשפט מהשרת. */
     unit_mix?: {
       rows: { rooms: number; area_sqm: number; units: number }[];

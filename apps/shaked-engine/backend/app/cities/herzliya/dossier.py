@@ -85,7 +85,7 @@ ASSUMPTION_LABEL = {
     "construction_cost_per_sqm_ils": "עלות בנייה למ״ר",
     "demolition_cost_per_unit_ils": "הריסה ליחידת דיור",
     "soft_cost_ratio": "עלויות רכות",
-    "developer_profit_target_ratio": "יעד רווח ליזם",
+    "developer_profit_target_ratio": "רווח יזמי מזערי",
     "main_area_ratio": "שיעור השטח העיקרי",
     "underground_ratio": "שיעור חניון תת-קרקעי",
     "underground_cost_per_sqm_ils": "עלות חניון למ״ר",
@@ -464,8 +464,8 @@ def _numeric(field: dict | None) -> float | None:
 # על העלות — רק כי לא היה עם מה להשוות.
 NO_THRESHOLD, RESILIENT, MARGINAL, UNRATED = "no_threshold", "resilient", "marginal", "unrated"
 BETTERMENT_CATEGORY_LABEL = {
-    NO_THRESHOLD: "לא כדאי בשום שיעור השבחה — הבעיה אינה ההיטל",
-    RESILIENT: "עמיד — ההשבחה צריכה להיות גבוהה במיוחד כדי לאיין את הכדאיות",
+    NO_THRESHOLD: "לא עומד ברווח היזמי המזערי גם בלי היטל — הבעיה אינה ההיטל",
+    RESILIENT: "עמיד — ההשבחה צריכה להיות גבוהה במיוחד כדי להוריד את הרווח מתחת למזערי",
     MARGINAL: "גבולי — ההשבחה היא שתכריע",
     UNRATED: ("לא דורג — חסר מחיר דירה קיימת או שטח בנוי קיים, ולכן אי אפשר "
               "לתרגם את הסף לשווי מ״ר זכויות ולומר אם הוא גבוה או נמוך"),
@@ -488,11 +488,17 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     ‏״229 מיליון״ אינו מספר שיזם שופט; ״33,705 ₪ למ״ר זכויות״ כן.
     """
     rate = a.betterment_levy_rate.value
-    threshold = breakeven_betterment(
-        lambda x: calculate_feasibility(
-            inputs.model_copy(update={"betterment_base_ils": x}),
-            missing_inputs=[]).projected_profit_ils,
-        rate=rate)
+    target = a.developer_profit_target_ratio.value
+
+    # ‏**E1 · 15.09 (בועז): הסף הוא ההיטל שמשאיר רווח יזמי של 16%, לא רווח
+    # אפס.** יזם אינו עובד ברווח אפס. הגרסה הקודמת קראה ״עמיד״ לפרויקט
+    # שכבר היה מתחת ליעד לפני כל היטל, ואומדן ההיטל חושב ביעד אחר מהסף.
+    def above_target(x: float) -> float:
+        r = calculate_feasibility(inputs.model_copy(update={"betterment_base_ils": x}),
+                                  missing_inputs=[])
+        return r.projected_profit_ils - target * r.total_cost_ils
+
+    threshold = breakeven_betterment(above_target, rate=rate)
 
     added = cap - cap / 4 if cap else None          # התקרה היא 400% מהקיים
     existing_price = live["existing_price"]["value"]
@@ -552,7 +558,8 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
         # ‏B13 · המשפט שמחליף את ״היטל השבחה: 0 ₪״ — **נכתב פעם אחת, בשרת.**
         # ה-PDF, האקסל והמסך מדפיסים אותו כמו שהוא, כמו `not_delivered_reason`,
         # ולכן הניסוח אינו יכול להיות שונה בין המשטחים.
-        "summary": _levy_summary(category, band, estimate),
+        "summary": _levy_summary(category, band, estimate, target),
+        "profit_target_ratio": target,
         "estimate": None if estimate is None else {
             "betterment_ils": estimate.betterment_ils,
             "before_ils": estimate.before_ils,
@@ -575,7 +582,7 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
         "category_label": BETTERMENT_CATEGORY_LABEL[category],
         # ‏15.09 · מאז שהאומדן בשיטת היזם מוצג (#64), ״מוצג סף ולא מספר״
         # נכתב מתחת למספר. הנוסח נגזר ממה שבאמת מוצג.
-        "note": ("הסף אינו שומה. הוא אומר עד היכן הפרויקט סופג את ההיטל. "
+        "note": (f"הסף אינו שומה. הוא אומר עד איזה היטל הפרויקט עוד משאיר רווח יזמי של {target:.0%}. "
                  "שיעור ההיטל — רבע ההשבחה לפי §19(ב)(10א) — ודאי; הבסיס "
                  + ("דורש שומה. האומדן מחושב בשיטת היזם — שווי הזכויות פחות "
                     "שווי הדירות הקיימות — ואינו שומה."
@@ -591,6 +598,19 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     }
 
 
+def _profit_verdict(result, target: float) -> str:
+    """‏*״הרווח היזמי חייב להיות מעל 16% כדי שיהיה כדאי״* (בועז, 15.09).
+
+    הרווח הוצג במספר גדול ובצבע, והמשפט ״מתחת ליעד״ לא נאמר במילים —
+    יזם שקרא 31 מיליון ₪ לא ראה שהפרויקט אינו עומד בסף שלו.
+    """
+    margin = result.profit_margin_on_cost_ratio
+    if result.meets_developer_target:
+        return f"מעל הרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, לפני היטל השבחה"
+    return (f"מתחת לרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, "
+            "עוד לפני היטל השבחה")
+
+
 _CATEGORY_SHORT = {NO_THRESHOLD: "לא כדאי", RESILIENT: "עמיד", MARGINAL: "גבולי",
                    UNRATED: "לא דורג"}
 
@@ -599,17 +619,20 @@ def _millions(ils: float) -> str:
     return f"{ils / 1e6:,.1f} מיליון ₪"
 
 
-def _levy_summary(category: str, band: dict, estimate) -> str:
+def _levy_summary(category: str, band: dict, estimate, target: float) -> str:
     """שורת ההיטל בתיק: **לא ידוע**, ומה כן ידוע — עד כמה הפרויקט סופג אותו.
 
     ‏״0 ₪״ נקרא כמו ״אין היטל״, והוא שקר: ההיטל הוא רבע מההשבחה, והבסיס
     דורש שומה. מה שכן אפשר לומר הוא התקרה — ההיטל שמעליו הרווח מתאפס.
     """
     if category == NO_THRESHOLD or not band.get("viable_up_to_ils"):
-        return ("היטל השבחה: לא ידוע · הפרויקט אינו כדאי בשום שיעור השבחה — "
-                "הבעיה אינה ההיטל")
-    text = (f"היטל השבחה: לא ידוע · כדאי כל עוד ההיטל מתחת ל-"
-            f"{_millions(band['viable_up_to_ils'])} ({_CATEGORY_SHORT[category]})")
+        # ‏E1 · מתחת ל-16% עוד לפני היטל. האומדן עדיין נאמר: הוא אומר בכמה
+        # עוד יירד הרווח, וזה מה שיזם ישאל מיד אחרי ״לא כדאי״.
+        text = (f"היטל השבחה: לא ידוע · הפרויקט אינו מגיע לרווח יזמי של {target:.0%} "
+                "גם בלי היטל — הבעיה אינה ההיטל")
+    else:
+        text = (f"היטל השבחה: לא ידוע · רווח של {target:.0%} נשמר כל עוד ההיטל מתחת ל-"
+                f"{_millions(band['viable_up_to_ils'])} ({_CATEGORY_SHORT[category]})")
     if estimate is not None and band.get("low_ils") is not None:
         # שיטת היזם: שווי המצב החדש פחות הקיים, כפול רבע. הטווח הוא ±10%
         # בשווי מ״ר הזכויות, ולכן רחב — ההיטל הוא הפרש, והוא רגיש.
@@ -795,6 +818,8 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             "inputs_missing": result.inputs_missing,
             "not_delivered_reason": _not_delivered(result.inputs_missing),
             "is_deliverable": result.is_deliverable,
+            # ‏E1 · המשפט ליד הרווח, בשרת — אותו נוסח במסך, ב-PDF ובאקסל.
+            "profit_verdict": _profit_verdict(result, a.developer_profit_target_ratio.value),
             # תקרת ה-400% נשענת על אומדן שטח קיים, וזה נכתב ולא נבלע.
             "buildable_basis": assessment.get("cap_400_basis"),
             "buildable_certainty": assessment.get("cap_400_certainty")}

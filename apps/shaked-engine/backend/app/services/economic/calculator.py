@@ -99,7 +99,14 @@ def calculate_feasibility(inputs: FeasibilityInput,
         + inputs.tenant_moving_cost_ils
         + inputs.tenant_legal_cost_per_unit_ils
     )
-    total_marketing_ils = total_revenue_ils * inputs.marketing_ratio
+    # ‏**E1 · 15.09 (בועז) — שיווק ומימון אינם מחושבים על דירות הבעלים.**
+    # ההצגה של דוח 0 מכניסה את שווי דירות הבעלים גם להכנסות וגם לעלויות
+    # (״קרקע״). ברווח זה מתקזז, אבל שני שיעורים חושבו על הסכום המנופח:
+    # שיווק על דירות שאיש אינו משווק, ומימון על שווי שאיש אינו מממן —
+    # באלוף יגאל אלון 40 כ-3.2 ו-7.6 מיליון ₪, והרווח ירד מ-15.5% ל-11%.
+    # ערבויות נשארות על הכול: היזם נותן ערבויות גם לבעלים. המוסכמה מול
+    # תקן שמאי 21 ממתינה לאישור חן (#79).
+    total_marketing_ils = developer_revenue_ils * inputs.marketing_ratio
     total_guarantees_ils = total_revenue_ils * inputs.guarantees_ratio
     # רבע מההשבחה, ולא אחוז מההכנסות. הבסיס הוא שומה ולא נגזרת של המכירה.
     betterment_levy_ils = inputs.betterment_base_ils * inputs.betterment_levy_rate
@@ -110,7 +117,7 @@ def calculate_feasibility(inputs: FeasibilityInput,
                            + total_demolition_cost_ils + total_tenant_cost_ils
                            + total_marketing_ils + total_guarantees_ils
                            + betterment_levy_ils)
-    total_finance_ils = cost_before_finance * inputs.finance_ratio
+    total_finance_ils = (cost_before_finance - land_cost_ils) * inputs.finance_ratio
     total_cost_ils = cost_before_finance + total_finance_ils
 
     projected_profit_ils = total_revenue_ils - total_cost_ils

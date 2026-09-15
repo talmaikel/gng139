@@ -128,7 +128,8 @@ def test_the_average_existing_flat_is_declared_and_not_a_default():
 
     spread = (calc(FI(**BASE, average_existing_unit_sqm=55.0)).projected_profit_ils
               - calc(FI(**BASE, average_existing_unit_sqm=95.0)).projected_profit_ils)
-    assert spread > 10_000_000
+    # ‏E1 · ~9.7 מיליון: המימון אינו מחושב יותר על שווי דירות הבעלים.
+    assert spread > 9_000_000
 
 
 def test_a_missing_assumption_blocks_delivery_without_blocking_the_calculation():
@@ -244,3 +245,17 @@ def test_the_betterment_levy_is_never_silently_zero_in_the_report():
     with_levy = calc(FI(**BASE, betterment_base_ils=8_000_000))
     assert with_levy.betterment_levy_ils > 0
     assert with_levy.profit_margin_on_cost_ratio < calc(FI(**BASE)).profit_margin_on_cost_ratio
+
+
+def test_marketing_and_finance_are_not_charged_on_the_owners_flats():
+    """‏E1 · 15.09 (בועז). שווי דירות הבעלים נכנס להכנסות ולעלויות (״קרקע״) —
+    ועד היום גם לבסיס של שיווק ושל מימון. באלוף יגאל אלון 40 אלה היו כ-3.2
+    ו-7.6 מיליון ₪ על דירות שאיש אינו משווק ושווי שאיש אינו מממן."""
+    inp = FI(**BASE)
+    r = calc(inp)
+    assert r.total_marketing_ils == pytest.approx(r.developer_revenue_ils * inp.marketing_ratio, abs=1)
+    before_finance = r.total_cost_ils - r.total_finance_ils
+    assert r.total_finance_ils == pytest.approx((before_finance - r.land_cost_ils)
+                                                * inp.finance_ratio, abs=1)
+    # ערבויות נשארות על הכול: היזם נותן ערבויות גם לבעלים
+    assert r.total_guarantees_ils == pytest.approx(r.total_revenue_ils * inp.guarantees_ratio, abs=1)

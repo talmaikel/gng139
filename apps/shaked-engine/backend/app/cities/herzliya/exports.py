@@ -165,6 +165,9 @@ def pdf(d: dict[str, Any]) -> bytes:
             line(f'{name}: {s[key]:,.0f} ₪', 9, gap=2)
         line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪  ·  '
              f'{s["profit_margin_on_cost_ratio"]:.0%} על העלות', 11, (0.06, 0.15, 0.12), gap=5)
+        if econ.get("profit_verdict"):
+            line(econ["profit_verdict"], 9, (0.54, 0.38, 0.00) if not s.get("meets_developer_target")
+                 else (0.12, 0.37, 0.33), gap=4)
         # ‏B8 · הסייגים נוסעים עם הרווח. פרק הזכויות כתב ״התקרה מנופחת״,
         # והתרחיש מתחתיו הציג רווח בלי מילה.
         if econ.get("caveats"):
@@ -245,6 +248,7 @@ OUTPUT_ROWS = [
     ("dev_area", "שטח ליזם", "={sellable}-{tenant_area}", "מ״ר"),
     ("net_price", 'מחיר נטו למ״ר', "={price}/(1+{vat})", "₪"),
     ("revenue", "הכנסות (נטו ממע״מ)", "={sellable}*{net_price}", "₪"),
+    ("dev_revenue", "מתוכן: דירות היזם", "={dev_area}*{net_price}", "₪"),
     ("land", "קרקע — פיצוי הדיירים", "={tenant_area}*{net_price}", "₪"),
     ("build_cost", "בנייה מעל הקרקע", "={buildable}*{build}", "₪"),
     ("under", "חניון תת-קרקעי", "={buildable}*{under_ratio}*{under_cost}", "₪"),
@@ -252,13 +256,14 @@ OUTPUT_ROWS = [
     ("demo_cost", "הריסה", "={units}*{demo}", "₪"),
     ("tenant_cost", "שכירות, הובלות ויועצים לדיירים",
      "={units}*({rent_months}*{rent}+{moving}+{legal})", "₪"),
-    ("marketing_cost", "שיווק ותיווך", "={revenue}*{marketing}", "₪"),
+    # ‏E1 · שיווק על הדירות שהיזם מוכר, ומימון בלי שווי דירות הבעלים.
+    ("marketing_cost", "שיווק ותיווך", "={dev_revenue}*{marketing}", "₪"),
     ("guarantee_cost", "ערבויות וביטוח", "={revenue}*{guarantees}", "₪"),
     ("levy_cost", "היטל השבחה", "={levy_base}*{levy_rate}", "₪"),
     ("before_finance", "סך עלויות לפני מימון",
      "={land}+{build_cost}+{under}+{soft_cost}+{demo_cost}+{tenant_cost}"
      "+{marketing_cost}+{guarantee_cost}+{levy_cost}", "₪"),
-    ("finance_cost", "מימון", "={before_finance}*{finance}", "₪"),
+    ("finance_cost", "מימון", "=({before_finance}-{land})*{finance}", "₪"),
     ("total_cost", "סך העלויות", "={before_finance}+{finance_cost}", "₪"),
     ("profit", "רווח", "={revenue}-{total_cost}", "₪"),
     ("margin", "רווח על העלות", '=IF({total_cost}>0,{profit}/{total_cost},"")', "%"),
@@ -399,7 +404,8 @@ def excel(d: dict[str, Any]) -> bytes:
     econ = d["economics"]
     tail = out_start + len(OUTPUT_ROWS) + 2
     # ‏B8/B13 · הסייגים ומשפט ההיטל, מתחת לרווח ולא בגיליון אחר.
-    lines = ([econ["betterment"]["summary"]] if _levy_unknown(econ) else []) + \
+    lines = ([econ["profit_verdict"]] if econ.get("profit_verdict") else []) + \
+            ([econ["betterment"]["summary"]] if _levy_unknown(econ) else []) + \
             [cav["text"] for cav in econ.get("caveats") or []]
     if lines:
         sc.merge_range(tail, 0, tail, 4, "על מה הרווח נשען", head)
