@@ -22,7 +22,7 @@ const theme = createTheme({
   defaultRadius: "sm",
 });
 
-export function DesignProviders({ children }: { children: React.ReactNode }) {
+export function MantineShell({ children }: { children: React.ReactNode }) {
   return (
     <DirectionProvider initialDirection="rtl" detectDirection={false}>
       <MantineProvider theme={theme} forceColorScheme="light">

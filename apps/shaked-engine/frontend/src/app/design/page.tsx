@@ -77,7 +77,7 @@ function PageDeck() {
             <div
               className={classes.deckPage}
               style={i === 0
-                ? { backgroundImage: "linear-gradient(to left, rgba(19,22,30,.85), rgba(19,22,30,.2)), url(/design/herzliya.jpg)" }
+                ? { backgroundImage: "linear-gradient(to left, rgba(19,22,30,.85), rgba(19,22,30,.2)), url(/brand/herzliya.jpg)" }
                 : { background: i % 2 ? "#13161E" : "#2A2E39" }}
             >
               <Text size="sm" c="almond.3" fw={600}>עמוד {i + 1} מתוך {PAGES.length}</Text>
@@ -242,7 +242,7 @@ export default function DesignTrialPage() {
       <Container size="lg">
         <Stack gap={56}>
           <Stack gap={4}>
-            <img src="/design/shakdan-lockup.svg" alt="shakdan" width={138} height={34} style={{ alignSelf: "flex-start" }} />
+            <img src="/brand/shakdan-lockup.svg" alt="shakdan" width={138} height={34} style={{ alignSelf: "flex-start" }} />
             <Title order={1} mt="md">רכיבי Mantine בשפה של שקדן</Title>
             <Text c="dimmed">עמוד ניסיון: שלושת הרכיבים לפני שמכניסים אותם לדף הפתיחה ולמוצר.</Text>
           </Stack>
