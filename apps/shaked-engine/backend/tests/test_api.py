@@ -121,7 +121,13 @@ async def test_an_unknown_city_does_not_fall_back_to_herzliya(client):
 @pytest.mark.asyncio
 async def test_a_dossier_of_another_company_is_not_found_rather_than_forbidden(client, session):
     """‏404 ולא 403: ‏403 מאשר שהמזהה קיים, וזו דליפה בפני עצמה."""
-    r = await client.post(f"/api/v1/dossiers/{uuid.uuid4()}/generate")
+    from app.models.package import Balance
+    opp = await _deliverable_parcel(session, "9405")
+    session.add(Balance(company_id=client.user.company_id, credits_remaining=1))
+    await session.flush()
+    assert (await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")).status_code == 200
+
+    r = await client.post(f"/api/v1/dossiers/{opp.id}/generate")
     assert r.status_code == 200
     task_id = r.json()["task_id"]
 
@@ -427,3 +433,14 @@ async def test_certain_floors_only_keeps_the_figure_that_does_not_move(client, s
                           json={"polygon": INSIDE, "certain_floors_only": True})
     ids = [x["id"] for x in r.json()]
     assert str(firm.id) in ids and str(soft.id) not in ids
+
+
+@pytest.mark.asyncio
+async def test_a_dossier_that_was_not_delivered_cannot_be_generated(client, session):
+    """‏#89 · ‏`/generate` קיבל כל מזהה, ו-`/status` החזיר את התיק — כתובת
+    וכלכלה — בלי מסירה. ‏404, גם כשהמגרש קיים."""
+    opp = await _deliverable_parcel(session, "9406")
+    assert (await client.post(f"/api/v1/dossiers/{opp.id}/generate")).status_code == 404
+    r = await client.post("/api/v1/dossiers/generate-batch", json={"opportunity_ids": [str(opp.id)]})
+    assert r.status_code == 404
+    assert (await client.post(f"/api/v1/dossiers/{uuid.uuid4()}/generate")).status_code == 404

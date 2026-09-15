@@ -196,6 +196,22 @@ async def review_dwelling_unit(
     return await _dwelling_review_state(session, opportunity)
 
 
+async def _require_delivered(session: AsyncSession, company_id, opportunity_ids) -> None:
+    """‏#89 · הפקת תיק רק למי שהתיק נמסר לו.
+
+    הנתיבים האלה קיבלו כל מזהה, ותוצאת העבודה — כתובת וכלכלה — נקראה דרך
+    ‏`/status`. ‏ACC-08: חלקה אינה נמסרת ״דרך צמד, קישור, ייצוא, מטמון או
+    API״. ‏404 ולא 403, ובלי לומר איזה מהמזהים חסר: גם זה מאשר שהוא קיים.
+    """
+    ids = set(opportunity_ids)
+    owned = set((await session.execute(
+        select(Delivery.opportunity_id).where(Delivery.company_id == company_id,
+                                              Delivery.opportunity_id.in_(ids))
+    )).scalars())
+    if owned != ids:
+        raise HTTPException(status_code=404, detail="התיק אינו במאגר החברה.")
+
+
 @router.post("/generate-batch")
 async def generate_dossier_batch(
     request: BatchDossierRequest,
@@ -205,6 +221,7 @@ async def generate_dossier_batch(
     """Queue the on-demand final-stage pipeline for at most three selected opportunities."""
     if len(set(request.opportunity_ids)) != len(request.opportunity_ids):
         raise HTTPException(status_code=422, detail="opportunity_ids must be unique")
+    await _require_delivered(session, user.company_id, request.opportunity_ids)
 
     found_ids = set(
         (
@@ -257,6 +274,7 @@ async def generate_dossier(
     user: User = Depends(current_active_user),
 ) -> dict[str, Any]:
     """Enqueue an asynchronous dossier-generation job for one opportunity."""
+    await _require_delivered(session, user.company_id, [opportunity_id])
     payload: dict[str, Any] = {"opportunity_id": str(opportunity_id)}
     if request and request.construction_cost_per_sqm_ils is not None:
         payload["construction_cost_per_sqm_ils"] = request.construction_cost_per_sqm_ils
