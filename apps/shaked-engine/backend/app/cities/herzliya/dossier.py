@@ -67,6 +67,7 @@ FIELD_LABEL = {
     "renewal_policy_category": "קטגוריה במפת המדיניות",
     "category_ceiling": "תקרת הקטגוריה",
     "residential_zoning": "ייעוד למגורים",
+    "zoning_names": "שמות הייעוד בתכנית",
     "residential_share": "שיעור השימוש למגורים",
     "permit_date": "מועד ההיתר",
     "strengthened": "בוצע חיזוק בהיתר",

@@ -68,6 +68,13 @@ def _load(name: str):
     return json.loads((LAYER_A / name).read_text(encoding="utf-8"))
 
 
+# ‏#95 · נבנה ב-POC/layer_a/scripts/build_zoning_names.py. חסר — אין שורה, ולא ״ריק״.
+try:
+    ZONING_NAMES: dict[str, list[str]] = _load("zoning_names.json")
+except FileNotFoundError:
+    ZONING_NAMES = {}
+
+
 def _fetched_rows(key: str, entry: dict | None) -> list[dict]:
     """שורות ראיה מתיק שנשלף חי. גוברות על מה שנגזר מהקובץ הישן.
 
@@ -194,6 +201,11 @@ def _rows(key, surv, front, geo, sources, archive):
         ev("residential_zoning", geo.get("residential_zoning"), "iplan_xplan",
            f"{at} · ייעוד קרקע בתכנית מקומית", Certainty.DERIVED,
            "מרכז החלקה בתוך פוליגון ייעוד מאושר שבשמו 'מגורים'"),
+        # ‏#95 · שם הייעוד, ולא רק ״יש מגורים״: ״מגורים מסחר ותעסוקה״ ו״מגורים ב׳״
+        # עוברים את השער הראשון באותה מידה, אבל רק הראשון הוא סיכון לשער ה-70%.
+        ev("zoning_names", ZONING_NAMES.get(key), "iplan_xplan_zoning_names",
+           f"{at} · ייעוד קרקע בתכנית מקומית", Certainty.DERIVED,
+           "שמות הייעוד המאושרים שמכילים את מרכז החלקה"),
         ev("in_tama70", geo.get("in_tama70"), "iplan_xplan", at, Certainty.DERIVED,
            'חפיפה של מעל 50% משטח החלקה עם מרחב תמ"א 70'),
         ev("scope_buildings", geo.get("buildings"), "agol_buildings", at, Certainty.DERIVED,

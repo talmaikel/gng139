@@ -382,3 +382,21 @@ def test_the_seventy_percent_gate_says_where_the_answer_is():
     gate = next(c for c in R.threshold_checks({}) if c.id == "residential_share")
     assert gate.status == "unknown"
     assert "טבלת השטחים בהיתר" in gate.detail and "97%" not in gate.detail
+
+
+# ── #95 · שם הייעוד כרמז בשער 70% ──
+
+def test_mixed_zoning_is_flagged_as_a_risk_without_deciding_the_gate():
+    gate = next(c for c in R.threshold_checks({"zoning_names": ["מגורים מסחר ותעסוקה", "יעוד עפ\"י תכנית מאושרת אחרת"]})
+                if c.id == "residential_share")
+    assert gate.status == "unknown"
+    assert "ייעוד מעורב" in gate.detail and "מגורים מסחר ותעסוקה" in gate.detail
+
+
+def test_residential_only_zoning_is_likely_but_not_decided():
+    gate = next(c for c in R.threshold_checks({"zoning_names": ["מגורים ב'", "מרחב עירוני מוטה מטרו"]})
+                if c.id == "residential_share")
+    assert gate.status == "unknown"
+    assert "מגורים בלבד" in gate.detail and "לא מוכרע" in gate.detail
+    none = next(c for c in R.threshold_checks({}) if c.id == "residential_share")
+    assert "מעורב" not in none.detail and "בלבד" not in none.detail
