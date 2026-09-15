@@ -319,7 +319,10 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                 </strong>
               </div>
               <div>
-                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שטח נמכר</div>
+                {/* ‏C14 · היה ״שטח נמכר״, והמספר הוא השטח שנשאר ליזם אחרי הדיירים.
+                    באקסל ״שטח נמכר (עיקרי)״ הוא כל השטח העיקרי — שם אחד, שני
+                    מספרים, בדיוק ברגע שהיזם פותח את האקסל מול המסך. */}
+                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שטח ליזם</div>
                 <strong style={{ fontSize: "1.3rem" }}>{sqm(s.developer_allocation_sqm)}</strong>
               </div>
             </div>
