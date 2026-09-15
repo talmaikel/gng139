@@ -24,7 +24,8 @@ const MAX_PREFERENCES = 3;
 interface Props {
   value: SearchOptions;
   onChange: (next: SearchOptions) => void;
-  onApply: () => void;
+  /** בלי `onApply` אין כפתור ״החל״: בסריקה (S2) התנאים נשלחים עם ״חפש״. */
+  onApply?: () => void;
   disabled?: boolean;
 }
 
@@ -189,9 +190,11 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
       </section>
 
       <div style={{ display: "flex", gap: ".6rem", alignItems: "center" }}>
-        <button onClick={onApply} disabled={disabled}>
-          החל על האזור המסומן
-        </button>
+        {onApply && (
+          <button onClick={onApply} disabled={disabled}>
+            החל על האזור המסומן
+          </button>
+        )}
         <button
           onClick={() => onChange({})}
           style={{ background: "transparent", color: "#6b655c", border: "1px solid #d8d8d3" }}
