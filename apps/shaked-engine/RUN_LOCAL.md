@@ -40,23 +40,33 @@ npm install
 npx next dev -p 3000
 ```
 
-## המלכודת בהרשמה
+## משתמש ראשון
 
-`POST /api/v1/auth/register` דורש `company_id` של חברה **קיימת**, ולכן הרשמה
-ראשונה נכשלת ב-422 עד שיש שורה ב-`tenants`. בנוסף, כתובת בדומיין
-`.test`/`.local` נדחית בוולידציה.
+דרך המסך: `http://localhost:3000/signup`. או ישירות — ההרשמה פותחת חברה חדשה,
+הנרשם הוא ה-owner שלה, והתשובה כבר מכילה טוקן:
 
 ```bash
-CID=$(psql -d shaked_engine -tAc \
-  "INSERT INTO tenants (id,name,slug,is_active,created_at)
-   VALUES (gen_random_uuid(),'Dev Co','dev-co',true,now()) RETURNING id" | tr -d '[:space:]')
-
-curl -X POST localhost:8000/api/v1/auth/register -H 'Content-Type: application/json' \
-  -d "{\"email\":\"dev@shaked.example.com\",\"password\":\"devpass12345\",
-       \"full_name\":\"Dev\",\"company_id\":\"$CID\"}"
+curl -X POST localhost:8000/api/v1/auth/signup -H 'Content-Type: application/json' \
+  -d '{"company_name":"Dev Co","full_name":"Dev","email":"dev@shaked.example.com","password":"devpass12345"}'
 ```
 
-ואז login ב-`/api/v1/auth/jwt/login` עם `username`/`password` כ-form-urlencoded.
+כתובת בדומיין `.test`/`.local` נדחית בוולידציה. ‏`/auth/register` הישן **הוסר**:
+הוא קיבל `company_id` ו-`role` מהגולש, כלומר כל אחד יכול היה להצטרף לחברה
+קיימת כ-owner.
+
+כניסה חוזרת: `/api/v1/auth/jwt/login` עם `username`/`password` כ-form-urlencoded.
+
+## זכאות: אין רכישה באתר
+
+בפיילוט אין סליקה. הלקוח לוחץ ״לרכישה צרו קשר״ (היעד ב-`NEXT_PUBLIC_SALES_CONTACT_URL`),
+משלם בקישור Bit עסקי / PayPal, ומקבל חשבונית ב-Morning. אז אדמין נכנס ל-`/admin`,
+מוצא את החברה לפי מייל, ומוסיף זכאות עם מספר החשבונית. כל הוספה נרשמת ב-`credit_grants`.
+
+אדמין הוא משתמש רגיל שהוגדר מהשרת — אין לזה נתיב באתר:
+
+```bash
+.venv/bin/python scripts/make_admin.py you@example.com --apply
+```
 
 ## מה נבדק
 
@@ -64,7 +74,7 @@ curl -X POST localhost:8000/api/v1/auth/register -H 'Content-Type: application/j
 |---|---|
 | `alembic upgrade head` | ראש יחיד `0004_merge_heads` |
 | `pytest` | 51 עוברות |
-| `POST /auth/register` | 201 |
+| `POST /auth/signup` | 201 |
 | `POST /auth/jwt/login` | JWT |
 | `GET /candidates/herzliya` | 200 · `[]` — **אין עדיין הזדמנויות זרועות** |
 | `GET /filters/options` | 200 · הרצליה ות״א |

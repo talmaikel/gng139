@@ -280,8 +280,9 @@ async def test_balance_starts_at_zero_rather_than_erroring(client):
 
 
 @pytest.mark.asyncio
-async def test_buying_a_package_adds_entitlement_to_the_company(client, session):
-    """*״הזכאות לשלוש הזדמנויות שייכת לחברה ומשותפת לצוותה״*."""
+async def test_a_customer_sees_packages_but_cannot_add_credits_to_itself(client, session):
+    """הרכישה המדומה הוסרה: עם הרשמה פתוחה היא נתנה תיקים בחינם לכל נרשם.
+    זכאות נוספת רק על ידי אדמין — `test_admin_credits.py`."""
     from app.models.package import Package
     pkg = Package(name="שלוש הזדמנויות", credits=3, price_ils=30_000)
     session.add(pkg)
@@ -291,20 +292,7 @@ async def test_buying_a_package_adds_entitlement_to_the_company(client, session)
     assert any(p["id"] == str(pkg.id) for p in listed)
 
     r = await client.post(f"/api/v1/account/packages/{pkg.id}/purchase")
-    assert r.status_code == 200 and r.json()["credits_remaining"] == 3
-
-    # משתמש אחר באותה חברה רואה את אותה יתרה
-    other = await _user(session)
-    other.company_id = client.user.company_id
-    await session.flush()
-    app.dependency_overrides[current_active_user] = lambda: other
-    assert (await client.get("/api/v1/account/balance")).json()["credits_remaining"] == 3
-
-
-@pytest.mark.asyncio
-async def test_an_unknown_package_is_404_and_changes_no_balance(client):
-    r = await client.post(f"/api/v1/account/packages/{uuid.uuid4()}/purchase")
-    assert r.status_code == 404
+    assert r.status_code in (404, 405)
     assert (await client.get("/api/v1/account/balance")).json()["credits_remaining"] == 0
 
 

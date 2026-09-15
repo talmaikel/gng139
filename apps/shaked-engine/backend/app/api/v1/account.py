@@ -9,9 +9,8 @@
 אי אפשר לענות ללקוח על מה חויב.
 """
 from typing import Any
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -63,23 +62,6 @@ async def list_packages(
              "price_ils": p.price_ils} for p in rows]
 
 
-@router.post("/packages/{package_id}/purchase")
-async def purchase_package(
-    package_id: UUID,
-    session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_active_user),
-) -> dict[str, Any]:
-    """רכישה מדומה: מוסיפה זכאות לחברה. אין כאן סליקה.
-
-    ‏**החבילה נרכשת לחברה ולא למשתמש** — ה-PRD מפורש: *״הזכאות לשלוש
-    הזדמנויות שייכת לחברה ומשותפת לצוותה״*. וחבילה חדשה **אינה** פותחת
-    מחדש מגרש שכבר נמסר (SEL-02) — רישום המסירות אינו נוגע ביתרה.
-    """
-    package = await session.get(Package, package_id)
-    if package is None:
-        raise HTTPException(status_code=404, detail="חבילה אינה קיימת")
-    balance = await _balance(session, user.company_id)
-    balance.credits_remaining += package.credits
-    await session.commit()
-    return {"package": package.name, "credits_added": package.credits,
-            "credits_remaining": balance.credits_remaining}
+# ‏**אין כאן נתיב רכישה.** הייתה ״רכישה מדומה״ שהוסיפה זכאות בלחיצה, בלי
+# תשלום — סבירה כל עוד ההרשמה הייתה סגורה, ותיקים בחינם לכל נרשם מרגע
+# שנפתחה. בפיילוט הלקוח משלם מחוץ למערכת ואדמין מוסיף זכאות: `admin.py`.

@@ -41,6 +41,7 @@ export class ApiError extends Error {
 const FALLBACK: Record<number, string> = {
   401: "נדרשת התחברות מחדש.",
   402: "לא נותרה זכאות לחברה.",
+  403: "אין הרשאה לפעולה הזו.",
   404: "לא נמצא.",
   409: "המועמד אינו מוכן למסירה.",
   422: "הבקשה אינה תקינה.",
@@ -98,6 +99,22 @@ export async function login(email: string, password: string): Promise<LoginRespo
     throw new Error("Login failed");
   }
   return response.json() as Promise<LoginResponse>;
+}
+
+export interface SignupInput {
+  company_name: string;
+  full_name: string;
+  email: string;
+  password: string;
+}
+
+/** לקוח חדש: חברה חדשה והנרשם כ-owner שלה. מחזיר טוקן — הנרשם כבר מחובר.
+ *  ‏409 = המייל תפוס, ‏422 = סיסמה או שדה שנדחו, עם משפט בעברית. */
+export function signup(input: SignupInput): Promise<LoginResponse> {
+  return request<LoginResponse>("/api/v1/auth/signup", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export interface MultiPolygonGeometry {
@@ -279,12 +296,56 @@ export function getPackages(): Promise<CreditPackage[]> {
   return request<CreditPackage[]>("/api/v1/account/packages");
 }
 
-export function purchasePackage(packageId: string): Promise<{
-  package: string;
-  credits_added: number;
+// ‏אין `purchasePackage`: הרכישה המדומה הוסרה. זכאות נוספת רק על ידי אדמין.
+
+
+// ── אדמין: זכאות ידנית בפיילוט ──
+
+export interface Me {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  company_id: string;
+  is_superuser: boolean;
+}
+
+export function getMe(): Promise<Me> {
+  return request<Me>("/api/v1/auth/users/me");
+}
+
+export interface AdminCompany {
+  id: string;
+  name: string;
+  emails: string[];
   credits_remaining: number;
-}> {
-  return request(`/api/v1/account/packages/${packageId}/purchase`, { method: "POST" });
+  created_at: string | null;
+}
+
+export interface CreditGrantRow {
+  credits: number;
+  note: string;
+  granted_by: string | null;
+  created_at: string | null;
+}
+
+export function adminFindCompanies(q: string): Promise<AdminCompany[]> {
+  return request<AdminCompany[]>(`/api/v1/admin/companies?q=${encodeURIComponent(q)}`);
+}
+
+/** ‏`note` הוא האסמכתה — מספר חשבונית או תשלום. השרת מסרב בלעדיה. */
+export function adminGrantCredits(
+  companyId: string,
+  grant: { package_id?: string; credits?: number; note: string },
+): Promise<{ company: string; credits_added: number; credits_remaining: number }> {
+  return request(`/api/v1/admin/companies/${companyId}/credits`, {
+    method: "POST",
+    body: JSON.stringify(grant),
+  });
+}
+
+export function adminGrantHistory(companyId: string): Promise<CreditGrantRow[]> {
+  return request<CreditGrantRow[]>(`/api/v1/admin/companies/${companyId}/credits`);
 }
 
 

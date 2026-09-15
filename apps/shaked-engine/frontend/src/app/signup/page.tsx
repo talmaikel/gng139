@@ -2,79 +2,38 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { login, setToken } from "@/lib/api";
+import { useState } from "react";
+import { ApiError, setToken, signup } from "@/lib/api";
 
-function isLocalBrowser(): boolean {
-  if (typeof window === "undefined") return false;
-  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-}
-
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
+  const [companyName, setCompanyName] = useState("");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [autoLoggingIn, setAutoLoggingIn] = useState(true);
-
-  useEffect(() => {
-    if (!isLocalBrowser()) {
-      setAutoLoggingIn(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function autoLogin() {
-      try {
-        const response = await fetch("/dev-auto-login", {
-          method: "POST",
-          cache: "no-store",
-        });
-        if (!response.ok) throw new Error("Auto-login unavailable");
-
-        const { access_token } = await response.json();
-        if (cancelled) return;
-        setToken(access_token);
-        router.replace("/dashboard");
-      } catch {
-        if (!cancelled) setAutoLoggingIn(false);
-      }
-    }
-
-    void autoLogin();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
-      const { access_token } = await login(email, password);
+      const { access_token } = await signup({
+        company_name: companyName,
+        full_name: fullName,
+        email,
+        password,
+      });
       setToken(access_token);
       router.push("/dashboard");
-    } catch {
-      setError("כתובת או סיסמה שגויות.");
+    } catch (e) {
+      // ‏422 של ולידציה (למשל מייל לא תקין) מגיע בלי משפט — ה-FALLBACK
+      // אומר ״הבקשה אינה תקינה״, וזה מספיק כדי שהגולש יבדוק את השדות.
+      setError(e instanceof ApiError ? e.detail : "ההרשמה נכשלה. אפשר לנסות שוב.");
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (autoLoggingIn) {
-    return (
-      <main className="page">
-        <div className="card" style={{ maxWidth: 380, margin: "3.5rem auto" }}>
-          <p style={{ margin: 0, color: "#6b655c", fontSize: ".82rem", letterSpacing: ".08em" }}>
-            חלופת שקד · הרצליה
-          </p>
-          <h1 style={{ margin: ".15rem 0 1.2rem" }}>מתחבר…</h1>
-        </div>
-      </main>
-    );
   }
 
   return (
@@ -83,14 +42,36 @@ export default function LoginPage() {
         <p style={{ margin: 0, color: "#6b655c", fontSize: ".82rem", letterSpacing: ".08em" }}>
           חלופת שקד · הרצליה
         </p>
-        <h1 style={{ margin: ".15rem 0 1.2rem" }}>כניסה</h1>
+        <h1 style={{ margin: ".15rem 0 1.2rem" }}>הרשמה</h1>
         <form onSubmit={handleSubmit}>
+          <div className="form-field">
+            <label htmlFor="company">שם החברה</label>
+            <input
+              id="company"
+              required
+              minLength={2}
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="full-name">שם מלא</label>
+            <input
+              id="full-name"
+              required
+              minLength={2}
+              autoComplete="name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+            />
+          </div>
           <div className="form-field">
             <label htmlFor="email">דואר אלקטרוני</label>
             <input
               id="email"
               type="email"
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               dir="ltr"
@@ -98,11 +79,13 @@ export default function LoginPage() {
             />
           </div>
           <div className="form-field">
-            <label htmlFor="password">סיסמה</label>
+            <label htmlFor="password">סיסמה (8 תווים לפחות)</label>
             <input
               id="password"
               type="password"
               required
+              minLength={8}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               dir="ltr"
@@ -111,11 +94,11 @@ export default function LoginPage() {
           </div>
           {error && <p style={{ color: "#a8321e", fontSize: ".88rem" }}>{error}</p>}
           <button type="submit" disabled={submitting}>
-            {submitting ? "מתחבר…" : "כניסה"}
+            {submitting ? "נרשם…" : "הרשמה"}
           </button>
         </form>
         <p style={{ marginTop: "1.2rem", fontSize: ".88rem" }}>
-          לקוח חדש? <Link href="/signup">הרשמה</Link>
+          כבר יש חשבון? <Link href="/login">כניסה</Link>
         </p>
       </div>
     </main>
