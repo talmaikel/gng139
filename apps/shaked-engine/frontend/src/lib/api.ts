@@ -396,7 +396,8 @@ export interface Betterment {
   breakeven_ils: number | null;
   breakeven_per_added_sqm_ils: number | null;
   breakeven_land_value_per_right_ils: number | null;
-  category: "no_threshold" | "resilient" | "marginal";
+  /** ‏`unrated` — אין מחיר דירה קיימת או שטח בנוי קיים, ולכן אין עם מה להשוות את הסף. */
+  category: "no_threshold" | "resilient" | "marginal" | "unrated";
   category_label: string;
   note: string;
   rests_on_unresolved_inputs: string[];

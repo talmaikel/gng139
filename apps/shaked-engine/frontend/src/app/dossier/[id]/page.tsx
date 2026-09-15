@@ -101,6 +101,8 @@ function EvidenceTable({ rows }: { rows: EvidenceRow[] }) {
 
 const BETTERMENT_COLOUR: Record<Betterment["category"], string> = {
   resilient: "#1f5f55", marginal: "#8a6100", no_threshold: "#a8321e",
+  // ״לא דורג״ אינו ״עמיד״ — בלי צבע שאומר משהו.
+  unrated: "#5c5750",
 };
 
 /** ‏C14 · ההיטל כתקרה ולא כ-0 ₪.
