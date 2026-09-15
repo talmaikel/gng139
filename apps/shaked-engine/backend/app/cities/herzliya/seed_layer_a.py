@@ -112,6 +112,20 @@ def usable_units(surv: dict) -> int | None:
     return units
 
 
+def width_verified(front) -> bool:
+    """הרוחב נמדד ב-frontages_v2. רשומה בפורמט הישן (בלי width_v1) אינה מאומתת."""
+    return "width_v1" in front and front.get("width") is not None
+
+
+def street_width(front):
+    """רוחב v2, ואם הוא לא מצא חזית — רוחב v1, כדי שהחלקה לא תיעלם מהסינון.
+
+    בלי הנפילה חזרה 84 חלקות היו מאבדות מספר קומות, ו-44 מהן רק כי יש להן
+    חזית צרה שעוד לא ברור אם היא רחוב.
+    """
+    return front.get("width") if front.get("width") is not None else front.get("width_v1")
+
+
 def _rows(key, surv, front, geo, sources, archive):
     """שורות הראיה לחלקה אחת. שדה בלי מקור או מיקום פשוט אינו נוצר."""
     at = f"גוש {key.split('/')[0]} חלקה {key.split('/')[1]}"
@@ -167,9 +181,11 @@ def _rows(key, surv, front, geo, sources, archive):
            f"{at} · עמ׳ 8", Certainty.DERIVED,
            "דגימת דיסק 15 מ׳ במפה שגאו-רפרנסה, התאמת צבע קרובה, הכרעת רוב"),
         ev("category_ceiling", CEILING.get(cat), "strategic_plan", f"{at} · עמ׳ 8", Certainty.DERIVED),
-        ev("street_width", front.get("width"), "govmap_parcels",
+        ev("street_width", street_width(front), "govmap_parcels",
            f'{at} · {front.get("why", "")}'[:400], Certainty.DERIVED,
-           "פער קדסטרלי, החזית הצרה קובעת; אמין עד 15 מ׳"),
+           "פער קדסטרלי עד החלקה הבנויה שממול, החזית הצרה קובעת; 27 מ-29 חזיתות "
+           "שנמדדו ביד בתוך ±1 מ׳; אמין עד 12 מ׳" if width_verified(front) else
+           "האלגוריתם החדש לא מצא חזית — רוחב האלגוריתם הקודם, שהגזים עקבית; לא מאומת"),
         ev("pilotis", surv.get("pilotis"), "agol_addresses", f"{at} · amudim"),
         ev("registration_area", geo.get("registration_area"), "strategic_plan",
            f"{at} · אזורי רישום", Certainty.DERIVED, "אזור הרישום שמכיל את מרכז החלקה"),
@@ -189,6 +205,16 @@ def _rows(key, surv, front, geo, sources, archive):
            "agol_buildings", f'{at} · ברוטו {gross} מ"ר', Certainty.ESTIMATE,
            f"טביעת רגל × קומות × k={K} · k כויל על היתר 19780028, נקודת אמת אחת"),
     ]
+
+    if street_width(front) is not None:
+        out.append(ev("street_width_verified", width_verified(front), "govmap_parcels",
+                      f"{at} · רוחב רחוב", Certainty.DERIVED,
+                      "נמדד באלגוריתם החדש" if width_verified(front) else "רוחב האלגוריתם הקודם"))
+    if front.get("narrow"):
+        out.append(ev("street_narrow_frontages",
+                      " · ".join(f'{n["width"]:g} מ׳ ({n["name"] or n["tag"]})' for n in front["narrow"]),
+                      "govmap_parcels", f"{at} · חזית מתויגת-רחוב צרה מ-8 מ׳", Certainty.DERIVED,
+                      "באימות 3 מ-6 היו רחוב ו-3 דרך שירות או חניון — נדרשת בדיקה"))
 
     if archive:
         years = [int(str(r["req"])[:4]) for r in archive if str(r.get("req", ""))[:4].isdigit()]
@@ -231,7 +257,9 @@ def _post_2005(requests) -> bool:
 
 async def seed(limit=None):
     surv = {x["key"]: x for x in _load("survivors_apt.json")}
-    front = {x["key"]: x for x in _load("frontages.json")}
+    # ‏v2: הקרן נעצרת בחלקה הבנויה שממול. נבנה ב-POC/layer_a/scripts/build_frontages.py --v2,
+    # ונבדק מול המדידות הידניות ב-POC/layer_a/validation/evaluate_widths.py.
+    front = {x["key"]: x for x in _load("frontages_v2.json")}
     geo = _load("parcels_700.geojson.json")
     sources = _load("source_fetched.json")
     facts = {f["tik"]: f for f in _load("archive_facts.json")}
@@ -340,7 +368,7 @@ def _metadata(key, surv, front):
     נמדד יכול להפיק מספר קומות ולכן `primary_candidate`; מי שלא —
     `needs_verification`, וזה מדויק ולא הנחה.
     """
-    measured = front.get("width") is not None
+    measured = street_width(front) is not None
     return {
         "source": "layer_a",
         "category": "primary_candidate" if measured else "needs_verification",

@@ -37,6 +37,24 @@ def test_every_evidence_row_carries_a_source_and_a_location():
         assert r["certainty"] in {c.value for c in Certainty}
 
 
+def test_v2_width_is_verified_and_the_fallback_is_not():
+    """רשומת frontages_v2: רוחב v2 מאומת. בלי רוחב v2 — נופלים לרוחב הקודם
+    כדי שהחלקה לא תיעלם מהסינון, אבל מסומנת כלא מאומתת."""
+    sources = _load("source_fetched.json")
+    rows = lambda front: {r["field"]: r for r in _rows("6537/222", SURV, front, {}, sources, [])}
+    v2 = rows({"width": 10.4, "width_v1": 17.3, "why": "x", "narrow": []})
+    assert v2["street_width"]["value"] == 10.4
+    assert v2["street_width_verified"]["value"] is True
+    assert "street_narrow_frontages" not in v2
+    fb = rows({"width": None, "width_v1": 33.0, "why": "x",
+               "narrow": [{"width": 7.3, "tag": "residential", "name": "אחד העם"}]})
+    assert fb["street_width"]["value"] == 33.0
+    assert fb["street_width_verified"]["value"] is False
+    assert "לא מאומת" in fb["street_width"]["method"]
+    assert fb["street_narrow_frontages"]["value"] == "7.3 מ׳ (אחד העם)"
+    assert _metadata("x/1", SURV, {"width": None, "width_v1": 33.0})["category"] == "primary_candidate"
+
+
 def test_a_field_without_a_known_source_is_not_written_at_all():
     """בלי מקור אי אפשר אפילו לטעון שחיפשנו, ולכן אין שורה — לא MISSING."""
     rows = _rows("6537/222", SURV, {"width": 15.5}, {}, {}, [])

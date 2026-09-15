@@ -58,6 +58,8 @@ FIELD_LABEL = {
     "floors": "מספר קומות קיים",
     "existing_area": "שטח בנוי קיים",
     "street_width": "רוחב הרחוב",
+    "street_width_verified": "רוחב הרחוב נמדד בשיטה המאומתת",
+    "street_narrow_frontages": "חזיתות צרות מ-8 מ׳",
     "pilotis": "קומת עמודים",
     "registration_area": "אזור רישום",
     "in_tama70": 'בתחום תמ"א 70',

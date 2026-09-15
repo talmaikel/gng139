@@ -42,7 +42,7 @@ from dataclasses import dataclass, field as dc_field
 # הפרסום של אפריל 2026 — זהה אות-באות, 14 עמודים, 13,838 תווים. כל שינוי
 # בטבלת רוחב הרחוב, בתקרות הקטגוריה או בתקן החניה מחייב העלאה כאן, אחרת
 # תיק שנמסר לא יידע לפי מה הוא חושב.
-RULES_VERSION = "herzliya-policy-2026-02+w2026-09-14"
+RULES_VERSION = "herzliya-policy-2026-02+w2026-09-15"
 
 POLICY_URL = (
     "https://handasa.herzliya.muni.il/wp-content/uploads/2026/04/"
@@ -73,6 +73,10 @@ TOLERANCE_M = 1.0
 # 29.1 כשהחזית שלה 9.9. הקרן בורחת מעבר לחלקה שממול, ולכן השגיאה חד-כיוונית:
 # הערך הוא חסם עליון, לא מדידה. ‏12.1 הוא הערך הגבוה ביותר שאומת, ו-12 הוא
 # גם הגבול שממנו הטבלה נותנת 9 קומות.
+#
+# ‏15.09: הרוחבות עברו ל-frontages_v2 (הקרן נעצרת בחלקה הבנויה שממול). מול 29
+# חזיתות שנמדדו ביד — 27 בתוך ±1 מ׳. אבל במדגם אקראי של 10 מעל 12 מ׳ עדיין
+# הגזמה אחת שהעבירה חזית מ-11 ל-17.9 (ליברמן), ולכן הסף נשאר.
 RELIABLE_MAX_M = 12.0
 UNBOUND = float("inf")   # הרחוב אינו מגביל; תקרת הקטגוריה קובעת
 
@@ -240,11 +244,19 @@ def floors_for_width(width_m: float | None):
     return UNBOUND
 
 
-def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M) -> Rights:
+def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M, *,
+           verified: bool = True, narrow: str | None = None) -> Rights:
     """תקרת הקטגוריה, מוקטנת לפי רוחב הרחוב.
 
     סורק את כל התחום [w-tol, w+tol] בצעדים של 0.1 מ׳ — פער לא מוגדר שנופל
     *בתוך* התחום ולא על קצותיו נתפס כך גם הוא.
+
+    ‏`verified=False` — הרוחב בא מהאלגוריתם הקודם, שהגזים עקבית, כי החדש לא
+    מצא חזית. מתייחסים אליו כחסם עליון בכל גובה, לא רק מעל RELIABLE_MAX_M.
+
+    ‏`narrow` — חזית צרה מ-8 מ׳ שהאלגוריתם מצא. אם היא רחוב, אין תוספת; אם
+    היא דרך שירות או כניסה לחניון, היא לא נספרת. באימות 3 מתוך 6 היו כל
+    אחד מהשניים, ולכן היא לא מכריעה — אבל שום מספר כאן אינו ודאי לידה.
     """
     r = Rights()
     ceiling = CATEGORY_CEILING.get(category or "")
@@ -255,9 +267,12 @@ def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M
     r.checks.append(Check("renewal_policy_category", "קטגוריה במפת המדיניות",
                           "passed", STRATEGIC_URL, 8, f"{category} · תקרה {ceiling}"))
 
+    narrow_text = (f"חזית צרה מ-8 מ׳: {narrow} — אם זה רחוב, אין תוספת; "
+                   "אם דרך שירות או חניון, היא לא נספרת") if narrow else None
+
     if width_m is None:
         r.checks.append(Check("street_width", "רוחב רחוב", "unknown", POLICY_URL, 8,
-                              "לא נמדד — לא ניתן להקטין את התקרה"))
+                              " · ".join(filter(None, ["לא נמדד — לא ניתן להקטין את התקרה", narrow_text]))))
         return r
 
     seen, none_hits, undefined_hits = [], 0, 0
@@ -280,12 +295,13 @@ def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M
     # מעל RELIABLE_MAX_M הרחוב האמיתי עשוי להיות צר בהרבה, ולכן התחום נפתח
     # כלפי מטה עד השורה הממוספרת הראשונה בטבלה. בלי זה, 33 מ׳ יצא ״9 קומות,
     # עבר״ — וארלוזורוב 5 נמדדה 8.
-    unreliable = width_m > RELIABLE_MAX_M
+    unreliable = width_m > RELIABLE_MAX_M or not verified
     if unreliable:
         seen.append(min(STREET_TABLE[0][1], ceiling))
 
     r.floors_low, r.floors_high = min(seen), max(seen)
-    r.floors_certain = none_hits + undefined_hits == 0 and r.floors_low == r.floors_high
+    r.floors_certain = (none_hits + undefined_hits == 0 and r.floors_low == r.floors_high
+                        and not narrow)
     # ״בחינה נקודתית״ נכונה רק לרחוב שידוע שהוא מעל 15 מ׳, ומדידת פער כזו אינה אמינה.
     r.case_by_case = not unreliable and width_m > STREET_TABLE[-1][0]
 
@@ -306,14 +322,19 @@ def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M
     bits = [_width_text(width_m)]
     if policy_silent:
         bits.append(f"{100*(none_hits+undefined_hits)//total}% מתחום המדידה ללא מספר במדיניות")
-    elif unreliable and not r.floors_certain:
+    elif not verified and r.floors_low != r.floors_high:
+        bits.append(f"רוחב מהאלגוריתם הקודם, שהגזים — לא מאומת; "
+                    f"{r.floors_low:g} עד {r.floors_high:g} קומות; מדידה בשטח תכריע")
+    elif unreliable and r.floors_low != r.floors_high:
         bits.append(f"מדידת הפער מגזימה ברחובות רחבים — הרחוב עשוי להיות צר בהרבה; "
                     f"{r.floors_low:g} עד {r.floors_high:g} קומות; מדידה בשטח תכריע")
-    elif not r.floors_certain:
+    elif r.floors_low != r.floors_high:
         bits.append(f"טווח ±{tol:g} מ׳ חוצה שורות בטבלה — {r.floors_low:g} עד {r.floors_high:g} קומות; "
                     "מדידה בשטח תכריע")
     if r.case_by_case:
         bits.append("מעל 15 מ׳ — הרחוב אינו מגביל, תקרת הקטגוריה קובעת ונתונה לבחינה נקודתית")
+    if narrow_text:
+        bits.append(narrow_text)
     r.checks.append(Check("street_width", "רוחב רחוב מול מספר קומות", status,
                           POLICY_URL, 8, " · ".join(bits)))
     r.notes.append("הערה 1 לטבלת הר/2323: מדיניות בלבד; הוועדה רשאית לקבוע אחרת.")
