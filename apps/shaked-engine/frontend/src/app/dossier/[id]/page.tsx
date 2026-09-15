@@ -343,6 +343,23 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
               </div>
             )}
 
+            {/* ‏B15 · התמהיל שהיזם חישב. המשפט מהשרת, כמו ב-PDF ובאקסל,
+                והרווח שמעליו אינו זז בגללו (בועז, 15.09). */}
+            <div style={{ marginBottom: "1rem", padding: ".7rem .9rem", borderRadius: 8,
+                          background: "#eef3f8", color: "#1d3f66", fontSize: ".86rem" }}>
+              {d.economics.unit_mix?.summary ? (
+                <>
+                  {d.economics.unit_mix.summary}{" "}
+                  <Link href={`/dossier/${id}/mix`}>שנה את התמורה ←</Link>
+                </>
+              ) : (
+                <>
+                  תמהיל הדירות עוד לא חושב.{" "}
+                  <Link href={`/dossier/${id}/mix`}>חשב תמהיל ורווחיות ←</Link>
+                </>
+              )}
+            </div>
+
             <table>
               <tbody>
                 {([

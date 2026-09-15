@@ -7,7 +7,6 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.models.opportunity import Opportunity
 from app.services.dwelling_units import load_units, resolve_existing_unit_area
 from app.services.economic.assumptions import get_assumptions
@@ -16,9 +15,7 @@ from app.services.economic.construction_costs import (
     resolve_underground_cost_per_sqm,
 )
 from app.services.economic.schemas import FeasibilityInput
-from app.services.market_data.repository import add_valuation_run, find_latest_valuation
-from app.services.market_data.schemas import TargetUnit
-from app.services.market_data.valuation import calculate_market_valuation
+from app.services.evidence_store import fields_for
 from app.services.unit_mix.optimizer import optimize_unit_mix
 from app.services.unit_mix.schemas import (
     UnitMixOptimizationInput,
@@ -70,7 +67,12 @@ def _economic_input(
 
     a = get_assumptions(opportunity.city_code)
     assessment = _assessment(opportunity)
-    floors = ((assessment.get("floors") or {}).get("low"))
+    # The stored screening assessment keeps floors flat (`floors_low`); the
+    # live one nests them. Reading only the nested form left floors=None, so
+    # construction cost averaged every height band (7,367 vs the dossier's
+    # 7,200) and the mix screen's margin sat a point below the dossier's.
+    floors = ((assessment.get("floors") or {}).get("low")
+              or assessment.get("floors_low"))
     construction = resolve_construction_cost_per_sqm(
         opportunity.city_code, developer_value=None, floors=floors
     )
@@ -80,7 +82,7 @@ def _economic_input(
         key
         for key in a.blocking()
         if key not in {
-            "average_existing_unit_sqm",  # full per-unit schedule is required below
+            "average_existing_unit_sqm",  # resolved below: confirmed schedule, else building average
             "betterment_base_ils",        # dossier product decision: expose threshold instead
             "construction_cost_per_sqm_ils",
         }
@@ -94,8 +96,8 @@ def _economic_input(
     underground_cost = (
         underground.value_ils_per_sqm or a.underground_cost_per_sqm_ils.value
     )
-    # Candidate-specific room prices replace this placeholder inside the
-    # optimizer. It still has to be a valid positive FeasibilityInput field.
+    # The optimizer overwrites this with each candidate's revenue per used sqm,
+    # which is this same price while every size sells at it (_unit_types).
     sale_price = a.sale_price_per_sqm_ils.value
 
     return (
@@ -129,60 +131,33 @@ def _economic_input(
     )
 
 
-def _priced_unit_types(valuation) -> tuple[list[UnitTypeOption], dict[str, Any]]:
-    """Re-price the beta apartment sizes from the already-fetched comparables.
+def _unit_types(sale_price_per_sqm_ils: float) -> list[UnitTypeOption]:
+    """The beta apartment sizes, all priced at the dossier's sale price.
 
-    No request to GovMap is made here. The latest immutable valuation snapshot
-    already carries the factual comparable sales, and B15 asks the existing
-    valuation engine how those sales price 75/100/125 sqm apartments.
+    15.09 (Boaz): the comparables near the parcels are second-hand deals, and
+    a second-hand price is not the sale price of a new building (B12). Pricing
+    each room count from them put the mix screen at -17.6% while the dossier
+    said +20.8% for the same parcel. Until a new-build price per room count
+    exists, every size sells at the same per-sqm price the dossier uses, so the
+    mix is chosen by area and Herzliya's constraints, and both screens rest on
+    one price.
     """
-
-    if not valuation or not valuation.comparable_sales:
-        raise UnitMixUnavailable(
-            "אין עסקאות השוואה שמורות לחלקה. יש להריץ את שלב B1/B16 לפני B15."
+    return [
+        UnitTypeOption(
+            key=f"{rooms}r",
+            rooms=rooms,
+            area_sqm=area,
+            price_per_sqm_ils=sale_price_per_sqm_ils,
         )
-
-    targets = [
-        TargetUnit(rooms=rooms, area_sqm=area, units=1)
         for rooms, area in DEFAULT_UNIT_AREAS_SQM.items()
     ]
-    repriced = calculate_market_valuation(
-        valuation.comparable_sales,
-        targets,
-        as_of_date=valuation.as_of_date,
-        lookback_months=valuation.lookback_months,
-        radius_m=valuation.radius_m,
-        fetched_at=valuation.fetched_at,
-    )
 
-    options: list[UnitTypeOption] = []
-    room_evidence: dict[str, Any] = {}
-    for target, estimate in zip(targets, repriced.room_estimates, strict=True):
-        room = int(target.rooms)
-        room_evidence[str(room)] = {
-            "area_sqm": target.area_sqm,
-            "comparable_count": estimate.comparable_count,
-            "base_price_per_sqm_ils": estimate.base_price_per_sqm_ils,
-            "confidence": estimate.confidence.value,
-        }
-        if estimate.base_price_per_sqm_ils is None:
-            continue
-        options.append(
-            UnitTypeOption(
-                key=f"{room}r",
-                rooms=target.rooms,
-                area_sqm=target.area_sqm,
-                price_per_sqm_ils=estimate.base_price_per_sqm_ils,
-            )
-        )
 
-    if not options:
-        raise UnitMixUnavailable("אין אף קבוצת חדרים עם עסקאות השוואה תקינות.")
-    if not any(56 <= option.area_sqm <= 80 for option in options):
-        raise UnitMixUnavailable(
-            "אין קבוצת דירות מתומחרת בטווח 56–80 מ״ר, ולכן אי אפשר לקיים את דרישת 25% הדירות הקטנות."
-        )
-    return options, room_evidence
+def _numeric(field: dict[str, Any] | None) -> float | None:
+    try:
+        return float((field or {}).get("value"))
+    except (TypeError, ValueError):
+        return None
 
 
 async def prepare_unit_mix(
@@ -195,10 +170,10 @@ async def prepare_unit_mix(
     """Run B15 from the opportunity's existing B3/B16/Report-0 inputs.
 
     If ``persist`` is true, the recommended mix is written to
-    ``opportunity.metadata_json['planned_unit_mix']`` and an immutable,
-    mix-adjusted valuation snapshot is added from the *already stored*
-    comparable sales. The dossier can therefore consume the transaction-based
-    blended price immediately, without a network call at read time.
+    ``opportunity.metadata_json['planned_unit_mix']``. The dossier shows it,
+    and its profit does not move: no valuation snapshot is created, because a
+    mix-weighted price of second-hand comparables must not become the sale
+    price (see ``_unit_types``).
     """
 
     if opportunity.city_code != "herzliya":
@@ -217,19 +192,36 @@ async def prepare_unit_mix(
         municipal_unit_count=opportunity.existing_units,
         existing_area_sqm=None,
     )
-    if not resolution.per_unit_detail_available:
-        raise UnitMixUnavailable(
-            "חישוב תמורה לכל בעל דירה דורש לוח דירות מלא ומאומת; ממוצע בניין אינו מספיק."
-        )
-    verified_units = [
-        unit for unit in units
-        if not unit.requires_human_review and unit.area_sqm is not None
-    ]
-    existing_areas = [float(unit.area_sqm) for unit in verified_units]
-    if len(existing_areas) != opportunity.existing_units:
-        raise UnitMixUnavailable("לוח הדירות המאומת אינו מכסה את כל הדירות הקיימות.")
-
     assumptions = get_assumptions(opportunity.city_code)
+    if resolution.per_unit_detail_available:
+        verified_units = [
+            unit for unit in units
+            if not unit.requires_human_review and unit.area_sqm is not None
+        ]
+        existing_areas = [float(unit.area_sqm) for unit in verified_units]
+        if len(existing_areas) != opportunity.existing_units:
+            raise UnitMixUnavailable("לוח הדירות המאומת אינו מכסה את כל הדירות הקיימות.")
+        existing_units_basis = "confirmed_schedule"
+    else:
+        # 15.09 (Boaz): no parcel has a confirmed schedule yet (0 of 699), so
+        # requiring one meant the screen never produced a mix. The total owner
+        # area is the same either way -- n x (average + c) equals the sum of
+        # (area_i + c) -- so developer area and profit do not depend on it.
+        # What the average blurs is how many owner apartments fall in the
+        # 56-80 sqm band. It is the same average the dossier shows, from the
+        # same resolution, and is persisted as the basis.
+        fields = await fields_for(session, opportunity.id)
+        resolution = resolve_existing_unit_area(
+            units,
+            municipal_unit_count=opportunity.existing_units,
+            existing_area_sqm=_numeric(fields.get("existing_area")),
+        )
+        average = (resolution.average_existing_unit_sqm
+                   or assumptions.average_existing_unit_sqm.value)
+        if not average:
+            raise UnitMixUnavailable("אין שטח דירה קיימת, גם לא ממוצע לבניין.")
+        existing_areas = [float(average)] * opportunity.existing_units
+        existing_units_basis = "building_average"
     default_comp = assumptions.tenant_compensation_sqm_per_existing_unit.value
     compensation = (
         compensation_sqm_per_existing_unit
@@ -237,12 +229,8 @@ async def prepare_unit_mix(
         else default_comp
     )
 
-    latest = await find_latest_valuation(
-        session,
-        opportunity_id=opportunity.id,
-        max_age_days=get_settings().source_max_age_days,
-    )
-    options, room_evidence = _priced_unit_types(latest)
+    sale_price = assumptions.sale_price_per_sqm_ils
+    options = _unit_types(sale_price.value)
 
     average_existing = sum(existing_areas) / len(existing_areas)
     economic_input, missing, assumptions_version = _economic_input(
@@ -297,10 +285,15 @@ async def prepare_unit_mix(
         "unit_area_assumption_status": "estimate",
         "unit_area_assumption_source": UNIT_AREA_ASSUMPTION_SOURCE,
         "economic_assumptions_version": assumptions_version,
-        "room_market_evidence": room_evidence,
-        "market_as_of_date": str(latest.as_of_date),
-        "market_comparable_count": latest.comparable_count,
-        "market_radius_m": latest.radius_m,
+        "existing_units_basis": existing_units_basis,
+        "average_existing_unit_sqm": round(sum(existing_areas) / len(existing_areas), 2),
+        "sale_price_per_sqm_ils": sale_price.value,
+        "sale_price_status": sale_price.status.value,
+        "sale_price_source": sale_price.source,
+        "tenant_units": best.tenant_units,
+        "developer_units": best.developer_units,
+        "unused_developer_sqm": best.unused_developer_sqm,
+        "developer_available_sqm": optimization.developer_available_sqm,
         "warnings": optimization.warnings,
         "projected_profit_ils": best.projected_profit_ils,
         "profit_margin_on_cost_ratio": best.profit_margin_on_cost_ratio,
@@ -313,29 +306,6 @@ async def prepare_unit_mix(
             "planned_unit_mix_meta": metadata,
         }
 
-        targets = [TargetUnit.model_validate(item) for item in planned_mix]
-        adjusted = calculate_market_valuation(
-            latest.comparable_sales,
-            targets,
-            as_of_date=latest.as_of_date,
-            lookback_months=latest.lookback_months,
-            radius_m=latest.radius_m,
-            fetched_at=generated_at,
-        )
-        if not adjusted.is_unit_mix_adjusted or adjusted.blended_price_per_sqm_ils is None:
-            raise UnitMixUnavailable(
-                "התמהיל נוצר, אבל אין מספיק עסקאות כדי לחשב לו מחיר משוקלל."
-            )
-        add_valuation_run(
-            session,
-            opportunity_id=opportunity.id,
-            valuation=adjusted,
-            parameters={
-                "unit_mix_state": "provided",
-                "targets": [target.model_dump(mode="json") for target in targets],
-                "source": "b15_profit_optimizer",
-            },
-        )
         await session.flush()
 
     return PreparedUnitMix(

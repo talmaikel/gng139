@@ -65,8 +65,8 @@ async def optimize_opportunity_unit_mix(
     """B15: recalculate the most profitable Herzliya mix for a compensation offer.
 
     This endpoint performs no scraping. It reuses the delivered opportunity's
-    verified apartment schedule, rights assessment, stored comparable sales and
-    existing Report-0 assumptions. Calling it again with a different
+    apartment schedule (or the building average the dossier shows), rights
+    assessment, the dossier's sale price and existing Report-0 assumptions. Calling it again with a different
     compensation value recalculates the mix immediately.
     """
 

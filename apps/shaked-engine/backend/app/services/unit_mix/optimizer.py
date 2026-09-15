@@ -52,16 +52,15 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
     developer_available = total_main_area - tenant_allocation
 
     warnings = [
-        "Herzliya policy says typical floors should contain mainly 3- and 4-room apartments, "
-        "but gives no numeric threshold; B15 does not invent one. Architectural review is required.",
-        "The 10% accessibility requirement is a design requirement, not a separate apartment-size bucket; "
-        "B15 does not double-count it in the numerical mix.",
+        "מדיניות הרצליה קובעת שבקומה טיפוסית יהיו בעיקר דירות 3 ו-4 חדרים, בלי סף מספרי; "
+        "התמהיל אינו ממציא סף, ונדרשת בדיקה אדריכלית.",
+        "דרישת 10% הדירות הנגישות היא דרישת תכנון ולא גודל דירה נפרד, ולכן אינה נספרת פעמיים בתמהיל.",
     ]
 
     if inputs.economic_missing_inputs:
         warnings.append(
-            "Generic Report 0 still has missing economic inputs; mixes can be compared, "
-            "but the economics are not deliverable until those inputs are resolved."
+            "בדוח 0 עדיין חסרים קלטים כלכליים: אפשר להשוות בין תמהילים, "
+            "אבל התרחיש אינו נמסר כתוצאה עד שיושלמו."
         )
 
     if developer_available < 0:
@@ -72,7 +71,7 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
             total_main_area_sqm=round(total_main_area, 2),
             developer_available_sqm=round(developer_available, 2),
             feasible=False,
-            warnings=warnings + ["Existing tenants plus compensation do not fit in the available main area."],
+            warnings=warnings + ["דירות הבעלים עם התמורה אינן נכנסות בשטח העיקרי הזמין."],
         )
 
     min_total_units, max_total_units = _count_ranges(inputs, tenant_units)
@@ -171,12 +170,20 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
     # on cost is the first tie-breaker, followed by exact developer revenue and
     # lower unused residual area. This matches the B15 brief while still
     # exposing margin so the UI can offer a "highest margin" alternative.
+    #
+    # 15.09: with one price per sqm for every size (see service._unit_types),
+    # many mixes use the same area and tie on all four keys, and the winner was
+    # whichever the enumeration produced first. The policy says "mainly 3 and
+    # 4 rooms", so ties now go to fewer 5+ room apartments, then to more units.
+    rooms_by_key = {option.key: option.rooms for option in options}
     candidates.sort(
         key=lambda c: (
             c.projected_profit_ils,
             c.profit_margin_on_cost_ratio,
             c.gross_developer_revenue_ils,
             -c.unused_developer_sqm,
+            -sum(n for k, n in c.counts.items() if rooms_by_key[k] >= 5),
+            c.total_new_units,
         ),
         reverse=True,
     )
@@ -184,7 +191,7 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
 
     if not candidates:
         warnings.append(
-            "No candidate mix satisfies the current area, unit-multiplier, small-unit and micro-unit constraints."
+            "אין תמהיל שעומד יחד בשטח, במכפיל הדירות, ב-25% הדירות הקטנות ובתקרת דירות המיקרו."
         )
 
     return UnitMixOptimizationResult(

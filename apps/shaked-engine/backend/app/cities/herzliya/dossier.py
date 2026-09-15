@@ -308,8 +308,16 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
     # מייבא הנחה בשקט ומציג אותה כנתון מעסקאות. הגרסה הראשונה שלי
     # השתמשה בכל הערכה שנמצאה, וכך החלישה כלל שהוא בנה ב-B1. כשהתמהיל
     # אינו מפורש ומלא — נשארים על הנחת העיר, וההערכה עדיין נחשפת בתיק.
+    #
+    # ‏**15.09 · וגם תמהיל מלא אינו מספיק: המחיר צריך להיות של דירה חדשה.**
+    # ‏B15 שומר תמהיל, ו-B1 משקלל לפיו את עסקאות GovMap — שהן דירות יד
+    # שנייה. בסימולציה המחיר ירד מ-42,000 ל-31,768, סומן ״נתון״, והרווח
+    # באלוף יגאל אלון 40 עבר מ-11% להפסד. מחיר יד שנייה הוא הצד ״לפני״
+    # של ההשבחה (`existing_price`), ולא ההכנסות. רק הערכה של דירות חדשות
+    # (B12) מכריעה כאן.
     if (valuation and valuation.blended_price_per_sqm_ils
-            and valuation.is_unit_mix_adjusted):
+            and valuation.is_unit_mix_adjusted
+            and valuation.price_basis == "new_build"):
         out["sale_price"] = {
             "value": valuation.blended_price_per_sqm_ils,
             "resolved": True,
@@ -327,9 +335,11 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
             "certainty": Certainty.ESTIMATE.value,
             # המספר נקרא מהספרייה ולא נכתב כאן, כדי שהתווית לא תשקר כשהערך ישתנה.
             "label": (f"אומדן אחיד לעיר, {a.sale_price_per_sqm_ils.value:,.0f} ₪ — {_CITY_PRICE_BASIS}. "
-                      + ("יש הערכת שווי לחלקה, אך תמהיל הדירות אינו מפורש ומלא, "
-                         "ולכן המחיר המשוקלל אינו מכריע"
-                         if valuation else "לא נמצאה הערכת שווי עדכנית לחלקה")),
+                      + ("לא נמצאה הערכת שווי עדכנית לחלקה" if not valuation
+                         else "העסקאות ליד החלקה הן של דירות יד שנייה, ולכן אינן קובעות "
+                              "מחיר לבניין חדש" if valuation.price_basis != "new_build"
+                         else "יש הערכת שווי לחלקה, אך תמהיל הדירות אינו מפורש ומלא, "
+                              "ולכן המחיר המשוקלל אינו מכריע")),
             # ההערכה נחשפת גם כשאינה מכריעה: היזם רואה את העסקאות.
             "valuation_present": valuation is not None,
             "comparable_count": valuation.comparable_count if valuation else None,
@@ -367,6 +377,53 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
         "notes": list(resolution.notes),
     }
     return out
+
+
+def _unit_mix(opp: Opportunity, a) -> dict[str, Any]:
+    """‏B15 · התמהיל שהיזם חישב במסך ״תמהיל ורווחיות״, כפי שנשמר לחלקה.
+
+    ‏**התמהיל מוצג ואינו משנה את הרווח** (בועז, 15.09): ההדגמה ביום רביעי
+    נשענת על המספרים שבתיק, והתמהיל נכנס אליהם רק אחרי שייבדק. המשפט
+    נכתב כאן ולא במסך, כדי שהמסך, ה-PDF והאקסל יאמרו אותו דבר.
+    """
+    meta = opp.metadata_json or {}
+    rows = [r for r in (meta.get("planned_unit_mix") or [])
+            if isinstance(r, dict) and r.get("units")]
+    info = meta.get("planned_unit_mix_meta") or {}
+    if not rows or info.get("source") != "b15_profit_optimizer":
+        return {"rows": [], "summary": None}
+
+    rows = sorted(rows, key=lambda r: r["rooms"])
+    developer_units = sum(int(r["units"]) for r in rows)
+    parts = " · ".join(f'{int(r["units"])} × {r["rooms"]:g} חד׳ ({r["area_sqm"]:,.0f} מ״ר)'
+                       for r in rows)
+    comp = info.get("compensation_sqm_per_existing_unit")
+    summary = f"תמהיל דירות ליזם (אומדן): {parts} — {developer_units} דירות ליזם"
+    if info.get("tenant_units"):
+        summary += f' ו-{info["tenant_units"]} לבעלי הדירות'
+    if comp is not None:
+        summary += f" · לפי תוספת של {comp:g} מ״ר לכל דירה קיימת"
+    if info.get("existing_units_basis") == "building_average":
+        summary += " · שטח הדירות הקיימות לפי ממוצע הבניין"
+    # ‏באלוף יגאל אלון 6 מכפיל הדירות מתיר 30 דירות ליזם, ו-1,261 מ״ר מתוך
+    # 4,461 לא נכנסים לאף תמהיל. הרווח בתיק מוכר את כל השטח, ולכן זה נאמר.
+    unused, available = info.get("unused_developer_sqm"), info.get("developer_available_sqm")
+    if unused and available and unused > 0.05 * available:
+        summary += (f" · {unused:,.0f} מ״ר מתוך {available:,.0f} ליזם לא נכנסים לתמהיל "
+                    "(מגבלת מספר הדירות), והרווח בתיק מניח שהם נמכרים")
+    library_comp = a.tenant_compensation_sqm_per_existing_unit.value
+    if comp is not None and abs(comp - library_comp) > 1e-9:
+        summary += f" · הרווח בתיק עדיין מחושב לפי {library_comp:g} מ״ר"
+    return {
+        "rows": rows,
+        "developer_units": developer_units,
+        "tenant_units": info.get("tenant_units"),
+        "compensation_sqm_per_existing_unit": comp,
+        "existing_units_basis": info.get("existing_units_basis"),
+        "status": info.get("status", "estimate"),
+        "generated_at": info.get("generated_at"),
+        "summary": summary,
+    }
 
 
 # פחות מזה חציון אינו מייצג; עדיף סף בלבד מאשר אומדן על שלוש עסקאות.
@@ -682,6 +739,7 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             underground_cost, underground_cost_per_sqm),
         "live_inputs": live,
         "caveats": _scenario_caveats(assessment, fields, live, opp.existing_units),
+        "unit_mix": _unit_mix(opp, a),
         "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
                       "ואינה קובעת זכויות או היתכנות מאושרת.",
     }
