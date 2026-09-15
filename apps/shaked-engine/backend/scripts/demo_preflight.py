@@ -20,6 +20,8 @@
 """
 import asyncio
 import datetime as dt
+import os
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -66,7 +68,15 @@ def check_code() -> None:
         report(WARN, "יש שינויים שלא נשמרו בקוד המוצר", dirty.splitlines()[0])
 
 
+# ‏E8 · טל הריץ את הסקריפט ב-Windows וקיבל שלושה ✗ שגויים: אין שם `lsof`,
+# ‏`ps` ו-`pgrep`, והנתיב ל-alembic שונה. בלי הכלים אי אפשר לדעת מאיזו תיקייה
+# השרת רץ — וזה נאמר כאזהרה, לא כחוסם שקרי. ‏`/health` עדיין בודק שהוא עונה.
+POSIX_TOOLS = all(shutil.which(tool) for tool in ("lsof", "ps"))
+
+
 def _listener(port: int) -> tuple[str, Path | None, dt.datetime | None]:
+    if not POSIX_TOOLS:
+        return "", None, None
     pid = sh("lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t").split("\n")[0]
     if not pid:
         return "", None, None
@@ -86,6 +96,10 @@ def _last_commit(path: Path) -> dt.datetime | None:
 
 
 def check_processes() -> None:
+    if not POSIX_TOOLS:
+        report(WARN, "אין lsof/ps במחשב הזה — לא נבדק מאיזו תיקייה השרתים רצים ומתי עלו",
+               "לוודא ביד: השרת הופעל מחדש אחרי git pull, מתוך apps/shaked-engine/backend")
+        return
     for port, where, name, reloads in ((8000, BACKEND, "השרת", False), (3000, FRONTEND, "שרת המסכים", True)):
         pid, cwd, started = _listener(port)
         if not pid:
@@ -125,7 +139,8 @@ def check_http() -> None:
 
 
 def check_migrations() -> None:
-    alembic = str(BACKEND / ".venv" / "bin" / "alembic")
+    venv_bin = BACKEND / ".venv" / ("Scripts" if os.name == "nt" else "bin")
+    alembic = str(venv_bin / ("alembic.exe" if os.name == "nt" else "alembic"))
     current = sh(alembic, "current", cwd=BACKEND).split()
     heads = sh(alembic, "heads", cwd=BACKEND).split()
     if current and heads and current[0] == heads[0]:
@@ -149,7 +164,13 @@ def check_auth() -> None:
 
 
 def check_tunnel() -> None:
-    running = sh("pgrep", "-fl", "cloudflared")
+    if shutil.which("pgrep"):
+        running = sh("pgrep", "-fl", "cloudflared")
+    elif os.name == "nt":
+        running = "cloudflared" in sh("tasklist", "/FI", "IMAGENAME eq cloudflared.exe").lower()
+    else:
+        report(WARN, "לא נבדק אם מנהרה פתוחה — אין pgrep במחשב הזה")
+        return
     if running:
         report(WARN, "מנהרת cloudflared פתוחה",
                "הכתובת ציבורית — להשאיר רק בזמן ההדגמה, ולסגור מיד אחריה")

@@ -28,9 +28,27 @@ uv venv --python 3.12 --seed .venv
 uv pip install --python .venv/bin/python -r requirements.txt -r requirements-dev.txt
 cp .env.example .env
 .venv/bin/alembic upgrade head        # צריך להגיע ל-0007_add_market_data
-.venv/bin/python -m pytest -q         # 251 עוברות
+.venv/bin/python -m pytest -q
 .venv/bin/uvicorn app.main:app --port 8000
 ```
+
+**Postgres מקומי בלי docker** (טל, Windows, 15.09): למשתמש `shaked` אין הרשאת
+CREATEDB, ולכן הבדיקות לא יוצרות לבד את מסד הבדיקות ו-113 מהן מדלגות בשקט.
+פעם אחת, ממשתמש `postgres`:
+
+```bash
+createdb -U postgres -O shaked shaked_engine_test
+psql -U postgres -d shaked_engine_test -c "CREATE EXTENSION postgis"
+```
+
+**חברת ההדגמה במסד נקי** — אין אותה אחרי זריעה. ‏`demo_setup.py` יוצר אותה, והסיסמה
+נשאלת ולא מודפסת:
+
+```bash
+.venv/bin/python scripts/demo_setup.py --apply
+```
+
+ב-Windows הנתיב הוא `.venv\Scripts\python` במקום `.venv/bin/python`.
 
 ## Frontend
 
