@@ -104,9 +104,13 @@ def test_the_target_is_compared_and_not_assumed():
     מבוסס), וההחזר נראה גבולי -- כ-17%, מתחת ליעד. אחרי שעלות הבנייה
     הוחלפה בסקר עלויות אמיתי של לשכת שמאי מקרקעין בישראל (יוני 2026, ממוצע
     ~7,367 ₪/מ״ר להרצליה+רמת השרון), אותו מועמד בדיוק נמצא **מעל** היעד.
-    זו הייתה ההערכה שהשתנתה, לא הפרויקט."""
+    זו הייתה ההערכה שהשתנתה, לא הפרויקט.
+
+    ‏15.09 (הנחות v4): מחיר המכירה ירד מ-45,000 ל-42,000 ₪ למ״ר — אומדן מוצלב
+    מעסקאות יד שנייה ומפער חדש/יד שנייה — והמועמד ירד ל-~29%. עדיין מעל
+    היעד של 20%, ולכן הטענה של הבדיקה לא השתנתה, רק הטווח."""
     r = calc(FI(**BASE))
-    assert 0.30 < r.profit_margin_on_cost_ratio < 0.40
+    assert 0.25 < r.profit_margin_on_cost_ratio < 0.35
     assert calc(FI(**BASE, developer_profit_target_ratio=0.20)).meets_developer_target
     assert not calc(FI(**BASE, developer_profit_target_ratio=0.40)).meets_developer_target
 

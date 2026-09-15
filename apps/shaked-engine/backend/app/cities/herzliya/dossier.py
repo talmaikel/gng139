@@ -271,6 +271,10 @@ def _not_delivered(missing: list[str]) -> str | None:
             f"מה שאינו ידוע: {names}.")
 
 
+# ‏15.09.2026 · הבסיס לאומדן מחיר דירה חדשה בהרצליה (ראו assumptions.py).
+_CITY_PRICE_BASIS = "עסקאות יד שנייה ליד החלקות (GovMap) × פער חדש/יד שנייה בהרצליה (מדלן, 15.09)"
+
+
 async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> dict[str, Any]:
     """שני קלטים שיש להם מקור אמיתי לכל חלקה — ולא הנחה אחידה לעיר.
 
@@ -311,10 +315,11 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
         out["sale_price"] = {
             "value": a.sale_price_per_sqm_ils.value, "resolved": False,
             "certainty": Certainty.ESTIMATE.value,
-            "label": ("אומדן אחיד לעיר — יש הערכת שווי לחלקה, אך תמהיל "
-                      "הדירות אינו מפורש ומלא, ולכן המחיר המשוקלל אינו מכריע"
-                      if valuation else
-                      "אומדן אחיד לעיר — לא נמצאה הערכת שווי עדכנית לחלקה"),
+            # המספר נקרא מהספרייה ולא נכתב כאן, כדי שהתווית לא תשקר כשהערך ישתנה.
+            "label": (f"אומדן אחיד לעיר, {a.sale_price_per_sqm_ils.value:,.0f} ₪ — {_CITY_PRICE_BASIS}. "
+                      + ("יש הערכת שווי לחלקה, אך תמהיל הדירות אינו מפורש ומלא, "
+                         "ולכן המחיר המשוקלל אינו מכריע"
+                         if valuation else "לא נמצאה הערכת שווי עדכנית לחלקה")),
             # ההערכה נחשפת גם כשאינה מכריעה: היזם רואה את העסקאות.
             "valuation_present": valuation is not None,
             "comparable_count": valuation.comparable_count if valuation else None,
