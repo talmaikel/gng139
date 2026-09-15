@@ -252,6 +252,30 @@ def _scenario_caveats(assessment: dict, fields: dict, live: dict,
         out.append({"id": "existing_area_estimate",
                     "text": f"השטח הבנוי הקיים, שעליו נשענת התקרה, הוא אומדן{how} ולא מדידה."})
 
+    # ‏**R1 · 15.09 · האם התקרה נכנסת בגובה המותר.** הדר 19: ‏9,776 מ״ר על
+    # מגרש של 1,108 מ״ר ב-7–8 קומות — כל קומה צריכה 110%–126% מהמגרש. אין
+    # במנוע בדיקת תכסית, והרווח מחושב על כל התקרה. זה חשבון בלבד (תקרה ÷
+    # קומות ÷ מגרש) ולא כלל מהמדיניות; הבדיקה מול התכסית המותרת היא #78.
+    cap, floors = assessment.get("cap_400_sqm"), assessment.get("floors") or {}
+    lot = _numeric(fields.get("parcel_area"))
+    high, low = floors.get("high"), floors.get("low")
+    if cap and lot and high:
+        plate_high = cap / high / lot
+        plate_low = cap / low / lot if low else plate_high
+        span = f"{low}–{high}" if low and low != high else f"{high}"
+        share = (f"{plate_high:.0%}" if abs(plate_low - plate_high) < 0.005
+                 else f"{plate_high:.0%}–{plate_low:.0%}")
+        if plate_high > 1:
+            out.append({"id": "floor_plate_exceeds_lot", "text": (
+                f"התקרה אינה נכנסת בגובה המותר: {cap:,.0f} מ״ר ב-{span} קומות הם {share} "
+                f"משטח המגרש ({lot:,.0f} מ״ר) בכל קומה. הזכויות בפועל נמוכות מהתקרה, "
+                "והרווח מחושב על שטח שכנראה לא ייבנה.")})
+        elif plate_high > 0.6:
+            out.append({"id": "floor_plate_tight", "text": (
+                f"כדי שהתקרה תיכנס ב-{span} קומות, כל קומה צריכה {share} משטח המגרש "
+                f"({cap / high:,.0f} מ״ר ומעלה). עם קווי בניין ותכסית מותרת ייתכן שהתקרה "
+                "אינה נכנסת, והרווח מחושב על כולה.")})
+
     # ‏**הסייג אומר שהנתון אינו מוכרע, ולא רק מאיפה הוא בא.** הנוסח הקודם
     # צירף את תווית המקור, ובחלקה עם דירה אחת מאומתת מתוך 28 יצא
     # ״שטח דירה קיימת ממוצע: לוח דירות מהיתר, אומת ידנית.״ — משפט שנקרא

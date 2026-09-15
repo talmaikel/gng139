@@ -974,3 +974,38 @@ def test_a_source_field_name_reaches_the_developer_in_hebrew():
     assert _readable("תיק 1613 · 6 בקשות") == "תיק 1613 · 6 בקשות"
     assert _readable("residential_zoning") == "residential_zoning"
     assert _readable(None) is None
+
+
+# ── R1 · מה שהביקורת על אלוף יגאל אלון 40 והדר 19 מצאה ──
+
+@pytest.mark.asyncio
+async def test_a_ceiling_that_cannot_fit_in_the_allowed_floors_is_said(session):
+    """הדר 19: ‏9,776 מ״ר ב-7–8 קומות על מגרש של 1,108 מ״ר — ‏110%–126%
+    מהמגרש בכל קומה. הרווח חושב על כל התקרה, ואף משטח לא אמר את זה."""
+    from app.cities.herzliya import exports
+    from app.cities.herzliya.surfaces import _cells
+
+    c, opp = await _delivered_with(session, "9681", parcel_area=700.0)
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    cav = {x["id"]: x["text"] for x in d["economics"]["caveats"]}
+    assert "floor_plate_exceeds_lot" in cav
+    assert "אינה נכנסת בגובה המותר" in cav["floor_plate_exceeds_lot"]
+    assert "700 מ״ר" in cav["floor_plate_exceeds_lot"]
+    strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
+    assert cav["floor_plate_exceeds_lot"] in strings
+
+    c2, roomy = await _delivered_with(session, "9682", parcel_area=5000.0)
+    ids = [x["id"] for x in (await build(session, HerzliyaCityRules(), roomy.id, c2.id))["economics"]["caveats"]]
+    assert not any(i.startswith("floor_plate") for i in ids)
+
+
+@pytest.mark.asyncio
+async def test_the_initiative_gate_says_what_was_not_checked(session):
+    """״לא נמצאה יוזמה של אחר״ עבר על סמך העדר בקשה בארכיון. רוב היוזמות
+    מתחילות בהחתמת דיירים, הרבה לפני בקשה."""
+    c, _, opp = await _delivered(session, block="9683")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    gate = next(g for g in d["rights"]["checks"] if g["id"] == "occupied")
+    assert gate["status"] == "passed"                      # הארכיון נבדק, והמסירה לא נחסמת
+    assert "בארכיון" in gate["label"]
+    assert "החתמת דיירים" in gate["detail"] and "לא נבדקה" in gate["detail"]
