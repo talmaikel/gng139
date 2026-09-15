@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { use } from "react";
 import { ApiError, downloadDossier, getDossier,
-         type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
+         type Betterment, type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
 import {
   ASSUMPTION_STATUS, GATE_STATUS,
 } from "@/lib/labels";
@@ -96,6 +96,64 @@ function EvidenceTable({ rows }: { rows: EvidenceRow[] }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+const BETTERMENT_COLOUR: Record<Betterment["category"], string> = {
+  resilient: "#1f5f55", marginal: "#8a6100", no_threshold: "#a8321e",
+};
+
+/** ‏C14 · ההיטל כתקרה ולא כ-0 ₪.
+ *
+ *  ההשבחה אינה ידועה, והתרחיש מחושב בלעדיה. ״היטל השבחה 0 ₪״ אמר ליזם
+ *  שאין היטל; מה שאנחנו באמת יודעים הוא עד כמה הרווח סופג אותו. */
+function BettermentBlock({ b }: { b: Betterment }) {
+  const { levy } = b;
+  return (
+    <div style={{ marginTop: "1rem", paddingTop: ".9rem", borderTop: "1px solid #eee" }}>
+      <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: ".5rem" }}>
+        <div>
+          <div style={{ color: "#6b655c", fontSize: ".8rem" }}>
+            תקרת היטל ההשבחה · {Math.round(levy.rate * 100)}% מההשבחה
+          </div>
+          <strong style={{ fontSize: "1.3rem", color: BETTERMENT_COLOUR[b.category] }}>
+            {levy.viable_up_to_ils != null ? `עד ${ils(levy.viable_up_to_ils)}` : "אין תקרה"}
+          </strong>
+        </div>
+        {b.breakeven_land_value_per_right_ils != null && (
+          <div>
+            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שווי מ״ר זכויות שמאפס את הרווח</div>
+            <strong style={{ fontSize: "1.3rem" }}>{ils(b.breakeven_land_value_per_right_ils)}</strong>
+          </div>
+        )}
+        {levy.low_ils != null && levy.high_ils != null && (
+          <div>
+            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>אומדן ההיטל</div>
+            <strong style={{ fontSize: "1.3rem" }}>{ils(levy.low_ils)}–{ils(levy.high_ils)}</strong>
+          </div>
+        )}
+      </div>
+      <p style={{ margin: ".2rem 0", fontWeight: 600, color: BETTERMENT_COLOUR[b.category], fontSize: ".88rem" }}>
+        {b.category_label}
+      </p>
+      {levy.within_range === false && (
+        <p style={{ margin: ".2rem 0", fontWeight: 600, color: "#a8321e", fontSize: ".88rem" }}>
+          הקצה העליון של אומדן ההיטל גבוה מהתקרה.
+        </p>
+      )}
+      <p style={{ margin: ".2rem 0", color: "#6b655c", fontSize: ".82rem" }}>{b.note}</p>
+      {b.estimate_withheld_because && (
+        <p style={{ margin: ".2rem 0", color: "#6b655c", fontSize: ".82rem" }}>
+          אין אומדן להיטל: {b.estimate_withheld_because}
+        </p>
+      )}
+      {b.rests_on_unresolved_inputs.length > 0 && (
+        <p style={{ margin: ".2rem 0", color: "#8a6100", fontSize: ".82rem" }}>
+          התקרה זזה עם {b.rests_on_unresolved_inputs.join(" ועם ")}
+          {b.rests_on_unresolved_inputs.length === 1 ? ", שעדיין אינו מוכרע." : ", שעדיין אינם מוכרעים."}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -246,7 +304,9 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
           <>
             <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
               <div>
-                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>רווח צפוי</div>
+                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>
+                  רווח צפוי{d.economics.betterment ? " · לפני היטל השבחה" : ""}
+                </div>
                 <strong style={{ fontSize: "1.3rem" }}>{ils(s.projected_profit_ils)}</strong>
               </div>
               <div>
@@ -262,6 +322,22 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
               </div>
             </div>
 
+            {/* ‏C14 · הסייג צמוד למספר שהוא מסייג. הנוסח מהשרת, כמו
+                ‏`not_delivered_reason` — אותו משפט במסך, ב-PDF ובאקסל. */}
+            {d.economics.caveats.length > 0 && (
+              <div style={{ marginBottom: "1rem", padding: ".7rem .9rem", borderRadius: 8,
+                            background: "#fbf4e4", color: "#6b4c00", fontSize: ".86rem" }}>
+                <strong style={{ display: "block", marginBottom: ".3rem", color: "#8a6100" }}>
+                  על מה הרווח נשען
+                </strong>
+                <ul style={{ margin: 0, paddingInlineStart: "1.1rem" }}>
+                  {d.economics.caveats.map((c) => (
+                    <li key={c.id} style={{ marginBottom: ".2rem" }}>{c.text}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <table>
               <tbody>
                 {([
@@ -275,7 +351,8 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                   ["שיווק ותיווך", -s.total_marketing_ils],
                   ["ערבויות וביטוח", -s.total_guarantees_ils],
                   ["מימון", -s.total_finance_ils],
-                  ["היטל השבחה", -s.betterment_levy_ils],
+                  // ‏0 ₪ כאן אינו ״אין היטל״ אלא ״ההשבחה אינה ידועה״. התקרה מתחת.
+                  ...(d.economics.betterment ? [] : [["היטל השבחה", -s.betterment_levy_ils]]),
                 ] as [string, number][]).map(([name, value]) => (
                   <tr key={name}>
                     <td>{name}</td>
@@ -285,8 +362,16 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                     </td>
                   </tr>
                 ))}
+                {d.economics.betterment && (
+                  <tr>
+                    <td>היטל השבחה</td>
+                    <td style={{ textAlign: "end", color: "#8a6100" }}>לא נכלל ברווח · ראו תקרה</td>
+                  </tr>
+                )}
               </tbody>
             </table>
+
+            {d.economics.betterment && <BettermentBlock b={d.economics.betterment} />}
           </>
         ) : (
           <p style={{ color: "#8a6100" }}>{d.economics.why ?? "לא חושב תרחיש."}</p>
