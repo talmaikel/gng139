@@ -67,7 +67,10 @@ def betterment_from_land_values(
 
 def breakeven_betterment(profit_at: Callable[[float], float],
                          *, rate: float, iterations: int = 60) -> float | None:
-    """ההשבחה שמאפסת את הרווח, או `None` כשאין רווח גם בהשבחה אפס.
+    """ההשבחה שבה `profit_at` מגיע לאפס, או `None` כשהוא אינו חיובי גם בהשבחה אפס.
+
+    ‏E1 · התיק מעביר כאן ״רווח מעל הרווח המזערי״ (רווח − 16% × עלות), ולכן
+    הסף הוא ההשבחה שמשאירה 16% — לא ההשבחה שמאפסת את הרווח.
 
     ‏`None` אינו כישלון אלא ממצא: **אין שיעור השבחה שהופך את הפרויקט
     לכדאי.** הבעיה שם אינה ההיטל.
@@ -148,19 +151,22 @@ def residual_land_value(
     הרווח שהוא דורש. אם ההכנסות חייבות לכסות עלות ועוד רווח יעד::
 
         הכנסות = (1 + רווח_יעד) × עלות_כוללת
-        עלות_כוללת = (עלויות_ללא_קרקע + קרקע) × (1 + מימון)
+        עלות_כוללת = קרקע + עלויות_ללא_קרקע × (1 + מימון)
 
-    ומכאן::
+    ‏(E1 · 15.09: המימון אינו מחושב על הקרקע — שווי דירות הבעלים.) ומכאן::
 
-        קרקע = הכנסות / ((1 + רווח_יעד)(1 + מימון)) − עלויות_ללא_קרקע
+        קרקע = הכנסות / (1 + רווח_יעד) − עלויות_ללא_קרקע × (1 + מימון)
 
     **זה חילוץ אחד, לא שניים.** הצד ה״קיים״ של ההשבחה מגיע מעסקאות
     שכנות אמיתיות (B1) ולא מחילוץ שני, ולכן השגיאה אינה מתעצמת פעמיים
     כפי שהיא מתעצמת בשומה שמחלצת את שני הצדדים.
     """
-    before_finance_excl_land = total_cost_ils / (1 + finance_ratio) - land_cost_ils
-    affordable = total_revenue_ils / ((1 + developer_profit_target_ratio) * (1 + finance_ratio))
-    return affordable - before_finance_excl_land
+    # עלות כוללת = קרקע + עלויות_ללא_קרקע × (1 + מימון), ולכן החלק שאינו
+    # קרקע, כולל המימון שלו, הוא פשוט ההפרש. ‏`finance_ratio` נשאר בחתימה
+    # לקוראים הקיימים.
+    del finance_ratio
+    non_land_with_finance = total_cost_ils - land_cost_ils
+    return total_revenue_ils / (1 + developer_profit_target_ratio) - non_land_with_finance
 
 
 def levy_range(

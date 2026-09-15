@@ -314,7 +314,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
               <div>
                 <div style={{ color: "#6b655c", fontSize: ".8rem" }}>רווח על העלות</div>
                 <strong style={{ fontSize: "1.3rem",
-                                 color: s.profit_margin_on_cost_ratio >= 0.2 ? "#1f5f55" : "#8a6100" }}>
+                                 color: s.meets_developer_target ? "#1f5f55" : "#8a6100" }}>
                   {Math.round(s.profit_margin_on_cost_ratio * 100)}%
                 </strong>
               </div>

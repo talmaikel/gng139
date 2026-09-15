@@ -660,8 +660,9 @@ def test_the_residual_land_value_is_what_the_developer_can_pay():
     land = residual_land_value(
         total_revenue_ils=100e6, total_cost_ils=80e6, land_cost_ils=30e6,
         finance_ratio=0.05, developer_profit_target_ratio=0.20)
-    # בדיקת ההיפוך: עם הקרקע הזו, ההכנסות הן בדיוק עלות ועוד רווח היעד
-    cost = ((80e6 / 1.05 - 30e6) + land) * 1.05
+    # בדיקת ההיפוך: עם הקרקע הזו, ההכנסות הן בדיוק עלות ועוד רווח היעד.
+    # ‏E1 · המימון אינו על הקרקע, ולכן החלק שאינו קרקע (כולל מימונו) קבוע.
+    cost = land + (80e6 - 30e6)
     assert cost == pytest.approx(100e6 / 1.20, rel=1e-9)
 
 
@@ -867,6 +868,9 @@ async def test_a_threshold_without_existing_prices_is_unrated_not_resilient(sess
     """‏9661 הוצגה ״עמיד״ בירוק עם 9% רווח על העלות: בלי עסקאות בדירות
     קיימות אין שווי מ״ר זכויות, והקוד נפל ל״עמיד״."""
     c, _, opp = await _delivered(session, block="9675")
+    # ‏E1 · מעל 16% עוד לפני היטל, אחרת אין סף לדרג (28 דירות יוצאות 12%).
+    opp.existing_units = 10
+    await session.flush()
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
     b = d["economics"]["betterment"]
     assert b["breakeven_ils"] is not None
@@ -874,6 +878,65 @@ async def test_a_threshold_without_existing_prices_is_unrated_not_resilient(sess
     assert b["category"] == "unrated"
     assert b["category_label"].startswith("לא דורג")
     assert "(לא דורג)" in b["summary"]
+
+
+@pytest.mark.asyncio
+async def test_the_levy_ceiling_leaves_the_minimum_developer_profit(session):
+    """‏E1 · 15.09 (בועז): *״הרווח היזמי חייב להיות מעל 16%״*. התקרה היא
+    ההיטל שמשאיר 16% על העלות — ולא ההיטל שמאפס את הרווח, שקרא ״עמיד״
+    לפרויקט שכבר היה מתחת ליעד."""
+    from app.cities.herzliya import exports
+    from app.cities.herzliya.surfaces import _cells
+    from app.services.economic.assumptions import get_assumptions
+    from app.services.economic.calculator import calculate_feasibility
+    from app.services.economic.schemas import FeasibilityInput
+
+    target = get_assumptions("herzliya").developer_profit_target_ratio.value
+    assert target == 0.16
+
+    c, _, opp = await _delivered(session, block="9679")
+    opp.existing_units = 10                              # מעל 16% לפני היטל
+    await session.flush()
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    econ = d["economics"]
+    b, s = econ["betterment"], econ["scenario"]
+    assert s["meets_developer_target"] and b["breakeven_ils"]
+
+    # הרווח כשההשבחה בדיוק בסף: 16% על העלות
+    rows = {k: v["value"] for k, v in econ["assumptions"].items()}
+    a = get_assumptions("herzliya")
+    at = calculate_feasibility(FeasibilityInput(
+        plot_area_sqm=opp.area_sqm, existing_units=opp.existing_units,
+        buildable_area_sqm=d["rights"]["cap_400_sqm"],
+        sale_price_per_sqm=rows["sale_price_per_sqm_ils"],
+        construction_cost_per_sqm=rows["construction_cost_per_sqm_ils"],
+        underground_cost_per_sqm=rows["underground_cost_per_sqm_ils"],
+        average_existing_unit_sqm=rows["average_existing_unit_sqm"],
+        soft_cost_ratio=a.soft_cost_ratio.value, demolition_cost_per_unit=a.demolition_cost_per_unit_ils.value,
+        developer_profit_target_ratio=target, tenant_compensation_sqm_per_existing_unit=a.tenant_compensation_sqm_per_existing_unit.value,
+        main_area_ratio=a.main_area_ratio.value, underground_ratio=a.underground_ratio.value,
+        tenant_rent_months=a.tenant_rent_months.value, tenant_monthly_rent_ils=a.tenant_monthly_rent_ils.value,
+        tenant_moving_cost_ils=a.tenant_moving_cost_ils.value, tenant_legal_cost_per_unit_ils=a.tenant_legal_cost_per_unit_ils.value,
+        marketing_ratio=a.marketing_ratio.value, guarantees_ratio=a.guarantees_ratio.value,
+        finance_ratio=a.finance_ratio.value, betterment_levy_rate=a.betterment_levy_rate.value,
+        betterment_base_ils=b["breakeven_ils"], vat_rate=a.vat_rate.value), missing_inputs=[])
+    assert at.profit_margin_on_cost_ratio == pytest.approx(target, abs=1e-3)
+    assert "רווח של 16% נשמר" in b["summary"]
+
+    # והמשפט ליד הרווח נאמר במילים, זהה במסך ובאקסל
+    assert econ["profit_verdict"].startswith("מעל הרווח היזמי המזערי (16%)")
+    strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
+    assert econ["profit_verdict"] in strings
+
+
+@pytest.mark.asyncio
+async def test_below_the_minimum_profit_there_is_no_ceiling_and_it_says_why(session):
+    c, _, opp = await _delivered(session, block="9680")     # 28 דירות: כ-12%
+    econ = (await build(session, HerzliyaCityRules(), opp.id, c.id))["economics"]
+    assert not econ["scenario"]["meets_developer_target"]
+    assert econ["betterment"]["category"] == "no_threshold"
+    assert "16% גם בלי היטל" in econ["betterment"]["summary"]
+    assert econ["profit_verdict"].startswith("מתחת לרווח היזמי המזערי (16%)")
 
 
 @pytest.mark.asyncio
