@@ -218,7 +218,8 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
     }
 
 
-def _scenario_caveats(assessment: dict, fields: dict, live: dict) -> list[dict[str, str]]:
+def _scenario_caveats(assessment: dict, fields: dict, live: dict,
+                      existing_units: int | None = None) -> list[dict[str, str]]:
     """על מה הרווח נשען ואינו ודאי — **משפטים מוכנים, נכתבים פעם אחת בשרת.** (B8)
 
     במעבר של B8 על 6537/120: פרק הזכויות כותב שהתקרה ״מנופחת״, והתרחיש
@@ -248,12 +249,20 @@ def _scenario_caveats(assessment: dict, fields: dict, live: dict) -> list[dict[s
         out.append({"id": "existing_area_estimate",
                     "text": f"השטח הבנוי הקיים, שעליו נשענת התקרה, הוא אומדן{how} ולא מדידה."})
 
+    # ‏**הסייג אומר שהנתון אינו מוכרע, ולא רק מאיפה הוא בא.** הנוסח הקודם
+    # צירף את תווית המקור, ובחלקה עם דירה אחת מאומתת מתוך 28 יצא
+    # ״שטח דירה קיימת ממוצע: לוח דירות מהיתר, אומת ידנית.״ — משפט שנקרא
+    # כאישור, ברשימה שכותרתה ״על מה הרווח נשען ואינו ודאי״.
     for key, name in (("sale_price", "sale_price_per_sqm_ils"),
                       ("unit_area", "average_existing_unit_sqm")):
         item = live.get(key) or {}
-        if not item.get("resolved"):
-            out.append({"id": f"{name}_unresolved",
-                        "text": f"{ASSUMPTION_LABEL[name]}: {item.get('label')}."})
+        if item.get("resolved"):
+            continue
+        text = f"{ASSUMPTION_LABEL[name]} אינו מוכרע לחלקה: {item.get('label')}"
+        covered = item.get("unit_count")
+        if key == "unit_area" and covered and existing_units and covered < existing_units:
+            text += f" — הלוח מכסה {covered} מתוך {existing_units} הדירות"
+        out.append({"id": f"{name}_unresolved", "text": text + "."})
     return out
 
 
@@ -370,13 +379,20 @@ def _numeric(field: dict | None) -> float | None:
         return None
 
 
-# שלוש הקטגוריות שהסף מפצל אליהן. הן אינן ניסוח אלא שדה מדורג, כי
+# ארבע הקטגוריות שהסף מפצל אליהן. הן אינן ניסוח אלא שדה מדורג, כי
 # המשמעות שלהן שונה לחלוטין: ״אין סף״ אינו ״גבולי מאוד״.
-NO_THRESHOLD, RESILIENT, MARGINAL = "no_threshold", "resilient", "marginal"
+#
+# ‏**״לא דורג״ אינו ״עמיד״.** הדירוג משווה את הסף בשווי מ״ר זכויות לסף
+# ‏`MARGINAL_LAND_VALUE_ILS`, והתרגום דורש מחיר דירה קיימת ושטח בנוי קיים.
+# כשאחד מהם חסר, הקוד נפל ל״עמיד״: ‏9661 הוצגה ״עמיד״ בירוק עם 9% רווח
+# על העלות — רק כי לא היה עם מה להשוות.
+NO_THRESHOLD, RESILIENT, MARGINAL, UNRATED = "no_threshold", "resilient", "marginal", "unrated"
 BETTERMENT_CATEGORY_LABEL = {
     NO_THRESHOLD: "לא כדאי בשום שיעור השבחה — הבעיה אינה ההיטל",
     RESILIENT: "עמיד — ההשבחה צריכה להיות גבוהה במיוחד כדי לאיין את הכדאיות",
     MARGINAL: "גבולי — ההשבחה היא שתכריע",
+    UNRATED: ("לא דורג — חסר מחיר דירה קיימת או שטח בנוי קיים, ולכן אי אפשר "
+              "לתרגם את הסף לשווי מ״ר זכויות ולומר אם הוא גבוה או נמוך"),
 }
 # מתחת לזה הסף נמוך מכדי לספוג שווי קרקע סביר באזור מרכזי. אומדן גס
 # ומכוון ככזה: הוא מדרג בין מועמדים ואינו קובע כדאיות.
@@ -447,7 +463,9 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
 
     if threshold is None:
         category = NO_THRESHOLD
-    elif per_right is None or per_right >= MARGINAL_LAND_VALUE_ILS:
+    elif per_right is None:
+        category = UNRATED
+    elif per_right >= MARGINAL_LAND_VALUE_ILS:
         category = RESILIENT
     else:
         category = MARGINAL
@@ -472,7 +490,7 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
              if existing_price is None else
              "מחיר דירה חדשה ומחיר דירה קיימת מגיעים מאותן עסקאות ואינם "
              "מופרדים. בלי הפרדה, אומדן ההשבחה יוצא אפס בכל חלקה — "
-             "והסף שלמטה אינו תלוי בכך")),
+             "והסף אינו תלוי בכך")),
         "breakeven_ils": threshold,
         "breakeven_per_added_sqm_ils": threshold / added if threshold and added else None,
         # המספר שיזם שופט בשנייה.
@@ -492,7 +510,8 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     }
 
 
-_CATEGORY_SHORT = {NO_THRESHOLD: "לא כדאי", RESILIENT: "עמיד", MARGINAL: "גבולי"}
+_CATEGORY_SHORT = {NO_THRESHOLD: "לא כדאי", RESILIENT: "עמיד", MARGINAL: "גבולי",
+                   UNRATED: "לא דורג"}
 
 
 def _millions(ils: float) -> str:
@@ -642,7 +661,7 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             a, live, construction_cost, construction_cost_per_sqm,
             underground_cost, underground_cost_per_sqm),
         "live_inputs": live,
-        "caveats": _scenario_caveats(assessment, fields, live),
+        "caveats": _scenario_caveats(assessment, fields, live, opp.existing_units),
         "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
                       "ואינה קובעת זכויות או היתכנות מאושרת.",
     }

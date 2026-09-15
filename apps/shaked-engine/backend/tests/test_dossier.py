@@ -370,7 +370,7 @@ async def test_the_dossier_says_how_much_betterment_the_project_survives(session
     b = d["economics"]["betterment"]
 
     assert b["rate"] == 0.25                         # §19(ב)(10א)
-    assert b["category"] in {"no_threshold", "resilient", "marginal"}
+    assert b["category"] in {"no_threshold", "resilient", "marginal", "unrated"}
     assert "שומה" in b["note"]                       # נאמר במפורש שזו אינה שומה
     # והסף אומר על מה הוא עדיין נשען ולא מוצג כנחרץ
     assert "שטח דירה קיימת ממוצע" in b["rests_on_unresolved_inputs"]
@@ -683,6 +683,43 @@ async def test_an_unresolved_price_is_a_caveat_and_a_resolved_one_is_not(session
     ids = [x["id"] for x in d["economics"]["caveats"]]
     assert "sale_price_per_sqm_ils_unresolved" not in ids     # 17 עסקאות
     assert "average_existing_unit_sqm_unresolved" in ids      # דירה אחת מתוך רבות
+
+
+@pytest.mark.asyncio
+async def test_a_verified_but_partial_unit_table_reads_as_a_caveat(session):
+    """‏9660: ״שטח דירה קיימת ממוצע: לוח דירות מהיתר, אומת ידנית.״ נקרא
+    כאישור. דירה אחת מאומתת מתוך 28 אינה מכריעה, והסייג צריך לומר את זה."""
+    c, opp = await _with_resolved_inputs(session, "9674")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    text = next(x["text"] for x in d["economics"]["caveats"]
+                if x["id"] == "average_existing_unit_sqm_unresolved")
+    assert "אינו מוכרע" in text
+    assert f"1 מתוך {opp.existing_units}" in text
+
+
+# ── B11 · הדירוג אינו ״עמיד״ כשאין עם מה להשוות ──
+
+@pytest.mark.asyncio
+async def test_a_threshold_without_existing_prices_is_unrated_not_resilient(session):
+    """‏9661 הוצגה ״עמיד״ בירוק עם 9% רווח על העלות: בלי עסקאות בדירות
+    קיימות אין שווי מ״ר זכויות, והקוד נפל ל״עמיד״."""
+    c, _, opp = await _delivered(session, block="9675")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    b = d["economics"]["betterment"]
+    assert b["breakeven_ils"] is not None
+    assert b["breakeven_land_value_per_right_ils"] is None
+    assert b["category"] == "unrated"
+    assert b["category_label"].startswith("לא דורג")
+    assert "(לא דורג)" in b["summary"]
+
+
+@pytest.mark.asyncio
+async def test_a_threshold_with_existing_prices_is_still_rated(session):
+    c, opp = await _with_resolved_inputs(session, "9676")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    b = d["economics"]["betterment"]
+    assert b["breakeven_land_value_per_right_ils"] is not None
+    assert b["category"] in {"resilient", "marginal"}
 
 
 def test_a_source_field_name_reaches_the_developer_in_hebrew():
