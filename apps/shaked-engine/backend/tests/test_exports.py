@@ -90,7 +90,8 @@ def _evaluate_sheet(d):
         # הנוסחאות משתמשות במפתחות לוגיים; כאן הם משתני פייתון.
         expr = expr.replace("MIN(", "min(").replace("IF(", "_if(")
         expr = re.sub(r"\{(\w+)\}", r'env["\1"]', expr)
-        env[key] = eval(expr, {"min": min, "_if": lambda c, a, b: a if c else b}, {"env": env})
+        env[key] = eval(expr, {"min": min, "_if": lambda c, a, b: a if c else b},
+                        {"env": {k: (0.0 if v is None else v) for k, v in env.items()}})
     return env
 
 

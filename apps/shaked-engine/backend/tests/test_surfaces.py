@@ -86,7 +86,8 @@ async def test_a_betterment_base_that_differs_is_caught_and_a_blank_one_is_not(s
     assert not d["economics"]["assumptions"]["betterment_base_ils"]["value"]
 
     claimed = copy.deepcopy(d)
-    claimed["economics"]["assumptions"]["betterment_base_ils"]["value"] = 4_000_000.0
+    # מספר עם סטטוס — בסיס ״חסר״ נכתב ריק תמיד (B13), ולכן הזיוף הוא של שומה
+    claimed["economics"]["assumptions"]["betterment_base_ils"].update(value=4_000_000.0, status="data")
     problems = compare(d, exports.excel(claimed), exports.pdf(d))
     assert any(p.startswith("בסיס ההשבחה:") for p in problems), problems
 
@@ -109,3 +110,80 @@ async def test_a_loss_keeps_its_minus_sign_in_the_pdf(session):
     doc = pdf_surface(exports.pdf(loss))
     assert doc.profit == -3_142_113.0
     assert doc.margin == "-21%"
+
+
+# ── B13 · הייצוא אומר מה הוא לא יודע ──
+
+def _row(cells, label):
+    import re as _re
+    for ref, (kind, val) in cells.items():
+        m = _re.fullmatch(r"A(\d+)", ref)
+        if m and kind == "s" and val == label:
+            n = m.group(1)
+            return {col: cells.get(f"{col}{n}", ("blank", None)) for col in "BCDE"}
+    raise AssertionError(f"לא נמצאה שורה: {label}")
+
+
+@pytest.mark.asyncio
+async def test_the_spreadsheet_says_where_each_input_came_from(session):
+    """‏B8 מצא 22 קלטים באקסל בלי מקור: 45,000 היה מספר בלבד."""
+    from app.cities.herzliya.surfaces import _cells
+    d = await _dossier(session, "9666")
+    cells = _cells(exports.excel(d))
+
+    price = _row(cells, "מחיר מכירה למ״ר (כולל מע״מ)")
+    assert price["B"] == ("n", 52_300.0)
+    assert price["D"] == ("s", "נתון")                     # נפתר מעסקאות
+    assert "17 עסקאות" in price["E"][1]
+
+    unit = _row(cells, "שטח דירה קיימת ממוצע")
+    assert unit["D"] == ("s", "אומדן")                     # לוח חלקי — מוצג, לא מכריע
+
+    # ובסיס ההשבחה שאינו ידוע — תא ריק, וסטטוס שאומר את זה
+    base = _row(cells, "ההשבחה (שומה)")
+    assert base["B"][0] == "blank"
+    assert base["D"] == ("s", "חסר")
+
+
+@pytest.mark.asyncio
+async def test_the_spreadsheet_carries_the_caveats_and_the_levy_ceiling(session):
+    from app.cities.herzliya.surfaces import _cells
+    d = await _dossier(session, "9667")
+    econ = d["economics"]
+    assert econ["caveats"] and econ["betterment"]["summary"]
+    strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
+    assert "על מה הרווח נשען" in strings
+    assert econ["betterment"]["summary"] in strings
+    for cav in econ["caveats"]:
+        assert cav["text"] in strings, cav["id"]
+
+
+@pytest.mark.asyncio
+async def test_the_pdf_prints_the_ceiling_and_not_a_zero_levy(session):
+    """״היטל השבחה: 0 ₪״ נקרא כמו ״אין היטל״. הבסיס דורש שומה."""
+    import pymupdf
+    from app.cities.herzliya.surfaces import _words
+    d = await _dossier(session, "9668")
+    doc = pymupdf.open(stream=exports.pdf(d), filetype="pdf")
+    lines = [ln for page in doc for ln in page.get_text().splitlines()]
+
+    levy_lines = [ln for ln in lines if {"היטל", "השבחה"} <= _words(ln)]
+    assert levy_lines, "אין שורת היטל ב-PDF"
+    assert not any(ln.replace("₪", "").strip().startswith("0 ") or " 0 " in f" {ln} " for ln in levy_lines), levy_lines
+    assert any("ידוע" in _words(ln) and "כדאי" in _words(ln) for ln in levy_lines), levy_lines
+
+    text = " ".join(lines)
+    assert "נשען" in text                                   # כותרת הסייגים
+    assert "רגל" in text                                    # ״טביעת רגל״ — השטח הקיים הוא אומדן
+    # ומה שמכריע את B14 לא נשבר: המסך, ה-PDF והאקסל עדיין מסכימים
+    assert compare(d, exports.excel(d), exports.pdf(d)) == []
+
+
+def test_a_known_betterment_base_is_still_written_as_a_number():
+    """הכלל ״ריק ולא 0״ חל רק כשהבסיס חסר. שומה אמיתית נכתבת כמספר."""
+    from tests.test_exports import _with_economics
+    d = _with_economics()
+    row = d["economics"]["assumptions"]["betterment_base_ils"]
+    row.update(value=12_000_000.0, status="data")
+    assert exports._scenario_inputs(d)["levy_base"] == 12_000_000.0
+    assert not exports._levy_unknown(d["economics"])

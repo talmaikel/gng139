@@ -30,8 +30,13 @@ MUTS = [
   ("services/evidence_store.py", "שדות שאינם מכריעים נכנסים להכרעה",
    "if usable(f, get_settings().source_max_age_days, now)}", "if True}"),
   # ‏B14 · שלושת המשטחים
-  ("cities/herzliya/exports.py", "האקסל כותב את מחיר העיר ולא את המחיר לחלקה",
-   '"price": g("sale_price_per_sqm_ils")', '"price": 45_000.0'),
+  ("cities/herzliya/exports.py", "האקסל אינו כותב את המחיר לחלקה",
+   '"price": "sale_price_per_sqm_ils",', '"price": "sale_price_per_sqm_ils_city",'),
+  # ‏B13 · הייצוא אומר מה הוא לא יודע
+  ("cities/herzliya/exports.py", "שורת ההיטל ב-PDF חוזרת ל-0 ₪",
+   'if key == "betterment_levy_ils" and _levy_unknown(econ):', 'if False:'),
+  ("cities/herzliya/exports.py", "הסייגים לא נכנסים לאקסל",
+   '[cav["text"] for cav in econ.get("caveats") or []]', '[]'),
   ("cities/herzliya/exports.py", "ה-PDF מדפיס רווח שאינו הרווח",
    '''line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪''',
    '''line(f'רווח: {s["projected_profit_ils"] * 1.02:,.0f} ₪'''),
