@@ -110,9 +110,21 @@ class EconomicAssumptionSet:
 
 HERZLIYA_2026_V1 = EconomicAssumptionSet(
     city_code="herzliya",
-    version="2026-v3",
+    version="2026-v4",
     effective_date=date(2026, 1, 1),
-    sale_price_per_sqm_ils=Assumption(45_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm"),
+    # ‏v4 (15.09.2026): 45,000 → 42,000, ועם מקור. 45,000 היה ניחוש אחיד לעיר.
+    # ‏42,000 מוצלב משני מקורות, ועדיין אומדן ולא נתון:
+    #   1. ‏GovMap — 44 עסקאות יד שנייה ברדיוס 500 מ׳ מחלקות ההדגמה, 12 חודשים:
+    #      חציון 32,883 ₪ למ״ר (B16, issue #18).
+    #   2. מדלן, הרצליה, 15.09.2026 (צפייה ידנית, לא שליפה): דירה חדשה יקרה בכ-40%
+    #      מיד שנייה באותו מספר חדרים (3 חד׳ +38%, 4 +41%, 5 +40%). הפער הוא
+    #      למחיר דירה; דירה חדשה גדולה יותר (ממ״ד), ולכן למ״ר כ-25%–30%.
+    #   ‏32,883 × 1.25–1.30 ≈ 41,000–43,000.
+    # **לא מכניסים עליית מחירים צפויה:** התיק מתאר את השוק ביום הבדיקה, והטעות
+    # היקרה היא מחיר גבוה מדי — הוא הופך חלקה גבולית ל״כדאית״.
+    sale_price_per_sqm_ils=Assumption(
+        42_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm",
+        source="אומדן לדירה חדשה בהרצליה: עסקאות יד שנייה ליד החלקות (GovMap) × פער חדש/יד שנייה בעיר (מדלן, 15.09.2026)"),
     # Superseded by `services/economic/construction_costs.py`: the developer's
     # own figure, then the appraisers' regional survey, decide this value now
     # (see worker.py). This entry only feeds a scenario when neither is
