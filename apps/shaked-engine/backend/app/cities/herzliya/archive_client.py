@@ -55,6 +55,28 @@ class HerzliyaArchiveError(SourceError):
     pass
 
 
+class ArchiveBlocked(HerzliyaArchiveError):
+    """The archive answered with a CAPTCHA or its "cannot display" apology, both as HTTP 200.
+
+    A stop signal (POC/layer_a/data/DATA_LAW.md): never solved, never retried in
+    a loop, and never read as an answer about the parcel.
+    """
+
+
+# Both refusals arrive as HTTP 200. The soft block is short; the same sentence
+# can appear inside a long legitimate page, hence the length bound (as in the POC).
+CAPTCHA_MARKERS = ("g-recaptcha", "VerifyUser", "נדרש אימות משתמש")
+SOFT_BLOCK_MARKER = "לא ניתן להציג את המידע המבוקש"
+SOFT_BLOCK_MAX_CHARS = 4000
+
+
+def assert_archive_page(page: str, context: str) -> None:
+    if any(marker in page for marker in CAPTCHA_MARKERS):
+        raise ArchiveBlocked(f"The archive demanded a CAPTCHA for {context}; stopping")
+    if SOFT_BLOCK_MARKER in page and len(page) < SOFT_BLOCK_MAX_CHARS:
+        raise ArchiveBlocked(f"The archive refused to display {context}; stopping")
+
+
 @dataclass
 class ArchiveDocument:
     tik_id: str
@@ -97,7 +119,14 @@ class HerzliyaArchiveClient:
 
     async def _page(self, params: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         raw, meta = await self._public.get(ARCHIVE_URL, params)
-        return raw.decode("utf-8", errors="replace"), meta
+        page = raw.decode("utf-8", errors="replace")
+        try:
+            assert_archive_page(page, str(params.get("prgname")))
+        except ArchiveBlocked:
+            # Otherwise the refusal is cached and served back as the page for a day.
+            self._public.forget(ARCHIVE_URL, params)
+            raise
+        return page, meta
 
     async def search(self, gush: str, parcel: str) -> ArchiveSearch:
         """Building-permit files ("tik binyan") for a gush/parcel, with how the archive answered."""
@@ -174,6 +203,34 @@ class HerzliyaArchiveClient:
             {"appname": "cixpa", "prgname": "GetTikFile", "siteid": SITE_ID, "t": int(tik_id), "arguments": "siteid,t"}
         )
         return {"id": str(tik_id), "source": meta, "text": text_from_html(page), "html": page}
+
+    async def requests_by_address(self, street_code: str, request_type: int) -> tuple[str, dict[str, Any]]:
+        """Requests of one type on a street (the public request search, "grp=0&t=<type>").
+
+        The type codes come from GetBakashotTypes for site 121, checked 14.09.2026:
+        22 = "בקשה להיתר לתמ"א 38", 1 = "בקשה להיתר". The page is returned whole;
+        `neighbour_precedents.parse_request_list` reads it without the applicant column.
+        """
+        return await self._page(
+            {
+                "appname": "cixpa",
+                "prgname": "GetBakashotByAddress",
+                "siteid": SITE_ID,
+                "grp": 0,
+                "t": int(request_type),
+                "c": HERZLIYA_LAMAS_CODE,
+                "s": int(street_code),
+                "h": "",
+                "l": "true",
+                "arguments": "siteId,grp,t,c,s,h,l",
+            }
+        )
+
+    async def request_page(self, request_no: int | str) -> tuple[str, dict[str, Any]]:
+        """One permit request's page (GetBakashaFile)."""
+        return await self._page(
+            {"appname": "cixpa", "prgname": "GetBakashaFile", "siteid": SITE_ID, "b": int(request_no), "arguments": "siteid,b"}
+        )
 
     async def find_documents(self, tik_id: str) -> list[ArchiveDocument]:
         """Downloadable PDF links attached to one building-permit file."""

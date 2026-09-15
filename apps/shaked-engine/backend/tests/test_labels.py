@@ -11,8 +11,10 @@ import pytest
 
 from app.cities.herzliya import rights
 from app.cities.herzliya.dossier import (
-    ASSUMPTION_LABEL, CERTAINTY_LABEL, FIELD_LABEL, _not_delivered,
+    ASSUMPTION_LABEL, CERTAINTY_LABEL, FIELD_LABEL, PRECEDENT_COLUMN_LABEL, _not_delivered,
+    _precedents,
 )
+from app.cities.herzliya.neighbour_precedents import FIELD as PRECEDENTS_FIELD, KIND_LABEL, STATUS_LABEL
 from app.models.evidence import Certainty
 from app.services.economic.assumptions import HERZLIYA_2026_V1 as A
 
@@ -46,7 +48,10 @@ def test_every_certainty_level_has_a_label():
 
 @pytest.mark.parametrize("label", sorted(ASSUMPTION_LABEL.values())
                                  + sorted(FIELD_LABEL.values())
-                                 + sorted(CERTAINTY_LABEL.values()))
+                                 + sorted(CERTAINTY_LABEL.values())
+                                 + sorted(PRECEDENT_COLUMN_LABEL.values())
+                                 + sorted(KIND_LABEL.values())
+                                 + sorted(STATUS_LABEL.values()))
 def test_labels_are_not_identifiers(label):
     assert not IDENTIFIER.search(label), f"מזהה קוד בתוך תווית: {label!r}"
 
@@ -63,3 +68,16 @@ def test_the_sentence_the_developer_reads_carries_no_identifier():
 
 def test_no_sentence_when_nothing_is_missing():
     assert _not_delivered([]) is None
+
+
+def test_the_precedents_section_prints_labels_and_not_identifiers():
+    """״פרויקטים באותו רחוב״ — כל עמודה, כל סוג וכל מצב מגיעים עם תווית מהשרת."""
+    assert PRECEDENTS_FIELD in FIELD_LABEL           # אם יתיישן, יודפס ב״מקורות שהתיישנו״
+    section = _precedents({"value": {"status": "budget_reached", "projects": [
+        {"address": "הנוטרים 10", "kind": "tama38_2", "kind_label": KIND_LABEL["tama38_2"],
+         "floors": None, "units": None, "permit_year": None, "request": 20130622}]}})
+    printed = [section["title"], section["note"], section["status_label"],
+               *section["columns"].values(), *(v for r in section["rows"] for k, v in r.items()
+                                               if k not in ("source_url",) and isinstance(v, str))]
+    for text in printed:
+        assert not IDENTIFIER.search(text), text

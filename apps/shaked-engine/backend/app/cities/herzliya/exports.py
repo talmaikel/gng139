@@ -140,6 +140,25 @@ def pdf(d: dict[str, Any]) -> bytes:
              7.5, (0.55, 0.53, 0.49), gap=4, indent=14)
     rule()
 
+    # ── פרויקטים באותו רחוב ──
+    pre = d.get("neighbour_precedents")
+    if pre:
+        line(pre["title"], 13, (0.06, 0.15, 0.12), gap=3)
+        line(pre["note"], 8.5, (0.42, 0.40, 0.36), gap=4)
+        line(f'{pre.get("street") or ""}  ·  {pre["status_label"]}'
+             + (f'  ·  נשלף {(pre.get("retrieved_at") or "")[:10]}' if pre.get("retrieved_at") else ""),
+             8.5, (0.42, 0.40, 0.36), gap=5)
+        cols = pre["columns"]
+        for r in pre["rows"]:
+            line(f'{r["address"]}  ·  {r["kind_label"]}', 9.5, gap=1)
+            line(f'{cols["floors"]} {r["floors"]}  ·  {cols["units"]} {r["units"]}  ·  '
+                 f'{cols["permit_year"]} {r["permit_year"]}  ·  {cols["distance"]} {r["distance"]}',
+                 9, gap=1, indent=14)
+            if r.get("floors_quote"):
+                line(f'כלשון הבקשה: {r["floors_quote"]}', 7.5, (0.55, 0.53, 0.49), gap=1, indent=14)
+            line(r["source"], 7.5, (0.55, 0.53, 0.49), gap=4, indent=14)
+        rule()
+
     # ── תרחיש ──
     econ = d["economics"]
     line("תרחיש כלכלי", 13, (0.06, 0.15, 0.12), gap=3)
@@ -355,6 +374,21 @@ def excel(d: dict[str, Any]) -> bytes:
     sc.merge_range(tail + 4, 0, tail + 4, 2,
                    f'כללים {v["rules_version"]} · נתונים {v["data_version"] or "—"} · '
                    f'תבנית {v["template_version"]}', note)
+
+    # ── פרויקטים באותו רחוב ── (אחרון: ‏sheet2 הוא התרחיש, ובדיקות נשענות על כך)
+    pre = d.get("neighbour_precedents")
+    if pre:
+        ps = wb.add_worksheet("באותו רחוב")
+        ps.right_to_left()
+        keys = list(pre["columns"])
+        for col, width in enumerate((22, 26, 10, 10, 10, 22, 24, 52)):
+            ps.set_column(col, col, width)
+        ps.write_row(0, 0, [pre["columns"][k] for k in keys] + ["קישור"], head)
+        for i, r in enumerate(pre["rows"], 1):
+            ps.write_row(i, 0, [r[k] for k in keys] + [r.get("source_url") or ""], wrap)
+        foot = len(pre["rows"]) + 2
+        ps.write(foot, 0, pre["status_label"], note)
+        ps.write(foot + 1, 0, pre["note"], note)
 
     wb.close()
     return buf.getvalue()

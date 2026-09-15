@@ -157,6 +157,13 @@ class AsyncPublicClient:
         self._write_cache(key, response.content, meta)
         return response.content, meta
 
+    def forget(self, url: str, params: dict[str, Any] | None = None) -> None:
+        """Drop a cached GET answer. For a source that says "no" with HTTP 200 (a CAPTCHA page),
+        so the refusal is not served back from cache as if it were the page."""
+        key = hashlib.sha256(final_url(url, params).encode()).hexdigest()
+        for suffix in (".bin", ".json"):
+            (self.cache_dir / f"{key}{suffix}").unlink(missing_ok=True)
+
     async def json(self, url: str, params: dict[str, Any] | None = None, **kwargs: Any) -> tuple[Any, dict[str, Any]]:
         body, meta = await self.get(url, params, **kwargs)
         return self._parse_json(body, meta), meta

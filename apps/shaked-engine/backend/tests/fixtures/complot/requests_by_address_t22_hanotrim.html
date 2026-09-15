@@ -1,0 +1,191 @@
+﻿<script>
+  $.getScript(siteBaseURL + 'handasi2016/Scripts/Complot/Request/request-list.js');
+</script>
+
+<div id="request-list-container" style="display: none">
+  <h2 translatable-text>תוצאות איתור בקשות</h2>
+
+    <hr id="search-result-heading-hr" />
+    <p>
+    <span translatable-text>נמצאו</span>
+         4
+    <span translatable-text>בקשות</span>
+  </p>
+    <table class="table table-hover" id="results-table">
+    <thead class="complot-thead">
+      <tr translatable-title translatable-bs-title data-toggle="tooltip" title="ניתן ללחוץ על מנת למיין לפי עמודה">
+        <th></th>
+        <th><span translatable-text>מספר בקשה</span><br /><span translatable-text>(רישוי זמין)</span></th>
+        <th style="vertical-align: middle" class="hidden-on-mobile" translatable-text>תיק בניין</th>
+        <th style="vertical-align: middle" class="hidden-on-mobile" translatable-text>תאריך הגשה</th>
+        <th style="vertical-align: middle" class="hidden-on-mobile" translatable-text>שם המבקש</th>
+        <th style="vertical-align: middle" translatable-text>כתובת</th>
+                <th style="vertical-align: middle" class="hidden-on-mobile" translatable-text>גוש</th>
+        <th style="vertical-align: middle" class="hidden-on-mobile" translatable-text>חלקה</th>
+                <th style="vertical-align: middle" class="center-text on-mobile-archive" translatable-text>ארכיב מסמכים</th>
+              </tr>
+    </thead>
+    <tbody>
+            <tr>
+        <td>
+          <a onclick="disableDocButton(this)" href="javascript:getRequest(20130622)" aria-label="הצגת הבקשה"
+            ><span class="glyphicon glyphicon-new-window black-font-color"></span
+          ></a>
+        </td>
+        <td>
+          <a onclick="disableDocButton(this)" href="javascript:getRequest(20130622)">20130622</a
+          ><br />
+        </td>
+        <td class="hidden-on-mobile">
+          <a href="javascript:getBuilding(3704)">3704</a>
+        </td>
+        <td class="hidden-on-mobile">08/10/2013</td>
+        <td class="hidden-on-mobile">חברה לדוגמה בע"מ</td>
+        <td>הנוטרים 10 הרצליה</td>
+                <td class="hidden-on-mobile">6537</td>
+        <td class="hidden-on-mobile">181</td>
+                <td class="center-text on-mobile-archive">
+                              <button
+            href="#modal-window"
+            data-toggle="modal"
+            data-keyboard="true"
+            class="btn btn-default btn-xs black-font-color openBtn"
+            onClick="showRequestDocs(20130622, this)"
+            aria-haspopup="true"
+            aria-label="ארכיב מסמכים עבור בקשה 20130622"
+          >
+            <span class="glyphicon glyphicon-file black-font-color archive-btn-id"></span>
+          </button>
+                            </td>
+              </tr>
+            <tr>
+        <td>
+          <a onclick="disableDocButton(this)" href="javascript:getRequest(20140997)" aria-label="הצגת הבקשה"
+            ><span class="glyphicon glyphicon-new-window black-font-color"></span
+          ></a>
+        </td>
+        <td>
+          <a onclick="disableDocButton(this)" href="javascript:getRequest(20140997)">20140997</a
+          ><br />
+        </td>
+        <td class="hidden-on-mobile">
+          <a href="javascript:getBuilding(3699)">3699</a>
+        </td>
+        <td class="hidden-on-mobile">29/07/2014</td>
+        <td class="hidden-on-mobile">חברה לדוגמה בע"מ</td>
+        <td>הנוטרים 2 הרצליה</td>
+                <td class="hidden-on-mobile">6537</td>
+        <td class="hidden-on-mobile">133</td>
+                <td class="center-text on-mobile-archive">
+                              <button
+            href="#modal-window"
+            data-toggle="modal"
+            data-keyboard="true"
+            class="btn btn-default btn-xs black-font-color openBtn"
+            onClick="showRequestDocs(20140997, this)"
+            aria-haspopup="true"
+            aria-label="ארכיב מסמכים עבור בקשה 20140997"
+          >
+            <span class="glyphicon glyphicon-file black-font-color archive-btn-id"></span>
+          </button>
+                            </td>
+              </tr>
+            <tr>
+        <td>
+          <a onclick="disableDocButton(this)" href="javascript:getRequest(20150432)" aria-label="הצגת הבקשה"
+            ><span class="glyphicon glyphicon-new-window black-font-color"></span
+          ></a>
+        </td>
+        <td>
+          <a onclick="disableDocButton(this)" href="javascript:getRequest(20150432)">20150432</a
+          ><br />
+        </td>
+        <td class="hidden-on-mobile">
+          <a href="javascript:getBuilding(3699)">3699</a>
+        </td>
+        <td class="hidden-on-mobile">22/04/2015</td>
+        <td class="hidden-on-mobile">חברה לדוגמה בע"מ</td>
+        <td>הנוטרים 2 הרצליה</td>
+                <td class="hidden-on-mobile">6537</td>
+        <td class="hidden-on-mobile">133</td>
+                <td class="center-text on-mobile-archive">
+                              <button
+            href="#modal-window"
+            data-toggle="modal"
+            data-keyboard="true"
+            class="btn btn-default btn-xs black-font-color openBtn"
+            onClick="showRequestDocs(20150432, this)"
+            aria-haspopup="true"
+            aria-label="ארכיב מסמכים עבור בקשה 20150432"
+          >
+            <span class="glyphicon glyphicon-file black-font-color archive-btn-id"></span>
+          </button>
+                            </td>
+              </tr>
+            <tr>
+        <td>
+          <a onclick="disableDocButton(this)" href="javascript:getRequest(20161092)" aria-label="הצגת הבקשה"
+            ><span class="glyphicon glyphicon-new-window black-font-color"></span
+          ></a>
+        </td>
+        <td>
+          <a onclick="disableDocButton(this)" href="javascript:getRequest(20161092)">20161092</a
+          ><br />
+        </td>
+        <td class="hidden-on-mobile">
+          <a href="javascript:getBuilding(3704)">3704</a>
+        </td>
+        <td class="hidden-on-mobile">21/11/2016</td>
+        <td class="hidden-on-mobile">חברה לדוגמה בע"מ</td>
+        <td>הנוטרים 10 הרצליה</td>
+                <td class="hidden-on-mobile">6537</td>
+        <td class="hidden-on-mobile">181</td>
+                <td class="center-text on-mobile-archive">
+                              <button
+            href="#modal-window"
+            data-toggle="modal"
+            data-keyboard="true"
+            class="btn btn-default btn-xs black-font-color openBtn"
+            onClick="showRequestDocs(20161092, this)"
+            aria-haspopup="true"
+            aria-label="ארכיב מסמכים עבור בקשה 20161092"
+          >
+            <span class="glyphicon glyphicon-file black-font-color archive-btn-id"></span>
+          </button>
+                            </td>
+              </tr>
+          </tbody>
+  </table>
+  </div>
+
+<style>
+  .dataTables_wrapper .dataTables_length {
+      float: right;
+  }
+
+  #t4-no-result {
+  	text-align: center;
+  }
+  #t4-no-result img {
+  	width: 80px;
+  	height: 80px;
+  	scale: 150%
+  }
+  #t4-no-result b {
+  	font-size: 25px;
+  }
+
+  @media only screen and (max-width: 768px) {
+  .on-mobile-archive {
+      ;
+  }
+  .on-mobile-t4 {
+      display:none;
+  }
+  #t4-no-result img {
+     scale: 70%;
+  }
+
+  }
+</style>
+<!-- fixture: recorded GetBakashotByAddress t=22 page; applicant names replaced -->

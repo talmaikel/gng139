@@ -1,0 +1,440 @@
+﻿<style>
+  .btn-header:after {
+    font-family: 'Glyphicons Halflings';
+    content: '\e114';
+    float: left;
+    margin-right: 15px;
+  }
+
+  .btn-header.collapsed:after {
+    content: '\e079';
+  }
+
+  .btn-header,
+  .btn-header:hover,
+  .btn-header:focus {
+    border-radius: 0;
+    border-top: 1px solid black;
+    font-weight: bold;
+    font-size: 16px;
+    text-align: right;
+    width: 100%;
+  }
+
+  .spn {
+    padding-right: 3px;
+  }
+  .tr-hidden {
+    display: none;
+  }
+</style>
+
+<script>
+  $.getScript(siteBaseURL + 'handasi2016/Scripts/Complot/Request/min/request-result.min.js');
+</script>
+
+<div class="top-nav-bar" id="top-navbar-id">
+  <h2 translatable-text>פרטי בקשה להיתר</h2>
+  <hr />
+  <section>
+    <div class="row" id="result-title-div-id">
+      <div class="col-sm-4">
+        <div class="result-title top-navbar-info-desc" translatable-text>מספר הבקשה:</div>
+        <div class="top-navbar-info-desc">20130622</div>
+      </div>
+      <div class="col-sm-4">
+        <div class="result-title top-navbar-info-desc" translatable-text>כתובת:</div>
+        <div class="top-navbar-info-desc">הנוטרים 10 הרצליה</div>
+      </div>
+      <div class="col-sm-4">
+        <div class="result-title top-navbar-info-desc" translatable-text>תאריך הגשה:</div>
+        <div class="top-navbar-info-desc">08/10/2013</div>
+      </div>
+    </div>
+  </section>
+  <hr />
+
+  <div class="row hidden-xs" id="btn-group-row-id">
+    <div class="btn-group" style="width: 100%" id="btn-group-id" role="navigation" aria-label="קישור לאיזור בדף">
+      <input
+        translatable-value
+        role="link"
+        type="button"
+        class="btn btn-primary btn-responsive"
+        onclick="scrollToElement('#info-main')"
+        value="מידע כללי"
+      />
+      <input
+        translatable-value
+        role="link"
+        type="button"
+        class="btn btn-primary btn-responsive"
+        onclick="scrollToElement('#mahut')"
+        value="מהות"
+      />
+      <input
+        translatable-value
+        role="link"
+        type="button"
+        class="btn btn-primary btn-responsive"
+        onclick="scrollToElement('#baaley-inyan')"
+        value="בעלי עניין"
+      />
+            <input
+        translatable-value
+        role="link"
+        type="button"
+        class="btn btn-primary btn-responsive"
+        onclick="scrollToElement('#gushim-helkot')"
+        value="גוש וחלקה"
+      />
+            <input
+        translatable-value
+        role="link"
+        type="button"
+        class="btn btn-primary btn-responsive"
+        onclick="scrollToElement('#events')"
+        value="אירועים"
+      />
+            <input
+        translatable-value
+        role="link"
+        type="button"
+        class="btn btn-primary btn-responsive"
+        onclick="scrollToElement('#vaada')"
+        value="ישיבות"
+      />
+            <input
+        translatable-value
+        role="link"
+        type="button"
+        class="btn btn-primary btn-responsive"
+        onclick="scrollToElement('#requirments')"
+        value="דרישות"
+      />
+      <input
+        translatable-value
+        role="link"
+        type="button"
+        class="btn btn-primary btn-responsive"
+        onclick="scrollToElement('#archive')"
+        value="ארכיב מסמכים"
+      />
+    </div>
+  </div>
+</div>
+
+<nav class="navbar navbar-default navbar-fixed-top" id="sticky-nav-bar">
+  <div class="container-fluid row">
+    <div class="dropdown dropdown-pos">
+      <button
+        class="btn dropdown-toggle col-md-1 col-sm-1 col-xs-1 hidden-print"
+        id="dropdownMenu1"
+        data-toggle="dropdown"
+      >
+        <span class="glyphicon glyphicon-menu-hamburger"></span>
+        <span translatable-text>ניווט</span>
+      </button>
+
+      <div id="navbar-titles-id" class="hidden-xs">
+        <div class="col-md-2 col-sm-2 margin-top-navbar-info">
+          <h5 class="result-title" translatable-text>מספר הבקשה:</h5>
+        </div>
+        <div class="col-md-3 col-sm-3 margin-top-navbar-info">
+          <h5>20130622</h5>
+        </div>
+        <div class="col-md-2 col-sm-2 margin-top-navbar-info">
+          <h5 class="result-title" translatable-text>כתובת:</h5>
+        </div>
+        <div class="col-md-4 col-sm-3 margin-top-navbar-info">
+          <h5>הנוטרים 10 הרצליה</h5>
+        </div>
+      </div>
+
+      <div class="visible-xs" id="navbar-xs-id">
+        <div class="result-title">
+          <h2>
+            <span translatable-text>פרטי בקשה</span>
+            20130622
+          </h2>
+        </div>
+      </div>
+
+      <ul class="dropdown-menu" id="dropdown-menu-nav-id" aria-labelledby="dropdownMenu1">
+        <li>
+          <input
+            translatable-value
+            role="link"
+            type="button"
+            class="btn li-max-width"
+            onclick="scrollToElement('#info-main')"
+            value="מידע כללי"
+          />
+        </li>
+        <li>
+          <input
+            translatable-value
+            role="link"
+            type="button"
+            class="btn li-max-width"
+            onclick="scrollToElement('#mahut')"
+            value="מהות"
+          />
+        </li>
+        <li>
+          <input
+            translatable-value
+            role="link"
+            type="button"
+            class="btn li-max-width"
+            onclick="scrollToElement('#baaley-inyan')"
+            value="בעלי עניין"
+          />
+        </li>
+                <li>
+          <input
+            translatable-value
+            role="link"
+            type="button"
+            class="btn li-max-width"
+            onclick="scrollToElement('#gushim-helkot')"
+            value="גוש וחלקה"
+          />
+        </li>
+                <li>
+          <input
+            translatable-value
+            role="link"
+            type="button"
+            class="btn li-max-width"
+            onclick="scrollToElement('#events')"
+            value="אירועים"
+          />
+        </li>
+                <li>
+          <input
+            translatable-value
+            role="link"
+            type="button"
+            class="btn li-max-width"
+            onclick="scrollToElement('#vaada')"
+            value="ישיבות"
+          />
+        </li>
+                <li>
+          <input
+            translatable-value
+            role="link"
+            type="button"
+            class="btn li-max-width"
+            onclick="scrollToElement('#requirments')"
+            value="דרישות"
+          />
+        </li>
+        <li>
+          <input
+            translatable-value
+            role="link"
+            type="button"
+            class="btn li-max-width"
+            onclick="scrollToElement('#archive')"
+            value="ארכיב מסמכים"
+          />
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="row" id="info-main" tabindex="-1">
+  <div>
+    <h3 class="result-title result-title-bottom" translatable-text>מידע כללי</h3>
+  </div>
+
+  <table class="table table-condensed" role="presentation">
+    <tbody>
+      <tr>
+        <td class="title" translatable-text>מספר תיק בניין</td>
+        <td>
+          <a href="javascript:getBuilding(3704)">3704</a>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="title" translatable-text>מספר הבקשה ברישוי זמין</td>
+        <td></td>
+      </tr>
+
+      <tr>
+        <td class="title" translatable-text>סוג הבקשה</td>
+        <td>בקשה להיתר לתמ"א 38</td>
+      </tr>
+
+      <tr>
+        <td class="title" translatable-text>שימוש עיקרי</td>
+        <td>בית מגורים משותף</td>
+      </tr>
+
+      <tr>
+        <td class="title" translatable-text>תיאור הבקשה</td>
+        <td>תמ"א 38 - תוספת וחיזוק</td>
+      </tr>
+
+      
+            <tr>
+        <td class="title" translatable-text>מספר היתר</td>
+        <td>20130622</td>
+      </tr>
+
+      <tr>
+        <td class="title" translatable-text>תאריך הפקת היתר</td>
+        <td>11/11/2015</td>
+      </tr>
+      
+      <tr>
+        <td class="title" translatable-text>שטח עיקרי</td>
+        <td>1001.53</td>
+      </tr>
+
+      <tr>
+        <td class="title" translatable-text>שטח שירות</td>
+        <td>356.73</td>
+      </tr>
+
+      <tr>
+        <td class="title" translatable-text>סך מספר יחידות דיור המבוקשות</td>
+        <td>6</td>
+      </tr>
+
+      
+      
+      
+          </tbody>
+  </table>
+</div>
+
+<div class="row" id="mahut" tabindex="-1">
+  <div>
+    <h3 class="result-title result-title-bottom" translatable-text>מהות הבקשה</h3>
+  </div>
+
+  <table class="table table-condensed" role="presentation">
+    <tbody>
+                  <tr>
+        <td>‏בקשה להארכת תוקף החלטה מס' 540 בתאריך 07/10/2014</td>
+      </tr>
+            <tr>
+        <td>‏&nbsp</td>
+      </tr>
+            <tr>
+        <td>‏תוספת וחיזוק בית מגורים משותף בן 3 קומות על עמודים,12 יחי"ד ע"פ תמ"א 38:</td>
+      </tr>
+            <tr>
+        <td>‏תוספת 2.5 קומות, 6 יחי"דיור, ממ"דים לדירות החדשות,מרפסת גג,פרגולה,</td>
+      </tr>
+            <tr>
+        <td>‏לדירות הקיימות: חדרים מחוזקים ,תוספת שטח  ע"י סגירת מרפסות קיימות</td>
+      </tr>
+            <tr>
+        <td>‏ וגזוזטראות,מעלית, הריסת מדרגות קיימות ובנית מדרגות חדשות.</td>
+      </tr>
+            <tr>
+        <td>‏בקומת קרקע: הגדלת לובי כניסה, מחסנים דירתיים,חדרים טכניים,מחסן</td>
+      </tr>
+            <tr>
+        <td>‏ משותף לדיירים,חניות , מתקני חניה, פתוח שטח וגדרות</td>
+      </tr>
+            <tr>
+        <td>‏- סה"כ 6.5 קומות כולל קומת הקרקע, סה"כ 18 יחי"דיור.</td>
+      </tr>
+            <tr>
+        <td>‏-אישור מהנדס הועדה לרוחב פרוזדור מול דלת המעלית 110 ס"מ</td>
+      </tr>
+                </tbody>
+  </table>
+</div>
+
+<div class="row" id="baaley-inyan" tabindex="-1">
+  <div>
+    <div
+      id="btn-baaley-inyan"
+      type="button"
+      class="btn btn-defailt btn-header collapsed"
+      data-toggle="collapse"
+      data-target="#table-baaley-inyan"
+      role="button"
+    >
+      <span translatable-text>בעלי עניין</span>
+      <span class="spn">(5)</span>
+    </div>
+  </div>
+  <div id="table-baaley-inyan" class="collapse" style="height: 0px">
+    <table class="table table-condensed">
+      <thead>
+        <tr>
+          <th class="th-results-header" translatable-text>סוג בעל עניין</th>
+          <th class="th-results-header" translatable-text>שם בעל עניין</th>
+        </tr>
+      </thead>
+      <tbody>
+                        <tr>
+          <td class="title">מבקש</td>
+          <td>ישראל ישראלי</td>
+        </tr>
+                <tr>
+          <td class="title">בעל הנכס</td>
+          <td>חברה לדוגמה בע"מ</td>
+        </tr>
+                <tr>
+          <td class="title">עורך</td>
+          <td>אדריכל לדוגמה</td>
+        </tr>
+                <tr>
+          <td class="title">מהנדס</td>
+          <td>מהנדס לדוגמה</td>
+        </tr>
+                <tr>
+          <td class="title">בודק אזורי</td>
+          <td>בודק לדוגמה</td>
+        </tr>
+                      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row" id="gushim-helkot" tabindex="-1">
+  <div>
+    <div
+      id="btn-gushim-helkot"
+      type="button"
+      class="btn btn-defailt btn-header collapsed"
+      data-toggle="collapse"
+      data-target="#table-gushim-helkot"
+      role="button"
+    >
+      <span translatable-text>גושים וחלקות</span>
+      <span class="spn">(0)</span>
+    </div>
+  </div>
+  <div id="table-gushim-helkot" class="collapse" style="height: 0px">
+    <table class="table table-condensed">
+      <thead>
+        <tr>
+          <th class="th-results-header"></th>
+          <th class="th-results-header" translatable-text>מספר גוש</th>
+          <th class="th-results-header" translatable-text>מספר חלקה</th>
+          <th class="th-results-header" translatable-text>מספר מגרש</th>
+          <th class="th-results-header" translatable-text>יעוד</th>
+        </tr>
+      </thead>
+      <tbody>
+                <tr>
+          <td colspan="5" translatable-text>לא נמצאו נתונים</td>
+        </tr>
+              </tbody>
+    </table>
+  </div>
+</div>
+<!-- ShowGushHelka -->
+
+<!-- fixture: recorded page trimmed after the parcels section; interested-party names replaced with fictional ones -->

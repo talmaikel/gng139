@@ -12,7 +12,8 @@ from app.models.tenant import User
 from app.cities.herzliya.archive_facts import (ArchiveUnavailable, NoBuildingFile,
                                                fetch_for_delivery)
 from app.cities.herzliya import exports
-from app.cities.herzliya.dossier import NotEntitled, build as build_dossier
+from app.cities.herzliya.archive_client import ArchiveBlocked, HerzliyaArchiveError
+from app.cities.herzliya.dossier import NotEntitled, _entitlement, build as build_dossier
 from app.services.deliveries import (NoCredits, NotDeliverable, deliver, delivered_ids,
                                      for_company, provenance)
 
@@ -141,6 +142,37 @@ async def export_dossier(
         content=payload, media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="shakdan-{stem}.{fmt}"'},
     )
+
+
+@router.post("/{city_code}/{opportunity_id}/neighbour-precedents")
+async def neighbour_precedents(
+    city_code: str,
+    opportunity_id: UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> dict[str, Any]:
+    """״פרויקטים באותו רחוב״ לתיק שכבר נמסר לחברה — לפי לחיצה, לא ברקע.
+
+    **לא בתוך `deliver`:** עד שש פניות לארכיון בקצב של אחת לעשר שניות הן
+    דקה של המתנה, על ראיה שאינה מכריעה דבר. שליפה שנעשתה נשמרת, וקריאה
+    חוזרת בתוך חלון הרעננות אינה פונה לארכיון כלל.
+    """
+    from app.cities.herzliya.neighbour_precedents import fetch_for_dossier
+
+    get_city_rules(city_code)
+    try:
+        await _entitlement(session, opportunity_id, user.company_id)
+        out = await fetch_for_dossier(session, opportunity_id)
+    except NotEntitled as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    # ‏CAPTCHA הוא אות עצירה. ‏503 אומר ״לא עכשיו״ — ואיש לא מנסה שוב אוטומטית.
+    except ArchiveBlocked as e:
+        raise HTTPException(status_code=503, detail="הארכיון העירוני ביקש אימות משתמש. "
+                                                    "הבדיקה נעצרה ולא נשמר דבר; אפשר לנסות מאוחר יותר.") from e
+    except HerzliyaArchiveError as e:
+        raise HTTPException(status_code=503, detail=f"הארכיון העירוני לא השיב כמצופה: {e}") from e
+    await session.commit()
+    return out
 
 
 @router.post("/{city_code}/{opportunity_id}/deliver")

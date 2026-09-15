@@ -119,8 +119,8 @@ def never_reach_the_archive(request, monkeypatch):
             "HerzliyaArchiveClient במפורש."
         )
 
-    monkeypatch.setattr(HerzliyaArchiveClient, "find_tik_ids", refuse)
-    monkeypatch.setattr(HerzliyaArchiveClient, "file", refuse)
+    for name in ("find_tik_ids", "file", "streets", "requests_by_address", "request_page"):
+        monkeypatch.setattr(HerzliyaArchiveClient, name, refuse)
 
 
 @pytest.fixture

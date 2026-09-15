@@ -1,0 +1,40 @@
+﻿<script src="https://www.google.com/recaptcha/api.js?hl=iw" async defer></script>
+
+        <div class="container">
+            <div class="row">
+                <div class="col-md-5 col-md-offset-4">
+                    <div class="panel panel-default boxshadow">
+                        <div class="panel-heading">
+                            <h3 class="panel-title" translatable-text>אימות משתמש</h3>
+                        </div>
+                        <div class="panel-body">
+                            <fieldset>
+                                <div>
+                                    <p>נדרש אימות משתמש</p>
+                                </div>
+                                <div class="g-recaptcha complot" data-sitekey="6LcZ9vgUAAAAAH2PAp3wYTpGtCQ8-w7F89fq30QG"></div>
+                                <br>
+                                <button type="button" id="btnSubmit" class="btn btn-md btn-primary" onclick="btnSubmit_Clicked()">בצע אימות</button>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<script>
+	$('.g-recaptcha').not('.complot').remove();
+</script>
+
+<script>
+function btnSubmit_Clicked()
+{
+    var Id = 194851;
+	var recaptcha = grecaptcha.getResponse();
+
+    var urlformat = "{0}VerifyUser&id={1}&r={2}&arguments=id,r";
+	var url = urlformat.format(xpaBaseURL, Id, recaptcha);		
+
+	goTo(url);		
+}    
+</script>

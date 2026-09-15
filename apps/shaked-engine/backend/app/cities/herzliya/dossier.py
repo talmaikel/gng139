@@ -69,6 +69,8 @@ FIELD_LABEL = {
     "strengthened": "בוצע חיזוק בהיתר",
     "occupied": "יוזמה פעילה של אחר",
     "post_2005_permit": "היתר אחרי 18.5.2005",
+    # אינו שער ואינו בטבלת הראיות — אבל אם התיישן הוא מופיע ב״מקורות שהתיישנו״.
+    "neighbour_precedents": "פרויקטים באותו רחוב",
 }
 
 # ההנחות הכלכליות. **התווית חיה כאן ולא בדפדפן.** עד היום היא הייתה
@@ -112,6 +114,58 @@ CERTAINTY_LABEL = {
     "community": "קהילתי", "ocr_candidate": "קריאת OCR", "ai_candidate": "קריאת מודל",
     "estimate": "אומדן", "missing": "נבדק ולא נמצא", "conflict": "סתירה בין מקורות",
 }
+
+
+# ‏״פרויקטים באותו רחוב״ — ‏`neighbour_precedents.py`. **פרק נפרד ולא שורת ראיה:**
+# הערך הוא טבלה, והוא אינו מכריע דבר. בטבלת הראיות הוא היה מודפס כ-JSON
+# עם ״מכריע: כן״ (ודאות נגזרת), כלומר בדיוק מה שהוא לא.
+PRECEDENTS_TITLE = "פרויקטים באותו רחוב"
+PRECEDENT_COLUMN_LABEL = {
+    "address": "כתובת",
+    "kind_label": "סוג",
+    "floors": "קומות",
+    "units": "יח״ד",
+    "permit_year": "שנת היתר",
+    "distance": "מרחק",
+    "source": "מקור",
+}
+PRECEDENTS_NOTE = ("תקדים בלבד. מספר הקומות נקרא מהבקשה להיתר עצמה, רק כשהיא מציינת סכום "
+                   "מפורש של הבניין — ואינו משמש לקביעת הקומות המותרות לחלקה.")
+
+
+def _precedents(field: dict | None) -> dict[str, Any]:
+    """הפרק כפי שהוא מודפס: שורות מוכנות, תוויות מהשרת, ו״לא צוין״ במקום ניחוש."""
+    from app.cities.herzliya.neighbour_precedents import NOT_STATED, STATUS_LABEL
+
+    base = {"title": PRECEDENTS_TITLE, "columns": PRECEDENT_COLUMN_LABEL, "note": PRECEDENTS_NOTE}
+    value = (field or {}).get("value")
+    if not isinstance(value, dict):
+        return {**base, "status": "not_checked", "status_label": "טרם נבדק", "rows": []}
+    source = (field or {}).get("source") or {}
+
+    def distance(p):
+        parts = [f'{p["distance_m"]:,} מ׳'] if p.get("distance_m") is not None else []
+        gap = p.get("house_number_gap")
+        parts.append("אותו מספר בית" if gap == 0 else f"{gap} מספרי בית" if gap is not None else NOT_STATED)
+        return " · ".join(parts)
+
+    rows = [{
+        "address": p.get("address") or NOT_STATED,
+        "kind_label": p.get("kind_label") or NOT_STATED,
+        "floors": f'{p["floors"]:g}' if p.get("floors") is not None else NOT_STATED,
+        "floors_quote": p.get("floors_quote"),
+        "units": str(p["units"]) if p.get("units") is not None else NOT_STATED,
+        "units_quote": p.get("units_quote"),
+        "permit_year": str(p["permit_year"]) if p.get("permit_year") else NOT_STATED,
+        "distance": distance(p),
+        "source": f'בקשה {p["request"]}' + (f' · תיק {p["tik"]}' if p.get("tik") else ""),
+        "source_url": p.get("source_url"),
+    } for p in value.get("projects") or []]
+    street = value.get("street") or {}
+    return {**base, "status": value.get("status"),
+            "status_label": value.get("status_label") or STATUS_LABEL.get(value.get("status"), value.get("status")),
+            "street": street.get("name"), "rows": rows,
+            "retrieved_at": source.get("retrieved_at"), "source_url": source.get("url")}
 
 
 class NotEntitled(Exception):
@@ -683,6 +737,8 @@ async def assemble(session, city_rules, opp: Opportunity, delivery: Delivery | N
     opportunity_id = opp.id
     assessment = await city_rules.assess(session, opportunity_id)
     fields = await fields_for(session, opportunity_id)
+    from app.cities.herzliya.neighbour_precedents import FIELD as PRECEDENTS_FIELD
+    precedents = fields.pop(PRECEDENTS_FIELD, None)
     economics = await _economics(session, opp, assessment, fields)
 
     return {
@@ -699,6 +755,7 @@ async def assemble(session, city_rules, opp: Opportunity, delivery: Delivery | N
         "evidence": _evidence_rows(fields),
         "economics": economics,
         "gaps": _gaps(assessment, fields, economics),
+        "neighbour_precedents": _precedents(precedents),
         # ‏DOS-04: גרסת נתונים, כללים ותבנית.
         "versions": {
             "rules_version": (delivery and delivery.rules_version) or rights.RULES_VERSION,
