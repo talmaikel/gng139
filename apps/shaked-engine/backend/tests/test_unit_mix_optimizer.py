@@ -86,8 +86,16 @@ def test_optimizer_respects_herzliya_unit_multiplier_and_small_unit_share():
 def test_candidates_are_ranked_by_report_zero_projected_profit():
     result = optimize_unit_mix(_input())
 
-    profits = [candidate.projected_profit_ils for candidate in result.candidates]
-    assert profits == sorted(profits, reverse=True)
+    ranking = [
+        (
+            candidate.projected_profit_ils,
+            candidate.profit_margin_on_cost_ratio,
+            candidate.gross_developer_revenue_ils,
+            -candidate.unused_developer_sqm,
+        )
+        for candidate in result.candidates
+    ]
+    assert ranking == sorted(ranking, reverse=True)
     assert all(candidate.total_cost_ils > 0 for candidate in result.candidates)
     assert all(candidate.developer_revenue_ils > 0 for candidate in result.candidates)
 
