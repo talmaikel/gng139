@@ -253,6 +253,54 @@ export interface DeliveredOpportunity {
   data_version: string;
   why_selected: Record<string, unknown> | null;
   assessment: Assessment | null;
+  /** ‏S1 · המפה של הלקוח מציגה רק את מה שנמסר לו */
+  geometry?: MultiPolygonGeometry | null;
+  centroid?: { lat: number; lng: number } | null;
+}
+
+// ── S1/S2 · סריקה: פוליגון → עד שלושה תיקים, בלי לחשוף מועמדים ──
+
+/** מספרים בלבד, לפני החיוב. */
+export interface ScanPreview {
+  found: number;
+  offer: number;
+  ready: number;
+  needs_fetch: number;
+  credits_remaining: number;
+}
+
+export interface ScanResult {
+  delivered: DeliveredOpportunity[];
+  requested: number;
+  skipped: number;
+  retryable: boolean;
+  message: string | null;
+  credits_remaining: number;
+}
+
+function scanBody(polygon: object, options: SearchOptions): string {
+  return JSON.stringify({
+    polygon,
+    min_area_sqm: options.minAreaSqm,
+    min_units: options.minUnits,
+    min_floors: options.minFloors,
+    min_cap_400_sqm: options.minCap400Sqm,
+    certain_floors_only: options.certainFloorsOnly ?? false,
+    preferences: options.preferences ?? [],
+  });
+}
+
+export function previewScan(cityCode: string, polygon: object, options: SearchOptions = {}): Promise<ScanPreview> {
+  return request<ScanPreview>(`/api/v1/candidates/${cityCode}/scan/preview`, {
+    method: "POST", body: scanBody(polygon, options),
+  });
+}
+
+/** מוסר עד שלושה תיקים מהאזור. עשוי לקחת עד כדקה כשצריך לשלוף תיקי בניין. */
+export function runScan(cityCode: string, polygon: object, options: SearchOptions = {}): Promise<ScanResult> {
+  return request<ScanResult>(`/api/v1/candidates/${cityCode}/scan/deliver`, {
+    method: "POST", body: scanBody(polygon, options),
+  });
 }
 
 /** מה שכבר נמסר לחברה — SEL-02: "מוצג במאגר החברה בלבד". */
