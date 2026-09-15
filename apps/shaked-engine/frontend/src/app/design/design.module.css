@@ -1,0 +1,85 @@
+.shell {
+  background: #f5f6f8;
+  min-height: 100vh;
+  padding-block: 2.5rem 4rem;
+}
+
+/* ── vertical pager ── */
+.deckRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+@media (min-width: 900px) {
+  .deckRow { grid-template-columns: 1fr 220px; }
+}
+.deckPage {
+  height: 100%;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 1.6rem 1.8rem;
+  color: #fff;
+  background-size: cover;
+  background-position: center;
+}
+
+/* ── carousel indicators: small dots, the active one grows with a spring ── */
+.indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #cfd3da;
+  opacity: 1;
+  transition: width 0.5s cubic-bezier(0.34, 1.7, 0.5, 1), height 0.5s cubic-bezier(0.34, 1.7, 0.5, 1), background 0.25s;
+}
+.indicator[data-active] {
+  width: 12px;
+  height: 12px;
+  background: #e8894a;
+}
+.indicators {
+  bottom: -2.4rem;
+  align-items: center;
+  gap: 8px;
+}
+.control {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border: 1px solid #dde0e6;
+  background: #fff;
+  color: #5b6068;
+  box-shadow: none;
+  opacity: 1;
+}
+.control[data-inactive] {
+  opacity: 0.4;
+  cursor: default;
+}
+.stepPic {
+  border: 1px solid #dde0e6;
+  border-radius: 5px;
+  overflow: hidden;
+  line-height: 0;
+}
+.num {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #e8894a;
+  color: #13161e;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.6rem;
+}
+
+.mono {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
