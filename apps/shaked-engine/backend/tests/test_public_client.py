@@ -1,18 +1,21 @@
 import httpx
 import pytest
 
-from app.sources.client import MAX_BODY_BYTES, AsyncPublicClient, HostPolicy, SourceError
+from app.sources.client import MAX_BODY_BYTES, AsyncPublicClient, HostPolicy, HostSlots, SourceError
 
 UNPACED = {"example.org": HostPolicy(min_interval_seconds=0)}
 
 
-def make_client(tmp_path, handler, policies=UNPACED):
-    sleeps: list[float] = []
+def make_client(tmp_path, handler, policies=UNPACED, slots=None, sleeps=None):
+    sleeps = [] if sleeps is None else sleeps
 
     async def fake_sleep(seconds: float) -> None:
         sleeps.append(seconds)
 
-    client = AsyncPublicClient(tmp_path, transport=httpx.MockTransport(handler), policies=policies, sleep=fake_sleep)
+    # רישום תורות נפרד לכל בדיקה: ‏sleep מדומה אינו מקדם את השעון, ותורות
+    # מהרישום המשותף היו עוברים מבדיקה לבדיקה.
+    client = AsyncPublicClient(tmp_path, transport=httpx.MockTransport(handler), policies=policies,
+                               sleep=fake_sleep, slots=slots if slots is not None else HostSlots())
     return client, sleeps
 
 
@@ -86,6 +89,57 @@ async def test_archive_requests_are_paced_ten_seconds_apart(tmp_path):
     await client.get("https://handasi.complot.co.il/magicscripts/mgrqispi.dll", {"t": 1})
     await client.get("https://handasi.complot.co.il/magicscripts/mgrqispi.dll", {"t": 2})
     assert any(9.5 < s <= 10.0 for s in sleeps)
+
+
+async def test_permit_sheet_downloads_from_gis_net_are_paced_ten_seconds_apart(tmp_path):
+    """‏A24. ‏`robots.txt` של archive.gis-net הוא `Disallow: /`, והגישה אליו
+    ביוזמת אדם בלבד. עד 15.09 ההורדה רצה בברירת המחדל — 0.35 שניות."""
+    for host in ("archive.gis-net.co.il", "v5.gis-net.co.il"):
+        client, sleeps = make_client(tmp_path, lambda r: httpx.Response(200, content=b"%PDF-1.4"), policies={})
+        await client.get(f"https://{host}/Herzeliya/a.pdf")
+        await client.get(f"https://{host}/Herzeliya/b.pdf")
+        assert any(9.5 < s <= 10.0 for s in sleeps), host
+
+
+async def test_a_new_client_does_not_reset_the_pace(tmp_path):
+    """‏`worker._fetch_permit_pdfs` יוצר לקוח חדש לכל חלקה. אם כל לקוח זוכר
+    לבד מתי פנה, הבקשה הראשונה של כל חלקה יוצאת מיד — ובלולאה על 39 חלקות
+    הקצב של 10 שניות פשוט לא קיים."""
+    slots, sleeps = HostSlots(), []
+    ok = lambda r: httpx.Response(200, content=b"%PDF-1.4")          # noqa: E731
+    first, _ = make_client(tmp_path / "1", ok, policies={}, slots=slots, sleeps=sleeps)
+    await first.get("https://archive.gis-net.co.il/Herzeliya/parcel1.pdf")
+    await first.aclose()
+    second, _ = make_client(tmp_path / "2", ok, policies={}, slots=slots, sleeps=sleeps)
+    await second.get("https://archive.gis-net.co.il/Herzeliya/parcel2.pdf")
+    assert any(9.5 < s <= 10.0 for s in sleeps), sleeps
+
+
+async def test_clients_share_one_pace_by_default(tmp_path):
+    """ברירת המחדל היא רישום אחד לכל התהליך — לא צריך לזכור להעביר אותו."""
+    import app.sources.client as source_client
+    sleeps: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    host = "pace-shared-default.invalid"            # שם שאינו בשימוש בשום בדיקה אחרת
+    policies = {host: HostPolicy(min_interval_seconds=10.0)}
+    ok = httpx.MockTransport(lambda r: httpx.Response(200, text="ok"))
+    for i in range(2):
+        c = AsyncPublicClient(tmp_path / str(i), transport=ok, policies=policies, sleep=fake_sleep)
+        assert c._slots is source_client.SHARED_SLOTS
+        await c.get(f"https://{host}/x", {"i": i})
+        await c.aclose()
+    assert any(9.5 < s <= 10.0 for s in sleeps), sleeps
+
+
+async def test_concurrent_requests_get_consecutive_slots_not_the_same_one(tmp_path):
+    import asyncio
+    client, sleeps = make_client(tmp_path, lambda r: httpx.Response(200, text="ok"), policies={})
+    await asyncio.gather(*(client.get("https://handasi.complot.co.il/x", {"i": i}) for i in range(3)))
+    waits = sorted(sleeps)
+    assert len(waits) == 2 and 9.5 < waits[0] <= 10.0 and 19.5 < waits[1] <= 20.0, sleeps
 
 
 async def test_oversized_body_is_refused_not_truncated(tmp_path):

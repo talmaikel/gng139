@@ -14,7 +14,14 @@ the POC guaranteed, and this keeps:
 Pacing is per host. The municipal archive rate-limits hard, and Overpass frees
 its two per-IP slots on a ~15 s cycle, so a 1 s / 2 s backoff would spend every
 attempt inside the same closed window.
+
+‏**הקצב משותף לכל התהליך, ולא לכל מופע של הלקוח.** (A24, 15.09) עד היום כל
+‏`AsyncPublicClient` זכר לבד מתי פנה לכל שרת. ‏`worker._fetch_permit_pdfs` יוצר
+לקוח חדש לכל חלקה, ולכן בלולאה על 39 חלקות (PR #19) הבקשה הראשונה של כל חלקה
+יצאה בלי המתנה — גם לארכיון העירוני שמוגדר ל-10 שניות. קצב של 10 שניות שמתאפס
+בכל מופע הוא לא קצב.
 """
+import threading
 
 import asyncio
 import hashlib
@@ -46,8 +53,39 @@ class HostPolicy:
 
 DEFAULT_POLICIES: dict[str, HostPolicy] = {
     "handasi.complot.co.il": HostPolicy(min_interval_seconds=10.0),
+    # ‏A24 · הגרמושקות עצמן. ‏`robots.txt` של archive.gis-net הוא `Disallow: /`,
+    # ו-`DATA_LAW.md` קובע שהגישה אליו ביוזמת אדם בלבד. עד היום הורדה רצה
+    # בברירת המחדל — 0.35 שניות — כלומר ריצה על 39 חלקות הייתה מורידה עשרות
+    # קבצים בשניות. **הקצב אינו רשות:** הוא רצפה למקרה שמישהו כן מריץ.
+    # ‏v5.gis-net הוא אותו מפעיל (proxy של שכבות העירייה, וקישורי מסמכים).
+    "archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),
+    "v5.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),
     "overpass-api.de": HostPolicy(min_interval_seconds=1.0, retry_base_seconds=15.0),
 }
+
+
+class HostSlots:
+    """מתי מותר לפנות לכל שרת — **אחד לכל התהליך.**
+
+    ההזמנה נעשית תחת נעילה רגילה ובלי המתנה בתוכה: מחשבים את התור הבא,
+    רושמים אותו, ורק אז ממתינים מחוץ לנעילה. כך שני לקוחות, או שתי בקשות
+    מקבילות באותו לקוח, מקבלים תורות עוקבים ולא אותו תור. נעילה רגילה ולא
+    ‏`asyncio.Lock`, כי הרישום משותף גם ללולאות אירועים שונות.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._next: dict[str, float] = {}
+
+    def reserve(self, host: str, interval: float, now: float) -> float:
+        """מזמין את התור הבא לשרת, ומחזיר כמה שניות להמתין עד אליו."""
+        with self._lock:
+            start = max(now, self._next.get(host, float("-inf")))
+            self._next[host] = start + interval
+            return start - now
+
+
+SHARED_SLOTS = HostSlots()
 
 
 def utcnow_iso() -> str:
@@ -80,6 +118,7 @@ class AsyncPublicClient:
         timeout_seconds: float = 35.0,
         max_attempts: int = 3,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        slots: HostSlots | None = None,
     ):
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -90,8 +129,9 @@ class AsyncPublicClient:
         )
         self._max_attempts = max_attempts
         self._sleep = sleep  # injectable, so tests assert on waits instead of waiting
-        self._last_request: dict[str, float] = {}
-        self._host_locks: dict[str, asyncio.Lock] = {}
+        # ברירת המחדל היא הרישום המשותף. בדיקות מעבירות רישום משלהן, כי
+        # ‏`sleep` מדומה אינו מקדם את השעון והתורות היו מצטברים בין בדיקות.
+        self._slots = slots if slots is not None else SHARED_SLOTS
 
     async def aclose(self) -> None:
         await self._client.aclose()
@@ -167,12 +207,9 @@ class AsyncPublicClient:
         policy = self._policies.get(host, HostPolicy())
         if policy.min_interval_seconds <= 0:
             return
-        lock = self._host_locks.setdefault(host, asyncio.Lock())
-        async with lock:
-            wait = policy.min_interval_seconds - (time.monotonic() - self._last_request.get(host, float("-inf")))
-            if wait > 0:
-                await self._sleep(wait)
-            self._last_request[host] = time.monotonic()
+        wait = self._slots.reserve(host, policy.min_interval_seconds, time.monotonic())
+        if wait > 0:
+            await self._sleep(wait)
 
     def _backoff(self, host: str, attempt: int) -> float:
         base = self._policies.get(host, HostPolicy()).retry_base_seconds

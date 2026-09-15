@@ -35,6 +35,11 @@ MUTS = [
   ("cities/herzliya/exports.py", "ה-PDF מדפיס רווח שאינו הרווח",
    '''line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪''',
    '''line(f'רווח: {s["projected_profit_ils"] * 1.02:,.0f} ₪'''),
+  # ‏A24 · קצב לשרתי הגרמושקות, ומשותף לכל התהליך
+  ("sources/client.py", "הגרמושקות יורדות בלי קצב",
+   '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),
+  ("sources/client.py", "כל לקוח חדש מאפס את הקצב",
+   "self._slots = slots if slots is not None else SHARED_SLOTS", "self._slots = slots if slots is not None else HostSlots()"),
 ]
 root = pathlib.Path("app")
 # ‏**עד 14.09 הסקריפט רק הדפיס.** מוטציה ששרדה הדפיסה ״X שרד״, והשלב ב-CI
