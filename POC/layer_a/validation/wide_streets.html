@@ -1,0 +1,242 @@
+<meta charset="utf-8">
+<title>רחובות רחבים · אימות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#F7F5F0; --card:#FFFDF9; --ink:#1C1A17; --soft:#6B655C; --faint:#9A9388;
+  --blue:#1D4E89; --blue-soft:#E4ECF5; --flag:#A8321E; --flag-soft:#F6E6E2;
+  --ok:#2E6B4F; --ok-soft:#E2EFE8; --warn:#8A6100; --warn-soft:#F6EEDC;
+  --rule:#DCD6CA; --rule-2:#EAE5DB;
+  --display:"Frank Ruhl Libre",Georgia,serif;
+  --body:"Assistant","Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#16150F; --card:#1E1D16; --ink:#EFEAE0; --soft:#A7A093; --faint:#77716A;
+  --blue:#7FAEE0; --blue-soft:#1B2A3C; --flag:#E28471; --flag-soft:#33201C;
+  --ok:#7BC69F; --ok-soft:#17291F; --warn:#D8AE5A; --warn-soft:#2A2314;
+  --rule:#33312A; --rule-2:#26251E;
+}}
+:root[data-theme="dark"]{
+  --paper:#16150F; --card:#1E1D16; --ink:#EFEAE0; --soft:#A7A093; --faint:#77716A;
+  --blue:#7FAEE0; --blue-soft:#1B2A3C; --flag:#E28471; --flag-soft:#33201C;
+  --ok:#7BC69F; --ok-soft:#17291F; --warn:#D8AE5A; --warn-soft:#2A2314;
+  --rule:#33312A; --rule-2:#26251E;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;margin:0}
+.wrap{max-width:60rem;margin:0 auto;padding:2.2rem 1.2rem 4rem}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.7rem,4vw,2.4rem);line-height:1.15;margin:.3rem 0 .5rem;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:1.3rem;margin:0 0 .6rem}
+p{margin:0 0 .8rem}
+.eyebrow{font-size:.76rem;letter-spacing:.14em;color:var(--blue);font-weight:600;font-family:var(--mono)}
+.stand{font-size:1.06rem;color:var(--soft);max-width:46rem}
+.rule{height:1px;background:var(--rule);margin:2rem 0}
+section{margin:0 0 2.2rem}
+.note{color:var(--soft);font-size:.94rem;border-inline-start:2px solid var(--rule);padding-inline-start:.9rem;margin:0 0 1rem}
+.method{margin:0 0 1rem;padding-inline-start:1.2rem;color:var(--soft);font-size:.94rem}
+.method li{margin-bottom:.25rem}
+.traps{display:grid;gap:.7rem;grid-template-columns:1fr}
+@media(min-width:48rem){.traps{grid-template-columns:repeat(3,1fr)}}
+.trap{background:var(--flag-soft);border-inline-start:3px solid var(--flag);border-radius:0 .4rem .4rem 0;padding:.75rem .95rem}
+.trap strong{color:var(--flag);display:block;margin-bottom:.15rem}
+.trap span{font-size:.9rem;color:var(--soft)}
+.who{display:flex;gap:.6rem;align-items:end;flex-wrap:wrap;margin-bottom:1rem}
+.who label{max-width:16rem;flex:1}
+.status{font-family:var(--mono);font-size:.78rem;color:var(--faint);margin:0 0 1rem}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:.6rem;padding:1rem 1.1rem;margin-bottom:.9rem}
+.rowhead{display:flex;flex-wrap:wrap;gap:.35rem 1rem;align-items:baseline;margin-bottom:.15rem}
+.addr{font-family:var(--display);font-weight:700;font-size:1.15rem}
+.pk{font-family:var(--mono);font-size:.82rem;color:var(--faint)}
+.front{font-size:.95rem;margin:0 0 .6rem}
+.front b{color:var(--blue)}
+a.map{font-family:var(--mono);font-size:.82rem;color:var(--blue);text-decoration:none;border-bottom:1px solid var(--blue-soft)}
+a.map:hover{border-bottom-color:var(--blue)}
+a.map:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem}
+.inputs .wide{grid-column:1/-1}
+@media(min-width:44rem){.inputs{grid-template-columns:repeat(3,7rem) 11rem 1fr}.inputs .wide{grid-column:auto}}
+label{display:flex;flex-direction:column;gap:.2rem;font-size:.78rem;color:var(--soft)}
+input,select{font-family:var(--mono);font-size:.95rem;padding:.45rem .55rem;border:1px solid var(--rule);
+  border-radius:.35rem;background:var(--paper);color:var(--ink);width:100%;min-width:0}
+input[type=text],select{font-family:var(--body)}
+input:focus-visible,select:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.verdict{margin-top:.6rem;font-family:var(--mono);font-size:.85rem;padding:.45rem .65rem;border-radius:.35rem;background:var(--rule-2);color:var(--faint)}
+.v-ok{background:var(--ok-soft);color:var(--ok)}
+.v-warn{background:var(--warn-soft);color:var(--warn)}
+.v-bad{background:var(--flag-soft);color:var(--flag)}
+button{font-family:var(--body);font-weight:600;font-size:.9rem;padding:.5rem 1rem;border-radius:.35rem;cursor:pointer;
+  border:1px solid var(--blue);background:var(--blue);color:var(--paper)}
+button:hover{filter:brightness(1.08)}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.exportbar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:.9rem 0}
+.copied{font-size:.85rem;color:var(--ok);font-family:var(--mono)}
+#json{width:100%;min-height:11rem;font-family:var(--mono);font-size:.8rem;line-height:1.5;padding:.7rem;border:1px solid var(--rule);
+  border-radius:.4rem;background:var(--card);color:var(--ink);white-space:pre;overflow-x:auto;resize:vertical}
+.foot{font-size:.85rem;color:var(--faint);border-top:1px solid var(--rule);padding-top:1.1rem;margin-top:2.2rem}
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+<header>
+  <div class="eyebrow">חלק ב׳ · אימות</div>
+  <h1>רחובות רחבים — מדידה עיוורת</h1>
+  <p class="stand">עשר חזיתות שנבחרו באקראי מתוך אלה שהאלגוריתם החדש מדד מעל 12 מ׳ — ארבע בין 12 ל-15, ארבע בין 15 ל-20, ושתיים מעל 20. היום כל רוחב מעל 12 מדווח ״7–9 קומות · דורש מדידה״. אם האלגוריתם מדויק גם כאן, אפשר להחזיר ודאות למאות חלקות. הערך שלו מוצג רק אחרי שהוזנו שלוש הנקודות.</p>
+</header>
+
+<div class="rule"></div>
+
+<section>
+  <h2>איך מודדים</h2>
+  <ol class="method">
+    <li>פתחו את הקישור של השורה — הוא נוחת על החזית עצמה. הדליקו את שכבת <strong>חלקות</strong>.</li>
+    <li>מדדו <strong>בניצב לרחוב שבכותרת</strong>, מקו הגבול של החלקה עד קו הגבול של החלקה שממול.</li>
+    <li>שלוש נקודות לאורך החזית: התחלה, אמצע, סוף.</li>
+    <li>ציינו אם זה בכלל רחוב — או שביל, דרך שירות, חניון.</li>
+  </ol>
+  <div class="traps">
+    <div class="trap"><strong>לא האספלט</strong><span>גבול חלקה לגבול חלקה, כולל מדרכות.</span></div>
+    <div class="trap"><strong>לחצות רצועות סרק</strong><span>חלקה דקה בלי בניין (מדרכה, שארית הפקעה) — ממשיכים דרכה עד החלקה הבנויה שממול.</span></div>
+    <div class="trap"><strong>החזית הנכונה</strong><span>בחלקות פינה מודדים רק את החזית לרחוב שבכותרת.</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="who"><label>מי מודד<input id="who" type="text" placeholder="שם או ראשי תיבות" autocomplete="off"></label></div>
+  <h2>החזיתות</h2>
+  <p class="status" id="status">טוען…</p>
+  <div id="rows"></div>
+</section>
+
+<section>
+  <h2>ייצוא</h2>
+  <p class="note">כשסיימתם — "העתק" והדבקה בצ׳אט, או "הורד".</p>
+  <div class="exportbar">
+    <button type="button" id="copy">העתק</button>
+    <button type="button" id="download">הורד</button>
+    <span class="copied" id="copied" aria-live="polite"></span>
+  </div>
+  <textarea id="json" readonly spellcheck="false" dir="ltr" aria-label="תוכן לייצוא"></textarea>
+</section>
+
+<p class="foot">אם המדידות מתאימות, סף האמינות במנוע (<span style="font-family:var(--mono)">RELIABLE_MAX_M</span>, היום 12 מ׳) עולה, ורוחב מעל 12 מדווח כמספר ולא כ״דורש מדידה״. אם לא — הסף נשאר, והפער מראה איפה האלגוריתם עדיין בורח.</p>
+</div>
+
+<script>
+const ROWS = [
+  {key:"6540/50",  addr:"מובשוביץ בנימין 13", street:"הרב מובשוביץ", x:186114, y:674388, algo:12.1},
+  {key:"6529/244", addr:"הנדיב 7",            street:"הנדיב",        x:185114, y:675021, algo:13.0},
+  {key:"6528/146", addr:"בני בנימין 22א",     street:"בני בנימין",   x:185152, y:675450, algo:12.4},
+  {key:"6546/517", addr:"סמדר 1",             street:"ברנר",         x:185379, y:673820, algo:13.6},
+  {key:"6536/489", addr:"ליברמן ישראל 5",     street:"ליברמן",       x:185721, y:675241, algo:17.9},
+  {key:"6534/154", addr:"לוין שמעון זאב 18",  street:"ש.ז. לוין",    x:184804, y:674577, algo:15.4},
+  {key:"6536/516", addr:"אלוף יגאל אלון 9",   street:"יגאל אלון",    x:185560, y:675106, algo:15.6},
+  {key:"6529/121", addr:"פינסקר 2",           street:"פינסקר",       x:184946, y:674883, algo:17.1},
+  {key:"6537/92",  addr:"העצמאות 95",         street:"העצמאות",      x:186025, y:674684, algo:21.2},
+  {key:"6528/113", addr:"מלכי יהודה 31",      street:"מלכי יהודה",   x:185313, y:675596, algo:21.4},
+];
+const KEY = "wide_streets_v1";
+const $ = s => document.querySelector(s);
+const id = k => k.replace("/", "-");
+
+let state = {};
+try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { state = {}; }
+state.rows = state.rows || {};
+
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(state));
+    $("#status").textContent = "נשמר בדפדפן הזה · " + new Date().toLocaleTimeString("he-IL");
+  } catch (e) {
+    $("#status").textContent = "השמירה בדפדפן נכשלה — העתיקו מהייצוא לפני סגירה";
+  }
+}
+
+function median(a) { const s = a.slice().sort((x, y) => x - y), n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; }
+
+function verdict(r) {
+  const d = state.rows[r.key] || {};
+  const v = ["a", "b", "c"].map(f => parseFloat(d[f])).filter(x => Number.isFinite(x) && x > 0);
+  const el = document.getElementById("v-" + id(r.key));
+  if (v.length < 3) { el.className = "verdict"; el.textContent = "הערך של האלגוריתם יוצג אחרי שלוש הנקודות"; return; }
+  const m = median(v), diff = m - r.algo, a = Math.abs(diff);
+  const cls = a <= 1 ? "v-ok" : a <= 2 ? "v-warn" : "v-bad";
+  el.className = "verdict " + cls;
+  el.textContent = `חציון ${m.toFixed(2)} מ׳ · אלגוריתם ${r.algo.toFixed(1)} מ׳ · הפרש ${diff >= 0 ? "+" : ""}${diff.toFixed(1)}` +
+                   (m > 12 ? " · מעל 12: 9 קומות" : " · עד 12: לא 9 קומות");
+}
+
+function render() {
+  $("#rows").innerHTML = "";
+  ROWS.forEach(r => {
+    const k = id(r.key);
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="rowhead">
+        <span class="addr">${r.addr}</span><span class="pk">${r.key}</span>
+        <a class="map" href="https://www.govmap.gov.il/?c=${r.x},${r.y}&z=10" target="_blank" rel="noopener">פתח ב-GovMap ↗</a>
+      </div>
+      <p class="front">החזית לרחוב <b>${r.street}</b></p>
+      <div class="inputs">
+        <label>תחילת חזית<input type="number" step="0.01" min="0" inputmode="decimal" data-k="${r.key}" data-f="a"></label>
+        <label>אמצע<input type="number" step="0.01" min="0" inputmode="decimal" data-k="${r.key}" data-f="b"></label>
+        <label>סוף חזית<input type="number" step="0.01" min="0" inputmode="decimal" data-k="${r.key}" data-f="c"></label>
+        <label class="wide">מה זה בפועל
+          <select data-k="${r.key}" data-f="kind">
+            <option value="">—</option>
+            <option value="street">רחוב</option>
+            <option value="path">שביל / מעבר הולכי רגל</option>
+            <option value="service">דרך שירות / חניון</option>
+            <option value="unsure">לא בטוח</option>
+          </select>
+        </label>
+        <label class="wide">הערה<input type="text" autocomplete="off" placeholder="רצועת סרק, חלקה מפולשת, כל דבר חריג" data-k="${r.key}" data-f="note"></label>
+      </div>
+      <div class="verdict" id="v-${k}"></div>`;
+    $("#rows").appendChild(card);
+  });
+  document.querySelectorAll("[data-k]").forEach(el => {
+    el.value = (state.rows[el.dataset.k] || {})[el.dataset.f] ?? "";
+    el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+      (state.rows[el.dataset.k] ||= {})[el.dataset.f] = el.value;
+      save(); verdict(ROWS.find(r => r.key === el.dataset.k)); buildExport();
+    });
+  });
+  ROWS.forEach(verdict);
+}
+
+function buildExport() {
+  const out = {
+    exported_at: new Date().toISOString(),
+    measured_by: state.who || "",
+    frontages: ROWS.map(r => ({ parcel: r.key, address: r.addr, street: r.street, ...(state.rows[r.key] || {}) }))
+                   .filter(x => x.a || x.b || x.c || x.kind || x.note),
+  };
+  $("#json").value = JSON.stringify(out, null, 2);
+}
+
+$("#who").value = state.who || "";
+$("#who").addEventListener("input", () => { state.who = $("#who").value; save(); buildExport(); });
+
+$("#copy").addEventListener("click", async () => {
+  buildExport();
+  const ta = $("#json");
+  try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand("copy"); }
+  $("#copied").textContent = "הועתק ✓";
+  setTimeout(() => { $("#copied").textContent = ""; }, 2500);
+});
+$("#download").addEventListener("click", () => {
+  buildExport();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([$("#json").value], { type: "application/json;charset=utf-8" }));
+  a.download = "wide_streets.json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+render();
+buildExport();
+$("#status").textContent = "נשמר בדפדפן הזה בלבד. כל שינוי נשמר אוטומטית";
+</script>

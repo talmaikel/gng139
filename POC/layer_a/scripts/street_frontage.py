@@ -63,6 +63,20 @@ def qualifying(runs, street_index, streets, tags, names):
             out.append((r['width'], tag, name))
     return out
 
+def narrow_frontages(runs, street_index, streets, tags, names, min_width=3.0):
+    """חזיתות מתויגות-רחוב שצרות מ-8 מ׳. `qualifying` משמיט אותן, ולכן הן מוחזרות בנפרד.
+
+    הן לא "אין תוספת" אוטומטית: באימות (validation/narrow_streets.json) שלוש מתוך
+    שש היו דרך שירות או כניסה לחניון ש-OSM מתייג כרחוב. הרוחב נכון; הסיווג לא.
+    """
+    out = []
+    for r in runs:
+        if min_width <= r['width'] <= MIN_ROW_M:
+            tag, name = classify_run(r, street_index, streets, tags, names)
+            if tag in STREET_TAGS:
+                out.append((r['width'], tag, name))
+    return out
+
 def governing_width(runs, street_index, streets, tags, names, parcel=None):
     """הרוחב הקובע: הצר מבין חזיתות הרחוב הכשירות.
 
