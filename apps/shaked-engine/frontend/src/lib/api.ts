@@ -355,6 +355,10 @@ export interface Dossier {
     not_delivered_reason: string | null;
     is_deliverable: boolean;
     disclaimer: string;
+    /** על מה הרווח נשען ואינו ודאי, בסדר ההשפעה. משפטים מוכנים מהשרת (B8). */
+    caveats: { id: string; text: string }[];
+    /** רק כשיש תרחיש. ההשבחה אינה ידועה — מוצג עד כמה הפרויקט סופג אותה. */
+    betterment?: Betterment;
     buildable_basis?: string | null;
     buildable_certainty?: string | null;
     why?: string;
@@ -371,6 +375,34 @@ export interface Dossier {
   versions: { rules_version: string; data_version: string; template_version: string };
   delivery: { delivered_at: string | null; why_selected: Record<string, unknown> | null };
   stale_fields: string[];
+}
+
+/** ‏B11 · סף ההשבחה. ‏`viable_up_to_ils` — ההיטל הגבוה ביותר שהרווח עוד סופג. */
+export interface Betterment {
+  rate: number;
+  levy: {
+    rate: number;
+    viable_up_to_ils: number | null;
+    estimate_ils: number | null;
+    low_ils: number | null;
+    high_ils: number | null;
+    within_range: boolean | null;
+  };
+  estimate: {
+    betterment_ils: number; before_ils: number; after_ils: number;
+    land_value_per_right_ils: number; notes: string[];
+  } | null;
+  estimate_withheld_because: string | null;
+  breakeven_ils: number | null;
+  breakeven_per_added_sqm_ils: number | null;
+  breakeven_land_value_per_right_ils: number | null;
+  /** ‏`unrated` — אין מחיר דירה קיימת או שטח בנוי קיים, ולכן אין עם מה להשוות את הסף. */
+  category: "no_threshold" | "resilient" | "marginal" | "unrated";
+  category_label: string;
+  /** שורת ההיטל המוכנה (B13) — אותו משפט במסך, ב-PDF ובאקסל. */
+  summary: string;
+  note: string;
+  rests_on_unresolved_inputs: string[];
 }
 
 /** התיק המלא. ‏404 גם למי שאינו רשאי וגם למזהה שאינו קיים — ACC-08. */
