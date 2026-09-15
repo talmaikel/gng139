@@ -172,6 +172,9 @@ def pdf(d: dict[str, Any]) -> bytes:
             for cav in econ["caveats"]:
                 line(f'· {cav["text"]}', 8.5, (0.42, 0.40, 0.36), gap=2, indent=10)
             y[0] -= 3
+        # ‏B15 · התמהיל שהיזם חישב. מוצג ואינו משנה את הרווח שמעליו.
+        if (econ.get("unit_mix") or {}).get("summary"):
+            line(econ["unit_mix"]["summary"], 8.5, (0.06, 0.15, 0.12), gap=4)
     else:
         line(econ.get("why", "לא חושב תרחיש."), 9.5, (0.54, 0.20, 0.12))
     if not econ["is_deliverable"]:
@@ -404,6 +407,13 @@ def excel(d: dict[str, Any]) -> bytes:
             sc.merge_range(tail + n, 0, tail + n, 4, text, note)
             sc.set_row(tail + n, 30)
         tail += len(lines) + 2
+
+    # ‏B15 · התמהיל שהיזם חישב, אותו משפט כמו במסך וב-PDF.
+    if (econ.get("unit_mix") or {}).get("summary"):
+        sc.merge_range(tail, 0, tail, 4, "תמהיל דירות", head)
+        sc.merge_range(tail + 1, 0, tail + 1, 4, econ["unit_mix"]["summary"], note)
+        sc.set_row(tail + 1, 30)
+        tail += 3
 
     sc.write(tail, 0, "הערות", head)
     sc.merge_range(tail + 1, 0, tail + 1, 4, econ["disclaimer"], note)

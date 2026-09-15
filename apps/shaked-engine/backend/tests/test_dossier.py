@@ -258,7 +258,8 @@ async def test_a_stored_valuation_replaces_the_city_wide_estimate(session):
             status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
             fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
             comparable_count=17, comparable_sales=[], room_estimates=[],
-            blended_price_per_sqm_ils=52_300.0, is_unit_mix_adjusted=True),
+            blended_price_per_sqm_ils=52_300.0, is_unit_mix_adjusted=True,
+            price_basis="new_build"),
         parameters={"unit_mix_state": "x", "targets": []})
     await session.flush()
 
@@ -346,7 +347,8 @@ async def test_a_valuation_without_an_explicit_unit_mix_does_not_decide(session)
             status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
             fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
             comparable_count=9, comparable_sales=[], room_estimates=[],
-            blended_price_per_sqm_ils=61_000.0, is_unit_mix_adjusted=False),
+            blended_price_per_sqm_ils=61_000.0, is_unit_mix_adjusted=False,
+            price_basis="new_build"),
         parameters={"unit_mix_state": "inferred", "targets": []})
     await session.flush()
 
@@ -357,6 +359,121 @@ async def test_a_valuation_without_an_explicit_unit_mix_does_not_decide(session)
     assert price["valuation_present"] is True    # אבל כן נחשף
     assert price["comparable_count"] == 9
     assert "תמהיל" in price["label"]
+
+
+@pytest.mark.asyncio
+async def test_a_second_hand_price_never_becomes_the_sale_price(session):
+    """‏**15.09 · תמהיל מלא אינו מספיק.** עסקאות GovMap ליד החלקות הן דירות
+    יד שנייה. ‏B15 שמר תמהיל, ‏B1 שקלל לפיו, והתיק לקח 31,768 ₪ כ״נתון״:
+    באלוף יגאל אלון 40 הרווח ירד מ-11% להפסד. מחיר יד שנייה הוא הצד
+    ״לפני״ של ההשבחה, ולא ההכנסות של בניין חדש."""
+    from datetime import date, datetime, timezone
+
+    from app.services.economic.assumptions import get_assumptions
+    from app.services.market_data.repository import add_valuation_run
+    from app.services.market_data.schemas import MarketValuation, ValuationStatus
+
+    c, _, opp = await _delivered(session, block="9645")
+    add_valuation_run(
+        session, opportunity_id=opp.id,
+        valuation=MarketValuation(
+            status=ValuationStatus.ESTIMATED, as_of_date=date(2026, 9, 1),
+            fetched_at=datetime.now(timezone.utc), lookback_months=12, radius_m=500,
+            comparable_count=28, comparable_sales=[], room_estimates=[],
+            blended_price_per_sqm_ils=31_768.0, is_unit_mix_adjusted=True),
+        parameters={"unit_mix_state": "provided", "targets": []})
+    await session.flush()
+
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    price = d["economics"]["live_inputs"]["sale_price"]
+    assert price["resolved"] is False
+    assert price["value"] == get_assumptions("herzliya").sale_price_per_sqm_ils.value
+    assert d["economics"]["assumptions"]["sale_price_per_sqm_ils"]["status"] == "estimate"
+    assert price["comparable_count"] == 28          # העסקאות עדיין נחשפות
+    assert "יד שנייה" in price["label"]
+
+
+# ── B15 · התמהיל מוצג בתיק, והרווח אינו זז ──
+
+_MIX_META = {
+    "source": "b15_profit_optimizer", "status": "estimate",
+    "compensation_sqm_per_existing_unit": 30.0, "existing_units_basis": "building_average",
+    "tenant_units": 28, "developer_units": 40,
+    "unused_developer_sqm": 900.0, "developer_available_sqm": 4000.0,
+}
+
+
+@pytest.mark.asyncio
+async def test_a_saved_unit_mix_reads_the_same_on_screen_pdf_and_excel(session):
+    import pymupdf
+
+    from app.cities.herzliya import exports
+    from app.cities.herzliya.surfaces import _cells, _words
+
+    c, _, opp = await _delivered(session, block="9646")
+    opp.metadata_json = {**(opp.metadata_json or {}),
+                         "planned_unit_mix": [{"rooms": 4, "area_sqm": 100.0, "units": 30},
+                                              {"rooms": 3, "area_sqm": 75.0, "units": 10}],
+                         "planned_unit_mix_meta": _MIX_META}
+    await session.flush()
+
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    mix = d["economics"]["unit_mix"]
+    summary = mix["summary"]
+    assert mix["developer_units"] == 40
+    assert summary.startswith("תמהיל דירות ליזם (אומדן): 10 × 3 חד׳ (75 מ״ר) · 30 × 4 חד׳ (100 מ״ר)")
+    assert "28 לבעלי הדירות" in summary
+    assert "לפי תוספת של 30 מ״ר" in summary
+    assert "ממוצע הבניין" in summary
+    assert "הרווח בתיק עדיין מחושב לפי 25 מ״ר" in summary     # התמורה שונה מזו שבתיק
+    assert "900 מ״ר מתוך 4,000" in summary                   # שטח שלא נכנס נאמר
+
+    doc = pymupdf.open(stream=exports.pdf(d), filetype="pdf")
+    words = set().union(*(_words(ln) for page in doc for ln in page.get_text().splitlines()))
+    assert {"תמהיל", "ליזם", "חד׳"} <= words, "שורת התמהיל אינה ב-PDF"
+    strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
+    assert summary in strings
+
+
+@pytest.mark.asyncio
+async def test_a_dossier_without_a_mix_says_nothing_about_one(session):
+    c, _, opp = await _delivered(session, block="9647")
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    assert d["economics"]["unit_mix"] == {"rows": [], "summary": None}
+
+
+@pytest.mark.asyncio
+async def test_running_b15_on_a_dossier_leaves_its_price_and_profit_alone(session):
+    """מקצה לקצה: ‏B15 רץ על תיק שנמסר, שומר תמהיל, והתיק מציג אותו —
+    עם אותו מחיר ואותו רווח כמו לפני."""
+    from app.services.unit_mix.service import prepare_unit_mix
+
+    c, _, opp = await _delivered(session, block="9648")
+    # ‏28 דירות × 2.8 מחייבות 51 דירות ליזם, ו-3,540 מ״ר אינם מכילים אותן
+    # גם ב-75 מ״ר — אין תמהיל חוקי. ‏20 דירות משאירות מקום לתמהיל.
+    opp.existing_units = 20
+    await session.flush()
+    before = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    assert before["economics"]["scenario"] is not None, "הבדיקה צריכה תרחיש מחושב"
+    rights_ = before["rights"]
+    opp.metadata_json = {**(opp.metadata_json or {}), "assessment": {
+        "cap_400_sqm": rights_["cap_400_sqm"],
+        "floors_low": (rights_.get("floors") or {}).get("low")}}
+    await session.flush()
+
+    prepared = await prepare_unit_mix(session, opp, compensation_sqm_per_existing_unit=None,
+                                      persist=True)
+    assert prepared.metadata["existing_units_basis"] == "building_average"
+    after = await build(session, HerzliyaCityRules(), opp.id, c.id)
+
+    b, a = before["economics"], after["economics"]
+    assert a["assumptions"]["sale_price_per_sqm_ils"] == b["assumptions"]["sale_price_per_sqm_ils"]
+    assert a["scenario"]["projected_profit_ils"] == b["scenario"]["projected_profit_ils"]
+    assert a["unit_mix"]["summary"] and a["unit_mix"]["rows"] == sorted(
+        prepared.planned_unit_mix, key=lambda r: r["rooms"])
+    # ‏המסך של התמהיל ושל התיק על אותו מחיר ואותו שטח ליזם
+    assert prepared.result.developer_available_sqm == pytest.approx(
+        a["scenario"]["developer_allocation_sqm"], abs=0.01)
 
 
 # ── B11 · סף ההשבחה ──
@@ -592,7 +709,8 @@ async def _with_resolved_inputs(session, block):
             comparable_count=17,
             comparable_sales=_second_hand_sales([29_000, 30_500, 31_000, 32_000, 33_500, 35_000]),
             room_estimates=[],
-            blended_price_per_sqm_ils=52_300.0, is_unit_mix_adjusted=True),
+            blended_price_per_sqm_ils=52_300.0, is_unit_mix_adjusted=True,
+            price_basis="new_build"),
         parameters={"unit_mix_state": "x", "targets": []})
     # דירה אחת מאומתת מתוך כמה — מוצגת, ואינה מכריעה לבניין
     session.add(DwellingUnit(

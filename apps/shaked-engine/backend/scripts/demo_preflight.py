@@ -172,6 +172,7 @@ async def check_data() -> None:
     from app.models.package import Balance
     from app.models.tenant import Company
     from app.services.deliveries import delivered_ids
+    from app.services.unit_mix.service import UnitMixUnavailable, prepare_unit_mix
 
     rules = HerzliyaCityRules()
     wanted = demo.DELIVERED + [demo.FOURTH]
@@ -231,6 +232,20 @@ async def check_data() -> None:
                 else:
                     report(OK, f"{address} מוכנה · שורה {where} ברשימה · מסך = PDF = אקסל",
                            f"{len(d['economics'].get('caveats') or [])} סייגים בתיק")
+                # ‏B15 · מסך התמהיל עונה לחלקה, בלי לשמור דבר
+                try:
+                    mix = await prepare_unit_mix(s, o, compensation_sqm_per_existing_unit=None,
+                                                 persist=False)
+                    best = mix.result.candidates[0]
+                    report(OK, f"{address}: מסך התמהיל מחשב",
+                           f"{best.developer_units} דירות ליזם · "
+                           f"{best.profit_margin_on_cost_ratio:.1%} על העלות לפי התמהיל · "
+                           f"{best.unused_developer_sqm:,.0f} מ״ר לא נכנסים")
+                except UnitMixUnavailable as e:
+                    report(BLOCK, f"{address}: מסך התמהיל מסרב", str(e))
+                if (d["economics"].get("unit_mix") or {}).get("summary"):
+                    report(BLOCK, f"{address}: כבר נשמר תמהיל מהחזרה",
+                           ".venv/bin/python scripts/demo_reset.py --apply")
         await s.rollback()
 
 

@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -107,6 +108,12 @@ class MarketValuation(BaseModel):
     room_estimates: list[RoomPriceEstimate]
     blended_price_per_sqm_ils: float | None = None
     is_unit_mix_adjusted: bool = False
+    # What kind of apartments the comparables are. GovMap deals carry no build
+    # year and no "from developer" flag, and B16 (15.09) found the deals near
+    # the parcels to be essentially second-hand. A second-hand price is the
+    # "before" side of betterment, never the sale price of a new building, so
+    # only a "new_build" valuation (B12) may decide the dossier's sale price.
+    price_basis: Literal["second_hand", "new_build"] = "second_hand"
     warnings: list[str] = Field(default_factory=list)
 
 

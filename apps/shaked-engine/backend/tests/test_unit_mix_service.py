@@ -1,12 +1,9 @@
-from datetime import date, datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 
 from app.models.opportunity import Opportunity
-from app.services.market_data.schemas import ComparableSale
-from app.services.market_data.valuation import calculate_market_valuation
 from app.services.unit_mix import service
 
 
@@ -16,41 +13,6 @@ class FakeSession:
 
     async def flush(self):
         self.flush_count += 1
-
-
-def _sale(index: int, rooms: int, area: float, price_per_sqm: float) -> ComparableSale:
-    return ComparableSale(
-        source_deal_id=f"{rooms}-{index}",
-        city_code="herzliya",
-        deal_date=date(2026, 8, 1),
-        deal_amount_ils=area * price_per_sqm,
-        area_sqm=area,
-        rooms=rooms,
-        price_per_sqm_ils=price_per_sqm,
-        distance_m=100 + index * 10,
-    )
-
-
-def _valuation():
-    sales = []
-    for i in range(6):
-        sales.extend(
-            [
-                _sale(i, 3, 72 + i, 38_000 + i * 100),
-                _sale(i, 4, 96 + i, 36_000 + i * 100),
-                _sale(i, 5, 120 + i, 34_000 + i * 100),
-            ]
-        )
-    # The input valuation is deliberately NOT mix-adjusted, which is the state
-    # B15 exists to resolve for the dossier.
-    return calculate_market_valuation(
-        sales,
-        [],
-        as_of_date=date(2026, 9, 15),
-        lookback_months=12,
-        radius_m=500,
-        fetched_at=datetime(2026, 9, 15, tzinfo=timezone.utc),
-    )
 
 
 def _opportunity() -> Opportunity:
@@ -74,14 +36,9 @@ def _opportunity() -> Opportunity:
 async def test_prepare_unit_mix_uses_default_compensation_and_persists_auditable_mix(monkeypatch):
     opp = _opportunity()
     units = [SimpleNamespace(area_sqm=area, requires_human_review=False) for area in [65, 70, 75, 80, 85, 90]]
-    valuation = _valuation()
-    added = []
 
     async def fake_load_units(session, opportunity_id):
         return units
-
-    async def fake_latest(session, *, opportunity_id, max_age_days):
-        return valuation
 
     monkeypatch.setattr(service, "load_units", fake_load_units)
     monkeypatch.setattr(
@@ -89,8 +46,6 @@ async def test_prepare_unit_mix_uses_default_compensation_and_persists_auditable
         "resolve_existing_unit_area",
         lambda *args, **kwargs: SimpleNamespace(per_unit_detail_available=True),
     )
-    monkeypatch.setattr(service, "find_latest_valuation", fake_latest)
-    monkeypatch.setattr(service, "add_valuation_run", lambda *args, **kwargs: added.append(kwargs))
 
     session = FakeSession()
     prepared = await service.prepare_unit_mix(
@@ -108,25 +63,21 @@ async def test_prepare_unit_mix_uses_default_compensation_and_persists_auditable
     assert meta["source"] == "b15_profit_optimizer"
     assert meta["status"] == "estimate"
     assert meta["unit_area_assumption_status"] == "estimate"
-    assert meta["market_comparable_count"] == len(valuation.comparable_sales)
+    assert meta["existing_units_basis"] == "confirmed_schedule"
     assert meta["projected_profit_ils"] == prepared.result.candidates[0].projected_profit_ils
     assert session.flush_count == 1
-    assert len(added) == 1
-    assert added[0]["valuation"].is_unit_mix_adjusted is True
-    assert added[0]["valuation"].blended_price_per_sqm_ils is not None
+    # 15.09: no mix-adjusted valuation snapshot. FakeSession has no `add`, so
+    # writing one would raise here; a second-hand price weighted by this mix
+    # must not reach the dossier's sale price.
 
 
 @pytest.mark.asyncio
 async def test_user_compensation_recalculates_mix_without_fetching_new_market_data(monkeypatch):
     opp = _opportunity()
     units = [SimpleNamespace(area_sqm=area, requires_human_review=False) for area in [65, 70, 75, 80, 85, 90]]
-    valuation = _valuation()
 
     async def fake_load_units(session, opportunity_id):
         return units
-
-    async def fake_latest(session, *, opportunity_id, max_age_days):
-        return valuation
 
     monkeypatch.setattr(service, "load_units", fake_load_units)
     monkeypatch.setattr(
@@ -134,7 +85,6 @@ async def test_user_compensation_recalculates_mix_without_fetching_new_market_da
         "resolve_existing_unit_area",
         lambda *args, **kwargs: SimpleNamespace(per_unit_detail_available=True),
     )
-    monkeypatch.setattr(service, "find_latest_valuation", fake_latest)
 
     session = FakeSession()
     low = await service.prepare_unit_mix(
@@ -151,20 +101,42 @@ async def test_user_compensation_recalculates_mix_without_fetching_new_market_da
 
 
 @pytest.mark.asyncio
-async def test_per_household_mix_refuses_an_unverified_or_partial_schedule(monkeypatch):
+async def test_without_a_confirmed_schedule_the_mix_uses_the_building_average(monkeypatch):
+    """15.09: 0 of 699 parcels had a confirmed schedule, so the screen never
+    produced a mix. The owners' total area is n x (average + c) either way."""
     opp = _opportunity()
 
     async def fake_load_units(session, opportunity_id):
         return [SimpleNamespace(area_sqm=70, requires_human_review=True)]
 
+    async def fake_fields(session, opportunity_id):
+        return {"existing_area": {"value": 480.0}}
+
     monkeypatch.setattr(service, "load_units", fake_load_units)
+    monkeypatch.setattr(service, "fields_for", fake_fields)
     monkeypatch.setattr(
         service,
         "resolve_existing_unit_area",
-        lambda *args, **kwargs: SimpleNamespace(per_unit_detail_available=False),
+        lambda *args, **kwargs: SimpleNamespace(
+            per_unit_detail_available=False,
+            average_existing_unit_sqm=(kwargs["existing_area_sqm"] or 0) / 6 or None,
+        ),
     )
 
-    with pytest.raises(service.UnitMixUnavailable, match="לוח דירות מלא ומאומת"):
-        await service.prepare_unit_mix(
-            FakeSession(), opp, compensation_sqm_per_existing_unit=12, persist=False
-        )
+    prepared = await service.prepare_unit_mix(
+        FakeSession(), opp, compensation_sqm_per_existing_unit=12, persist=False
+    )
+    assert prepared.metadata["existing_units_basis"] == "building_average"
+    assert prepared.metadata["average_existing_unit_sqm"] == 80.0
+    assert prepared.result.tenant_allocation_sqm == pytest.approx(6 * (80 + 12))
+
+
+def test_every_apartment_size_sells_at_the_dossier_price():
+    """15.09: per-room second-hand prices put the mix screen at -17.6% while
+    the dossier said +20.8% for the same parcel."""
+    from app.services.economic.assumptions import get_assumptions
+
+    price = get_assumptions("herzliya").sale_price_per_sqm_ils.value
+    options = service._unit_types(price)
+    assert {o.rooms for o in options} == {3, 4, 5}
+    assert all(o.price_per_sqm_ils == price for o in options)

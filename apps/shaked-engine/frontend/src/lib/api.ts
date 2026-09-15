@@ -418,6 +418,14 @@ export interface Dossier {
     disclaimer: string;
     /** על מה הרווח נשען ואינו ודאי, בסדר ההשפעה. משפטים מוכנים מהשרת (B8). */
     caveats: { id: string; text: string }[];
+    /** ‏B15 · התמהיל שהיזם חישב. מוצג ואינו משנה את הרווח. המשפט מהשרת. */
+    unit_mix?: {
+      rows: { rooms: number; area_sqm: number; units: number }[];
+      summary: string | null;
+      developer_units?: number;
+      tenant_units?: number | null;
+      compensation_sqm_per_existing_unit?: number | null;
+    };
     /** רק כשיש תרחיש. ההשבחה אינה ידועה — מוצג עד כמה הפרויקט סופג אותה. */
     betterment?: Betterment;
     buildable_basis?: string | null;

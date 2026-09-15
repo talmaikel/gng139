@@ -124,7 +124,7 @@ def test_missing_economic_input_is_carried_to_candidate_delivery_status():
 
     assert result.candidates
     assert not result.candidates[0].economics_deliverable
-    assert any("not deliverable" in warning for warning in result.warnings)
+    assert any("אינו נמסר" in warning for warning in result.warnings)
 
 
 def test_compensation_that_does_not_fit_returns_explicit_infeasible_result():
@@ -139,7 +139,7 @@ def test_compensation_that_does_not_fit_returns_explicit_infeasible_result():
     assert not result.feasible
     assert result.candidates == []
     assert result.developer_available_sqm < 0
-    assert any("do not fit" in warning for warning in result.warnings)
+    assert any("אינן נכנסות" in warning for warning in result.warnings)
 
 
 def test_economic_input_must_match_per_apartment_and_rights_inputs():

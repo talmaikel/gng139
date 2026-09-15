@@ -28,8 +28,9 @@ interface OptimizationResponse {
     default_compensation_source: string | null;
     projected_profit_ils: number;
     profit_margin_on_cost_ratio: number;
-    market_comparable_count: number;
-    market_as_of_date: string;
+    existing_units_basis: "confirmed_schedule" | "building_average";
+    average_existing_unit_sqm: number;
+    sale_price_per_sqm_ils: number;
     unit_area_assumption_source: string;
     warnings: string[];
   };
@@ -128,7 +129,7 @@ export default function UnitMixPage({ params }: { params: Promise<{ id: string }
           </button>
         </div>
         <p style={{ color: "#6b655c", fontSize: ".82rem", marginBottom: 0 }}>
-          החישוב משתמש בלוח הדירות המאומת, בזכויות שכבר חושבו, בעסקאות ההשוואה השמורות ובמודל דוח 0 הקיים.
+          החישוב משתמש בזכויות, במחיר המכירה ובמודל של התיק. הדירות הקיימות לפי לוח מאושר, ואם אין — לפי ממוצע הבניין שבתיק.
         </p>
       </section>
 
@@ -152,8 +153,9 @@ export default function UnitMixPage({ params }: { params: Promise<{ id: string }
               <div><small>תמורה שנלקחה בחשבון</small><br/><strong>{sqm(result.optimization.compensation_sqm_per_existing_unit)}</strong></div>
               <div><small>שטח דירות בעלים</small><br/><strong>{sqm(result.optimization.tenant_allocation_sqm)}</strong></div>
               <div><small>שטח זמין ליזם</small><br/><strong>{sqm(result.optimization.developer_available_sqm)}</strong></div>
-              <div><small>רווח צפוי</small><br/><strong>{ils(best.projected_profit_ils)}</strong></div>
+              <div><small>רווח לפי התמהיל</small><br/><strong>{ils(best.projected_profit_ils)}</strong></div>
               <div><small>רווח על העלות</small><br/><strong>{(best.profit_margin_on_cost_ratio * 100).toFixed(1)}%</strong></div>
+              <div><small>שטח ליזם שלא נכנס לתמהיל</small><br/><strong>{sqm(best.unused_developer_sqm)}</strong></div>
             </div>
 
             <table>
@@ -167,8 +169,11 @@ export default function UnitMixPage({ params }: { params: Promise<{ id: string }
               </tbody>
             </table>
             <p style={{ color: "#6b655c", fontSize: ".82rem" }}>
-              {result.planned_unit_mix_meta.market_comparable_count} עסקאות השוואה · נכון ל-{result.planned_unit_mix_meta.market_as_of_date} ·
-              התמהיל נשמר כאומדן ולא כזכות מאושרת.
+              כל הדירות לפי {ils(result.planned_unit_mix_meta.sale_price_per_sqm_ils)} למ״ר, מחיר המכירה שבתיק ·{" "}
+              {result.planned_unit_mix_meta.existing_units_basis === "building_average"
+                ? `דירה קיימת ממוצעת ${sqm(result.planned_unit_mix_meta.average_existing_unit_sqm)} (ממוצע הבניין, אומדן)`
+                : "דירות קיימות לפי לוח מאושר"} ·
+              התמהיל נשמר כאומדן ומוצג בתיק. הרווח בתיק אינו משתנה: הוא מוכר את כל השטח ליזם ומחושב בתמורת ברירת המחדל.
             </p>
           </section>
 
@@ -182,7 +187,7 @@ export default function UnitMixPage({ params }: { params: Promise<{ id: string }
                     {result.optimization.candidates.slice(0, 5).map((candidate, index) => (
                       <tr key={index}>
                         <td>{index + 1}</td>
-                        <td>{Object.entries(candidate.counts).map(([k, v]) => `${k}: ${v}`).join(" · ")}</td>
+                        <td>{Object.entries(candidate.counts).map(([k, v]) => `${v} × ${k.replace("r", "")} חד׳`).join(" · ")}</td>
                         <td>{candidate.developer_units}</td>
                         <td>{ils(candidate.projected_profit_ils)}</td>
                         <td>{(candidate.profit_margin_on_cost_ratio * 100).toFixed(1)}%</td>

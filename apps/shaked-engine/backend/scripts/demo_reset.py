@@ -8,7 +8,8 @@
 והמסירה הרביעית אינה מחזירה 402.
 
 **מה נמחק:** רק מסירות של ארבע חלקות ההדגמה, ורק לחברת ההדגמה. ארבע
-המסירות הישנות מ-13.09 נשארות — זו הכרעה נפרדת (A23).
+המסירות הישנות מ-13.09 נשארות — זו הכרעה נפרדת (A23). וגם התמהיל שחושב
+לחלקות ההדגמה בחזרה (B15), כדי שבהדגמה התיק ייפתח עם ״עוד לא חושב״.
 
 **מתי הוא מסרב:** מסד שאינו על המחשב הזה, או חברה שאינה חברת הדגמה.
 במוצר אין ביטול מסירה, וזה נכון; הסקריפט הזה קיים רק למסד ההדגמה המקומי.
@@ -47,12 +48,14 @@ async def main(apply: bool) -> int:
             print("אין חברת הדגמה במסד")
             return 2
 
-        ids = {}
+        ids, mixed = {}, []
         for block, parcel, address in demo.DELIVERED + [demo.FOURTH]:
-            o = (await s.execute(select(Opportunity.id).where(
-                Opportunity.block == block, Opportunity.parcel == parcel))).scalar()
+            o = (await s.execute(select(Opportunity).where(
+                Opportunity.block == block, Opportunity.parcel == parcel))).scalars().first()
             if o:
-                ids[o] = address
+                ids[o.id] = address
+                if (o.metadata_json or {}).get("planned_unit_mix"):
+                    mixed.append(o)
         rows = (await s.execute(select(Delivery).where(
             Delivery.company_id == company.id, Delivery.opportunity_id.in_(list(ids))))).scalars().all()
         balance = (await s.execute(select(Balance).where(Balance.company_id == company.id))).scalar_one()
@@ -60,7 +63,9 @@ async def main(apply: bool) -> int:
         print(f"{company.name} · יתרה {balance.credits_remaining} → {demo.STARTING_CREDITS}")
         for r in rows:
             print(f"  מסירה שתימחק: {ids[r.opportunity_id]} · {r.delivered_at:%d.%m %H:%M}")
-        if not rows and balance.credits_remaining == demo.STARTING_CREDITS:
+        for o in mixed:
+            print(f"  תמהיל שיימחק: {ids[o.id]}")
+        if not rows and not mixed and balance.credits_remaining == demo.STARTING_CREDITS:
             print("כבר בנקודת ההתחלה — אין מה לשנות")
             return 0
         if not apply:
@@ -69,6 +74,9 @@ async def main(apply: bool) -> int:
 
         await s.execute(delete(Delivery).where(Delivery.id.in_([r.id for r in rows])))
         balance.credits_remaining = demo.STARTING_CREDITS
+        for o in mixed:
+            o.metadata_json = {k: v for k, v in o.metadata_json.items()
+                               if k not in ("planned_unit_mix", "planned_unit_mix_meta")}
         await s.commit()
         print("\nבוצע.")
         return 0
