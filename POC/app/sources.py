@@ -43,7 +43,12 @@ class PublicClient:
                 r=self.client.get(url,headers=headers)
                 if r.status_code in (429,502,503,504):
                     delay = r.headers.get('Retry-After','')
-                    time.sleep(min(10,float(delay)) if delay.isdigit() else 2**attempt)
+                    # Overpass hands out two slots per IP and frees them on a ~15s
+                    # cycle. Backing off 1s then 2s spends all three attempts inside
+                    # the same closed window, so a busy moment kills the whole scan.
+                    # Wait on the upstream's own timescale instead.
+                    base = 15 if 'overpass' in url else 2**attempt
+                    time.sleep(min(30,float(delay)) if delay.isdigit() else base)
                     error=SourceError(f'HTTP {r.status_code}: {url}'); continue
                 r.raise_for_status()
                 if len(r.content)>25_000_000: raise SourceError('Source exceeds 25 MB limit')
