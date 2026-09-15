@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { use } from "react";
-import { ApiError, downloadDossier, getDossier,
+import { ApiError, downloadDossier, getDossier, getUnitReviewCounts,
          type Betterment, type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
 import {
   ASSUMPTION_STATUS, GATE_STATUS,
@@ -179,6 +179,12 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
     }
   }
 
+  // ‏C15 · מסך האישור (PR #17) קיים, ועד היום לא היה מקושר מהתיק עם מה שמחכה בו.
+  const [unitReview, setUnitReview] = useState<{ total: number; pending: number } | null>(null);
+  useEffect(() => {
+    getUnitReviewCounts(id).then(setUnitReview).catch(() => setUnitReview(null));
+  }, [id]);
+
   useEffect(() => {
     getDossier(CITY, id)
       .then(setD)
@@ -349,6 +355,17 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                   ))}
                 </ul>
               </div>
+            )}
+
+            {unitReview && unitReview.total > 0 && (
+              <p style={{ margin: "-.4rem 0 1rem", fontSize: ".86rem", color: "#6b655c" }}>
+                {unitReview.pending > 0
+                  ? `${unitReview.pending} מתוך ${unitReview.total} הדירות שנקראו מההיתר ממתינות לאישור. `
+                  : `כל ${unitReview.total} הדירות שנקראו מההיתר אושרו. `}
+                <Link href={`/dossier/${id}/units`}>
+                  {unitReview.pending > 0 ? "אשר דירות ←" : "לוח הדירות ←"}
+                </Link>
+              </p>
             )}
 
             {/* ‏B15 · התמהיל שהיזם חישב. המשפט מהשרת, כמו ב-PDF ובאקסל,
