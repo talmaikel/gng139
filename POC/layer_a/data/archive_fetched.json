@@ -2,19 +2,17 @@
  "6424/144": {
   "fields": {
    "permit_date": "1978-01-01",
-   "post_2005_permit": true,
-   "tama38_event": true
+   "post_2005_permit": true
   },
   "location": "גוש 6424 חלקה 144 · 8 בקשות בתיק הבניין",
-  "method": "שנת הבקשה המוקדמת ביותר בתיק",
+  "method": "היתר בתיק שתאריכו אחרי 18.5.2005",
   "retrieved_at": "2026-09-12T12:00:00+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll"
  },
  "6424/145": {
   "fields": {
    "permit_date": "1979-01-01",
-   "post_2005_permit": true,
-   "tama38_event": false
+   "post_2005_permit": true
   },
   "location": "גוש 6424 חלקה 145 · 8 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -24,8 +22,7 @@
  "6424/152": {
   "fields": {
    "permit_date": "1991-01-01",
-   "post_2005_permit": false,
-   "tama38_event": false
+   "post_2005_permit": false
   },
   "location": "גוש 6424 חלקה 152 · 2 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -35,85 +32,737 @@
  "6424/76": {
   "fields": {
    "permit_date": "1966-01-01",
-   "post_2005_permit": false,
-   "tama38_event": false
+   "post_2005_permit": false
   },
   "location": "גוש 6424 חלקה 76 · 3 בקשות בתיק הבניין",
-  "method": null,
+  "method": "שנת הבקשה המוקדמת ביותר בתיק",
   "retrieved_at": "2026-09-12T12:00:00+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll"
+ },
+ "6527/120": {
+  "fields": {
+   "permit_date": "1973-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיקים 924, 1330 · 12 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:19:21.799934+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=924&arguments=siteid%2Ct"
+ },
+ "6527/194": {
+  "fields": {
+   "permit_date": "1978-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 3673 · 3 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:23:32.285851+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=3673&arguments=siteid%2Ct"
+ },
+ "6527/196": {
+  "fields": {
+   "permit_date": "1978-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 3670 · 2 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:24:12.212264+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=3670&arguments=siteid%2Ct"
+ },
+ "6527/201": {
+  "fields": {
+   "permit_date": "1965-01-01",
+   "tama38_event": true
+  },
+  "location": "תיק 1216 · 6 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:21:13.050381+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1216&arguments=siteid%2Ct"
+ },
+ "6527/280": {
+  "fields": {
+   "permit_date": "1976-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": true
+  },
+  "location": "תיק 3768 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:23:53.573303+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=3768&arguments=siteid%2Ct"
+ },
+ "6527/320": {
+  "fields": {
+   "permit_date": "1997-01-01",
+   "post_2005_permit": true,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 4344 · 13 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:26:13.118773+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=4344&arguments=siteid%2Ct"
+ },
+ "6528/106": {
+  "fields": {
+   "permit_date": "1950-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 4069 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:24:32.259176+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=4069&arguments=siteid%2Ct"
+ },
+ "6528/37": {
+  "fields": {
+   "permit_date": "1975-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 1493 · 11 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:24:02.348604+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1493&arguments=siteid%2Ct"
+ },
+ "6528/40": {
+  "fields": {
+   "permit_date": "1967-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1046 · 4 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:14:54.873216+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1046&arguments=siteid%2Ct"
+ },
+ "6528/90": {
+  "fields": {
+   "permit_date": "1974-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1451 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:15:14.873384+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1451&arguments=siteid%2Ct"
+ },
+ "6529/138": {
+  "fields": {
+   "permit_date": "1965-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 5850 · 3 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-10T16:14:45.476066+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=5850&arguments=siteid%2Ct"
+ },
+ "6529/162": {
+  "fields": {
+   "permit_date": "1961-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 4325 · 12 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-10T16:16:06.643446+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=4325&arguments=siteid%2Ct"
+ },
+ "6529/163": {
+  "fields": {
+   "permit_date": "1969-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 4682 · 6 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-10T16:17:16.158491+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=4682&arguments=siteid%2Ct"
+ },
+ "6529/166": {
+  "fields": {
+   "permit_date": "1970-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 5846 · 7 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-10T16:15:25.738874+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=5846&arguments=siteid%2Ct"
+ },
+ "6529/185": {
+  "fields": {
+   "permit_date": "1952-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיקים 485, 30072 · 6 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:15:34.891728+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=485&arguments=siteid%2Ct"
+ },
+ "6529/192": {
+  "fields": {
+   "permit_date": "1942-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 1422 · 14 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:23:14.719111+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1422&arguments=siteid%2Ct"
+ },
+ "6529/226": {
+  "fields": {
+   "permit_date": "1980-01-01",
+   "post_2005_permit": true,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1179 · 8 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:26:51.816566+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1179&arguments=siteid%2Ct"
+ },
+ "6529/264": {
+  "fields": {
+   "permit_date": "2018-01-01",
+   "post_2005_permit": true,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 9061 · 2 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:27:52.464509+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=9061&arguments=siteid%2Ct"
+ },
+ "6529/46": {
+  "fields": {
+   "permit_date": "1952-01-01",
+   "post_2005_permit": true,
+   "tama38_event": true
+  },
+  "location": "תיק 1146 · 9 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:20:22.260697+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1146&arguments=siteid%2Ct"
+ },
+ "6529/47": {
+  "fields": {
+   "permit_date": "1952-01-01",
+   "post_2005_permit": true,
+   "tama38_event": true
+  },
+  "location": "תיק 1146 · 9 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:20:22.260697+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1146&arguments=siteid%2Ct"
+ },
+ "6529/48": {
+  "fields": {
+   "permit_date": "1952-01-01",
+   "post_2005_permit": true,
+   "tama38_event": true
+  },
+  "location": "תיק 1146 · 9 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:20:22.260697+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1146&arguments=siteid%2Ct"
+ },
+ "6530/128": {
+  "fields": {
+   "permit_date": "1979-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": true
+  },
+  "location": "תיק 6620 · 9 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:25:12.866989+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=6620&arguments=siteid%2Ct"
+ },
+ "6530/141": {
+  "fields": {
+   "permit_date": "1963-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 1206 · 7 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:20:51.908778+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1206&arguments=siteid%2Ct"
+ },
+ "6530/51": {
+  "fields": {
+   "permit_date": "1968-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 4319 · 2 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:25:52.260109+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=4319&arguments=siteid%2Ct"
+ },
+ "6530/85": {
+  "fields": {
+   "permit_date": "1961-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 4030 · 3 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:27:32.384783+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=4030&arguments=siteid%2Ct"
+ },
+ "6531/13": {
+  "fields": {
+   "permit_date": "1954-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 368 · 11 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:16:55.959193+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=368&arguments=siteid%2Ct"
+ },
+ "6531/14": {
+  "fields": {
+   "permit_date": "1954-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 368 · 11 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:16:55.959193+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=368&arguments=siteid%2Ct"
  },
  "6531/156": {
   "fields": {
    "permit_date": "1972-01-01",
-   "post_2005_permit": true,
-   "tama38_event": false
+   "post_2005_permit": true
   },
   "location": "תיק 3892 · 4 בקשות",
   "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
   "retrieved_at": "2026-09-13T19:58:46.359106+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=3892&arguments=siteid%2Ct"
  },
+ "6532/105": {
+  "fields": {
+   "permit_date": "1943-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1125 · 3 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:16:04.865104+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1125&arguments=siteid%2Ct"
+ },
+ "6532/166": {
+  "fields": {
+   "permit_date": "1972-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 887 · 4 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:18:51.513050+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=887&arguments=siteid%2Ct"
+ },
+ "6532/230": {
+  "fields": {
+   "permit_date": "1967-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 252 · 10 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:16:36.028565+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=252&arguments=siteid%2Ct"
+ },
  "6532/271": {
   "fields": {
    "permit_date": "1950-01-01",
    "post_2005_permit": true,
+   "representative_event": false,
    "tama38_event": false
   },
-  "location": "תיק 1546 · 6 בקשות",
+  "location": "תיקים 1546, 7351 · 12 בקשות",
   "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
-  "retrieved_at": "2026-09-13T19:59:55.884055+00:00",
+  "retrieved_at": "2026-09-16T16:14:24.936647+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1546&arguments=siteid%2Ct"
+ },
+ "6532/289": {
+  "fields": {
+   "permit_date": "1974-01-01"
+  },
+  "location": "תיקים 670, 1209 · 9 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:17:51.299656+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=670&arguments=siteid%2Ct"
+ },
+ "6532/308": {
+  "fields": {
+   "permit_date": "1952-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1377 · 9 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:25:33.477202+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1377&arguments=siteid%2Ct"
+ },
+ "6532/33": {
+  "fields": {
+   "permit_date": "1964-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 1540 · 16 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:24:31.663500+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1540&arguments=siteid%2Ct"
+ },
+ "6534/141": {
+  "fields": {
+   "permit_date": "1959-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1257 · 4 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:18:44.868849+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1257&arguments=siteid%2Ct"
+ },
+ "6534/54": {
+  "fields": {
+   "permit_date": "1961-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 734 · 3 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:19:04.876956+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=734&arguments=siteid%2Ct"
+ },
+ "6535/115": {
+  "fields": {
+   "permit_date": "1944-01-01"
+  },
+  "location": "תיק 321 · 16 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-14T09:02:35.398482+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=321&arguments=siteid%2Ct"
+ },
+ "6536/263": {
+  "fields": {
+   "permit_date": "1975-01-01",
+   "post_2005_permit": true,
+   "tama38_event": true
+  },
+  "location": "תיק 1275 · 13 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:21:33.169956+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1275&arguments=siteid%2Ct"
+ },
+ "6536/342": {
+  "fields": {
+   "permit_date": "1952-01-01"
+  },
+  "location": "תיק 143 · 4 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-11T12:20:50.577910+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=143&arguments=siteid%2Ct"
+ },
+ "6536/407": {
+  "fields": {
+   "permit_date": "1955-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 3906 · 3 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:27:12.439525+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=3906&arguments=siteid%2Ct"
+ },
+ "6536/445": {
+  "fields": {
+   "permit_date": "1973-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1091 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:20:04.855518+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1091&arguments=siteid%2Ct"
+ },
+ "6536/486": {
+  "fields": {
+   "permit_date": "1967-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 1039 · 11 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:19:42.370698+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1039&arguments=siteid%2Ct"
+ },
+ "6536/489": {
+  "fields": {
+   "permit_date": "1978-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 1397 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:23:02.731180+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1397&arguments=siteid%2Ct"
  },
  "6536/501": {
   "fields": {
    "permit_date": "1970-01-01",
-   "post_2005_permit": true,
-   "tama38_event": false
+   "post_2005_permit": true
   },
   "location": "תיק 3988 · 6 בקשות",
   "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
   "retrieved_at": "2026-09-13T19:58:15.797834+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=3988&arguments=siteid%2Ct"
  },
+ "6536/863": {
+  "fields": {
+   "permit_date": "1981-01-01",
+   "post_2005_permit": true,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1353 · 7 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:26:31.815844+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1353&arguments=siteid%2Ct"
+ },
  "6537/120": {
   "fields": {
    "permit_date": "1971-01-01",
-   "post_2005_permit": true,
-   "tama38_event": false
+   "post_2005_permit": true
   },
   "location": "תיק 1613 · 6 בקשות",
   "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
   "retrieved_at": "2026-09-13T19:57:44.818894+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1613&arguments=siteid%2Ct"
  },
+ "6537/285": {
+  "fields": {
+   "permit_date": "1949-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 747 · 11 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:16:25.653320+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=747&arguments=siteid%2Ct"
+ },
+ "6537/97": {
+  "fields": {
+   "permit_date": "1964-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 6934 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:24:52.149405+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=6934&arguments=siteid%2Ct"
+ },
+ "6538/250": {
+  "fields": {
+   "permit_date": "1973-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 684 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:19:27.041846+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=684&arguments=siteid%2Ct"
+ },
+ "6538/308": {
+  "fields": {
+   "permit_date": "1974-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 866 · 3 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:18:05.234377+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=866&arguments=siteid%2Ct"
+ },
+ "6538/571": {
+  "fields": {
+   "permit_date": "1978-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 133 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:19:45.245703+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=133&arguments=siteid%2Ct"
+ },
+ "6538/681": {
+  "fields": {
+   "permit_date": "1965-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 355 · 7 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-14T08:56:10.684545+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=355&arguments=siteid%2Ct"
+ },
+ "6538/83": {
+  "fields": {
+   "permit_date": "1964-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 1040 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-14T09:00:43.873233+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1040&arguments=siteid%2Ct"
+ },
+ "6539/43": {
+  "fields": {
+   "permit_date": "1972-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1181 · 2 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:16:44.866890+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1181&arguments=siteid%2Ct"
+ },
+ "6539/58": {
+  "fields": {
+   "permit_date": "1973-01-01"
+  },
+  "location": "תיק 1387 · 2 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:22:45.304014+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1387&arguments=siteid%2Ct"
+ },
+ "6539/68": {
+  "fields": {
+   "permit_date": "1972-01-01",
+   "tama38_event": true
+  },
+  "location": "תיק 596 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-12T00:28:16.009029+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=596&arguments=siteid%2Ct"
+ },
+ "6539/90": {
+  "fields": {
+   "permit_date": "1966-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 631 · 4 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-12T08:17:21.608193+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=631&arguments=siteid%2Ct"
+ },
+ "6546/172": {
+  "fields": {
+   "permit_date": "1975-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 431 · 3 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:17:05.814227+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=431&arguments=siteid%2Ct"
+ },
+ "6546/175": {
+  "fields": {
+   "permit_date": "1954-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 796 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:18:24.884983+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=796&arguments=siteid%2Ct"
+ },
+ "6546/184": {
+  "fields": {
+   "permit_date": "1944-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 1341 · 4 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:17:24.860415+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1341&arguments=siteid%2Ct"
+ },
+ "6546/203": {
+  "fields": {
+   "permit_date": "1948-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 1308 · 5 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T14:21:41.418744+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=1308&arguments=siteid%2Ct"
+ },
  "6546/384": {
   "fields": {
    "permit_date": "1981-01-01",
-   "post_2005_permit": false,
-   "tama38_event": false
+   "post_2005_permit": false
   },
   "location": "גוש 6546 חלקה 384 · 2 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
   "retrieved_at": "2026-09-12T12:00:00+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll"
  },
+ "6546/690": {
+  "fields": {
+   "permit_date": "1971-01-01",
+   "post_2005_permit": true
+  },
+  "location": "תיק 432 · 16 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-14T09:03:07.276882+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=432&arguments=siteid%2Ct"
+ },
  "6546/791": {
   "fields": {
    "permit_date": "2001-01-01",
-   "post_2005_permit": true,
-   "tama38_event": false
+   "post_2005_permit": true
   },
   "location": "גוש 6546 חלקה 791 · 4 בקשות בתיק הבניין",
-  "method": "היתר בתיק שתאריכו אחרי 18.5.2005",
+  "method": "שנת הבקשה המוקדמת ביותר בתיק",
   "retrieved_at": "2026-09-12T12:00:00+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll"
+ },
+ "6546/812": {
+  "fields": {
+   "permit_date": "1974-01-01",
+   "post_2005_permit": false,
+   "representative_event": false,
+   "tama38_event": false
+  },
+  "location": "תיק 850 · 1 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:17:45.246705+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=850&arguments=siteid%2Ct"
  },
  "7291/114": {
   "fields": {
    "permit_date": "1981-01-01",
-   "post_2005_permit": true,
-   "tama38_event": false
+   "post_2005_permit": true
   },
   "location": "גוש 7291 חלקה 114 · 10 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -123,8 +772,7 @@
  "7291/140": {
   "fields": {
    "permit_date": "1973-01-01",
-   "post_2005_permit": false,
-   "tama38_event": false
+   "post_2005_permit": false
   },
   "location": "גוש 7291 חלקה 140 · 8 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -134,8 +782,7 @@
  "7291/141": {
   "fields": {
    "permit_date": "1974-01-01",
-   "post_2005_permit": true,
-   "tama38_event": false
+   "post_2005_permit": true
   },
   "location": "גוש 7291 חלקה 141 · 16 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -145,8 +792,7 @@
  "7291/145": {
   "fields": {
    "permit_date": "1966-01-01",
-   "post_2005_permit": false,
-   "tama38_event": false
+   "post_2005_permit": false
   },
   "location": "גוש 7291 חלקה 145 · 5 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -156,8 +802,7 @@
  "7291/146": {
   "fields": {
    "permit_date": "1962-01-01",
-   "post_2005_permit": false,
-   "tama38_event": false
+   "post_2005_permit": false
   },
   "location": "גוש 7291 חלקה 146 · 7 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -167,8 +812,7 @@
  "7291/147": {
   "fields": {
    "permit_date": "1980-01-01",
-   "post_2005_permit": false,
-   "tama38_event": false
+   "post_2005_permit": false
   },
   "location": "גוש 7291 חלקה 147 · 7 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -178,8 +822,7 @@
  "7291/149": {
   "fields": {
    "permit_date": "1965-01-01",
-   "post_2005_permit": false,
-   "tama38_event": false
+   "post_2005_permit": false
   },
   "location": "גוש 7291 חלקה 149 · 5 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -189,11 +832,10 @@
  "7291/151": {
   "fields": {
    "permit_date": "1966-01-01",
-   "post_2005_permit": false,
-   "tama38_event": false
+   "post_2005_permit": false
   },
   "location": "גוש 7291 חלקה 151 · 6 בקשות בתיק הבניין",
-  "method": "בקשת חיזוק שהוגשה ולא הופק לה היתר",
+  "method": "היתר בתיק שתאריכו אחרי 18.5.2005",
   "retrieved_at": "2026-09-12T12:00:00+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll"
  },
@@ -201,21 +843,21 @@
   "fields": {
    "permit_date": "1969-01-01",
    "post_2005_permit": true,
+   "representative_event": false,
    "tama38_event": false
   },
-  "location": "גוש 7291 חלקה 218 · 6 בקשות בתיק הבניין",
-  "method": "שנת הבקשה המוקדמת ביותר בתיק",
-  "retrieved_at": "2026-09-12T12:00:00+00:00",
-  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll"
+  "location": "תיק 634 · 6 בקשות",
+  "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
+  "retrieved_at": "2026-09-16T16:17:05.126310+00:00",
+  "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll?appname=cixpa&prgname=GetTikFile&siteid=121&t=634&arguments=siteid%2Ct"
  },
  "7291/231": {
   "fields": {
    "permit_date": "1978-01-01",
-   "post_2005_permit": true,
-   "tama38_event": true
+   "post_2005_permit": true
   },
   "location": "גוש 7291 חלקה 231 · 3 בקשות בתיק הבניין",
-  "method": null,
+  "method": "שנת הבקשה המוקדמת ביותר בתיק",
   "retrieved_at": "2026-09-12T12:00:00+00:00",
   "source_url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll"
  }
