@@ -9,6 +9,57 @@
       "port": 3000
     },
     {
+      "name": "c16-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "3001"],
+      "cwd": ".claude/worktrees/c16-landing/apps/shaked-engine/frontend",
+      "port": 3001
+    },
+    {
+      "name": "c17-backend",
+      "runtimeExecutable": "C:/Users/talma/OneDrive/Desktop/gng139/apps/shaked-engine/backend/.venv/Scripts/python.exe",
+      "runtimeArgs": ["-X", "utf8", "-m", "uvicorn", "app.main:app", "--port", "8010"],
+      "cwd": ".claude/worktrees/c16-landing/apps/shaked-engine/backend",
+      "port": 8010
+    },
+    {
+      "name": "c17-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "3011"],
+      "cwd": ".claude/worktrees/c16-landing/apps/shaked-engine/frontend",
+      "env": { "API_ORIGIN": "http://127.0.0.1:8010" },
+      "port": 3011
+    },
+    {
+      "name": "shaked-frontend-3002",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev", "-p", "3002"],
+      "cwd": "apps/shaked-engine/frontend",
+      "port": 3002
+    },
+    {
+      "name": "shaked-backend",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-X", "utf8", "-m", "uvicorn", "app.main:app", "--port", "8000"],
+      "cwd": "apps/shaked-engine/backend",
+      "port": 8000
+    },
+    {
+      "name": "calib-backend",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-X", "utf8", "-m", "uvicorn", "app.main:app", "--port", "8020"],
+      "cwd": "apps/shaked-engine/backend",
+      "port": 8020
+    },
+    {
+      "name": "calib-frontend",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev", "-p", "3020"],
+      "cwd": "apps/shaked-engine/frontend",
+      "env": { "API_ORIGIN": "http://127.0.0.1:8020" },
+      "port": 3020
+    },
+    {
       "name": "tel-aviv-review",
       "runtimeExecutable": ".venv/Scripts/python.exe",
       "runtimeArgs": ["-X", "utf8", "scripts/serve_tel_aviv_review.py"],
