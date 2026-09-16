@@ -64,6 +64,15 @@ UNIT_COUNT_PATTERNS = (
     re.compile(r"\b(\d{1,3})\s*(?:יח[\"'״]?ד|יחידות\s*דיור|דירות)"),
 )
 
+# Declared floor count for the whole building, e.g. "מספר קומות: 7" or
+# "בניין בן 7 קומות". Distinct from a unit row's own `floor` group in
+# UNIT_ROW_PATTERNS (which apartment sits on which floor) -- this is how
+# many floors the permit describes the building as having overall.
+FLOOR_COUNT_PATTERNS = (
+    re.compile(r"(?:מספר\s*)?קומות\D{0,10}?(\d{1,2})\b"),
+    re.compile(r"\bבן\s*[\-]?\s*(\d{1,2})\s*קומות\b"),
+)
+
 MIN_OCR_CONFIDENCE = 60.0
 
 # Bounds for a single dwelling unit, deliberately wider than any normal
@@ -188,6 +197,28 @@ def _parse_unit_count(text: str) -> int | None:
     return None
 
 
+def _parse_floor_count(text: str) -> int | None:
+    """The building's own declared floor count, when the legend states one.
+
+    Unverified against a real scan (no sample with this exact wording was
+    available while writing it) -- opportunistic like the rest of this
+    module: taken when found, left None otherwise, and never the only
+    source a floor count can come from (see worker.py, which only ever
+    displays a disagreement against the existing official reading, never
+    overwrites it).
+    """
+    for pattern in FLOOR_COUNT_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            try:
+                count = int(match.group(1))
+            except (TypeError, ValueError):
+                continue
+            if 1 <= count <= 40:
+                return count
+    return None
+
+
 EXTRACTION_JSON_SCHEMA = {
     "name": "building_area_extraction",
     "schema": {
@@ -215,13 +246,16 @@ EXTRACTION_JSON_SCHEMA = {
             # use, when the legend states it -- feeds the §70א 70%-residential
             # gate as a candidate, never as a decided answer (see worker.py).
             "residential_area_sqm": {"type": ["number", "null"]},
+            # The building's own declared floor count, when the legend
+            # states one -- distinct from a unit row's individual floor.
+            "declared_floor_count": {"type": ["integer", "null"]},
             "confidence": {"type": "number"},
             "notes": {"type": ["string", "null"]},
         },
         # OpenAI's strict structured-output mode requires every property to be
         # listed here, even ones that are semantically optional/nullable above.
         "required": ["total_building_area_sqm", "units", "declared_unit_count",
-                    "residential_area_sqm", "confidence", "notes"],
+                    "residential_area_sqm", "declared_floor_count", "confidence", "notes"],
         "additionalProperties": False,
     },
     "strict": True,
@@ -256,6 +290,11 @@ class ExtractionResult:
     # caller (worker.py) already has to re-check it against whichever total
     # it ends up selecting, which may come from a different page.
     residential_area_sqm: float | None = None
+    # The building's own declared floor count, when the legend states one.
+    # Never used to overwrite the existing official floor count (see
+    # worker.py) -- only to display a disagreement, the same caution as
+    # every other OCR-read figure in this module.
+    declared_floor_count: int | None = None
 
     @property
     def units_total_area_sqm(self) -> float | None:
@@ -284,6 +323,7 @@ def _extract_via_tesseract(legend_crop: np.ndarray, plot_area_sqm: float | None)
     units = _parse_unit_rows(text)
     declared_unit_count = _parse_unit_count(text)
     residential_area_sqm = _parse_residential_area(text)
+    declared_floor_count = _parse_floor_count(text)
 
     # A schedule that lists every apartment but no total is common on older
     # sheets. Summing the plausible unit rows is a legitimate reading of that
@@ -304,6 +344,7 @@ def _extract_via_tesseract(legend_crop: np.ndarray, plot_area_sqm: float | None)
         units=units,
         declared_unit_count=declared_unit_count,
         residential_area_sqm=residential_area_sqm,
+        declared_floor_count=declared_floor_count,
     )
 
 
@@ -333,7 +374,10 @@ async def _extract_via_openai(image_bytes: bytes, plot_area_sqm: float | None) -
                     "residential_area_sqm when the legend states how much of the building is "
                     "for residential use specifically (e.g. \"שטח למגורים\"), as opposed to the "
                     "total built area alone -- null when the legend does not distinguish "
-                    "residential from any other use."
+                    "residential from any other use. Also extract declared_floor_count: the "
+                    "building's own stated number of floors (e.g. \"מספר קומות\", \"בניין בן 7 "
+                    "קומות\"), not any individual unit's floor -- null when the legend does not "
+                    "state one."
                 ),
             },
             {
@@ -374,6 +418,7 @@ async def _extract_via_openai(image_bytes: bytes, plot_area_sqm: float | None) -
         units=units,
         declared_unit_count=payload.get("declared_unit_count"),
         residential_area_sqm=payload.get("residential_area_sqm"),
+        declared_floor_count=payload.get("declared_floor_count"),
         # Always True: an AI-read figure is never auto-trusted as verified
         # fact, even when it clears the bounds check -- the live test showed
         # gpt-4o-mini confidently misread a plot number as a building area,
