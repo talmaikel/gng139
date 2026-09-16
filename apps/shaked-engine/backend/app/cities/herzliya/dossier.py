@@ -27,9 +27,9 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.cities.herzliya import new_build_prices, rights
+from app.cities.herzliya import glossary, new_build_prices, rights
 from app.core.config import get_settings
-from app.evidence import DECIDING, Certainty
+from app.evidence import DECIDING, Certainty, usable
 from app.models.opportunity import Opportunity
 from app.models.package import Delivery
 from app.services.dwelling_units import load_units, resolve_existing_unit_area
@@ -66,7 +66,8 @@ FIELD_LABEL = {
     "in_tama70": 'בתחום תמ"א 70',
     "scope_buildings": "מספר מבנים בחלקה",
     "renewal_policy_category": "קטגוריה במפת המדיניות",
-    "category_ceiling": "תקרת הקטגוריה",
+    # ‏W4 · היה ״תקרת הקטגוריה״, והשותפים שאלו תקרה של מה. הערך הוא קומות.
+    "category_ceiling": "מספר קומות מרבי לפי קטגוריית המדיניות",
     "residential_zoning": "ייעוד למגורים",
     "zoning_names": "שמות הייעוד בתכנית",
     "residential_share": "שיעור השימוש למגורים",
@@ -168,6 +169,11 @@ def _evidence_rows(fields: dict[str, dict]) -> list[dict[str, Any]]:
 
     שורות `MISSING` נכללות **בכוונה**: ״נבדק ולא נמצא״ הוא ממצא, ותיק
     שמשמיט אותו נקרא כאילו איש לא בדק.
+
+    ‏**W4 · ״מכריע״ הוא אותו כלל שמכריע את השערים** (`usable()`): ודאות,
+    מקור, מיקום וגיל. הגרסה הקודמת בדקה ודאות בלבד, והמסך כתב מתחת
+    לטבלה שהעמודה משלבת את ארבעתם — ראיה רשמית שהתיישנה סומנה ״מכריע״
+    בזמן שהשער שנשען עליה נשאר ״לא ידוע״.
     """
     out = []
     for name, f in sorted(fields.items()):
@@ -178,7 +184,9 @@ def _evidence_rows(fields: dict[str, dict]) -> list[dict[str, Any]]:
             "value": f.get("value"),
             "certainty": f.get("certainty"),
             "certainty_label": CERTAINTY_LABEL.get(f.get("certainty"), f.get("certainty")),
-            "decides": f.get("certainty") in DECIDING,
+            "decides": usable(f, get_settings().source_max_age_days),
+            # המונח שמסביר את השדה, כשהתווית לבדה אינה מספיקה (glossary.py)
+            "term": glossary.FIELD_TERM.get(name),
             "source_url": source.get("url"),
             "retrieved_at": source.get("retrieved_at"),
             "location": _readable(f.get("location")),
@@ -900,4 +908,6 @@ async def assemble(session, city_rules, opp: Opportunity, delivery: Delivery | N
             "why_selected": delivery.why_selected if delivery else None,
         },
         "stale_fields": stale_fields(fields),
+        # ‏W4 · המונחים שה״?״ במסך פותח, ושהאקסל וה-PDF מדפיסים — נוסח אחד.
+        "glossary": glossary.glossary(),
     }

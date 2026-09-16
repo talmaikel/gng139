@@ -25,3 +25,4 @@ export const IconArrowUp = (p: IconProps) => <Icon {...p}><path d="M12 19V5m0 0-
 export const IconArrowDown = (p: IconProps) => <Icon {...p}><path d="M12 5v14m0 0 6-6m-6 6-6-6" /></Icon>;
 export const IconX = (p: IconProps) => <Icon {...p}><path d="M6 6l12 12M18 6 6 18" /></Icon>;
 export const IconMenu = (p: IconProps) => <Icon {...p}><path d="M4 7h16M4 12h16M4 17h16" /></Icon>;
+export const IconHelp = (p: IconProps) => <Icon {...p}><circle cx="12" cy="12" r="9" /><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 16.8v.1" /></Icon>;
