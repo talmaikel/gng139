@@ -24,7 +24,6 @@
 import argparse
 import asyncio
 import json
-import re
 from datetime import date, datetime
 from pathlib import Path
 
@@ -62,7 +61,6 @@ MIN_SQM_PER_UNIT = 30.0
 # מארח הארכיון העירוני. ראיות שמקורן בו נשלפות לפי דרישת לקוח, אחת-אחת,
 # ונשמרות לתמיד — הזריעה אינה נוגעת בהן.
 ARCHIVE_HOST = "complot.co.il"
-STRENGTHENING = re.compile(r'תמ["״]?א\s*38|חיזוק|רעידות אדמה')
 
 # תיקי בניין שנשלפו לפי בקשת לקוח, מיוצאים כדי שזריעה על מכונה חדשה
 # תשחזר אותם. בלעדיו מספר המועמדים המוכנים יורד בלי הסבר — קרה: 9 → 5.
@@ -89,12 +87,15 @@ def _fetched_rows(key: str, entry: dict | None) -> list[dict]:
     if not entry:
         return []
     at = datetime.fromisoformat(entry["retrieved_at"]) if entry.get("retrieved_at") else None
+    from app.cities.herzliya.archive_facts import ARCHIVE_FIELDS
     return [dict(field=field, value=value, certainty=Certainty.DERIVED.value,
                  source_url=entry["source_url"], retrieved_at=at,
                  source_updated_at=None, location=entry.get("location"),
                  method=entry.get("method"))
             for field, value in (entry.get("fields") or {}).items()
-            if at and entry.get("source_url") and entry.get("location")]
+            # שדה שפרש (W5) אינו חוזר דרך הקובץ
+            if field in ARCHIVE_FIELDS
+            and at and entry.get("source_url") and entry.get("location")]
 
 
 def usable_units(surv: dict) -> int | None:
@@ -255,14 +256,15 @@ def _rows(key, surv, front, geo, sources, archive):
         if years:
             out.append(ev("permit_date", f"{min(years)}-01-01", "archive", loc,
                           Certainty.DERIVED, "שנת הבקשה המוקדמת ביותר בתיק"))
-        hits = [r for r in archive if STRENGTHENING.search(r.get("action") or "")]
-        # חיזוק **עם** היתר פוסל לפי §70א(2). חיזוק **בלי** היתר פירושו
-        # שיזם אחר כבר מול הדיירים — כשיר בדין, לא זמין בפועל. שני שדות.
-        out.append(ev("strengthened", any((r.get("permit_date") or "").strip() for r in hits),
-                      "archive", loc, Certainty.DERIVED))
-        out.append(ev("occupied", any(not (r.get("permit_date") or "").strip() for r in hits),
-                      "archive", loc, Certainty.DERIVED,
-                      "בקשת חיזוק שהוגשה ולא הופק לה היתר"))
+        # ‏W5 · העמודה היא ״ארוע אחרון להצגה״ ולא תיאור הבקשה (ב-POC: `action`).
+        # ‏`strengthened`/`occupied` נגזרו ממנה והיו עיוורים, ואינם נכתבים עוד.
+        # מה שכן נשמר — סימן חיובי: ארוע שמזכיר תמ״א 38, או מייצג.
+        from app.cities.herzliya.archive_facts import REPRESENTATIVE, STRENGTHENING
+        events = [r.get("last_event") or r.get("action") or "" for r in archive]
+        out.append(ev("tama38_event", any(STRENGTHENING.search(e) for e in events),
+                      "archive", loc, Certainty.DERIVED, "ארוע אחרון בבקשה מזכיר תמ״א 38 או חיזוק"))
+        out.append(ev("representative_event", any(REPRESENTATIVE.search(e) for e in events),
+                      "archive", loc, Certainty.DERIVED, "ארוע אחרון בבקשה מזכיר מייצג"))
         # ‏§70ב(א)(1)(ב): תוספת שהותרה אחרי 18.5.2005 אינה נכנסת לבסיס
         # ה-400%. התיק מדווח שהיתר ניתן, לא כמה מ״ר הוא הוסיף, ולכן הערך
         # בוליאני: **False** פירושו נבדק ואין, ולא ״לא נבדק״ — את ההבדל
@@ -371,16 +373,21 @@ async def seed(limit=None):
             rows = _rows(key, surv[key], front.get(key, {}), g, sources, archive)
             rows += _fetched_rows(key, fetched.get(key))
 
+            from app.cities.herzliya.archive_facts import RETIRED_FIELDS
+            from app.cities.herzliya.renewal import FIELD as RENEWAL_FIELD
             conditions = [FieldEvidence.source_url.not_like(f"%{ARCHIVE_HOST}%")]
+            # שדות שפרשו (W5) נמחקים גם כשמקורם בארכיון — אחרת ״עבר״ עיוור נשאר לתמיד
             rewriting = {r["field"] for r in rows
-                         if ARCHIVE_HOST in (r.get("source_url") or "")}
-            if rewriting:
-                conditions.append(sa.and_(
-                    FieldEvidence.source_url.like(f"%{ARCHIVE_HOST}%"),
-                    FieldEvidence.field.in_(rewriting)))
+                         if ARCHIVE_HOST in (r.get("source_url") or "")} | set(RETIRED_FIELDS)
+            conditions.append(sa.and_(
+                FieldEvidence.source_url.like(f"%{ARCHIVE_HOST}%"),
+                FieldEvidence.field.in_(rewriting)))
             await session.execute(
                 delete(FieldEvidence).where(
-                    FieldEvidence.opportunity_id == opp_id, sa.or_(*conditions))
+                    FieldEvidence.opportunity_id == opp_id, sa.or_(*conditions),
+                    # ‏`renewal_status` מנוהל ב-`renewal.apply`, שרץ אחרי הזריעה —
+                    # כולל הכרעות צוות, שאין להן עותק בשום קובץ
+                    FieldEvidence.field != RENEWAL_FIELD)
             )
             for r in rows:
                 session.add(FieldEvidence(opportunity_id=opp_id, **r))
@@ -434,8 +441,11 @@ async def _seed_and_assess(limit=None):
     """
     from app.cities.herzliya.assessments import refresh
     from app.cities.herzliya.rules import HerzliyaCityRules
+    from app.cities.herzliya.renewal import apply_all
     out = await seed(limit)
     async with AsyncSessionLocal() as session:
+        # החידוש לפני ההערכה: השער קורא את `renewal_status`
+        out["renewal"] = (await apply_all(session, write=True))["counts"]
         out["assessment"] = await refresh(session, HerzliyaCityRules())
         await session.commit()
     return out

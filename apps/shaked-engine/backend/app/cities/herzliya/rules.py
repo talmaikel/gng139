@@ -72,6 +72,8 @@ class HerzliyaCityRules(BaseCityRules):
             "cap_400_reliable": rights.cap_400_reliable(post_2005),
             "notes": list(r.notes),
             "stale_fields": stale_fields(f),
+            # מה שהצוות צריך לראות במסך, בלי לפתוח את השער (W5)
+            "renewal": _renewal(d.get("renewal_status")),
         }
 
         # ‏W1 · כמה מהתקרה נכנס בפועל לפי המדיניות. 400% הוא תקרה בחוק ולא זכות,
@@ -104,6 +106,14 @@ def _scope_check(buildings):
     status = "failed" if buildings < 1 else "passed" if buildings <= 2 else "routed"
     return rights.Check("scope_buildings", "מבנה אחד או שניים במסלול המגרשי", status,
                         rights.POLICY_URL, 2, f"{buildings} מבנים")
+
+
+def _renewal(rs) -> dict[str, Any]:
+    """הנימוקים רק כשיש חשד או אימות — אלה אינם נמסרים. בחלקה שנמסרת הם
+    עשויים להחזיק הערת צוות, והתיק הולך ללקוח."""
+    rs = rs if isinstance(rs, dict) else {}
+    held = rs.get("status") in ("verified_renewed", "suspected")
+    return {"status": rs.get("status"), "reasons": list(rs.get("reasons") or []) if held else []}
 
 
 def _status(checks) -> str:

@@ -109,7 +109,7 @@ def pdf(d: dict[str, Any]) -> bytes:
     # ── שרשרת הזכויות ──
     STATUS = {"passed": "עבר", "failed": "נכשל", "unknown": "לא ידוע",
               "routed": "נותב למתחמים", "undefined": "המדיניות שותקת",
-              "needs_measurement": "דורש מדידה"}
+              "needs_measurement": "דורש מדידה", "needs_review": "ממתין לבדיקת צוות"}
     line("שרשרת הזכויות", 13, (0.06, 0.15, 0.12), gap=6)
     for g in d["rights"]["checks"]:
         page = f" · עמ׳ {g['page']}" if g.get("page") else ""

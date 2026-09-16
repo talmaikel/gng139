@@ -188,6 +188,9 @@ async def screen_herzliya_candidates(session: AsyncSession, filters: dict[str, A
             "verification_level": opp.verification_level,
             "category": opp.metadata_json.get("category"),
             "assessment": opp.metadata_json.get("assessment"),
+            # ‏W5 · מסך הצוות מציג את החשד ואת נימוקיו, לאישור או לפסילה
+            "renewal_status": (opp.metadata_json.get("assessment") or {}).get("renewal_status"),
+            "renewal_reasons": (opp.metadata_json.get("assessment") or {}).get("renewal_reasons") or [],
             "geometry": json.loads(geojson) if geojson else None,
             "centroid": {"lat": lat, "lng": lng} if lat is not None and lng is not None else None,
         }

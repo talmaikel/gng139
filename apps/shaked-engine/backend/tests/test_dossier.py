@@ -23,6 +23,7 @@ SQUARE = ("MULTIPOLYGON(((34.8460000 32.1660000,34.8464000 32.1660000,"
 
 READY = dict(residential_zoning=True, permit_date="1978-01-01", strengthened=False,
              occupied=False, post_2005_permit=False, floors=4, units=28,
+             renewal_status={"status": "none", "reasons": [], "manual": False},
              scope_buildings=1, street_width=12.0,
              renewal_policy_category="התחדשות מגרשית מוטת מגורים",
              in_tama70=True, registration_area='שז"ר')

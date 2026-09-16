@@ -75,6 +75,20 @@ MUTS = [
    '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),
   ("sources/client.py", "כל לקוח חדש מאפס את הקצב",
    "self._slots = slots if slots is not None else SHARED_SLOTS", "self._slots = slots if slots is not None else HostSlots()"),
+  # ‏W5 · בניין שכבר חודש — לא נמסר ולא מחויב
+  ("cities/herzliya/renewal.py", "הרשימה הידנית נזנחת",
+   "entry = RS.manual_entry(opp.block, opp.parcel)", "entry = None"),
+  ("cities/herzliya/assessments.py", "חלקה חשודה ניתנת למסירה",
+   '"deliverable": (screenable and not review', '"deliverable": (screenable'),
+  ("api/v1/candidates.py", "חלקה מוחזקת חוזרת לתור הסריקה",
+   'not held_for_renewal(r.get("assessment"))', "True"),
+  ("services/deliveries.py", "מסירה ישירה של חלקה חשודה פונה לארכיון",
+   "if held_for_renewal(_assessment(opp)):", "if False:"),
+  ("cities/herzliya/archive_facts.py", "הארוע האחרון נקרא שוב כחיזוק",
+   '"tama38_event": any(STRENGTHENING.search(r.get("last_event") or "") for r in requests),',
+   '"tama38_event": any(STRENGTHENING.search(r.get("last_event") or "") for r in requests), "strengthened": False,'),
+  ("cities/herzliya/rights.py", "חשד עובר את השער",
+   'result, detail = "needs_review", (', 'result, detail = "passed", ('),
 ]
 root = pathlib.Path("app")
 # ‏**עד 14.09 הסקריפט רק הדפיס.** מוטציה ששרדה הדפיסה ״X שרד״, והשלב ב-CI

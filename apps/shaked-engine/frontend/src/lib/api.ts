@@ -204,7 +204,14 @@ export interface Assessment {
    */
   screenable?: boolean;
   deliverable: boolean;
+  /** W5 · the building looks already renewed. Suspected is held for the team:
+   *  not delivered and not charged until someone confirms or rejects it. */
+  renewal_status?: RenewalStatus | null;
+  renewal_reasons?: string[];
+  under_review?: boolean;
 }
+
+export type RenewalStatus = "verified_renewed" | "suspected" | "none";
 
 export interface Candidate {
   id: string;
@@ -219,6 +226,22 @@ export interface Candidate {
   assessment: Assessment | null;
   /** ההעדפה שהכריעה את מקומו מול הבא אחריו — SEL-01 דורש נימוק לכל בחירה */
   why_selected?: string;
+  /** W5 · מסך הצוות בלבד */
+  renewal_status?: RenewalStatus | null;
+  renewal_reasons?: string[];
+}
+
+/** ‏W5 · הכרעת הצוות על חשד לחידוש. בלי קישור אין ראיה, והשרת מסרב. */
+export function setRenewal(
+  cityCode: string,
+  opportunityId: string,
+  decision: { status: RenewalStatus; source: string; evidence_url: string; note?: string },
+): Promise<{ opportunity_id: string; renewal_status: RenewalStatus | null;
+             renewal_reasons: string[]; assessment: Assessment }> {
+  return request(`/api/v1/candidates/${cityCode}/${opportunityId}/renewal`, {
+    method: "POST",
+    body: JSON.stringify(decision),
+  });
 }
 
 export function getCandidates(

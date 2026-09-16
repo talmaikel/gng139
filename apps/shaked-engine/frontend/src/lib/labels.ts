@@ -33,6 +33,13 @@ export const GATE_STATUS: Record<string, Status> = {
   routed: status("נותב למתחמים", "neutral"),
   undefined: status("המדיניות שותקת", "neutral"),
   needs_measurement: status("דורש מדידה", "warn"),
+  needs_review: status("ממתין לבדיקת צוות", "warn"),
+};
+
+/** ‏W5 · חשד שהבניין כבר חודש. ״לא נמצא״ אינו מוצג כתג — הוא אינו ממצא. */
+export const RENEWAL_STATUS: Record<string, Status> = {
+  verified_renewed: status("חודש · אומת", "bad"),
+  suspected: status("חשד לחידוש", "warn"),
 };
 
 export const ASSUMPTION_STATUS: Record<string, Status> = {

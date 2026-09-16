@@ -10,6 +10,14 @@
 
 **פרטיות:** עמודת שם המבקש היא `i+3` בשורת הבקשה, והיא מדולגת **בזמן
 הפרסור** ולא מסוננת אחר כך. שם שלא נקרא אינו יכול להישמר בטעות.
+
+‏**W5 · 16.09 · מה העמוד באמת מציג.** סדר העמודות בתיק: מספר בקשה · תאריך
+הגשה · **ארוע אחרון להצגה** · שם המבקש · היתר · תאריך היתר · מסמכים. העמודה
+השלישית נקראה כאן ״תיאור הבקשה״, ו״תמ״א 38״ חופש בה — אבל היא הארוע
+**האחרון** (״מסירת היתר למבקש״), ולא מה הבקשה. לכן `strengthened` ו-`occupied`
+היו עיוורים: False כמעט תמיד, ועברו כ״לא נמצא״. הם אינם נגזרים מכאן עוד.
+ארוע שכן מזכיר תמ״א 38 או מייצג הוא סימן חיובי אמיתי, ונשמר כבוליאני
+(`tama38_event`, `representative_event`) — שם, לעולם לא.
 """
 import argparse
 import asyncio
@@ -21,6 +29,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, select
 
+from app.cities.herzliya import renewal
 from app.cities.herzliya.archive_client import HerzliyaArchiveClient
 from app.evidence import Certainty
 from app.models.evidence import FieldEvidence
@@ -31,8 +40,13 @@ ROW = re.compile(r"<tr>(.*?)</tr>", re.S)
 CELL = re.compile(r"<td[^>]*>(.*?)</td>", re.S)
 REQUEST_NO = re.compile(r"^(19|20)\d{6}$")
 STRENGTHENING = re.compile(r'תמ["״]?א\s*38|חיזוק|רעידות אדמה')
+# עו״ד מייצג, נציגות, מיופה כוח, ב״כ — בפרויקט התחדשות הבעלים מיוצגים יחד
+REPRESENTATIVE = re.compile(r'מייצג|נציג|מיופה[\s-]*כו?ח|ב["״]כ')
 
 MAX_SHORTLIST = 25          # לא סריקה. מעבר לזה — לעצור ולשאול.
+# כל תיקי החלקה נקראים (היה: הראשון בלבד — הרצוג 3 הוא 1546 **ו**-7351).
+# ‏700 המועמדים הם עד שלושה תיקים לחלקה; חלקה אחת בעיר יש לה 23.
+MAX_TIKS = 4
 
 
 class ArchiveUnavailable(Exception):
@@ -54,7 +68,10 @@ def _text(x: str) -> str:
 
 
 def parse_requests(page_html: str) -> list[dict[str, Any]]:
-    """שורות הבקשות מעמוד תיק. שם המבקש (i+3) אינו נקרא."""
+    """שורות הבקשות מעמוד תיק. שם המבקש (i+3) אינו נקרא.
+
+    ‏`last_event` הוא ״ארוע אחרון להצגה״ — לא תיאור הבקשה.
+    """
     out = []
     for row in ROW.findall(page_html):
         cells = [_text(c) for c in CELL.findall(row)]
@@ -64,7 +81,7 @@ def parse_requests(page_html: str) -> list[dict[str, Any]]:
             out.append({
                 "req": int(v),
                 "submitted": cells[i + 1] if len(cells) > i + 1 else None,
-                "action": cells[i + 2] if len(cells) > i + 2 else None,
+                "last_event": cells[i + 2] if len(cells) > i + 2 else None,
                 # cells[i + 3] הוא שם המבקש — מדולג בכוונה
                 "permit": cells[i + 4] if len(cells) > i + 4 else None,
                 "permit_date": cells[i + 5] if len(cells) > i + 5 else None,
@@ -74,19 +91,18 @@ def parse_requests(page_html: str) -> list[dict[str, Any]]:
 
 
 def facts(requests: list[dict[str, Any]]) -> dict[str, Any]:
-    """מבקשות לשני השערים. `occupied` ו-`strengthened` אינם אותו דבר."""
+    """מה שהעמוד עונה עליו. ‏`strengthened`/`occupied` אינם כאן — ראו למעלה."""
     years = [int(str(r["req"])[:4]) for r in requests if str(r.get("req", ""))[:4].isdigit()]
-    hits = [r for r in requests if STRENGTHENING.search(r.get("action") or "")]
     return {
         "earliest_year": min(years) if years else None,
         "permit_date": f"{min(years)}-01-01" if years else None,
-        # חיזוק שהופק לו היתר → פסול לפי §70א(2)
-        "strengthened": any((r.get("permit_date") or "").strip() for r in hits),
-        # בקשת חיזוק ללא היתר → יזם אחר מול הדיירים. כשיר בדין, לא זמין בפועל.
-        "occupied": any(not (r.get("permit_date") or "").strip() for r in hits),
         # §70ב(א)(1)(ב): תוספת שהותרה אחרי המועד אינה נכנסת לבסיס ה-400%.
         # התיק מדווח שהיתר ניתן, לא כמה מ״ר הוא הוסיף — ולכן בוליאני.
         "post_2005_permit": _post_2005(requests),
+        # סימנים חיוביים בלבד: ארוע שמזכיר — כן; היעדרו — אינו אומר דבר
+        "tama38_event": any(STRENGTHENING.search(r.get("last_event") or "") for r in requests),
+        "representative_event": any(REPRESENTATIVE.search(r.get("last_event") or "")
+                                    for r in requests),
         "n_requests": len(requests),
     }
 
@@ -103,7 +119,8 @@ def _post_2005(requests) -> bool:
 
 
 async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveClient | None = None) -> dict:
-    """מביא תיק לכל הזדמנות ברשימה וכותב את שני השערים כראיה."""
+    """מביא את כל תיקי החלקה לכל הזדמנות ברשימה, כותב את העובדות כראיה,
+    ומעדכן מולן את `renewal_status`."""
     if len(opportunity_ids) > MAX_SHORTLIST:
         raise ValueError(
             f"‏{len(opportunity_ids)} הזדמנויות — מעל {MAX_SHORTLIST}. "
@@ -127,13 +144,17 @@ async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveCl
                 if not tik_ids:
                     result["no_tik"] += 1
                     continue
-                page = await client.file(tik_ids[0])
-                reqs = parse_requests(page["html"])
+                pages = [await client.file(t) for t in tik_ids[:MAX_TIKS]]
+                reqs = [r for page in pages for r in parse_requests(page["html"])]
                 if not reqs:
                     result["empty"] += 1
                     continue
                 f = facts(reqs)
-                await _write(session, oid, f, page, tik_ids[0])
+                if len(tik_ids) > MAX_TIKS:
+                    # לא נקרא הכול — ״אין היתר אחרי 2005״ אינו ידוע
+                    f["post_2005_permit"] = f["post_2005_permit"] or None
+                await _write(session, oid, f, pages[0], tik_ids[:MAX_TIKS], len(tik_ids))
+                await renewal.apply(session, opp)
                 result["fetched"] += 1
                 result["requests"] += len(reqs)
             except Exception as exc:                # תקלה בתיק אחד אינה מפילה את השאר
@@ -151,17 +172,22 @@ async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveCl
     return result
 
 
-async def _write(session, oid: UUID, f: dict, page: dict, tik_id: str) -> None:
+async def _write(session, oid: UUID, f: dict, page: dict, tik_ids: list[str],
+                 total: int | None = None) -> None:
     src = page.get("source") or {}
     url = src.get("url") or "https://handasi.complot.co.il/magicscripts/mgrqispi.dll"
     when = src.get("retrieved_at")
     when = datetime.fromisoformat(when) if isinstance(when, str) else datetime.now(timezone.utc)
-    loc = f'תיק {tik_id} · {f["n_requests"]} בקשות'
+    tiks = ", ".join(tik_ids)
+    read = f" (נקראו {len(tik_ids)} מתוך {total})" if total and total > len(tik_ids) else ""
+    loc = f'{"תיקים" if len(tik_ids) > 1 else "תיק"} {tiks}{read} · {f["n_requests"]} בקשות'
 
-    for field, value in (("permit_date", f["permit_date"]),
-                         ("strengthened", f["strengthened"]),
-                         ("occupied", f["occupied"]),
-                         ("post_2005_permit", f["post_2005_permit"])):
+    # שורות עיוורות מהקריאה הקודמת — לא נכתבות עוד, ולכן גם לא נשארות
+    await session.execute(
+        delete(FieldEvidence).where(FieldEvidence.opportunity_id == oid,
+                                    FieldEvidence.field.in_(RETIRED_FIELDS)))
+    for field in ARCHIVE_FIELDS:
+        value = f.get(field)
         if value is None:
             continue
         await session.execute(
@@ -175,8 +201,8 @@ async def _write(session, oid: UUID, f: dict, page: dict, tik_id: str) -> None:
 
 # השערים שתיק הבניין יכול לענות עליהם. שער פתוח שאינו כאן — אין טעם
 # לפנות לארכיון בשבילו, וכל פנייה מיותרת היא בדיוק מה שהפעיל את ההגנה
-# ב-12.09.
-ARCHIVE_ANSWERS = frozenset({"permit_date", "strengthened", "occupied", "post_2005_permit"})
+# ב-12.09. ‏`strengthened`/`occupied` יצאו (W5): העמוד אינו מציג תיאור בקשה.
+ARCHIVE_ANSWERS = frozenset({"permit_date", "post_2005_permit", "not_renewed"})
 
 
 async def fetch_for_delivery(session, opportunity_id: UUID, client=None) -> bool:
@@ -198,9 +224,14 @@ async def fetch_for_delivery(session, opportunity_id: UUID, client=None) -> bool
     assessment = (opp.metadata_json or {}).get("assessment") or {}
     # ‏`threshold_open` בלבד: ‏`blocking` כולל גם רוחב רחוב וקטגוריה, שאין
     # לתיק הבניין מה לומר עליהם, ופנייה בשבילם היא בקשה מיותרת.
-    open_gates = set(assessment.get("threshold_open") or [])
-    if not (open_gates & ARCHIVE_ANSWERS):
+    open_gates = set(assessment.get("threshold_open") or []) & ARCHIVE_ANSWERS
+    if not open_gates:
         return False
+    if open_gates == {"not_renewed"}:
+        # התיק כבר נקרא, ורק ההכרעה על החידוש חסרה — נגזרת מהמסד, בלי פנייה
+        if (await renewal.apply(session, opp))["status"] != "unknown":
+            await refresh_one(session, HerzliyaCityRules(), opportunity_id)
+            return True
 
     out = await enrich(session, [opportunity_id], client)
     if out.get("no_tik"):
@@ -229,7 +260,9 @@ FETCHED_FILE = "archive_fetched.json"
 # השדות שמקורם בתיק הבניין, וששווה לשמור בגיט. כולם **עובדות נגזרות** —
 # מותר לשמור אותן ללא הגבלה לפי `DATA_LAW.md`. ‏HTML גולמי, שמות מבקשים
 # וחתימות אינם כאן ולא יהיו.
-ARCHIVE_FIELDS = ("permit_date", "strengthened", "occupied", "post_2005_permit")
+ARCHIVE_FIELDS = ("permit_date", "post_2005_permit", "tama38_event", "representative_event")
+# נגזרו מהארוע האחרון כאילו היה תיאור הבקשה (W5). נמחקים, לא נכתבים.
+RETIRED_FIELDS = ("strengthened", "occupied")
 
 
 async def export_fetched(session, city_code: str = "herzliya") -> dict:

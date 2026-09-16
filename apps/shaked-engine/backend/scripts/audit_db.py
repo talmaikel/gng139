@@ -150,7 +150,9 @@ async def main(args) -> int:
                      ("עם ראיית ארכיון", archive)]:
             print(f"     {k:22s} {v}")
 
-        base = {"screenable": 576, "deliverable": 9, "no_units": 39, "no_cap": 0, "archive": 20}
+        # ‏W5 · 16.09 · deliverable 9 → 5 בכוונה: 6537/120, 6536/501, 6531/156 ו-6531/152
+        # חשודות כמחודשות וממתינות לצוות. זו אינה ירידה אלא עצירה.
+        base = {"screenable": 576, "deliverable": 5, "no_units": 39, "no_cap": 0, "archive": 20}
         got = {"screenable": screenable, "deliverable": deliverable,
                "no_units": no_units, "no_cap": no_cap, "archive": archive}
         for k, want in base.items():

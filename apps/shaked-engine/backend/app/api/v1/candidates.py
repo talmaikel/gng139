@@ -14,7 +14,8 @@ from app.cities.herzliya.archive_facts import (ArchiveUnavailable, NoBuildingFil
 from app.cities.herzliya import exports
 from app.cities.herzliya.dossier import NotEntitled, build as build_dossier
 from app.services.deliveries import (NoCredits, NotDeliverable, _credits, deliver,
-                                     delivered_ids, for_company, provenance)
+                                     delivered_ids, for_company, held_for_renewal,
+                                     provenance)
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -122,8 +123,10 @@ async def _scan_queue(session, rules, body: ScanArea, company_id) -> list[dict[s
         rows = await rules.screen_candidates(session, filters)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    # ‏W5 · מחודש או חשוד — לא בתור כלל. לא נספר ב-``found``, לא נשלף ולא מחויב.
     in_track = [r for r in rows
-                if _ready(r) or (r.get("assessment") or {}).get("screenable")]
+                if not held_for_renewal(r.get("assessment"))
+                and (_ready(r) or (r.get("assessment") or {}).get("screenable"))]
     ready = [r for r in in_track if _ready(r)]
     return ready if body.ready_only else ready + [r for r in in_track if not _ready(r)]
 
@@ -332,6 +335,43 @@ async def deliver_opportunity(
     await session.commit()
     return {"delivery_id": str(row.id), "opportunity_id": str(row.opportunity_id),
             "charged": charged, "delivered_at": row.delivered_at.isoformat()}
+
+
+class RenewalDecision(BaseModel):
+    """הכרעת הצוות על חשד לחידוש. בלי קישור אין ראיה — ולכן הוא חובה."""
+    status: Literal["verified_renewed", "suspected", "none"]
+    source: str = Field(min_length=2, max_length=300)
+    evidence_url: str = Field(min_length=10, max_length=1000, pattern=r"^https?://")
+    note: str | None = Field(default=None, max_length=1000)
+
+
+@router.post("/{city_code}/{opportunity_id}/renewal")
+async def set_renewal(
+    city_code: str,
+    opportunity_id: UUID,
+    body: RenewalDecision,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_superuser),
+) -> dict[str, Any]:
+    """‏W5 · הצוות מאשר שהבניין חודש, או פוסל את החשד. נכתב כ-MANUALLY_VERIFIED
+    וההערכה מחושבת מחדש מיד — כך שהסריקה הבאה כבר רואה את ההכרעה."""
+    from app.cities.herzliya import renewal
+    from app.cities.herzliya.assessments import refresh_one
+    from app.models.opportunity import Opportunity
+
+    rules = get_city_rules(city_code)
+    opp = await session.get(Opportunity, opportunity_id)
+    if opp is None or opp.city_code != city_code:
+        raise HTTPException(status_code=404, detail="המועמד לא נמצא")
+    await renewal.record_team_decision(
+        session, opp, status=body.status, source=body.source, evidence_url=body.evidence_url,
+        note=body.note, checked_by=user.email)
+    assessment = await refresh_one(session, rules, opportunity_id)
+    await session.commit()
+    return {"opportunity_id": str(opportunity_id),
+            "renewal_status": assessment.get("renewal_status"),
+            "renewal_reasons": assessment.get("renewal_reasons") or [],
+            "assessment": assessment}
 
 
 @router.get("/{city_code}")
