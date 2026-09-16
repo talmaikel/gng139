@@ -24,6 +24,7 @@ import Balance from "@/components/Balance";
 import VerifyEmailNotice from "@/components/VerifyEmailNotice";
 import DeliveredTable from "@/components/DeliveredTable";
 import SearchControls from "@/components/SearchControls";
+import SearchingOverlay from "@/components/SearchingOverlay";
 // מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
 // לחבילת ה-SSR, שם אין `window`, והדף מחזיר 500 בטעינה נקייה.
 import { MAX_RADIUS_M, circlePolygon, geodesicArea, type LatLngTuple } from "@/lib/searchArea";
@@ -185,6 +186,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
+      {busy === "search" && <SearchingOverlay progress={progress} />}
       <p className="eyebrow">חלופת שקד · הרצליה</p>
       <h1 style={{ margin: ".15rem 0 1rem" }}>האזור האישי</h1>
 
@@ -234,11 +236,7 @@ export default function DashboardPage() {
             onClick={() => search()}
             disabled={!searchArea || picking || busy !== null || credits < 1}
           >
-            {busy === "search"
-              ? (progress && progress.checked > 0
-                  ? `נבדקו ${progress.checked} חלקות · נמצאו ${progress.found} תיקים…`
-                  : "מאתר תיקים…")
-              : <><IconSearch size={14} /> חפש</>}
+            {busy === "search" ? "מאתר תיקים…" : <><IconSearch size={14} /> חפש</>}
           </button>
 
           <span className="text-muted" style={{ fontSize: ".88rem" }}>{hint}</span>

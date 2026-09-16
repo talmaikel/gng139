@@ -261,3 +261,48 @@ tr.is-rights td { background: var(--rights-soft); }
 .results-title { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 700; color: var(--rights-fg); }
 .sk-btn-like { align-self: flex-start; font-weight: 700; font-size: 0.9rem; color: var(--ink); background: var(--almond); border-radius: var(--r); padding: 0.5rem 0.9rem; text-decoration: none; }
 .sk-btn-like:hover { background: var(--almond-deep); }
+
+/* ── חלון חיפוש: ראדר ─────────────────────────────────────────────── */
+.sk-searching {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  background: rgba(19, 22, 30, .5);
+  backdrop-filter: blur(2px);
+  animation: sk-fade-in .18s ease-out;
+}
+.sk-searching-card {
+  width: 100%; max-width: 380px; margin: 0;
+  text-align: center; padding: 1.6rem 1.4rem 1.3rem;
+  animation: sk-rise .22s ease-out;
+}
+.sk-radar { display: block; margin: 0 auto .9rem; overflow: visible; }
+.sk-radar-ring { fill: none; stroke: var(--rule); stroke-width: 1; }
+.sk-radar-arm { transform-origin: 100px 100px; animation: sk-radar-spin 3.6s linear infinite; }
+.sk-radar-blip { opacity: 0; animation: sk-radar-blip 3.6s ease-out infinite; }
+.sk-radar-blip-ring { transform-origin: center; transform-box: fill-box; animation: sk-radar-blip-ring 3.6s ease-out infinite; }
+.sk-searching-title { margin: 0 0 .3rem; font-size: 1.15rem; font-weight: 600; color: var(--ink); }
+.sk-searching-note { margin: 0; font-size: .95rem; color: var(--almond-deep); font-weight: 500; }
+.sk-searching-progress { margin: .75rem 0 0; font-size: .9rem; color: var(--muted); min-height: 1.3em; }
+.sk-searching-progress strong { color: var(--ink); font-weight: 600; }
+.sk-searching-timer { margin: .35rem 0 0; font-family: var(--mono); font-size: .82rem; color: var(--faint); }
+
+@keyframes sk-radar-spin { to { transform: rotate(360deg); } }
+@keyframes sk-radar-blip {
+  0%, 8% { opacity: 0; }
+  10% { opacity: 1; }
+  60% { opacity: .35; }
+  100% { opacity: 0; }
+}
+@keyframes sk-radar-blip-ring {
+  0%, 8% { transform: scale(1); opacity: 0; }
+  10% { opacity: .9; }
+  45%, 100% { transform: scale(3.2); opacity: 0; }
+}
+@keyframes sk-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sk-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-radar-arm { animation-duration: 8s; }
+  .sk-radar-blip, .sk-radar-blip-ring { animation: none; opacity: .8; }
+  .sk-searching, .sk-searching-card { animation: none; }
+}
