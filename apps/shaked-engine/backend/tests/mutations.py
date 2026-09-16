@@ -67,9 +67,11 @@ MUTS = [
   ("cities/herzliya/policy_envelope.py", "הנסיגות אינן מצטברות מהקומה שמתחת",
    "[(1.0, s, 0.0), (1.0, 2 * s, s)]", "[(1.0, s, 0.0), (1.0, s, s)]"),
   ("cities/herzliya/policy_envelope.py", "כל המעטפת נחשבת בנויה (בלי η)",
-   "v = ETA * sqm", "v = sqm"),
+   "low_s, base_s, high_s = capped(low, ETA), capped(base, ETA), capped(high, ETA)",
+   "low_s, base_s, high_s = capped(low), capped(base), capped(high)"),
   ("cities/herzliya/policy_envelope.py", "מגרש פינתי נבדק כחזית אחת",
-   "chosen = corner if frontages >= 2 else single", "chosen = single"),
+   'return {"low": corner_safe, "base": corner_options, "high": corner_options}',
+   'return {"low": single, "base": single, "high": single}'),
   ("cities/herzliya/rules.py", "התיק אינו מחשב שטח לפי מדיניות",
    'out["policy_area"] = policy.as_dict() if policy else {"why": policy_why}',
    'out["policy_area"] = {"why": policy_why}'),
@@ -138,4 +140,3 @@ for rel, name, old, new in MUTS:
     if not r.returncode:
         failed.append(name)
 sys.exit(1 if failed else 0)
-

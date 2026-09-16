@@ -339,16 +339,21 @@ def _pdf_rights_comparison(econ: dict[str, Any], rights_: dict[str, Any], line) 
     line("זכויות לפי מדיניות הרצליה מול תקרת 400%", 11, (0.06, 0.15, 0.12), gap=4)
     if p.get("base"):
         b, lo, hi = p["base"], p["low"], p["high"]
+        geometric = (p.get("geometric") or {}).get("base")
         line(f'מגרש {p["plot_sqm"]:,.0f} מ״ר · מעטפת בתוך קווי הבניין {p["envelope_sqm"]:,.0f} מ״ר לקומה', 9, gap=2)
         if p.get("cap_400_sqm"):
             line(f'תקרת 400% (פי 4 מהשטח הבנוי הקיים): {p["cap_400_sqm"]:,.0f} מ״ר · '
                  f'{p["cap_400_far_pct"]:,.0f}% בנייה — תקרה בחוק, לא זכות', 9, gap=2)
-        line(f'לפי המדיניות: {b["sqm"]:,.0f} מ״ר (טווח {lo["sqm"]:,.0f}–{hi["sqm"]:,.0f}) · '
+        if geometric:
+            line(f'מקסימום גאומטרי לפי המדיניות: {geometric["sqm"]:,.0f} מ״ר · '
+                 f'{geometric["far_pct"]:,.0f}% בנייה · לפני מקדם תכנון', 9, gap=2)
+        line(f'אומדן תכנוני שמרני (η={p.get("eta", 0.9):g}): {b["sqm"]:,.0f} מ״ר '
+             f'(טווח {lo["sqm"]:,.0f}–{hi["sqm"]:,.0f}) · '
              f'{b["far_pct"]:,.0f}% בנייה'
              + (f' · {b["share_of_cap"]:.0%} מהתקרה' if b.get("share_of_cap") is not None else ""), 9, gap=2)
         if b.get("gap_sqm") is not None:
             line(f'פער: {b["gap_sqm"]:,.0f} מ״ר · {b["gap_far_pct"]:,.0f} נקודות אחוזי בנייה · '
-                 f'{b["unrealizable_share"]:.0%} מהזכויות אינן ניתנות למימוש לפי המדיניות', 9, gap=2)
+                 f'{b["unrealizable_share"]:.0%} מתקרת 400% אינם באומדן השמרני', 9, gap=2)
         for lim in p.get("limits") or []:
             line(f"· {lim}", 8, (0.42, 0.40, 0.36), gap=1, indent=10)
         for asm in p.get("assumptions") or []:
@@ -561,18 +566,25 @@ def _excel_rights_sheet(wb, d: dict[str, Any], head, note, wrap) -> None:
     r += 1
     if p.get("base"):
         b, lo, hi = p["base"], p["low"], p["high"]
+        geometric = p.get("geometric") or {}
+        gb = geometric.get("base") or {}
+        glo = geometric.get("low") or {}
+        ghi = geometric.get("high") or {}
         rows = [
             ("שטח המגרש (מ״ר)", p.get("plot_sqm"), num, "שטח המגרש הקובע"),
             ("מעטפת בתוך קווי הבניין, לקומה (מ״ר)", p.get("envelope_sqm"), num, "אומדן בסיס"),
             ("תקרת 400% (מ״ר)", p.get("cap_400_sqm"), num, "פי 4 מהשטח הבנוי הקיים (§70ב) — תקרה בחוק, לא זכות"),
             ("תקרת 400% באחוזי בנייה מהמגרש", (p.get("cap_400_far_pct") or 0) / 100, pct, ""),
-            ("שטח לפי המדיניות — בסיס (מ״ר)", b["sqm"], num, "התרחיש בגיליון ״תרחיש״ מחושב על המספר הזה"),
-            ("שטח לפי המדיניות — נמוך (מ״ר)", lo["sqm"], num, "הכיוון הגרוע, בקומות המינימום"),
-            ("שטח לפי המדיניות — גבוה (מ״ר)", hi["sqm"], num, "הכיוון הטוב, בקומות המקסימום"),
-            ("אחוזי בנייה לפי המדיניות", (b.get("far_pct") or 0) / 100, pct, ""),
+            ("מקסימום גאומטרי לפי המדיניות — בסיס (מ״ר)", gb.get("sqm"), num, "לפני מקדם תכנון"),
+            ("מקסימום גאומטרי — נמוך (מ״ר)", glo.get("sqm"), num, ""),
+            ("מקסימום גאומטרי — גבוה (מ״ר)", ghi.get("sqm"), num, ""),
+            ("אומדן תכנוני שמרני — בסיס (מ״ר)", b["sqm"], num, "התרחיש בגיליון ״תרחיש״ מחושב על המספר הזה"),
+            ("אומדן תכנוני שמרני — נמוך (מ״ר)", lo["sqm"], num, "הכיוון הגרוע, בקומות המינימום"),
+            ("אומדן תכנוני שמרני — גבוה (מ״ר)", hi["sqm"], num, "הכיוון הטוב, בקומות המקסימום"),
+            ("אחוזי בנייה באומדן השמרני", (b.get("far_pct") or 0) / 100, pct, ""),
             ("פער מול התקרה (מ״ר)", b.get("gap_sqm"), num, ""),
             ("פער באחוזי בנייה", (b.get("gap_far_pct") or 0) / 100, pct, ""),
-            ("שיעור הזכויות שאינו ניתן למימוש לפי המדיניות", b.get("unrealizable_share"), pct, ""),
+            ("שיעור הפער בין האומדן השמרני לתקרת 400%", b.get("unrealizable_share"), pct, ""),
         ]
         for label, value, fmt, why in rows:
             ws.write(r, 0, label)

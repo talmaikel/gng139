@@ -25,12 +25,14 @@ export interface PolicyArea {
   binding?: "envelope" | "cap";
   certainty?: string;
   eta?: number;
+  front_lines_m?: { low: number; base: number; high: number };
   limits?: string[];
   assumptions?: string[];
   sources?: { label: string; url: string }[];
   low?: PolicyAreaCase;
   base?: PolicyAreaCase;
   high?: PolicyAreaCase;
+  geometric?: { low: PolicyAreaCase; base: PolicyAreaCase; high: PolicyAreaCase };
 }
 
 export interface ScenarioCard {

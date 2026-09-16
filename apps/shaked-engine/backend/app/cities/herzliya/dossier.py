@@ -299,10 +299,10 @@ def _scenario_caveats(assessment: dict, fields: dict, live: dict,
                  else f"{low['share_of_cap']:.0%}–{high['share_of_cap']:.0%}")
         base = policy.get("base") or {}
         out.append({"id": "policy_area_below_cap", "text": (
-            f"הרווח מחושב על השטח לפי מדיניות הרצליה — אומדן של כ-{base.get('sqm', 0):,.0f} מ״ר "
+            f"הרווח מחושב על אומדן תכנוני שמרני לפי מדיניות הרצליה — כ-{base.get('sqm', 0):,.0f} מ״ר "
             f"(טווח {span}), {share} מתקרת ה-400% ({cap:,.0f} מ״ר). ‏400% הוא תקרה בחוק ולא "
-            "זכות. המעטפת נשענת על הנחות: קו בניין קדמי 5 מ׳, צלע חזית שאינה ידועה, ו-90% "
-            "מהמעטפת בנויים — ובוועדה המקומית השטח עשוי לצאת אחר.")})
+            "זכות. המקסימום הגאומטרי מוצג בנפרד; התרחיש נשען על 90% ממנו, קו קדמי 5 מ׳ "
+            "כברירת מחדל וצלע חזית שאינה ידועה — ובוועדה המקומית השטח עשוי לצאת אחר.")})
     elif cap and policy.get("why"):
         out.append({"id": "policy_area_unknown", "text": (
             f"לא חושב כמה מתקרת ה-400% נכנס לפי מדיניות הרצליה: {policy['why']}. "
@@ -1116,7 +1116,7 @@ def _scenario_card(r: dict[str, Any], assessment: dict) -> dict[str, Any]:
 def _policy_basis(assessment: dict) -> str:
     p = assessment.get("policy_area") or {}
     low, base, high = p.get("low") or {}, p.get("base") or {}, p.get("high") or {}
-    return (f"שטח לפי מדיניות הרצליה, אומדן בסיס {base.get('sqm', 0):,.0f} מ״ר "
+    return (f"אומדן תכנוני שמרני לפי מדיניות הרצליה, בסיס {base.get('sqm', 0):,.0f} מ״ר "
             f"(טווח {low.get('sqm', 0):,.0f}–{high.get('sqm', 0):,.0f}) — בתוך קווי הבניין והנסיגות; "
             f"תקרת 400% ({p.get('cap_400_sqm') or 0:,.0f} מ״ר) להשוואה בלבד")
 

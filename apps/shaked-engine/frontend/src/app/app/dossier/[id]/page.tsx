@@ -165,6 +165,7 @@ function PolicyAreaBlock({ p }: { p: PolicyArea }) {
     ) : null;
   }
   const { base, low, high } = p;
+  const geometric = p.geometric?.base;
   const range = Math.abs(high.sqm - low.sqm) < 50 ? undefined : `טווח ${sqm(low.sqm)}–${sqm(high.sqm)}`;
   return (
     <div style={{ marginTop: "1rem", paddingTop: ".9rem", borderTop: "1px solid var(--rule-2)" }}>
@@ -177,13 +178,16 @@ function PolicyAreaBlock({ p }: { p: PolicyArea }) {
               value={p.cap_400_sqm ? sqm(p.cap_400_sqm) : "—"}
               hint={p.cap_400_far_pct ? `${far(p.cap_400_far_pct)} בנייה · פי 4 מהבנוי הקיים` : undefined}
               hintTone="neutral" />
-        <Stat label="ניתן למימוש לפי המדיניות" value={sqm(base.sqm)} tone="ok"
+        <Stat label="מקסימום גאומטרי לפי המדיניות" value={geometric ? sqm(geometric.sqm) : "—"}
+              hint={geometric ? `${far(geometric.far_pct)} בנייה · לפני מקדם תכנון` : undefined}
+              hintTone="neutral" />
+        <Stat label={`אומדן שמרני למימוש${p.eta != null ? ` · ${pct(p.eta)}` : ""}`}
+              value={sqm(base.sqm)} tone="ok"
               hint={`${far(base.far_pct)} בנייה${range ? ` · ${range}` : ""}`} hintTone="neutral" />
         <Stat label="פער מול התקרה" value={base.gap_sqm != null ? sqm(base.gap_sqm) : "—"}
-              hint={base.gap_far_pct != null ? `${Math.round(base.gap_far_pct)} נקודות אחוזי בנייה` : undefined} />
-        <Stat label="לא ניתן למימוש לפי המדיניות" value={pct(base.unrealizable_share)} tone="warn"
-              hint={base.share_of_cap != null ? `ניתן לממש ${pct(base.share_of_cap)} מהתקרה` : undefined}
-              hintTone="neutral" />
+              hint={base.gap_far_pct != null
+                ? `${Math.round(base.gap_far_pct)} נקודות אחוזי בנייה · האומדן מנצל ${pct(base.share_of_cap)} מהתקרה`
+                : undefined} />
       </StatStrip>
       <Text size="sm" mt="sm">
         מגרש {p.plot_sqm ? sqm(p.plot_sqm) : "—"} · מעטפת בתוך קווי הבניין{" "}
@@ -442,7 +446,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
             {/* ‏W2 · הרווח מחושב על השטח שמותר לפי המדיניות, ולא על תקרת 400%. */}
             {econ.area_basis === "policy" && econ.buildable_area_sqm != null && (
               <Text size="sm" c="dimmed">
-                מחושב על {sqm(econ.buildable_area_sqm)} — השטח שניתן לממש לפי מדיניות הרצליה (אומדן). תקרת 400% מופיעה בהשוואה בלבד.
+                מחושב על {sqm(econ.buildable_area_sqm)} — אומדן תכנוני שמרני לפי מדיניות הרצליה. המקסימום הגאומטרי ותקרת 400% מוצגים להשוואה בלבד.
               </Text>
             )}
             <StatStrip cols={{ base: 1, sm: after ? 4 : 3 }}>

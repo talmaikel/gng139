@@ -7,9 +7,11 @@ from app.cities.herzliya import policy_envelope as pe
 BIG_CAP = 100_000.0
 
 
-def _run(geom, floors_low, floors_high=None, cap=BIG_CAP, frontages=1, plot=None):
+def _run(geom, floors_low, floors_high=None, cap=BIG_CAP, frontages=1, plot=None,
+         front_line=5.0):
     res, why = pe.compute(geom, plot_sqm=plot, floors_low=floors_low,
-                          floors_high=floors_high, cap_400_sqm=cap, frontages=frontages)
+                          floors_high=floors_high, cap_400_sqm=cap, frontages=frontages,
+                          front_line_m=front_line)
     assert why is None, why
     return res
 
@@ -45,6 +47,16 @@ def test_a_corner_lot_keeps_front_lines_on_two_sides():
     assert corner.corner is True and single.corner is False
     assert corner.high_sqm < single.high_sqm
     assert any("פינתי" in x for x in corner.limits)
+
+
+def test_a_corner_lot_low_case_intersects_both_rear_interpretations():
+    """בנמוך שתי הצלעות הפנימיות מקבלות קו אחורי; בבסיס כל פרשנות בנפרד."""
+    cases = pe.layouts(2)
+    assert all(len(x.rears) == 2 for x in cases["low"])
+    assert all(len(x.rears) == 1 for x in cases["base"])
+    r = _run(box(0, 0, 30, 40), 7, frontages=2)
+    assert r.low_sqm < r.base_sqm <= r.high_sqm
+    assert any("הקו האחורי" in x for x in r.assumptions)
 
 
 def test_five_and_a_half_floors_is_five_floors_and_half_a_plate():
@@ -95,6 +107,21 @@ def test_the_gap_is_against_four_times_the_existing_area_not_the_plot():
     assert d["certainty"] == "estimate" and d["sources"][0]["url"]
 
 
+def test_geometric_policy_envelope_is_separate_from_the_eta_estimate():
+    d = _run(box(0, 0, 30, 40), 7).as_dict()
+    assert d["geometric"]["base"]["sqm"] == pytest.approx(d["base"]["sqm"] / pe.ETA, abs=0.2)
+    assert d["base"]["sqm"] < d["geometric"]["base"]["sqm"] <= d["cap_400_sqm"]
+
+
+def test_an_unmeasured_front_line_uses_five_as_base_and_four_only_as_high():
+    unknown = _run(box(0, 0, 30, 40), 7, front_line=None)
+    measured_five = _run(box(0, 0, 30, 40), 7, front_line=5.0)
+    assert unknown.front_lines_m == {"low": 5.0, "base": 5.0, "high": 4.0}
+    assert unknown.base_sqm == pytest.approx(measured_five.base_sqm)
+    assert unknown.high_sqm > measured_five.high_sqm
+    assert any("5 מ׳ הוא בסיס שמרני" in x for x in unknown.assumptions)
+
+
 def test_a_rotated_lot_gives_the_same_area_as_an_upright_one():
     from shapely import affinity
     upright = _run(box(0, 0, 30, 40), 8)
@@ -111,7 +138,8 @@ ALON_40 = MultiPolygon([Polygon([
 
 
 def test_a_demo_parcel_lands_where_the_research_put_it():
-    r = _run(ALON_40, 7, 9, cap=11_300.8, frontages=1, plot=1575.0)
+    r = _run(ALON_40, 7, 9, cap=11_300.8, frontages=1, plot=1575.0,
+             front_line=None)
     d = r.as_dict()
     assert d["low"]["share_of_cap"] == pytest.approx(0.51, abs=0.03)
     assert d["high"]["share_of_cap"] == pytest.approx(0.64, abs=0.04)
