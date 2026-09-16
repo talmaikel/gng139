@@ -88,7 +88,17 @@ MUTS = [
    'if not q["economic"] and not body.accept_rights_request:\n        return []',
    'if False:\n        return []'),
   ("api/v1/candidates.py", "הסריקה אינה ממיינת לפי רווח",
-   'economic.sort(key=lambda r: (not _ready(r), -r["economics"]["margin"]))', 'pass'),
+   'economic.sort(key=lambda r: (r["economics"].get("tier", 2), -r["economics"]["margin"]))', 'pass'),
+  # ‏scan.html rev 35 · ביטחון ואז רווח, ושליפה חיה בתקציב זמן (טל, 16.09)
+  ("api/v1/candidates.py", "הסריקה מדרגת לפי רווח בלי שכבת הביטחון",
+   'economic.sort(key=lambda r: (r["economics"].get("tier", 2), -r["economics"]["margin"]))',
+   'economic.sort(key=lambda r: -r["economics"]["margin"])'),
+  ("api/v1/candidates.py", "הסריקה מתחילה שליפה אחרי תקציב הזמן",
+   'if not _ready(candidate) and time.monotonic() - started >= SCAN_TIME_BUDGET_S:', 'if False:'),
+  ("api/v1/candidates.py", "המשך הסריקה שולף שוב חלקה שנפלה",
+   ' | set(body.skip_ids)}', '}'),
+  ("cities/herzliya/dossier.py", "המעטפת נחשבת לשכבת הביטחון העליונה",
+   'if policy["binding"] == "cap" and low is not None and low >= cap - 1:', 'if True:'),
   # ‏A24 · קצב לשרתי הגרמושקות, ומשותף לכל התהליך
   ("sources/client.py", "הגרמושקות יורדות בלי קצב",
    '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),
