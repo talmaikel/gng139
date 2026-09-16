@@ -227,10 +227,12 @@ async def check_data() -> None:
 
         # ‏S2 · הסריקה שהמציג יריץ: אותו אזור, אותם תנאים, ואותו סדר שהשרת
         # מוסר בו — מוכנים קודם. היא חייבת למסור בדיוק את שלוש חלקות ההדגמה.
-        from app.api.v1.candidates import SCAN_SIZE, ScanArea, _scan_queue
-        queue = await _scan_queue(s, rules, ScanArea(
-            polygon=demo.area_polygon(), min_units=demo.MIN_UNITS,
-            preferences=[{"field": demo.SORT_FIELD, "direction": "desc"}]), company.id)
+        # ‏W6 · הסריקה מחזירה שני תורים — כלכליות, והגדלת זכויות — ו-`_offered`
+        # קובע מה ייצא בפועל. ההדגמה מסמנת הגדלת זכויות ומאשרת, כמו המציג.
+        from app.api.v1.candidates import SCAN_SIZE, ScanArea, _offered, _scan_queue
+        area = ScanArea(polygon=demo.area_polygon(), include_rights_request=True,
+                        accept_rights_request=True, ready_only=True)
+        queue = _offered(await _scan_queue(s, rules, area, company.id), area)
         would = [r["address"] for r in queue[:min(SCAN_SIZE, demo.STARTING_CREDITS)]]
         expected = [a for _, _, a in demo.DELIVERED]
         if would == expected:
