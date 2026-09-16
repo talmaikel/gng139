@@ -179,6 +179,14 @@ async def test_the_pdf_prints_the_ceiling_and_not_a_zero_levy(session):
     # ‏W2 · עם אומדן — ההיטל בתוך הרווח, והמשפט אומר שהוא אומדן ומה התקרה
     assert any("אומדן" in _words(ln) and "נשמר" in _words(ln) for ln in levy_lines), levy_lines
 
+    # ‏ובלי אומדן — בסיס לא ידוע: המשפט במקום ״0 ₪״, לא שורת אפס
+    unknown = await _dossier(session, "9670", resolved=False)
+    assert unknown["economics"]["after_levy"] is None
+    doc2 = pymupdf.open(stream=exports.pdf(unknown), filetype="pdf")
+    levy2 = [ln for page in doc2 for ln in page.get_text().splitlines() if {"היטל", "השבחה"} <= _words(ln)]
+    assert not any(" 0 " in f" {ln.replace('₪', ' ')} " for ln in levy2), levy2
+    assert any("ידוע" in _words(ln) for ln in levy2), levy2
+
     text = " ".join(lines)
     assert "נשען" in text                                   # כותרת הסייגים
     assert "רגל" in text                                    # ״טביעת רגל״ — השטח הקיים הוא אומדן
