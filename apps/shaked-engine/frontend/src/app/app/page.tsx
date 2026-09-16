@@ -11,13 +11,11 @@ import {
   getBalance,
   getMyDeliveries,
   getPackages,
-  previewScan,
   runScan,
   type AccountBalance,
   type Candidate,
   type CreditPackage,
   type DeliveredOpportunity,
-  type ScanPreview,
   type ScanResult,
   type SearchOptions,
 } from "@/lib/api";
@@ -52,10 +50,11 @@ function asMapRows(mine: DeliveredOpportunity[]): Candidate[] {
  * ‏S2 · הסריקה של הלקוח (בועז, 15.09).
  *
  * **הלקוח אינו רואה מועמדים.** רשימה עם כתובות ממוינות היא המוצר עצמו
- * בחינם. במקומה: לוחץ נקודה על המפה, בוחר רדיוס → ״חפש״ → *״נמצאו N — לקבל?״*
- * → עד שלושה תיקים, לפי התנאים וההעדפות שלו, מוכנים קודם. השלושה שנמסרו
- * מופיעים ברשימה מתחת למפה ועל המפה עצמה. הרשימה המלאה נשארה לצוות
- * ב-/admin/candidates.
+ * בחינם. במקומה: לוחץ נקודה על המפה, בוחר רדיוס → ״חפש״ → עד שלושה **תיקים
+ * שלמים** מהאזור, מיד (טל, 16.09: בלי שלב ״נמצאו N — לקבל?״ ובלי שליפה
+ * מהארכיון בזמן החיפוש). כל תיק שנמסר מנכה זכאות אחת; אזור ריק אינו מחייב.
+ * השלושה מופיעים ככרטיסים מתחת למפה ועל המפה עצמה. הרשימה המלאה נשארה
+ * לצוות ב-/admin/candidates.
  */
 export default function DashboardPage() {
   const router = useRouter();
@@ -78,9 +77,8 @@ export default function DashboardPage() {
   const [options, setOptions] = useState<SearchOptions>({});
   const [showControls, setShowControls] = useState(false);
 
-  const [preview, setPreview] = useState<ScanPreview | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
-  const [busy, setBusy] = useState<"preview" | "deliver" | null>(null);
+  const [busy, setBusy] = useState<"search" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -115,7 +113,6 @@ export default function DashboardPage() {
 
   /** כל שינוי באזור או בתנאים מבטל את התצוגה המקדימה: היא נכונה לשאלה אחרת. */
   function resetScan() {
-    setPreview(null);
     setResult(null);
     setError(null);
   }
@@ -127,34 +124,21 @@ export default function DashboardPage() {
     resetScan();
   }
 
+  /** חיפוש = מסירה: עד שלושה תיקים שלמים מהאזור, בלחיצה אחת. */
   async function search() {
     if (!searchArea) return;
-    setBusy("preview");
+    setBusy("search");
     setResult(null);
     setError(null);
+    setSelectedId(null);
     try {
-      setPreview(await previewScan(CITY, searchArea, options));
+      const r = await runScan(CITY, searchArea, options, true);
+      setResult(r);
+      if (r.delivered[0]) setSelectedId(r.delivered[0].opportunity_id);
     } catch (e) {
       if (signInIfUnauthorized(e)) return;
       // ‏422 הוא MAP-01 עושה את עבודתו, והמשפט בעברית הוא מה שהמשתמש צריך.
-      setError(e instanceof ApiError ? e.detail : "החיפוש נכשל.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function accept() {
-    if (!searchArea) return;
-    setBusy("deliver");
-    setError(null);
-    try {
-      setResult(await runScan(CITY, searchArea, options));
-      setPreview(null);
-    } catch (e) {
-      if (signInIfUnauthorized(e)) return;
-      setError(e instanceof ApiError
-        ? (e.status === 402 ? `${e.detail}` : e.detail)
-        : "המסירה נכשלה. אפשר לנסות שוב.");
+      setError(e instanceof ApiError ? e.detail : "החיפוש נכשל. אפשר לנסות שוב.");
     } finally {
       setBusy(null);
       loadAccount();
@@ -169,10 +153,10 @@ export default function DashboardPage() {
   const hint = picking
     ? "לחיצה על המפה קובעת את מרכז החיפוש · Escape לביטול"
     : credits < 1
-      ? "לא נותרה זכאות לחברה"
+      ? "לא נותרה זכאות לחברה · בחרו חבילה למעלה כדי להמשיך"
       : center
-        ? `אזור של ${dunam(areaSqm)} סביב הנקודה — אפשר להגדיר תנאים וללחוץ ״חפש״`
-        : `בחר נקודה על המפה, ותקבל עד ${Math.min(3, credits)} תיקי הזדמנות מסביבה`;
+        ? `אזור של ${dunam(areaSqm)} סביב הנקודה · ״חפש״ מביא עד ${Math.min(3, credits)} תיקים שלמים, וכל תיק מנכה זכאות אחת`
+        : `בחר נקודה על המפה, ותקבל עד ${Math.min(3, credits)} תיקי הזדמנות שלמים מסביבה`;
 
   return (
     <AppShell>
@@ -225,7 +209,7 @@ export default function DashboardPage() {
             onClick={search}
             disabled={!searchArea || picking || busy !== null || credits < 1}
           >
-            {busy === "preview" ? "מחפש…" : <><IconSearch size={14} /> חפש</>}
+            {busy === "search" ? "מאתר תיקים…" : <><IconSearch size={14} /> חפש</>}
           </button>
 
           <span className="text-muted" style={{ fontSize: ".88rem" }}>{hint}</span>
@@ -254,40 +238,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {preview && (
-        <div className="card tone-info" style={{ marginBottom: "1rem" }}>
-          {preview.offer > 0 ? (
-            <>
-              <strong style={{ fontSize: "1.05rem" }}>
-                נמצאו {preview.found} מועמדים באזור · תקבל {preview.offer === 1 ? "תיק אחד" : `${preview.offer} תיקים`}
-              </strong>
-              <p className="text-muted" style={{ margin: ".35rem 0 .8rem", fontSize: ".9rem" }}>
-                {preview.ready > 0 && `${preview.ready} מוכנים מיד`}
-                {preview.ready > 0 && preview.needs_fetch > 0 && " · "}
-                {preview.needs_fetch > 0 && `${preview.needs_fetch} ישלפו תיק בניין מהארכיון (עד 20 שניות לכל אחד)`}
-                {" · "}ינוכו עד {preview.offer} זכאויות, ורק על תיק שנמסר.
-              </p>
-              <div style={{ display: "flex", gap: ".6rem" }}>
-                <button onClick={accept} disabled={busy !== null}>
-                  {busy === "deliver"
-                    ? (preview.needs_fetch > 0 ? "שולף תיקי בניין…" : "מוסר…")
-                    : `קבל ${preview.offer === 1 ? "תיק אחד" : `${preview.offer} תיקים`}`}
-                </button>
-                <button className="btn-ghost" onClick={resetScan} disabled={busy !== null}>
-                  ביטול
-                </button>
-              </div>
-            </>
-          ) : preview.credits_remaining < 1 ? (
-            <strong className="text-warn">לא נותרה זכאות לחברה. יש לרכוש חבילה כדי להמשיך.</strong>
-          ) : (
-            <strong className="text-warn">
-              לא נמצאו מועמדים באזור שעומדים בתנאים — לא חויבת. אפשר לבחור נקודה אחרת או לשנות את התנאים.
-            </strong>
-          )}
-        </div>
-      )}
-
       {error && (
         <div className="card tone-bad" style={{ marginBottom: "1rem" }}>
           <strong className="text-bad">{error}</strong>
@@ -308,33 +258,38 @@ export default function DashboardPage() {
         />
       </div>
 
-      {result && (
-        <div className="card tone-ok" style={{ marginBottom: "1rem" }}>
-          <strong className="text-ok" style={{ fontSize: "1.05rem" }}>
+      {result && result.found === 0 && (
+        <div className="card tone-warn" style={{ marginBottom: "1rem" }}>
+          <strong className="text-warn" style={{ fontSize: "1.05rem" }}>אין הזדמנויות באזור הזה</strong>
+          <p style={{ margin: ".35rem 0 .2rem", fontSize: ".9rem" }}>
+            לא נמצא סביב הנקודה מגרש עם תיק שלם שעומד בתנאי הסף{conditionsCount > 0 ? " ובתנאים שהגדרת" : ""}. <strong>לא חויבת.</strong>
+          </p>
+          <p className="text-muted" style={{ margin: 0, fontSize: ".88rem" }}>
+            אפשר להגדיל את הרדיוס, לבחור נקודה אחרת{conditionsCount > 0 ? ", או להקל בתנאים" : ""}.
+          </p>
+        </div>
+      )}
+
+      {result && result.found > 0 && (
+        <div className={`card ${result.delivered.length > 0 ? "tone-ok" : "tone-warn"}`} style={{ marginBottom: "1rem" }}>
+          <strong className={result.delivered.length > 0 ? "text-ok" : "text-warn"} style={{ fontSize: "1.05rem" }}>
             {result.delivered.length === 0
               ? "לא נמסר תיק מהאזור הזה — לא חויבת."
-              : `נמסרו ${result.delivered.length === 1 ? "תיק אחד" : `${result.delivered.length} תיקים`} · נוכו ${result.delivered.length} זכאויות`}
+              : `${result.delivered.length === 1 ? "תיק אחד" : `${result.delivered.length} תיקים`} מהאזור · נוכו ${result.delivered.length} זכאויות`}
           </strong>
           {result.skipped > 0 && (
             <p className="text-muted" style={{ margin: ".3rem 0", fontSize: ".88rem" }}>
-              {result.skipped === 1 ? "מועמד אחד דולג" : `${result.skipped} מועמדים דולגו`}: תיק הבניין לא השלים את תנאי הסף. לא חויבת עליהם.
+              {result.skipped === 1 ? "מועמד אחד דולג" : `${result.skipped} מועמדים דולגו`}: התיק לא השלים את תנאי הסף. לא חויבת עליהם.
             </p>
           )}
           {result.message && (
             <p className="text-warn" style={{ margin: ".3rem 0", fontSize: ".88rem", fontWeight: 600 }}>{result.message}</p>
           )}
-          <div style={{ display: "flex", gap: ".6rem", alignItems: "center", flexWrap: "wrap", marginTop: ".4rem" }}>
-            {result.retryable && result.credits_remaining > 0 && (
-              <button onClick={accept} disabled={busy !== null}>
-                {busy === "deliver" ? "שולף…" : "השלם את החיפוש באזור"}
-              </button>
-            )}
-            {!result.retryable && result.delivered.length < result.requested && result.credits_remaining > 0 && (
-              <span className="text-ok" style={{ fontSize: ".88rem" }}>
-                נותרו {result.credits_remaining} זכאויות — אפשר לבחור נקודה נוספת.
-              </span>
-            )}
-          </div>
+          {result.delivered.length > 0 && result.delivered.length < 3 && result.credits_remaining > 0 && (
+            <p className="text-muted" style={{ margin: ".3rem 0 0", fontSize: ".88rem" }}>
+              באזור היו רק {result.delivered.length === 1 ? "תיק שלם אחד" : `${result.delivered.length} תיקים שלמים`}. נותרו {result.credits_remaining} זכאויות — אפשר לבחור נקודה נוספת.
+            </p>
+          )}
         </div>
       )}
 

@@ -7,7 +7,7 @@ import PurchaseDialog, { formatPrice } from "@/components/PurchaseDialog";
 interface Props {
   balance: AccountBalance | null;
   packages: CreditPackage[];
-  /** נשאר בחתימה: המסך קורא לו אחרי מסירה. אין כאן עוד פעולה שמשנה יתרה. */
+  /** נקרא אחרי רכישה (מדומה), כדי שהמסך ירענן את היתרה והמאגר. */
   onChanged?: () => void;
 }
 
@@ -22,7 +22,7 @@ interface Props {
  * ‏**כפתור חבילה אינו מוסיף זכאות.** הוא פותח את חלון הרכישה, ששם אמצעי
  * התשלום עוד אינם מחוברים (`PurchaseDialog`). הזכאות מתווספת ב-`/admin`.
  */
-export default function Balance({ balance, packages }: Props) {
+export default function Balance({ balance, packages, onChanged }: Props) {
   const [chosen, setChosen] = useState<CreditPackage | null>(null);
   const remaining = balance?.credits_remaining ?? 0;
   const delivered = balance?.delivered_count ?? 0;
@@ -52,7 +52,8 @@ export default function Balance({ balance, packages }: Props) {
       ))}
 
       {chosen && (
-        <PurchaseDialog pkg={chosen} companyId={balance?.company_id ?? null} onClose={() => setChosen(null)} />
+        <PurchaseDialog pkg={chosen} companyId={balance?.company_id ?? null}
+                        onClose={() => setChosen(null)} onPurchased={onChanged} />
       )}
     </div>
   );

@@ -98,6 +98,9 @@ class ScanArea(BaseModel):
     min_cap_400_sqm: float | None = Field(default=None, ge=0)
     certain_floors_only: bool = False
     preferences: list[Preference] = Field(default_factory=list, max_length=3)
+    # ‏״תיקים מושלמים״ (טל, 16.09): רק מגרשים שתיק הבניין שלהם כבר שלם. בלי
+    # שליפה מהארכיון בזמן החיפוש — התוצאה מיידית, ואין תיק שנשלף חלקית.
+    ready_only: bool = False
 
 
 def _ready(row: dict[str, Any]) -> bool:
@@ -111,7 +114,7 @@ async def _scan_queue(session, rules, body: ScanArea, company_id) -> list[dict[s
     מי שבמסלול המגרשי אבל דורש שליפה מהארכיון. בתוך כל קבוצה — לפי
     ההעדפות של הלקוח, כי `screen_candidates` כבר מיין כך והמיון יציב.
     """
-    filters = body.model_dump() | {
+    filters = body.model_dump(exclude={"ready_only"}) | {
         "limit": 500,
         "exclude_delivered_ids": await delivered_ids(session, company_id),
     }
@@ -121,7 +124,8 @@ async def _scan_queue(session, rules, body: ScanArea, company_id) -> list[dict[s
         raise HTTPException(status_code=422, detail=str(e)) from e
     in_track = [r for r in rows
                 if _ready(r) or (r.get("assessment") or {}).get("screenable")]
-    return [r for r in in_track if _ready(r)] + [r for r in in_track if not _ready(r)]
+    ready = [r for r in in_track if _ready(r)]
+    return ready if body.ready_only else ready + [r for r in in_track if not _ready(r)]
 
 
 @router.post("/{city_code}/scan/preview")
@@ -206,6 +210,8 @@ async def scan_deliver(
     mine = {m["opportunity_id"]: m for m in await for_company(session, company_id)}
     return {
         "delivered": [mine[i] for i in delivered if i in mine],
+        # כמה מועמדים היו באזור בכלל: 0 הוא ״אין הזדמנויות כאן״, לא ״נכשל״.
+        "found": len(queue),
         "requested": target,
         "skipped": skipped,
         "retryable": retryable,

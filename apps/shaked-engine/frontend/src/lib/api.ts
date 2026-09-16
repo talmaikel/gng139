@@ -316,6 +316,8 @@ export interface ScanPreview {
 
 export interface ScanResult {
   delivered: DeliveredOpportunity[];
+  /** כמה מועמדים היו באזור. 0 = אין הזדמנויות כאן. */
+  found: number;
   requested: number;
   skipped: number;
   retryable: boolean;
@@ -323,9 +325,10 @@ export interface ScanResult {
   credits_remaining: number;
 }
 
-function scanBody(polygon: object, options: SearchOptions): string {
+function scanBody(polygon: object, options: SearchOptions, readyOnly = false): string {
   return JSON.stringify({
     polygon,
+    ready_only: readyOnly,
     min_area_sqm: options.minAreaSqm,
     min_units: options.minUnits,
     min_floors: options.minFloors,
@@ -341,10 +344,11 @@ export function previewScan(cityCode: string, polygon: object, options: SearchOp
   });
 }
 
-/** מוסר עד שלושה תיקים מהאזור. עשוי לקחת עד כדקה כשצריך לשלוף תיקי בניין. */
-export function runScan(cityCode: string, polygon: object, options: SearchOptions = {}): Promise<ScanResult> {
+/** מוסר עד שלושה תיקים מהאזור. עם `readyOnly` — רק תיקים שלמים, מיד, בלי
+ *  שליפה מהארכיון; בלעדיו עשוי לקחת עד כדקה. */
+export function runScan(cityCode: string, polygon: object, options: SearchOptions = {}, readyOnly = false): Promise<ScanResult> {
   return request<ScanResult>(`/api/v1/candidates/${cityCode}/scan/deliver`, {
-    method: "POST", body: scanBody(polygon, options),
+    method: "POST", body: scanBody(polygon, options, readyOnly),
   });
 }
 
@@ -389,7 +393,17 @@ export function getPackages(): Promise<CreditPackage[]> {
   return request<CreditPackage[]>("/api/v1/account/packages");
 }
 
-// ‏אין `purchasePackage`: הרכישה המדומה הוסרה. זכאות נוספת רק על ידי אדמין.
+export type PaymentMethod = "card" | "bit" | "paypal";
+
+/** ‏**תשלום מדומה** (טל, 16.09): מוסיף את זכאות החבילה מיד, בלי סליקה.
+ *  פעיל רק כשהשרת רץ עם `SIMULATED_PAYMENTS=true`; אחרת 404, והחלון חוזר
+ *  לפרטי הקשר. כשתחובר סליקה אמיתית — היא נכנסת כאן. */
+export function purchasePackage(packageId: string, method: PaymentMethod):
+  Promise<{ package: string; credits_added: number; credits_remaining: number }> {
+  return request(`/api/v1/account/packages/${packageId}/purchase`, {
+    method: "POST", body: JSON.stringify({ method }),
+  });
+}
 
 
 // ── אדמין: זכאות ידנית בפיילוט ──
