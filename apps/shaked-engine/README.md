@@ -116,6 +116,28 @@ nothing outside. For real delivery: a Resend account, a verified sending domain,
 in `RESEND_API_KEY` or in `backend/resend.key` (gitignored). `FRONTEND_URL` decides where the
 links in the email point. Verification never blocks a customer; the dashboard only reminds.
 
+### Renewal search: fully automated (W5)
+
+Before a Herzliya parcel is scanned or delivered, the engine checks whether it was
+already renewed or is already in a signed Tama 38 / urban-renewal project, via an
+automated web search on the exact address (`app/cities/herzliya/renewal_search*.py`).
+A definite match (e.g. "תמ״א 38", "התחדשות עירונית", or a madlan.co.il/projects page
+at the same street, house number and city) disqualifies the parcel immediately — no
+manual review, no Street View, no admin approval screen. There is no step where a
+suspicion from this check waits for a person: it only ever returns a certain match, no
+match, or "not completed yet" (`retryable`), and a parcel with a check that has not
+completed is not delivered.
+
+Provider is `BRAVE_SEARCH_API_KEY` (Brave Search API) by default, behind a swappable
+`WebSearchProvider` interface. Without a key, checks come back `retryable` — nothing
+is delivered as "clean" on an incomplete check. Results are cached as evidence
+(`renewal_web_search` field) with the same freshness window as every other field
+(`SOURCE_MAX_AGE_DAYS`), so a screen refresh reads the saved result instead of
+searching again; a stale or retryable check is re-run by the next backfill.
+
+The older manual list (`data/verified_renewed.json`, "Street View + team decision")
+stays supported for historical entries only — new parcels are never added to it.
+
 ### Rate limits
 
 Login is capped **per account** (10 attempts / 15 minutes) and so are reset and verification

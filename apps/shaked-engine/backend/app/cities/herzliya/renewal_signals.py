@@ -112,9 +112,42 @@ def manual_reasons(entry: dict[str, Any]) -> list[str]:
     return out
 
 
-def decide(entry: dict[str, Any] | None, signal: dict[str, Any]) -> dict[str, Any]:
-    """הרשימה הידנית גוברת על הסימנים. הסימנים נשארים בנימוק."""
-    if entry is None:
-        return {**signal, "manual": False}
-    return {"status": entry["status"], "manual": True,
-            "reasons": manual_reasons(entry) + list(signal.get("reasons") or [])}
+# ‏W5 · 16.09 · חיפוש אינטרנט אוטומטי (`renewal_search.py`) מבטל את הדרישה
+# הקודמת ל-Street View ולאישור צוות: חלקה חדשה נבדקת אוטומטית בלבד, ותוצאה
+# ודאית פוסלת מיד. הסטטוסים שהחיפוש יכול להחזיר — לא מוכרעים כאן, רק משולבים.
+SEARCH_STATUSES = ("verified_renewed", "no_automated_renewal_signal", "unknown", "retryable")
+
+
+def combine_with_search(signal: dict[str, Any], search: dict[str, Any] | None) -> dict[str, Any]:
+    """משלב את `renewal_web_search` (חיפוש רשת אוטומטי) עם חשד הסימנים.
+
+    תוצאה ודאית מהחיפוש פוסלת מיד — גם כשהסימנים אמרו ״לא נמצא״ וגם בלי
+    היתר תיק בכלל (החיפוש הוא מקור עצמאי). בדיקה שלא הסתיימה (`retryable`,
+    או `unknown` — המפתח חסר) אינה מאפשרת ״עבר״: אם הסימנים היו נותנים
+    ‏"none" היא מורידה אותם ל-"unknown", כדי שהמסירה תיחסם עד הרצה חוזרת
+    ולא תיקרא כאילו הבדיקה כן נעשתה ולא מצאה דבר. חשד מהסימנים עצמם
+    (התהליך הישן, שממתין לצוות) אינו מושפע מבדיקה שלא הסתיימה — הוא כבר
+    חוסם מסירה בעצמו.
+    """
+    if search is None:
+        return dict(signal)
+    if search.get("status") == "verified_renewed":
+        return {"status": "verified_renewed",
+                "reasons": [r for r in (search.get("reason"),) if r] + list(signal.get("reasons") or [])}
+    if search.get("status") in ("unknown", "retryable") and signal["status"] not in (
+            "suspected", "verified_renewed"):
+        return {"status": "unknown", "reasons": list(signal.get("reasons") or [])}
+    return dict(signal)
+
+
+def decide(entry: dict[str, Any] | None, signal: dict[str, Any],
+          search: dict[str, Any] | None = None) -> dict[str, Any]:
+    """הרשימה הידנית גוברת על הכול. אחריה — תוצאת החיפוש האוטומטי, ואז הסימנים.
+
+    ‏`search` אופציונלי (ברירת מחדל `None`) כדי שקוד קיים שקורא ל-`decide`
+    בלי הפרמטר הזה ימשיך לעבוד בדיוק כפי שעבד.
+    """
+    if entry is not None:
+        return {"status": entry["status"], "manual": True,
+                "reasons": manual_reasons(entry) + list(signal.get("reasons") or [])}
+    return {**combine_with_search(signal, search), "manual": False}

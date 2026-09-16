@@ -27,6 +27,8 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: BRAVE_SEARCH_API_KEY   # W5 automated renewal search; missing key = checks stay retryable
+        sync: false
       - key: FRONTEND_URL
         value: https://gng139.online
       - key: CORS_ORIGINS

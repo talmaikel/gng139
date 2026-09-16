@@ -17,7 +17,7 @@ Everything is defined in [`render.yaml`](../../render.yaml) at the repo root.
 ## 2. Render
 1. Push `main` to GitHub.
 2. In the Render dashboard: **New → Blueprint** → choose the repo.
-3. Paste the secrets it asks for: `DATABASE_URL`, `DATABASE_URL_SYNC`, `RESEND_API_KEY`, `OPENAI_API_KEY`.
+3. Paste the secrets it asks for: `DATABASE_URL`, `DATABASE_URL_SYNC`, `RESEND_API_KEY`, `OPENAI_API_KEY`, `BRAVE_SEARCH_API_KEY` (W5 automated renewal search — without it, every new renewal check stays `retryable` and the parcel is not delivered).
 4. Once `shaked-api` is live, check its URL. If it isn't exactly `https://shaked-api.onrender.com`, update `API_ORIGIN` on `shaked-web` and trigger a redeploy. The rewrite is fixed at build time.
 
 ## 3. Seed the data (once, from your machine)
