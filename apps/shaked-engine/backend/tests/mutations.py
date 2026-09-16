@@ -60,6 +60,9 @@ MUTS = [
    'sc.merge_range(tail + 1, 0, tail + 1, 4, econ["unit_mix"]["summary"], note)', 'pass'),
   ("services/unit_mix/service.py", "מסך התמהיל מתמחר לפי מחיר אחר מהתיק",
    "price_per_sqm_ils=sale_price_per_sqm_ils,", "price_per_sqm_ils=sale_price_per_sqm_ils * 0.76,"),
+  # ‏W4 · ״מכריע״ בתיק הוא אותו כלל שמכריע את השערים
+  ("cities/herzliya/dossier.py", "״מכריע״ בתיק חוזר לבדוק ודאות בלבד",
+   '"decides": usable(f, get_settings().source_max_age_days),', '"decides": f.get("certainty") in DECIDING,'),
   # ‏A24 · קצב לשרתי הגרמושקות, ומשותף לכל התהליך
   ("sources/client.py", "הגרמושקות יורדות בלי קצב",
    '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),

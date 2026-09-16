@@ -45,12 +45,13 @@ export function PageHeader({ back, eyebrow, title, meta, actions }: {
   );
 }
 
-/** קטע בתיק: כותרת, הערת מבוא מהשרת, ותוכן. */
-export function Section({ id, title, note, children, actions }: { id?: string; title: string; note?: ReactNode; children: ReactNode; actions?: ReactNode }) {
+/** קטע בתיק: כותרת, הערת מבוא מהשרת, ותוכן. ‏`help` — ״?״ שמסביר את הכותרת (W4). */
+export function Section({ id, title, note, children, actions, help }: { id?: string; title: string; note?: ReactNode; children: ReactNode; actions?: ReactNode; help?: ReactNode }) {
+  const heading = <Title order={2} style={{ fontSize: "1.1rem" }}>{title}</Title>;
   return (
     <Paper component="section" id={id} p="lg" mb="md">
       <Group justify="space-between" align="flex-start" mb={note ? 4 : "sm"}>
-        <Title order={2} style={{ fontSize: "1.1rem" }}>{title}</Title>
+        {help ? <Group gap={4} align="center" wrap="nowrap">{heading}{help}</Group> : heading}
         {actions}
       </Group>
       {note && <Text c="dimmed" size="sm" mb="sm">{note}</Text>}
