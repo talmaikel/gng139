@@ -72,13 +72,16 @@ def pdf(d: dict[str, Any]) -> bytes:
 
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(PAGE_W, PAGE_H))
-    c.setTitle(f"תיק · {d['identity']['address']}")
+    overrides = scenario_overrides(d)
+    c.setTitle(f"{'תרחיש מותאם' if overrides is not None else 'תיק'} · {d['identity']['address']}")
     y = [PAGE_H - 60]
 
     def header():
         c.setFont("Shaked", 9)
         c.setFillColorRGB(0.42, 0.40, 0.36)
-        c.drawRightString(MARGIN_R, PAGE_H - 40, _rtl("שקדן · תיק הזדמנות — חלופת שקד"))
+        c.drawRightString(MARGIN_R, PAGE_H - 40, _rtl(
+            "שקדן · תרחיש מותאם של היזם — חלופת שקד" if overrides is not None
+            else "שקדן · תיק הזדמנות — חלופת שקד"))
         c.setStrokeColorRGB(0.88, 0.88, 0.86)
         c.line(MARGIN_L, PAGE_H - 48, MARGIN_R, PAGE_H - 48)
         y[0] = PAGE_H - 70
@@ -107,6 +110,16 @@ def pdf(d: dict[str, Any]) -> bytes:
          + (f' · {ident["existing_units"]} דירות קיימות' if ident.get("existing_units") else ""),
          9.5, (0.42, 0.40, 0.36))
     rule()
+
+    # ‏W8 · תרחיש של היזם: מה הוא שינה, מול ברירת המחדל — לפני כל מספר אחר.
+    if overrides is not None:
+        line(SCENARIO_TITLE, 13, (0.54, 0.38, 0.00), gap=6)
+        for item in overrides:
+            line(override_line(item), 9.5, gap=3)
+        if not overrides:
+            line("לא שונה אף ערך — המספרים הם ברירת המחדל של התיק.", 9.5, gap=3)
+        line(SCENARIO_NOTE, 8.5, (0.42, 0.40, 0.36), gap=4)
+        rule()
 
     # ── עמידה בתנאי חלופת שקד ──
     STATUS = {"passed": "עבר", "failed": "נכשל", "unknown": "לא ידוע",
@@ -258,6 +271,8 @@ INPUT_ROWS = [
     ("finance", "מימון", "יחס מהעלויות"),
     ("levy_rate", "היטל השבחה — שיעור", "יחס מההשבחה"),
     ("levy_base", "ההשבחה (שומה)", "₪"),
+    # ‏W8 · תמהיל: הדירות שהיזם מוכר, ולא כל השטח שנשאר לו. ריק — כל השטח נמכר.
+    ("mix_revenue", "הכנסות דירות היזם לפי תמהיל (כולל מע״מ)", "₪"),
 ]
 
 FIRST_INPUT_ROW = 2                       # אחרי הכותרת
@@ -268,8 +283,10 @@ OUTPUT_ROWS = [
     ("tenant_area", "שטח לדיירים", "=MIN({units}*({avg_unit}+{comp}),{sellable})", "מ״ר"),
     ("dev_area", "שטח ליזם", "={sellable}-{tenant_area}", "מ״ר"),
     ("net_price", 'מחיר נטו למ״ר', "={price}/(1+{vat})", "₪"),
-    ("revenue", "הכנסות (נטו ממע״מ)", "={sellable}*{net_price}", "₪"),
-    ("dev_revenue", "מתוכן: דירות היזם", "={dev_area}*{net_price}", "₪"),
+    ("revenue", "הכנסות (נטו ממע״מ)",
+     "=IF({mix_revenue}>0,{tenant_area}*{net_price}+{mix_revenue}/(1+{vat}),{sellable}*{net_price})", "₪"),
+    ("dev_revenue", "מתוכן: דירות היזם",
+     "=IF({mix_revenue}>0,{mix_revenue}/(1+{vat}),{dev_area}*{net_price})", "₪"),
     ("land", "קרקע — פיצוי הדיירים", "={tenant_area}*{net_price}", "₪"),
     ("build_cost", "בנייה מעל הקרקע", "={buildable}*{build}", "₪"),
     ("under", "חניון תת-קרקעי", "={buildable}*{under_ratio}*{under_cost}", "₪"),
@@ -303,7 +320,40 @@ INPUT_ASSUMPTION = {
     "marketing": "marketing_ratio", "guarantees": "guarantees_ratio", "finance": "finance_ratio",
     "levy_rate": "betterment_levy_rate", "levy_base": "betterment_base_ils",
 }
-STATUS_LABEL = {"data": "נתון", "estimate": "אומדן", "missing": "חסר"}
+STATUS_LABEL = {"data": "נתון", "estimate": "אומדן", "missing": "חסר", "developer": "היזם"}
+
+# ‏W8 · תרחיש של היזם — אותה כותרת ב-PDF ובאקסל.
+SCENARIO_TITLE = "תרחיש מותאם — ערכים שהיזם שינה"
+SCENARIO_NOTE = ("כל שאר הערכים הם ברירת המחדל של התיק. התרחיש חושב לפי בקשת היזם ואינו נשמר; "
+                 "אינו דוח שמאי חתום.")
+
+
+def scenario_overrides(d: dict[str, Any]) -> list[dict[str, Any]] | None:
+    """הערכים שהיזם שינה, או ``None`` כשזה התיק עצמו ולא תרחיש."""
+    return (d.get("economics") or {}).get("overrides_applied")
+
+
+def _override_value(value: Any, unit: str) -> str:
+    if value is None:
+        return "אין"
+    if isinstance(value, str):
+        return value
+    if unit == "ratio":
+        return f"{value * 100:,.4g}%"
+    if unit == "ILS":
+        return f"{value:,.0f} ₪"
+    if unit == "ILS/sqm":
+        return f"{value:,.0f} ₪ למ״ר"
+    if unit == "sqm":
+        return f"{value:,.0f} מ״ר"
+    return f"{value:,.4g}"
+
+
+def override_line(item: dict[str, Any]) -> str:
+    """״מחיר מכירה למ״ר: 55,000 ₪ למ״ר (ברירת המחדל: 42,000 ₪ למ״ר)״."""
+    default = ("" if item["id"] == "mix" else
+               f' (ברירת המחדל: {_override_value(item.get("default"), item.get("unit", ""))})')
+    return f'{item["label"]}: {_override_value(item["value"], item.get("unit", ""))}{default}'
 
 
 def comparison_rows(econ: dict[str, Any]) -> list[tuple[str, Any, Any, str]]:
@@ -388,6 +438,7 @@ def _scenario_inputs(d: dict[str, Any]) -> dict[str, float | None]:
     # ולכן החישוב לא משתנה — משתנה מה שהיזם רואה: שאין כאן מספר.
     if (a.get("betterment_base_ils") or {}).get("status") == "missing":
         out["levy_base"] = None
+    out["mix_revenue"] = (d["economics"].get("unit_mix") or {}).get("developer_sale_revenue_ils")
     return out
 
 
@@ -403,8 +454,15 @@ def _input_provenance(d: dict[str, Any]) -> dict[str, tuple[str, str]]:
             out[key] = (r.get("certainty_label") or r.get("certainty") or "",
                         " · ".join(x for x in (r.get("location"), r.get("method")) if x))
     rights_, econ = d["rights"], d["economics"]
-    if econ.get("area_basis") == "policy":
+    mix = econ.get("unit_mix") or {}
+    out["mix_revenue"] = ((STATUS_LABEL["developer"], "תמהיל שהזין היזם — הפירוט תחת ״תמהיל דירות״")
+                          if mix.get("source") == "developer" else
+                          ("אומדן", "תמהיל מיטבי — הפירוט תחת ״תמהיל דירות״") if mix.get("summary") else
+                          ("", "ריק: אין תמהיל, וכל השטח ליזם נמכר לפי מחיר המכירה"))
+    if econ.get("area_basis") in ("policy", "policy_low", "policy_high"):
         out["buildable"] = ("אומדן", econ.get("buildable_basis") or "")
+    elif econ.get("area_basis") == "custom":
+        out["buildable"] = (STATUS_LABEL["developer"], econ.get("buildable_basis") or "")
     elif rights_.get("cap_400_sqm"):
         certainty = rights_.get("cap_400_certainty")
         out["buildable"] = ("אומדן" if certainty not in ("official", "derived", "manually_verified")
@@ -454,6 +512,11 @@ def excel(d: dict[str, Any]) -> bytes:
     sc.set_column(3, 3, 10)
     sc.set_column(4, 4, 70)
     sc.write_row(0, 0, ["קלט", "ערך", "יחידה", "סטטוס", "מקור"], head)
+    overrides = scenario_overrides(d)
+    if overrides is not None:
+        # ‏W8 · השורה הריקה שמעל הקלטים: מי שפותח את הקובץ יודע מיד שזה תרחיש של היזם.
+        sc.merge_range(1, 0, 1, 4, f"{SCENARIO_TITLE} — הטבלה מתחת לחישוב",
+                       wb.add_format({"bold": True, "font_color": "#8A6100", "bg_color": "#FFF4DC"}))
 
     values = _scenario_inputs(d)
     provenance = _input_provenance(d)
@@ -508,6 +571,19 @@ def excel(d: dict[str, Any]) -> bytes:
             sc.merge_range(tail + n, 0, tail + n, 4, f'{para["title"]}: {para["text"]}', note)
             sc.set_row(tail + n, 60)
         tail += len(econ["betterment"]["explain"]) + 2
+
+    # ‏W8 · מה שהיזם שינה, מול ברירת המחדל — אותה רשימה כמו ב-PDF ובמסך.
+    if overrides is not None:
+        sc.merge_range(tail, 0, tail, 4, SCENARIO_TITLE, head)
+        sc.write_row(tail + 1, 0, ["ערך", "בתרחיש", "ברירת המחדל", "", ""], wrap)
+        items = overrides or [{"id": "none", "label": "לא שונה אף ערך", "value": "—", "default": "—"}]
+        for n, item in enumerate(items, 2):
+            unit = item.get("unit", "")
+            sc.write_row(tail + n, 0, [item["label"], _override_value(item["value"], unit),
+                                       "" if item["id"] == "mix" else _override_value(item.get("default"), unit)],
+                         wrap)
+        sc.merge_range(tail + len(items) + 2, 0, tail + len(items) + 2, 4, SCENARIO_NOTE, note)
+        tail += len(items) + 4
 
     # ‏B15 · התמהיל שהיזם חישב, אותו משפט כמו במסך וב-PDF.
     if (econ.get("unit_mix") or {}).get("summary"):

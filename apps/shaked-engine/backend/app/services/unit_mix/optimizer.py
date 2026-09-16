@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from itertools import product
 from math import ceil, floor
 
@@ -31,6 +32,152 @@ def _count_ranges(inputs: UnitMixOptimizationInput, tenant_units: int) -> tuple[
     minimum_total = ceil(tenant_units * p.min_unit_multiplier)
     maximum_total = floor(tenant_units * p.max_unit_multiplier)
     return minimum_total, maximum_total
+
+
+@dataclass(frozen=True)
+class _Base:
+    """What every candidate shares: the owners' side of the building."""
+
+    compensation: float
+    tenant_units: int
+    tenant_allocation: float
+    developer_available: float
+    tenant_small: int
+    tenant_micro: int
+    average_existing: float
+
+
+def _base(inputs: UnitMixOptimizationInput) -> _Base:
+    compensation, _ = _resolved_compensation(inputs)
+    tenant_new_areas = [area + compensation for area in inputs.existing_unit_areas_sqm]
+    tenant_allocation = sum(tenant_new_areas)
+    return _Base(
+        compensation=compensation,
+        tenant_units=len(tenant_new_areas),
+        tenant_allocation=tenant_allocation,
+        developer_available=inputs.buildable_area_sqm * inputs.main_area_ratio - tenant_allocation,
+        tenant_small=sum(_is_small(area, inputs) for area in tenant_new_areas),
+        tenant_micro=sum(_is_micro(area, inputs) for area in tenant_new_areas),
+        average_existing=sum(inputs.existing_unit_areas_sqm) / len(tenant_new_areas),
+    )
+
+
+def _shares(inputs: UnitMixOptimizationInput, base: _Base, counts_tuple) -> tuple[float, float]:
+    options = inputs.unit_types
+    total_units = base.tenant_units + sum(counts_tuple)
+    small = base.tenant_small + sum(
+        count for count, option in zip(counts_tuple, options) if _is_small(option.area_sqm, inputs))
+    micro = base.tenant_micro + sum(
+        count for count, option in zip(counts_tuple, options) if _is_micro(option.area_sqm, inputs))
+    return small / total_units, micro / total_units
+
+
+def _candidate(inputs: UnitMixOptimizationInput, base: _Base, counts_tuple) -> UnitMixCandidate | None:
+    """One mix through Generic Report 0 -- the same pricing for the optimizer and a typed mix."""
+    options = inputs.unit_types
+    developer_units = sum(counts_tuple)
+    total_units = base.tenant_units + developer_units
+    used_area = sum(count * option.area_sqm for count, option in zip(counts_tuple, options))
+    gross_revenue = sum(
+        count * option.area_sqm * option.price_per_sqm_ils
+        for count, option in zip(counts_tuple, options)
+    )
+    if used_area <= 0 or gross_revenue <= 0 or total_units == 0:
+        return None
+
+    small_units = base.tenant_small + sum(
+        count for count, option in zip(counts_tuple, options) if _is_small(option.area_sqm, inputs))
+    micro_units = base.tenant_micro + sum(
+        count for count, option in zip(counts_tuple, options) if _is_micro(option.area_sqm, inputs))
+    blended_price = gross_revenue / used_area
+    economic_input = inputs.economic_input.model_copy(
+        update={
+            "average_existing_unit_sqm": base.average_existing,
+            "tenant_compensation_sqm_per_existing_unit": base.compensation,
+            "sale_price_per_sqm": blended_price,
+            "developer_sale_revenue_ils": gross_revenue,
+        }
+    )
+    economics = calculate_feasibility(
+        economic_input,
+        missing_inputs=inputs.economic_missing_inputs,
+    )
+    return UnitMixCandidate(
+        counts={option.key: count for option, count in zip(options, counts_tuple) if count},
+        total_new_units=total_units,
+        developer_units=developer_units,
+        tenant_units=base.tenant_units,
+        tenant_allocation_sqm=round(base.tenant_allocation, 2),
+        developer_used_sqm=round(used_area, 2),
+        developer_available_sqm=round(base.developer_available, 2),
+        unused_developer_sqm=round(base.developer_available - used_area, 2),
+        small_units=small_units,
+        micro_units=micro_units,
+        small_unit_share=round(small_units / total_units, 4),
+        micro_unit_share=round(micro_units / total_units, 4),
+        gross_developer_revenue_ils=round(gross_revenue, 2),
+        blended_sale_price_per_sqm_ils=round(blended_price, 2),
+        developer_revenue_ils=economics.developer_revenue_ils,
+        total_cost_ils=economics.total_cost_ils,
+        projected_profit_ils=economics.projected_profit_ils,
+        profit_margin_on_cost_ratio=economics.profit_margin_on_cost_ratio,
+        meets_developer_target=economics.meets_developer_target,
+        economics_deliverable=economics.is_deliverable,
+    )
+
+
+def evaluate_mix(
+    inputs: UnitMixOptimizationInput, counts: dict[str, int]
+) -> tuple[UnitMixCandidate | None, list[str]]:
+    """W8: a mix the developer typed, priced exactly like an optimizer candidate.
+
+    A mix that does not fit the developer's area is refused (``None`` and the
+    reason). Herzliya's numeric constraints come back as warnings instead: a
+    developer may test a mix the local committee would ask to change, as long
+    as the screen says so.
+    """
+    options = inputs.unit_types
+    unknown = sorted(set(counts) - {option.key for option in options})
+    if unknown:
+        raise ValueError(f"unknown unit types: {unknown}")
+    counts_tuple = tuple(int(counts.get(option.key, 0)) for option in options)
+    base = _base(inputs)
+    if base.developer_available < 0:
+        return None, [
+            f"דירות הבעלים עם התמורה ({base.tenant_allocation:,.0f} מ״ר) אינן נכנסות בשטח העיקרי "
+            f"הזמין ({inputs.buildable_area_sqm * inputs.main_area_ratio:,.0f} מ״ר), ולכן אין שטח ליזם."
+        ]
+    used_area = sum(count * option.area_sqm for count, option in zip(counts_tuple, options))
+    if used_area > base.developer_available + 1e-9:
+        return None, [
+            f"התמהיל אינו נכנס בשטח ליזם: {used_area:,.0f} מ״ר בתמהיל, ו-{base.developer_available:,.0f} מ״ר "
+            f"זמינים ליזם ({inputs.buildable_area_sqm:,.0f} מ״ר בנוי × {inputs.main_area_ratio:.0%} עיקרי, "
+            f"פחות {base.tenant_allocation:,.0f} מ״ר לבעלי הדירות)."
+        ]
+    candidate = _candidate(inputs, base, counts_tuple)
+    if candidate is None:
+        return None, ["בתמהיל אין דירות ליזם."]
+
+    p = inputs.policy
+    problems: list[str] = []
+    minimum_total, maximum_total = _count_ranges(inputs, base.tenant_units)
+    if not minimum_total <= candidate.total_new_units <= maximum_total:
+        problems.append(
+            f"מכפיל הדירות: {candidate.total_new_units} דירות בבניין החדש, והמדיניות מתירה "
+            f"{minimum_total}–{maximum_total} ({p.min_unit_multiplier:g}–{p.max_unit_multiplier:g} "
+            f"× {base.tenant_units} הדירות הקיימות)."
+        )
+    if candidate.small_unit_share + 1e-12 < p.min_small_unit_share:
+        problems.append(
+            f"דירות קטנות ({p.small_unit_min_sqm:g}–{p.small_unit_max_sqm:g} מ״ר): "
+            f"{candidate.small_unit_share:.0%} מהדירות, והמדיניות דורשת לפחות {p.min_small_unit_share:.0%}."
+        )
+    if candidate.micro_unit_share - 1e-12 > p.max_micro_unit_share:
+        problems.append(
+            f"דירות מיקרו (עד {p.micro_unit_max_sqm:g} מ״ר): {candidate.micro_unit_share:.0%} מהדירות, "
+            f"והמדיניות מתירה עד {p.max_micro_unit_share:.0%}."
+        )
+    return candidate, problems
 
 
 def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationResult:
@@ -78,16 +225,13 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
     min_developer_units = max(0, min_total_units - tenant_units)
     max_developer_units = max(0, max_total_units - tenant_units)
 
-    tenant_small = sum(_is_small(area, inputs) for area in tenant_new_areas)
-    tenant_micro = sum(_is_micro(area, inputs) for area in tenant_new_areas)
-
+    base = _base(inputs)
     options = inputs.unit_types
     per_type_caps = [
         min(max_developer_units, floor(developer_available / option.area_sqm))
         for option in options
     ]
 
-    average_existing = sum(inputs.existing_unit_areas_sqm) / tenant_units
     candidates: list[UnitMixCandidate] = []
 
     for counts_tuple in product(*(range(cap + 1) for cap in per_type_caps)):
@@ -103,68 +247,16 @@ def optimize_unit_mix(inputs: UnitMixOptimizationInput) -> UnitMixOptimizationRe
         if total_units == 0:
             continue
 
-        developer_small = sum(
-            count for count, option in zip(counts_tuple, options) if _is_small(option.area_sqm, inputs)
-        )
-        developer_micro = sum(
-            count for count, option in zip(counts_tuple, options) if _is_micro(option.area_sqm, inputs)
-        )
-        small_units = tenant_small + developer_small
-        micro_units = tenant_micro + developer_micro
-        small_share = small_units / total_units
-        micro_share = micro_units / total_units
-
+        small_share, micro_share = _shares(inputs, base, counts_tuple)
         p = inputs.policy
         if small_share + 1e-12 < p.min_small_unit_share:
             continue
         if micro_share - 1e-12 > p.max_micro_unit_share:
             continue
 
-        gross_revenue = sum(
-            count * option.area_sqm * option.price_per_sqm_ils
-            for count, option in zip(counts_tuple, options)
-        )
-        if used_area <= 0 or gross_revenue <= 0:
-            continue
-
-        blended_price = gross_revenue / used_area
-        economic_input = inputs.economic_input.model_copy(
-            update={
-                "average_existing_unit_sqm": average_existing,
-                "tenant_compensation_sqm_per_existing_unit": compensation,
-                "sale_price_per_sqm": blended_price,
-                "developer_sale_revenue_ils": gross_revenue,
-            }
-        )
-        economics = calculate_feasibility(
-            economic_input,
-            missing_inputs=inputs.economic_missing_inputs,
-        )
-
-        candidates.append(
-            UnitMixCandidate(
-                counts={option.key: count for option, count in zip(options, counts_tuple) if count},
-                total_new_units=total_units,
-                developer_units=developer_units,
-                tenant_units=tenant_units,
-                tenant_allocation_sqm=round(tenant_allocation, 2),
-                developer_used_sqm=round(used_area, 2),
-                developer_available_sqm=round(developer_available, 2),
-                unused_developer_sqm=round(developer_available - used_area, 2),
-                small_units=small_units,
-                micro_units=micro_units,
-                small_unit_share=round(small_share, 4),
-                micro_unit_share=round(micro_share, 4),
-                gross_developer_revenue_ils=round(gross_revenue, 2),
-                blended_sale_price_per_sqm_ils=round(blended_price, 2),
-                developer_revenue_ils=economics.developer_revenue_ils,
-                total_cost_ils=economics.total_cost_ils,
-                projected_profit_ils=economics.projected_profit_ils,
-                profit_margin_on_cost_ratio=economics.profit_margin_on_cost_ratio,
-                meets_developer_target=economics.meets_developer_target,
-                economics_deliverable=economics.is_deliverable,
-            )
-        )
+        candidate = _candidate(inputs, base, counts_tuple)
+        if candidate is not None:
+            candidates.append(candidate)
 
     # Product decision: primary objective is absolute developer profit. Profit
     # on cost is the first tie-breaker, followed by exact developer revenue and

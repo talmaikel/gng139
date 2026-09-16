@@ -89,6 +89,13 @@ MUTS = [
    'if False:\n        return []'),
   ("api/v1/candidates.py", "הסריקה אינה ממיינת לפי רווח",
    'economic.sort(key=lambda r: (not _ready(r), -r["economics"]["margin"]))', 'pass'),
+  # ‏W8 · מחשבון התרחיש: דוח 0 נגזר ממה שהיזם בחר
+  ("cities/herzliya/dossier.py", "התמהיל מוצג ואינו משנה את ההכנסות",
+   'head = _run(head_inputs.model_copy(update={"developer_sale_revenue_ils": mix["developer_sale_revenue_ils"]}),',
+   'head = _run(head_inputs,'),
+  ("cities/herzliya/dossier.py", "השבחה שהיזם הזין אינה נכנסת לרווח",
+   '        result, inputs = given, inputs.model_copy(update={"betterment_base_ils": manual})',
+   '        result, inputs = before, inputs'),
   # ‏A24 · קצב לשרתי הגרמושקות, ומשותף לכל התהליך
   ("sources/client.py", "הגרמושקות יורדות בלי קצב",
    '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),

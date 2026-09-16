@@ -12,7 +12,9 @@ from app.models.tenant import User
 from app.cities.herzliya.archive_facts import (ArchiveUnavailable, NoBuildingFile,
                                                fetch_for_delivery)
 from app.cities.herzliya import exports
-from app.cities.herzliya.dossier import NotEntitled, build as build_dossier, screening
+from app.cities.herzliya.dossier import (NotEntitled, build as build_dossier, scenario as dossier_scenario,
+                                         screening)
+from app.cities.herzliya.scenario import ScenarioOverrides, ScenarioRejected
 from app.services.economic.assumptions import get_assumptions
 from app.services.deliveries import (NoCredits, NotDeliverable, _credits, deliver,
                                      delivered_ids, for_company, held_for_renewal,
@@ -316,6 +318,29 @@ async def get_dossier(
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
+@router.post("/{city_code}/{opportunity_id}/dossier/scenario")
+async def get_dossier_scenario(
+    city_code: str,
+    opportunity_id: UUID,
+    body: ScenarioOverrides,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> dict[str, Any]:
+    """‏W8 · הכלכלה של התיק לפי מה שהיזם שינה במחשבון. **שום דבר אינו נשמר.**
+
+    אותה בדיקת הרשאה כמו התיק (404 למי שלא קיבל אותו). תרחיש שאי אפשר לחשב
+    כמו שהוזן — תמהיל שאינו נכנס בשטח ליזם, שטח מעל תקרת החוק — ‏422 עם משפט.
+    """
+    rules = get_city_rules(city_code)
+    try:
+        economics = await dossier_scenario(session, rules, opportunity_id, user.company_id, body)
+    except NotEntitled as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except ScenarioRejected as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return {"economics": economics, "overrides_applied": economics.get("overrides_applied", [])}
+
+
 # ‏DOS-04: *״ייצוא PDF של התיק ו-Excel של נתוני התרחיש נכללים בגרסה
 # הראשונה״*. שני הנתיבים עוברים דרך אותה בדיקת בעלות כמו התיק עצמו —
 # ‏ACC-08 אומר במפורש שחלקה אינה נמסרת ״דרך צמד, קישור, **ייצוא**, מטמון
@@ -336,13 +361,33 @@ async def export_dossier(
     user: User = Depends(current_active_user),
 ) -> Response:
     """התיק כקובץ. ‏`pdf` למסמך, ‏`xlsx` לתרחיש עם נוסחאות חיות."""
+    return await _export(session, user, city_code, opportunity_id, fmt, None)
+
+
+@router.post("/{city_code}/{opportunity_id}/dossier.{fmt}")
+async def export_dossier_scenario(
+    city_code: str,
+    opportunity_id: UUID,
+    fmt: str,
+    body: ScenarioOverrides,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> Response:
+    """‏W8 · התיק כקובץ לפי התרחיש של היזם — עם שורת ״תרחיש מותאם״ וטבלת הערכים שהוא שינה."""
+    return await _export(session, user, city_code, opportunity_id, fmt, body)
+
+
+async def _export(session, user, city_code: str, opportunity_id: UUID, fmt: str,
+                  overrides: ScenarioOverrides | None) -> Response:
     if fmt not in EXPORTS:
         raise HTTPException(status_code=404, detail=f"פורמט {fmt} אינו נתמך")
     rules = get_city_rules(city_code)
     try:
-        dossier = await build_dossier(session, rules, opportunity_id, user.company_id)
+        dossier = await build_dossier(session, rules, opportunity_id, user.company_id, overrides)
     except NotEntitled as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+    except ScenarioRejected as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
     render, media_type = EXPORTS[fmt]
     try:
@@ -351,6 +396,8 @@ async def export_dossier(
         raise HTTPException(status_code=503, detail=str(e)) from e
 
     stem = f'{dossier["identity"]["block"]}-{dossier["identity"]["parcel"]}'
+    if overrides is not None:
+        stem += "-scenario"
     return Response(
         content=payload, media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="shakdan-{stem}.{fmt}"'},
