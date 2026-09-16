@@ -33,6 +33,7 @@ from app.services.economic.construction_costs import (
 from app.services.economic.schemas import FeasibilityInput
 from app.services.market_data.govmap import MarketDataUnavailable
 from app.services.market_data.service import get_or_refresh_market_valuation
+from app.services.residential_share import location_for as residential_location_for, record_ocr_candidate
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("shaked.worker")
@@ -252,6 +253,12 @@ async def generate_dossier_handler(payload: dict) -> dict:
         best_schedule: tuple[list, str, str, dict] | None = None
         best_schedule_plausible_count = 0
 
+        # W10 (#115): the first page that states its own residential-area
+        # figure against a known, sane total. "First" rather than "best" --
+        # unlike the unit schedule, this is a single scalar a legend states
+        # once; there is no partial reading to prefer over another.
+        best_residential: tuple[float, float, str, str, dict] | None = None
+
         for document_index, (pdf_bytes, document_source) in enumerate(pdf_documents, start=1):
             for page_index, page_bytes in enumerate(_rasterize_pdf(pdf_bytes), start=1):
                 preprocessed = preprocess_blueprint(page_bytes)
@@ -270,12 +277,24 @@ async def generate_dossier_handler(payload: dict) -> dict:
                         "units_read": len(extraction.units),
                         "declared_unit_count": extraction.declared_unit_count,
                         "units_total_area_sqm": extraction.units_total_area_sqm,
+                        "residential_area_sqm": extraction.residential_area_sqm,
                     }
                 )
                 usable_units = [u for u in extraction.units if u.is_plausible]
                 if len(usable_units) > best_schedule_plausible_count:
                     best_schedule = (extraction.units, extraction.method, page_ref, document_source)
                     best_schedule_plausible_count = len(usable_units)
+
+                if (
+                    best_residential is None
+                    and extraction.residential_area_sqm is not None
+                    and extraction.total_building_area_sqm is not None
+                    and 0 < extraction.residential_area_sqm <= extraction.total_building_area_sqm
+                ):
+                    best_residential = (
+                        extraction.residential_area_sqm, extraction.total_building_area_sqm,
+                        extraction.method, page_ref, document_source,
+                    )
 
         dossier["extraction_results"] = extraction_results
 
@@ -295,6 +314,24 @@ async def generate_dossier_handler(payload: dict) -> dict:
                 retrieved_at=datetime.fromisoformat(retrieved_at) if retrieved_at else None,
             )
             await session.flush()
+
+        # W10 (#115): the §70א 70%-residential gate previously had no open
+        # source at all -- a person had to read the gramoshka's area table
+        # by hand. When the same table states its own residential figure,
+        # write it as a displayed candidate; it still cannot decide the gate
+        # on its own (see residential_share.record_ocr_candidate), and it
+        # never contests a person's own manually-verified answer.
+        if best_residential:
+            residential_sqm, total_sqm, method, page_ref, document_source = best_residential
+            retrieved_at_raw = document_source.get("retrieved_at")
+            await record_ocr_candidate(
+                session, opportunity_id,
+                residential_sqm=residential_sqm, total_sqm=total_sqm,
+                source_url=document_source.get("url"),
+                retrieved_at=datetime.fromisoformat(retrieved_at_raw) if retrieved_at_raw else None,
+                location=residential_location_for(residential_sqm, total_sqm, page=page_ref),
+                method=method,
+            )
 
         stored_units = await load_units(session, opportunity_id)
         dossier["dwelling_units"] = [
