@@ -46,6 +46,8 @@ export const ASSUMPTION_STATUS: Record<string, Status> = {
   data: status("נתון", "ok"),
   estimate: status("אומדן", "warn"),
   missing: status("חסר", "bad"),
+  // ‏W8 · ערך שהיזם הזין במחשבון התרחיש.
+  developer: status("הוזן על ידי היזם", "neutral"),
 };
 
 export const ASSESSMENT_STATUS: Record<string, Status> = {

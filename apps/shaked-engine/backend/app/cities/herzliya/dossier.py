@@ -28,6 +28,10 @@ from uuid import UUID
 from sqlalchemy import select
 
 from app.cities.herzliya import glossary, new_build_prices, rights
+from app.cities.herzliya.scenario import (
+    AREA_BASIS_LABEL, ASSUMPTION_OF, DEVELOPER, DEVELOPER_SOURCE, ScenarioOverrides,
+    ScenarioRejected, scenario_mix,
+)
 from app.core.config import get_settings
 from app.evidence import DECIDING, Certainty, usable
 from app.models.opportunity import Opportunity
@@ -253,6 +257,10 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
     }
 
 
+_ENVELOPE_ASSUMPTIONS = ("המעטפת נשענת על הנחות: קו בניין קדמי 5 מ׳, צלע חזית שאינה ידועה, ו-90% "
+                         "מהמעטפת בנויים — ובוועדה המקומית השטח עשוי לצאת אחר.")
+
+
 def _scenario_caveats(assessment: dict, fields: dict, live: dict,
                       existing_units: int | None = None) -> list[dict[str, str]]:
     """על מה הרווח נשען ואינו ודאי — **משפטים מוכנים, נכתבים פעם אחת בשרת.** (B8)
@@ -301,8 +309,7 @@ def _scenario_caveats(assessment: dict, fields: dict, live: dict,
         out.append({"id": "policy_area_below_cap", "text": (
             f"הרווח מחושב על השטח לפי מדיניות הרצליה — אומדן של כ-{base.get('sqm', 0):,.0f} מ״ר "
             f"(טווח {span}), {share} מתקרת ה-400% ({cap:,.0f} מ״ר). ‏400% הוא תקרה בחוק ולא "
-            "זכות. המעטפת נשענת על הנחות: קו בניין קדמי 5 מ׳, צלע חזית שאינה ידועה, ו-90% "
-            "מהמעטפת בנויים — ובוועדה המקומית השטח עשוי לצאת אחר.")})
+            "זכות. " + _ENVELOPE_ASSUMPTIONS)})
     elif cap and policy.get("why"):
         out.append({"id": "policy_area_unknown", "text": (
             f"לא חושב כמה מתקרת ה-400% נכנס לפי מדיניות הרצליה: {policy['why']}. "
@@ -443,51 +450,31 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
     return out
 
 
-def _unit_mix(opp: Opportunity, a) -> dict[str, Any]:
-    """‏B15 · התמהיל שהיזם חישב במסך ״תמהיל ורווחיות״, כפי שנשמר לחלקה.
+def _no_unit_mix() -> dict[str, Any]:
+    """‏**W8 · התיק אינו קורא תמהיל שנשמר על החלקה.**
 
-    ‏**התמהיל מוצג ואינו משנה את הרווח** (בועז, 15.09): ההדגמה ביום רביעי
-    נשענת על המספרים שבתיק, והתמהיל נכנס אליהם רק אחרי שייבדק. המשפט
-    נכתב כאן ולא במסך, כדי שהמסך, ה-PDF והאקסל יאמרו אותו דבר.
+    ‏B15 שמר את התמהיל ב-`opportunity.metadata_json`, וההזדמנות משותפת לכל
+    החברות שקיבלו אותה — תמהיל שחברה אחת חישבה הופיע בתיק של אחרת. התמהיל
+    חי עכשיו רק בתשובה של מחשבון התרחיש (`scenario_for`), ושם הוא גם משנה
+    את הרווח. בתיק עצמו — ברירת המחדל — אין תמהיל.
     """
-    meta = opp.metadata_json or {}
-    rows = [r for r in (meta.get("planned_unit_mix") or [])
-            if isinstance(r, dict) and r.get("units")]
-    info = meta.get("planned_unit_mix_meta") or {}
-    if not rows or info.get("source") != "b15_profit_optimizer":
-        return {"rows": [], "summary": None}
+    return {"rows": [], "summary": None}
 
-    rows = sorted(rows, key=lambda r: r["rooms"])
-    developer_units = sum(int(r["units"]) for r in rows)
-    parts = " · ".join(f'{int(r["units"])} × {r["rooms"]:g} חד׳ ({r["area_sqm"]:,.0f} מ״ר)'
-                       for r in rows)
-    comp = info.get("compensation_sqm_per_existing_unit")
-    summary = f"תמהיל דירות ליזם (אומדן): {parts} — {developer_units} דירות ליזם"
-    if info.get("tenant_units"):
-        summary += f' ו-{info["tenant_units"]} לבעלי הדירות'
-    if comp is not None:
-        summary += f" · לפי תוספת של {comp:g} מ״ר לכל דירה קיימת"
-    if info.get("existing_units_basis") == "building_average":
-        summary += " · שטח הדירות הקיימות לפי ממוצע הבניין"
-    # ‏באלוף יגאל אלון 6 מכפיל הדירות מתיר 30 דירות ליזם, ו-1,261 מ״ר מתוך
-    # 4,461 לא נכנסים לאף תמהיל. הרווח בתיק מוכר את כל השטח, ולכן זה נאמר.
-    unused, available = info.get("unused_developer_sqm"), info.get("developer_available_sqm")
-    if unused and available and unused > 0.05 * available:
-        summary += (f" · {unused:,.0f} מ״ר מתוך {available:,.0f} ליזם לא נכנסים לתמהיל "
-                    "(מגבלת מספר הדירות), והרווח בתיק מניח שהם נמכרים")
-    library_comp = a.tenant_compensation_sqm_per_existing_unit.value
-    if comp is not None and abs(comp - library_comp) > 1e-9:
-        summary += f" · הרווח בתיק עדיין מחושב לפי {library_comp:g} מ״ר"
-    return {
-        "rows": rows,
-        "developer_units": developer_units,
-        "tenant_units": info.get("tenant_units"),
-        "compensation_sqm_per_existing_unit": comp,
-        "existing_units_basis": info.get("existing_units_basis"),
-        "status": info.get("status", "estimate"),
-        "generated_at": info.get("generated_at"),
-        "summary": summary,
-    }
+
+def _developer_live(live: dict[str, Any], ov: ScenarioOverrides) -> dict[str, Any]:
+    """‏W8 · הקלטים לחלקה אחרי מה שהיזם הזין — בשביל ההשבחה והסייגים.
+
+    ערך שהיזם הזין הוא ״מוכרע״ מבחינת התרחיש שלו: הסייג ״אינו מוכרע לחלקה״
+    אומר שהאומדן שלנו אינו ודאי, ובתרחיש הזה האומדן שלנו אינו בשימוש.
+    """
+    out = dict(live)
+    for key, value in (("sale_price", ov.sale_price_per_sqm),
+                       ("unit_area", ov.average_existing_unit_sqm),
+                       ("existing_price", ov.existing_price_per_sqm)):
+        if value is not None:
+            out[key] = {"value": value, "resolved": True, "certainty": DEVELOPER,
+                        "label": DEVELOPER_SOURCE, "default": (live.get(key) or {}).get("value")}
+    return out
 
 
 # פחות מזה חציון אינו מייצג; עדיף סף בלבד מאשר אומדן על שלוש עסקאות.
@@ -537,9 +524,11 @@ BETTERMENT_CATEGORY_LABEL = {
 MARGINAL_LAND_VALUE_ILS = 10_000.0
 
 
-def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
-                result=None) -> dict[str, Any]:
+def _betterment(inputs, live: dict, cap: float, existing_area: float | None,
+                result=None, manual: float | None = None) -> dict[str, Any]:
     # ‏W2 · ‏`cap` הוא השטח שעליו התרחיש מחושב: שטח המדיניות, או תקרת ה-400% להשוואה.
+    # ‏W8 · השיעור, יעד הרווח והמימון נקראים מהקלט ולא מספריית ההנחות — היזם
+    # משנה אותם בתרחיש שלו. ‏`manual` היא השבחה שהיזם הזין, במקום האומדן.
     """‏B11 · הסף, ולא אומדן של ההשבחה.
 
     מפורט ב-`POC/layer_a/data/BETTERMENT_BASE.md`. בקצרה: אנחנו לא
@@ -550,8 +539,8 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     זכויות** — המקדם היחיד שחסר בשיטה שחברות יזמיות מריצות בפועל.
     ‏״229 מיליון״ אינו מספר שיזם שופט; ״33,705 ₪ למ״ר זכויות״ כן.
     """
-    rate = a.betterment_levy_rate.value
-    target = a.developer_profit_target_ratio.value
+    rate = inputs.betterment_levy_rate
+    target = inputs.developer_profit_target_ratio
 
     # ‏**E1 · 15.09 (בועז): הסף הוא ההיטל שמשאיר רווח יזמי של 16%, לא רווח
     # אפס.** יזם אינו עובד ברווח אפס. הגרסה הקודמת קראה ״עמיד״ לפרויקט
@@ -594,8 +583,8 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
             total_revenue_ils=result.total_revenue_ils,
             total_cost_ils=result.total_cost_ils,
             land_cost_ils=result.land_cost_ils,
-            finance_ratio=a.finance_ratio.value,
-            developer_profit_target_ratio=a.developer_profit_target_ratio.value)
+            finance_ratio=inputs.finance_ratio,
+            developer_profit_target_ratio=target)
         if land > 0:
             estimate = betterment_from_land_values(
                 existing_area_sqm=existing_area,
@@ -605,7 +594,16 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
             estimate.notes.append(
                 f"שווי מ״ר זכויות נגזר ולא הונח: {land / cap:,.0f} ₪ — "
                 "מה שנשאר מההכנסות אחרי כל העלויות ואחרי הרווח היזמי")
-    band = levy_range(breakeven_betterment_ils=threshold, estimate=estimate, rate=rate)
+    if manual is None:
+        band = levy_range(breakeven_betterment_ils=threshold, estimate=estimate, rate=rate)
+    else:
+        # ‏W8 · השבחה שהיזם הזין היא מספר אחד ולא טווח: הטווח של האומדן נובע
+        # מרגישות שווי הקרקע השיורי, והמספר הזה אינו נגזר ממנו.
+        ceiling = threshold * rate if threshold else None
+        levy = manual * rate
+        band = {"rate": rate, "viable_up_to_ils": ceiling, "estimate_ils": levy,
+                "low_ils": levy, "high_ils": levy,
+                "within_range": levy <= ceiling if ceiling is not None else None}
 
     if threshold is None:
         category = NO_THRESHOLD
@@ -617,8 +615,8 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
         category = MARGINAL
 
     explain = _levy_explanation(rate, target, band, estimate, threshold, per_right, category,
-                                existing_area, existing_price, live, result, cap)
-    return {
+                                existing_area, existing_price, live, result, cap, manual)
+    out = {
         "rate": rate,
         "levy": band,
         # ‏W3 · נקודות 9 ו-13: איך מחושבים ההיטל, האומדן, הטווח והתקרה — במילים
@@ -627,7 +625,7 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
         # ‏B13 · המשפט שמחליף את ״היטל השבחה: 0 ₪״ — **נכתב פעם אחת, בשרת.**
         # ה-PDF, האקסל והמסך מדפיסים אותו כמו שהוא, כמו `not_delivered_reason`,
         # ולכן הניסוח אינו יכול להיות שונה בין המשטחים.
-        "summary": _levy_summary(category, band, estimate, target),
+        "summary": _levy_summary(category, band, estimate, target, manual),
         "profit_target_ratio": target,
         "estimate": None if estimate is None else {
             "betterment_ils": estimate.betterment_ils,
@@ -653,7 +651,9 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
         # נכתב מתחת למספר. הנוסח נגזר ממה שבאמת מוצג.
         "note": (f"הסף אינו שומה. הוא אומר עד איזה היטל הפרויקט עוד משאיר רווח יזמי של {target:.0%}. "
                  "שיעור ההיטל — רבע ההשבחה לפי §19(ב)(10א) — ודאי; הבסיס "
-                 + ("דורש שומה. האומדן מחושב בשיטת היזם — שווי הזכויות פחות "
+                 + ("בתרחיש הזה הוזן על ידי היזם, ואינו אומדן שלנו ואינו שומה."
+                    if manual is not None else
+                    "דורש שומה. האומדן מחושב בשיטת היזם — שווי הזכויות פחות "
                     "שווי הדירות הקיימות — ואינו שומה."
                     if estimate is not None else
                     "אינו ידוע, ולכן מוצג סף ולא מספר.")),
@@ -665,10 +665,15 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
                            "מחיר מכירה למ״ר": live["sale_price"]["resolved"]}.items()
             if not v),
     }
+    if manual is not None:
+        # ‏W8 · ההשבחה שהיזם הזין. ‏`estimate` נשאר האומדן שלנו — ברירת המחדל שהוחלפה.
+        out["manual_betterment_ils"] = manual
+    return out
 
 
 def _levy_explanation(rate, target, band, estimate, threshold, per_right, category,
-                      existing_area, existing_price, live, result, area) -> list[dict[str, str]]:
+                      existing_area, existing_price, live, result, area,
+                      manual: float | None = None) -> list[dict[str, str]]:
     """חמש פסקאות: מה ההיטל, איך האומדן, למה טווח, מה התקרה, מה הקטגוריה."""
     m = _millions
     out = [{"id": "what", "title": "מה זה היטל השבחה",
@@ -676,17 +681,29 @@ def _levy_explanation(rate, target, band, estimate, threshold, per_right, catego
                      "שקד (סעיף 19(ב)(10א) לתוספת השלישית; ברירת המחדל בחוק היא מחצית). הוא משולם "
                      "במימוש, כלומר בהיתר, ואת הסכום הסופי קובעת שומה של הוועדה המקומית. מה שבתיק הוא "
                      "אומדן ולא שומה.")}]
-    if estimate is not None and result is not None:
+    if manual is not None:
+        # ‏W8 · ההשבחה שהיזם הזין מחליפה את האומדן, ואין לה טווח.
+        out.append({"id": "estimate", "title": "ההשבחה שהזין היזם",
+                    "text": (f"בתרחיש הזה ההשבחה אינה אומדן שלנו: היזם הזין {m(manual)}, וההיטל "
+                             f"{rate:.0%} ממנה — {m(band['estimate_ils'])} — נכנס לעלות יחד עם המימון עליו. "
+                             "המספר אחד ואין לו טווח."
+                             + (f" לשם השוואה, האומדן שלנו בשיטת היזם: השבחה של "
+                                f"{m(max(estimate.betterment_ils, 0))}." if estimate is not None else ""))})
+    elif estimate is not None and result is not None:
         after, before = estimate.after_ils, estimate.before_ils
         non_land = result.total_cost_ils - result.land_cost_ils
         count = live["existing_price"].get("comparable_count")
+        # ‏W8 · מחיר דירה קיימת שהיזם הזין אינו חציון של עסקאות.
+        existing_basis = ("מחיר מ״ר של דירה קיימת שהזין היזם"
+                          if live["existing_price"].get("certainty") == DEVELOPER else
+                          "חציון מחיר מ״ר של דירות יד שנייה ליד החלקה")
         out.append({"id": "estimate", "title": "איך מחושב האומדן",
                     "text": (f"שיטת היזם: השבחה = שווי הזכויות החדשות פחות שווי המצב הקיים. "
                              f"שווי הזכויות הוא שווי הקרקע השיורי — מה שנשאר מההכנסות ({m(result.total_revenue_ils)}) "
                              f"אחרי רווח יזמי של {target:.0%} ואחרי כל העלויות שאינן קרקע ({m(non_land)}): "
                              f"{m(after)}, כ-{after / area:,.0f} ₪ למ״ר זכויות על {area:,.0f} מ״ר. "
                              f"שווי המצב הקיים הוא השטח הבנוי הקיים ({existing_area:,.0f} מ״ר, אומדן) כפול "
-                             f"חציון מחיר מ״ר של דירות יד שנייה ליד החלקה ({existing_price:,.0f} ₪"
+                             f"{existing_basis} ({existing_price:,.0f} ₪"
                              + (f", {count} עסקאות" if count else "") + f"): {m(before)}. "
                              f"ההשבחה {m(max(estimate.betterment_ils, 0))}, וההיטל {rate:.0%} ממנה: "
                              f"כ-{m(band['estimate_ils'])}.")})
@@ -704,7 +721,8 @@ def _levy_explanation(rate, target, band, estimate, threshold, per_right, catego
                     "text": (f"התקרה היא ההיטל הגבוה ביותר שעדיין משאיר רווח יזמי של {target:.0%}: "
                              f"{m(band['viable_up_to_ils'])}. כל שקל היטל מוסיף לעלות גם את המימון עליו, "
                              f"ולכן מעל התקרה הרווח יורד מתחת ל-{target:.0%}"
-                             + (" — והאומדן " + ("מתחת לה." if band.get("estimate_ils") is not None
+                             + ((" — וההיטל לפי ההשבחה שהזין היזם " if manual is not None else " — והאומדן ")
+                                + ("מתחת לה." if band.get("estimate_ils") is not None
                                                  and band["estimate_ils"] <= band["viable_up_to_ils"]
                                                  else "מעליה.")
                                 if band.get("estimate_ils") is not None else ".")
@@ -723,7 +741,7 @@ def _levy_explanation(rate, target, band, estimate, threshold, per_right, catego
     return out
 
 
-def _profit_verdict(result, target: float, after_levy: bool = False) -> str:
+def _profit_verdict(result, target: float, after_levy: bool = False, manual: bool = False) -> str:
     """‏*״הרווח היזמי חייב להיות מעל 16% כדי שיהיה כדאי״* (בועז, 15.09).
 
     הרווח הוצג במספר גדול ובצבע, והמשפט ״מתחת ליעד״ לא נאמר במילים —
@@ -733,7 +751,7 @@ def _profit_verdict(result, target: float, after_levy: bool = False) -> str:
     # ‏W2 · נקודה 7: הרווח שנשפט הוא אחרי אומדן ההיטל כשיש אומדן.
     if after_levy:
         side = "מעל הרווח היזמי המזערי" if result.meets_developer_target else "מתחת לרווח היזמי המזערי"
-        return f"{side} ({target:.0%}): {margin:.1%} על העלות, אחרי אומדן היטל השבחה"
+        return f"{side} ({target:.0%}): {margin:.1%} על העלות, {_after_levy_words(manual)}"
     if result.meets_developer_target:
         return f"מעל הרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, לפני היטל השבחה"
     return (f"מתחת לרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, "
@@ -748,7 +766,13 @@ def _millions(ils: float) -> str:
     return f"{ils / 1e6:,.1f} מיליון ₪"
 
 
-def _levy_summary(category: str, band: dict, estimate, target: float) -> str:
+def _after_levy_words(manual: bool) -> str:
+    """‏W8 · ״אחרי אומדן היטל״ אינו נכון כשההשבחה היא של היזם."""
+    return "אחרי היטל לפי ההשבחה שהזין היזם" if manual else "אחרי אומדן היטל השבחה"
+
+
+def _levy_summary(category: str, band: dict, estimate, target: float,
+                  manual: float | None = None) -> str:
     """שורת ההיטל בתיק: **לא ידוע**, ומה כן ידוע — עד כמה הפרויקט סופג אותו.
 
     ‏״0 ₪״ נקרא כמו ״אין היטל״, והוא שקר: ההיטל הוא רבע מההשבחה, והבסיס
@@ -756,6 +780,8 @@ def _levy_summary(category: str, band: dict, estimate, target: float) -> str:
     """
     # ‏W2 · כשיש אומדן, הוא נכנס לרווח — ולכן ההיטל אינו ״לא ידוע״ אלא אומדן שאינו שומה.
     known = "אומדן ולא שומה" if estimate is not None and band.get("low_ils") is not None else "לא ידוע"
+    if manual is not None:
+        known = "לפי השבחה שהזין היזם"
     if category == NO_THRESHOLD or not band.get("viable_up_to_ils"):
         # ‏E1 · מתחת ל-16% עוד לפני היטל. האומדן עדיין נאמר: הוא אומר בכמה
         # עוד יירד הרווח, וזה מה שיזם ישאל מיד אחרי ״לא כדאי״.
@@ -764,7 +790,10 @@ def _levy_summary(category: str, band: dict, estimate, target: float) -> str:
     else:
         text = (f"היטל השבחה: {known} · רווח של {target:.0%} נשמר כל עוד ההיטל מתחת ל-"
                 f"{_millions(band['viable_up_to_ils'])} ({_CATEGORY_SHORT[category]})")
-    if estimate is not None and band.get("low_ils") is not None:
+    if manual is not None:
+        text += (f" · היטל: כ-{band['estimate_ils'] / 1e6:,.1f} מיליון ₪ על השבחה של "
+                 f"{manual / 1e6:,.1f} מיליון ₪")
+    elif estimate is not None and band.get("low_ils") is not None:
         # שיטת היזם: שווי המצב החדש פחות הקיים, כפול רבע. הטווח הוא ±10%
         # בשווי מ״ר הזכויות, ולכן רחב — ההיטל הוא הפרש, והוא רגיש.
         text += (f" · אומדן: כ-{band['estimate_ils'] / 1e6:,.1f} מיליון ₪ "
@@ -788,11 +817,20 @@ def _cost_rows(r, inputs, assumptions: dict[str, dict]) -> list[dict[str, Any]]:
 
     net = inputs.sale_price_per_sqm / (1 + inputs.vat_rate)
     underground = inputs.buildable_area_sqm * inputs.underground_ratio
+    if inputs.developer_sale_revenue_ils is None:
+        revenue = ("revenue", "הכנסות (נטו ממע״מ)", r.total_revenue_ils,
+                   f"{r.sellable_main_sqm:,.0f} מ״ר עיקרי × {inputs.sale_price_per_sqm:,.0f} ₪ ÷ {1 + inputs.vat_rate:g} (מע״מ)",
+                   "שווי כל השטח העיקרי בבניין החדש — כולל הדירות שנמסרות לבעלים, שחוזרות כעלות הקרקע.",
+                   src("sale_price_per_sqm_ils", "main_area_ratio"))
+    else:
+        # ‏W8 · עם תמהיל, היזם מוכר את הדירות שבתמהיל ולא את כל השטח שנשאר לו.
+        revenue = ("revenue", "הכנסות (נטו ממע״מ)", r.total_revenue_ils,
+                   f"{r.tenant_allocation_sqm:,.0f} מ״ר לבעלים × {net:,.0f} ₪ נטו + דירות היזם בתמהיל "
+                   f"{inputs.developer_sale_revenue_ils / 1e6:,.1f} מיליון ₪ ÷ {1 + inputs.vat_rate:g} (מע״מ)",
+                   "שווי דירות הבעלים, ועוד הדירות שבתמהיל שהיזם מוכר. שטח ליזם שאינו נכנס לתמהיל אינו נמכר.",
+                   src("sale_price_per_sqm_ils", "main_area_ratio") + " · תמהיל הדירות בתרחיש")
     rows = [
-        ("revenue", "הכנסות (נטו ממע״מ)", r.total_revenue_ils,
-         f"{r.sellable_main_sqm:,.0f} מ״ר עיקרי × {inputs.sale_price_per_sqm:,.0f} ₪ ÷ {1 + inputs.vat_rate:g} (מע״מ)",
-         "שווי כל השטח העיקרי בבניין החדש — כולל הדירות שנמסרות לבעלים, שחוזרות כעלות הקרקע.",
-         src("sale_price_per_sqm_ils", "main_area_ratio")),
+        revenue,
         ("land", "קרקע — פיצוי הדיירים", -r.land_cost_ils,
          f"{r.tenant_allocation_sqm:,.0f} מ״ר לבעלים × {net:,.0f} ₪ למ״ר נטו",
          f"הדירות החדשות שהבעלים מקבלים: לכל דירה קיימת שטחה הממוצע ועוד "
@@ -828,9 +866,11 @@ def _cost_rows(r, inputs, assumptions: dict[str, dict]) -> list[dict[str, Any]]:
          "עלות האשראי לאורך הפרויקט. אינה מחושבת על שווי דירות הבעלים.", src("finance_ratio")),
     ]
     if r.betterment_levy_ils:
-        rows.append(("levy", "היטל השבחה (אומדן)", -r.betterment_levy_ils,
+        manual = assumptions.get("betterment_base_ils", {}).get("status") == DEVELOPER
+        rows.append(("levy", "היטל השבחה (לפי היזם)" if manual else "היטל השבחה (אומדן)", -r.betterment_levy_ils,
                      f"{inputs.betterment_levy_rate:.0%} × השבחה של {inputs.betterment_base_ils / 1e6:,.1f} מיליון ₪",
-                     "אומדן בשיטת היזם ולא שומה — הפירוט בהסבר ההיטל.", src("betterment_base_ils")))
+                     ("ההשבחה שהזין היזם — לא אומדן שלנו ולא שומה." if manual else
+                      "אומדן בשיטת היזם ולא שומה — הפירוט בהסבר ההיטל."), src("betterment_base_ils")))
     return [{"id": i, "label": label, "value_ils": value, "formula": formula,
              "explain": explain, "source": source} for i, label, value, formula, explain, source in rows]
 
@@ -894,11 +934,56 @@ def _assumption_rows(a, live: dict, construction_cost, construction_cost_per_sqm
 
 
 async def _economics(session, opp: Opportunity, assessment: dict, fields: dict,
-                     solve_required: bool = True) -> dict[str, Any]:
-    """התרחיש הגנרי — ‏PRD 6.4. **אינו דוח שמאי חתום, וזה נכתב בתיק.**"""
+                     solve_required: bool = True,
+                     overrides: ScenarioOverrides | None = None) -> dict[str, Any]:
+    """התרחיש הגנרי — ‏PRD 6.4. **אינו דוח שמאי חתום, וזה נכתב בתיק.**
+
+    ‏**W8 · ‏`overrides` — מה שהיזם שינה במחשבון.** הערכים נכנסים לטבלת ההנחות
+    (סטטוס ״developer״, וברירת המחדל נשמרת ב-`default`), ומשם לאותו חישוב.
+    בלעדיהם התוצאה היא התיק כמו שהוא, בלי שדה אחד שונה.
+    """
     cap = assessment.get("cap_400_sqm")
     a = get_assumptions(opp.city_code)
     live = await _resolve_live_inputs(session, opp, fields, a)
+
+    # B2: the same resolution worker.py uses for the on-demand pipeline --
+    # a.construction_cost_per_sqm_ils is a placeholder only (see
+    # assumptions.py) and must never decide a scenario directly. `floors`
+    # lets this pick the survey's actual height band for this building
+    # instead of averaging across all three; worker.py has no rights
+    # assessment to read a floor count from, so it always averages.
+    #
+    # `floors_low` rather than `floors_high`: `rights.floors()` scans the
+    # street-width measurement's tolerance band and returns the minimum and
+    # maximum permitted floor count across it. `floors_low` is the
+    # conservative, guaranteed-at-least figure; `floors_high` is the
+    # optimistic end of the same uncertainty. Pricing construction off the
+    # optimistic count would understate cost whenever the true width lands
+    # on the low side of the tolerance band.
+    floors_range = assessment.get("floors") or {}
+    floors = floors_range.get("low")
+    construction_cost = resolve_construction_cost_per_sqm(opp.city_code, None, floors=floors)
+    construction_cost_per_sqm = (a.construction_cost_per_sqm_ils.value
+                                 if construction_cost.value_ils_per_sqm is None
+                                 else construction_cost.value_ils_per_sqm)
+
+    # החניון מאותה שורה בסקר. עיר שהסקר לא מכסה נופלת להנחת הספרייה.
+    underground_cost = resolve_underground_cost_per_sqm(opp.city_code)
+    underground_cost_per_sqm = (underground_cost.value_ils_per_sqm
+                                or a.underground_cost_per_sqm_ils.value)
+
+    # ‏**A20.** טבלת ההנחות מציגה את מה שהתרחיש השתמש בו, לא את ברירת המחדל
+    # של העיר. ראו `_assumption_rows`.
+    rows = _assumption_rows(a, live, construction_cost, construction_cost_per_sqm,
+                            underground_cost, underground_cost_per_sqm)
+    policy = (assessment.get("policy_area") or {}).get("base") or {}
+    policy_sqm = policy.get("sqm")
+    default_live = live
+    ov = None
+    if overrides is not None:
+        ov = _changed(overrides, rows, live, "policy_base" if policy_sqm else "cap_400")
+        live = _developer_live(live, ov)
+        _developer_rows(rows, ov)
 
     # ‏**החוסמים נגזרים מהמצב בפועל ולא מהספרייה.** ‏`a.blocking()` מחזיר
     # את מה שמסומן `MISSING` בספרייה — נכון כברירת מחדל לעיר, ושגוי
@@ -928,53 +1013,29 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict,
     if live["unit_area"]["value"] is not None:
         SOFTENED = SOFTENED | {"average_existing_unit_sqm"}
     blocking = [k for k in a.blocking() if k not in SOFTENED and k != "construction_cost_per_sqm_ils"]
-    # B2: the same resolution worker.py uses for the on-demand pipeline --
-    # a.construction_cost_per_sqm_ils is a placeholder only (see
-    # assumptions.py) and must never decide a scenario directly. `floors`
-    # lets this pick the survey's actual height band for this building
-    # instead of averaging across all three; worker.py has no rights
-    # assessment to read a floor count from, so it always averages.
-    #
-    # `floors_low` rather than `floors_high`: `rights.floors()` scans the
-    # street-width measurement's tolerance band and returns the minimum and
-    # maximum permitted floor count across it. `floors_low` is the
-    # conservative, guaranteed-at-least figure; `floors_high` is the
-    # optimistic end of the same uncertainty. Pricing construction off the
-    # optimistic count would understate cost whenever the true width lands
-    # on the low side of the tolerance band.
-    floors_range = assessment.get("floors") or {}
-    floors = floors_range.get("low")
-    construction_cost = resolve_construction_cost_per_sqm(opp.city_code, None, floors=floors)
-    if construction_cost.value_ils_per_sqm is None:
+    if (construction_cost.value_ils_per_sqm is None
+            and rows["construction_cost_per_sqm_ils"]["status"] != DEVELOPER):
         blocking.append("construction_cost_per_sqm_ils")
-        construction_cost_per_sqm = a.construction_cost_per_sqm_ils.value
-    else:
-        construction_cost_per_sqm = construction_cost.value_ils_per_sqm
-
-    # החניון מאותה שורה בסקר. עיר שהסקר לא מכסה נופלת להנחת הספרייה.
-    underground_cost = resolve_underground_cost_per_sqm(opp.city_code)
-    underground_cost_per_sqm = (underground_cost.value_ils_per_sqm
-                                or a.underground_cost_per_sqm_ils.value)
 
     base = {
         "assumptions_version": a.version,
         "assumptions_effective_date": a.effective_date.isoformat(),
-        # ‏**A20.** טבלת ההנחות מציגה את מה שהתרחיש השתמש בו, לא את
-        # ברירת המחדל של העיר. ראו `_assumption_rows`.
-        "assumptions": _assumption_rows(
-            a, live, construction_cost, construction_cost_per_sqm,
-            underground_cost, underground_cost_per_sqm),
+        "assumptions": rows,
         "live_inputs": live,
         "caveats": _scenario_caveats(assessment, fields, live, opp.existing_units),
-        "unit_mix": _unit_mix(opp, a),
+        # ‏W8 · תמהיל רק מהמחשבון, ולא מה שנשמר על החלקה.
+        "unit_mix": _no_unit_mix(),
         "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
                       "ואינה קובעת זכויות או היתכנות מאושרת.",
     }
     if not cap or not opp.existing_units or not opp.area_sqm:
-        return {**base, "scenario": None, "inputs_missing": blocking,
-                "not_delivered_reason": _not_delivered(blocking),
-                "is_deliverable": False,
-                "why": "אין תקרת זכויות מבוססת, ולכן לא מחושב תרחיש (DOS-03)"}
+        out = {**base, "scenario": None, "inputs_missing": blocking,
+               "not_delivered_reason": _not_delivered(blocking),
+               "is_deliverable": False,
+               "why": "אין תקרת זכויות מבוססת, ולכן לא מחושב תרחיש (DOS-03)"}
+        if ov is not None:
+            out["overrides_applied"] = _overrides_applied(ov, rows, default_live, None, None, None)
+        return out
 
     # ‏**התרחיש קורא את הטבלה, ולא את המקורות שמאחוריה.** כך הטבלה
     # שמוצגת ליזם והקלט של החישוב הם אותו אובייקט, ואינם יכולים להיפרד
@@ -988,9 +1049,9 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict,
             construction_cost_per_sqm=used["construction_cost_per_sqm_ils"],
             soft_cost_ratio=a.soft_cost_ratio.value,
             demolition_cost_per_unit=a.demolition_cost_per_unit_ils.value,
-            developer_profit_target_ratio=a.developer_profit_target_ratio.value,
+            developer_profit_target_ratio=used["developer_profit_target_ratio"],
             average_existing_unit_sqm=used["average_existing_unit_sqm"],
-            tenant_compensation_sqm_per_existing_unit=a.tenant_compensation_sqm_per_existing_unit.value,
+            tenant_compensation_sqm_per_existing_unit=used["tenant_compensation_sqm_per_existing_unit"],
             main_area_ratio=a.main_area_ratio.value,
             underground_ratio=a.underground_ratio.value,
             underground_cost_per_sqm=used["underground_cost_per_sqm_ils"],
@@ -1000,30 +1061,54 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict,
             tenant_legal_cost_per_unit_ils=a.tenant_legal_cost_per_unit_ils.value,
             marketing_ratio=a.marketing_ratio.value,
             guarantees_ratio=a.guarantees_ratio.value,
-            finance_ratio=a.finance_ratio.value,
+            finance_ratio=used["finance_ratio"],
             betterment_levy_rate=a.betterment_levy_rate.value,
+            # ‏W8 · השבחה שהיזם הזין אינה נכנסת כאן: הרווח ״לפני היטל״ נשאר לפני היטל,
+            # וההשבחה נכנסת ב-`_run` — במקום האומדן.
             betterment_base_ils=a.betterment_base_ils.value,
             vat_rate=a.vat_rate.value,
     )
     existing_area = _numeric(fields.get("existing_area"))
-    target = a.developer_profit_target_ratio.value
+    target = inputs.developer_profit_target_ratio
+    manual = ov.betterment_ils if ov is not None else None
 
     def run(area: float) -> dict[str, Any]:
-        return _run(inputs.model_copy(update={"buildable_area_sqm": area}), a, live,
-                    existing_area, blocking)
+        return _run(inputs.model_copy(update={"buildable_area_sqm": area}), live,
+                    existing_area, blocking, manual)
 
     # ‏**W2 · 16.09 · הדוח הכלכלי נקבע לפי המדיניות, ו-400% להשוואה בלבד.**
     # ‏400% הוא תקרה בחוק ולא זכות (§70ב); הרווח עליו הוא ״מה היה אילו״.
-    policy = (assessment.get("policy_area") or {}).get("base") or {}
-    policy_sqm = policy.get("sqm")
     cap_run = run(cap)
     policy_run = run(policy_sqm) if policy_sqm else None
     head = policy_run or cap_run
+    area_basis = "policy" if policy_run else "cap_400"
+    mix = None
+    if ov is not None and (ov.area_basis or ov.mix is not None):
+        # ‏W8 · השטח שהיזם בחר, והתמהיל שהוא בחר עליו. ההשוואה בין המדיניות ל-400%
+        # ותוספת הזכויות נשארות בלי התמהיל — הן על השטח, לא על הדירות.
+        area_basis = {"policy_base": "policy"}.get(ov.area_basis, ov.area_basis) or area_basis
+        area = _chosen_area(ov, assessment, cap) if ov.area_basis else head["area_sqm"]
+        if ov.mix is not None:
+            head_inputs = inputs.model_copy(update={"buildable_area_sqm": area})
+            mix = scenario_mix(head_inputs, ov.mix, missing=blocking,
+                               default_compensation=a.tenant_compensation_sqm_per_existing_unit.value,
+                               existing_unit_label=rows["average_existing_unit_sqm"].get("source"))
+            head = _run(head_inputs.model_copy(update={"developer_sale_revenue_ils": mix["developer_sale_revenue_ils"]}),
+                        live, existing_area, blocking, manual)
+        elif ov.area_basis == "cap_400":
+            head = cap_run
+        elif ov.area_basis != "policy_base":
+            head = run(area)
     result, betterment, after = head["result"], head["betterment"], head["after"]
 
     # שורת בסיס ההשבחה בטבלה היא מה שהתרחיש השתמש בו: האומדן כשיש, ״חסר״ כשאין.
     # האקסל קורא אותה לתא הכחול, ולכן גם שם הרווח הוא אחרי אומדן ההיטל.
-    if after is not None:
+    if manual is not None:
+        # ‏W8 · ההשבחה שהיזם הזין. ברירת המחדל שהוחלפה היא האומדן שלנו, כשיש.
+        est = betterment.get("estimate")
+        base["assumptions"]["betterment_base_ils"]["default"] = (
+            max(est["betterment_ils"], 0.0) if est else None)
+    elif after is not None:
         base["assumptions"]["betterment_base_ils"] = {
             **base["assumptions"]["betterment_base_ils"],
             "value": after["betterment_ils"], "status": AssumptionStatus.ESTIMATE.value,
@@ -1032,44 +1117,180 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict,
                        "אינו שומה")}
 
     rights_verdict = _rights_verdict(policy_run, cap_run, run, assessment, target,
-                                     solve_required=solve_required)
-    head_inputs = inputs.model_copy(update={
-        "buildable_area_sqm": head["area_sqm"],
-        "betterment_base_ils": after["betterment_ils"] if after else inputs.betterment_base_ils})
-    return {**base,
-            "scenario": result.model_dump(),
-            "live_inputs": live,
-            "betterment": betterment,
-            "after_levy": after,
-            "before_levy": {"profit_ils": head["before"].projected_profit_ils,
-                            "margin": head["before"].profit_margin_on_cost_ratio,
-                            "meets_target": head["before"].meets_developer_target},
-            "area_basis": "policy" if policy_run else "cap_400",
-            "buildable_area_sqm": head["area_sqm"],
-            "scenarios": {"policy": _scenario_card(policy_run, assessment) if policy_run else None,
-                          "cap_400": _scenario_card(cap_run, assessment)},
-            "rights_verdict": rights_verdict,
-            "cost_rows": _cost_rows(result, head_inputs, base["assumptions"]),
-            "inputs_missing": result.inputs_missing,
-            "not_delivered_reason": _not_delivered(result.inputs_missing),
-            "is_deliverable": result.is_deliverable,
-            # ‏E1 · המשפט ליד הרווח, בשרת — אותו נוסח במסך, ב-PDF ובאקסל.
-            "profit_verdict": _profit_verdict(result, target, after_levy=after is not None),
-            "buildable_basis": (_policy_basis(assessment) if policy_run
-                                else assessment.get("cap_400_basis")),
-            "buildable_certainty": ("estimate" if policy_run
-                                    else assessment.get("cap_400_certainty"))}
+                                     solve_required=solve_required,
+                                     manual=manual is not None, mix=mix is not None)
+    out = {**base,
+           "scenario": result.model_dump(),
+           "live_inputs": live,
+           "betterment": betterment,
+           "after_levy": after,
+           "before_levy": {"profit_ils": head["before"].projected_profit_ils,
+                           "margin": head["before"].profit_margin_on_cost_ratio,
+                           "meets_target": head["before"].meets_developer_target},
+           "area_basis": area_basis,
+           "buildable_area_sqm": head["area_sqm"],
+           "scenarios": {"policy": _scenario_card(policy_run, assessment) if policy_run else None,
+                         "cap_400": _scenario_card(cap_run, assessment)},
+           "rights_verdict": rights_verdict,
+           "cost_rows": _cost_rows(result, head["inputs"], base["assumptions"]),
+           "inputs_missing": result.inputs_missing,
+           "not_delivered_reason": _not_delivered(result.inputs_missing),
+           "is_deliverable": result.is_deliverable,
+           # ‏E1 · המשפט ליד הרווח, בשרת — אותו נוסח במסך, ב-PDF ובאקסל.
+           "profit_verdict": _profit_verdict(result, target, after_levy=after is not None,
+                                             manual=manual is not None),
+           "buildable_basis": _buildable_basis(area_basis, head["area_sqm"], assessment),
+           "buildable_certainty": ("estimate" if area_basis.startswith("policy")
+                                   else DEVELOPER if area_basis == "custom"
+                                   else assessment.get("cap_400_certainty"))}
+    if ov is not None:
+        if mix is not None:
+            out["unit_mix"] = mix
+        out["caveats"] = _area_caveats(out["caveats"], area_basis, head["area_sqm"], assessment)
+        default_area = (policy_run or cap_run)["area_sqm"]
+        out["overrides_applied"] = _overrides_applied(ov, rows, default_live, default_area,
+                                                      head["area_sqm"], mix)
+    return out
 
 
-def _run(inputs, a, live: dict, existing_area: float | None, blocking: list[str]) -> dict[str, Any]:
+def _changed(ov: ScenarioOverrides, rows: dict[str, dict], live: dict, default_basis: str) -> ScenarioOverrides:
+    """‏W8 · רק מה שבאמת שונה. ערך שזהה לברירת המחדל אינו ״הוזן על ידי היזם״."""
+    same = {field: None for field, key in ASSUMPTION_OF.items()
+            if key != "betterment_base_ils" and getattr(ov, field) is not None
+            and abs(getattr(ov, field) - rows[key]["value"]) < 1e-9}
+    existing = live["existing_price"]["value"]
+    if ov.existing_price_per_sqm is not None and existing is not None \
+            and abs(ov.existing_price_per_sqm - existing) < 1e-9:
+        same["existing_price_per_sqm"] = None
+    if ov.area_basis == default_basis:
+        same["area_basis"] = None
+    return ov.model_copy(update=same)
+
+
+def _developer_rows(rows: dict[str, dict], ov: ScenarioOverrides) -> None:
+    """שורות שהיזם שינה: הערך שלו, סטטוס ״developer״, וברירת המחדל ב-`default`."""
+    for field, key in ASSUMPTION_OF.items():
+        value = getattr(ov, field)
+        if value is None:
+            continue
+        row = {**rows[key], "value": value, "status": DEVELOPER, "source": DEVELOPER_SOURCE,
+               "default": rows[key]["value"]}
+        if "method" in row:
+            row["method"], row["as_of_date"] = "developer_input", None
+        rows[key] = row
+
+
+def _chosen_area(ov: ScenarioOverrides, assessment: dict, cap: float) -> float:
+    policy = assessment.get("policy_area") or {}
+    if ov.area_basis == "custom":
+        # ‏400% הוא התקרה בחוק (§70ב). מעליה אין תרחיש של חלופת שקד.
+        if ov.custom_area_sqm > cap + 0.5:
+            raise ScenarioRejected(f"השטח שהוזן ({ov.custom_area_sqm:,.0f} מ״ר) גדול מתקרת ה-400% "
+                                   f"({cap:,.0f} מ״ר), שהיא התקרה בחוק.")
+        return ov.custom_area_sqm
+    if ov.area_basis == "cap_400":
+        return cap
+    sqm = (policy.get(ov.area_basis.removeprefix("policy_")) or {}).get("sqm")
+    if not sqm:
+        raise ScenarioRejected("לא חושב לחלקה הזו שטח לפי מדיניות הרצליה"
+                               + (f" ({policy['why']})" if policy.get("why") else "")
+                               + ". אפשר לבחור את תקרת ה-400% או להזין שטח.")
+    return sqm
+
+
+def _buildable_basis(area_basis: str, area: float, assessment: dict) -> str | None:
+    if area_basis == "policy":
+        return _policy_basis(assessment)
+    if area_basis == "cap_400":
+        return assessment.get("cap_400_basis")
+    p = assessment.get("policy_area") or {}
+    base_sqm = (p.get("base") or {}).get("sqm")
+    if area_basis == "custom":
+        return (f"שטח שהזין היזם: {area:,.0f} מ״ר"
+                + (f" — לפי המדיניות כ-{base_sqm:,.0f} מ״ר" if base_sqm else "")
+                + f"; תקרת 400% ({assessment.get('cap_400_sqm') or 0:,.0f} מ״ר) היא התקרה בחוק")
+    return (f"שטח לפי מדיניות הרצליה, {AREA_BASIS_LABEL[area_basis].removeprefix('לפי המדיניות — ')}: "
+            f"{area:,.0f} מ״ר (אומדן בסיס {base_sqm or 0:,.0f}) — בתוך קווי הבניין והנסיגות; "
+            f"תקרת 400% ({p.get('cap_400_sqm') or 0:,.0f} מ״ר) להשוואה בלבד")
+
+
+def _area_caveats(caveats: list[dict[str, str]], area_basis: str, area: float,
+                  assessment: dict) -> list[dict[str, str]]:
+    """‏W8 · הסייג על השטח אומר על איזה שטח הרווח מחושב — גם כשהיזם בחר אחר."""
+    if area_basis == "policy":
+        return caveats
+    base_sqm = ((assessment.get("policy_area") or {}).get("base") or {}).get("sqm")
+    policy = f" (אומדן הבסיס כ-{base_sqm:,.0f} מ״ר)" if base_sqm else ""
+    text = {
+        "policy_low": f"הרווח מחושב על הקצה הנמוך של השטח לפי מדיניות הרצליה — {area:,.0f} מ״ר{policy}. "
+                      + _ENVELOPE_ASSUMPTIONS,
+        "policy_high": f"הרווח מחושב על הקצה הגבוה של השטח לפי מדיניות הרצליה — {area:,.0f} מ״ר{policy}. "
+                       + _ENVELOPE_ASSUMPTIONS,
+        "cap_400": (f"הרווח מחושב על תקרת ה-400% ({area:,.0f} מ״ר) ולא על השטח לפי מדיניות הרצליה{policy}. "
+                    "‏400% הוא תקרה בחוק ולא זכות: בלי הגדלת זכויות מהוועדה המקומית השטח הזה לא ייבנה."),
+        "custom": (f"הרווח מחושב על {area:,.0f} מ״ר שהזין היזם, ולא על השטח לפי מדיניות הרצליה{policy}. "
+                   "השטח שייבנה בפועל נקבע בוועדה המקומית."),
+    }[area_basis]
+    area_ids = {"policy_area_below_cap", "policy_area_unknown"}
+    out = [c for c in caveats if c["id"] not in area_ids]
+    at = next((i for i, c in enumerate(caveats) if c["id"] in area_ids), len(out))
+    out.insert(min(at, len(out)), {"id": "area_basis_developer", "text": text})
+    return out
+
+
+# ‏W8 · תווית לשדות שאינם שורה בטבלת ההנחות.
+_EXISTING_PRICE_LABEL = "מחיר מ״ר של דירה קיימת (לאומדן ההשבחה)"
+
+
+def _overrides_applied(ov: ScenarioOverrides, rows: dict[str, dict], live: dict,
+                       default_area: float | None, area: float | None,
+                       mix: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """‏W8 · מה שהיזם שינה, מול ברירת המחדל — אותה רשימה במסך, ב-PDF ובאקסל."""
+    def item(id_, label, default, value, unit):
+        return {"id": id_, "label": label, "default": default, "value": value,
+                "unit": unit, "unit_label": UNIT_LABEL.get(unit, unit)}
+
+    out = []
+    if ov.area_basis and area is not None:
+        out.append(item("area_basis", f"השטח לבנייה · {AREA_BASIS_LABEL[ov.area_basis]}",
+                        default_area, area, "sqm"))
+    for field, key in ASSUMPTION_OF.items():
+        if getattr(ov, field) is not None:
+            r = rows[key]
+            out.append(item(field, r["label"], r.get("default"), r["value"], r["unit"]))
+        if field == "average_existing_unit_sqm" and ov.existing_price_per_sqm is not None:
+            out.append(item("existing_price_per_sqm", _EXISTING_PRICE_LABEL,
+                            live["existing_price"]["value"], ov.existing_price_per_sqm, "ILS/sqm"))
+    if mix is not None:
+        out.append(item("mix", "תמהיל דירות ליזם", None,
+                        " · ".join(f'{r["units"]} × {r["rooms"]} חד׳' for r in mix["rows"]), "mix"))
+    return out
+
+
+def _run(inputs, live: dict, existing_area: float | None, blocking: list[str],
+         manual: float | None = None) -> dict[str, Any]:
     """תרחיש אחד על שטח אחד: לפני היטל, התקרה והאומדן, ואחרי אומדן ההיטל."""
     area = inputs.buildable_area_sqm
     before = calculate_feasibility(inputs, missing_inputs=blocking)
-    betterment = _betterment(inputs, a, live, area, existing_area, before)
+    betterment = _betterment(inputs, live, area, existing_area, before, manual)
     est = betterment.get("estimate")
     after = None
     result = before
-    if est is not None:
+    if manual is not None:
+        # ‏W8 · השבחה שהיזם הזין נכנסת לעלות כמו האומדן, ובלי טווח.
+        given = calculate_feasibility(inputs.model_copy(update={"betterment_base_ils": manual}),
+                                      missing_inputs=blocking)
+        after = {"betterment_ils": manual,
+                 "levy_ils": given.betterment_levy_ils,
+                 "levy_low_ils": given.betterment_levy_ils, "levy_high_ils": given.betterment_levy_ils,
+                 "profit_ils": given.projected_profit_ils,
+                 "margin": given.profit_margin_on_cost_ratio,
+                 "margin_low": given.profit_margin_on_cost_ratio,
+                 "margin_high": given.profit_margin_on_cost_ratio,
+                 "meets_target": given.meets_developer_target,
+                 "manual": True}
+        result, inputs = given, inputs.model_copy(update={"betterment_base_ils": manual})
+    elif est is not None:
         # ‏**W2 · נקודה 7: ״רווח על העלות — רווח יזמי אחרי היטל השבחה״.** האומדן
         # נכנס לעלות כמו שהיטל נכנס בפועל, כולל המימון עליו — אותה הנחה שעליה
         # נשענת התקרה, ולכן רווח ≥16% ⇔ ההיטל מתחת לתקרה.
@@ -1089,8 +1310,10 @@ def _run(inputs, a, live: dict, existing_area: float | None, blocking: list[str]
                  "margin_high": best.profit_margin_on_cost_ratio,
                  "meets_target": mid.meets_developer_target}
         result = mid
+        inputs = inputs.model_copy(update={"betterment_base_ils": after["betterment_ils"]})
+    # ‏`inputs` — הקלט של התוצאה, כולל ההשבחה שבתוכה: שורות העלות כותבות ממנו את הנוסחאות.
     return {"area_sqm": area, "before": before, "after": after, "result": result,
-            "betterment": betterment}
+            "betterment": betterment, "inputs": inputs}
 
 
 def _scenario_card(r: dict[str, Any], assessment: dict) -> dict[str, Any]:
@@ -1125,13 +1348,25 @@ REQUIRED_AREA_ITERATIONS = 30
 
 
 def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float,
-                    solve_required: bool = True) -> dict[str, Any]:
+                    solve_required: bool = True, manual: bool = False,
+                    mix: bool = False) -> dict[str, Any]:
     """‏**W2 · האם כלכלי לפי המדיניות, ואם לא — כמה זכויות צריך לבקש.**
 
     ארבעה מצבים, ולא כן/לא: ״לא כלכלי לפי המדיניות וכלכלי ב-400%״ הוא בדיוק
     הטיעון של יזם מול הוועדה המקומית, ו״לא כלכלי גם ב-400%״ אומר שהגדלת
     זכויות אינה הפתרון. הרווח נשפט אחרי אומדן ההיטל כשיש אומדן, ולפניו כשאין.
+
+    ‏W8 · בתרחיש של היזם ההשוואה נשענת על הערכים שהוא הזין. תמהיל נקבע לשטח
+    אחד, ולכן ההשוואה בין השטחים מחושבת בלעדיו — וזה נאמר במשפט.
     """
+    verdict = _rights_verdict_text(policy_run, cap_run, run, assessment, target, manual, solve_required)
+    if mix and verdict.get("text"):
+        verdict["text"] += " ההשוואה ותוספת הזכויות מחושבות בלי התמהיל: כל השטח ליזם נמכר."
+    return verdict
+
+
+def _rights_verdict_text(policy_run, cap_run, run, assessment: dict, target: float,
+                         manual: bool, solve_required: bool = True) -> dict[str, Any]:
     p = assessment.get("policy_area") or {}
     if policy_run is None:
         return {"case": "D", "basis": None,
@@ -1139,7 +1374,7 @@ def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float,
                          + (f": {p['why']}" if p.get("why") else "")
                          + ". הרווח מחושב על תקרת ה-400%, שהיא תקרה בחוק ולא זכות.")}
     after = policy_run["after"] is not None
-    when = "אחרי אומדן היטל השבחה" if after else "לפני היטל השבחה"
+    when = _after_levy_words(manual) if after else "לפני היטל השבחה"
     plot = p.get("plot_sqm")
     cap = cap_run["area_sqm"]
     pm = policy_run["result"].profit_margin_on_cost_ratio
@@ -1199,16 +1434,37 @@ async def screening(session, city_rules, opportunity_id: UUID) -> dict[str, Any]
             "after_levy": econ.get("after_levy") is not None}
 
 
-async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> dict[str, Any]:
-    """התיק המלא לחלקה אחת, למי שקיבל אותה."""
+async def build(session, city_rules, opportunity_id: UUID, company_id: UUID,
+                overrides: ScenarioOverrides | None = None) -> dict[str, Any]:
+    """התיק המלא לחלקה אחת, למי שקיבל אותה. ‏`overrides` — תרחיש של היזם (W8)."""
+    opp, delivery = await _entitled_opportunity(session, opportunity_id, company_id)
+    return await assemble(session, city_rules, opp, delivery, overrides)
+
+
+async def scenario(session, city_rules, opportunity_id: UUID, company_id: UUID,
+                   overrides: ScenarioOverrides) -> dict[str, Any]:
+    """‏W8 · הכלכלה של התיק לפי מה שהיזם שינה — אותה בדיקת הרשאה כמו התיק, ובלי לשמור דבר."""
+    opp, _ = await _entitled_opportunity(session, opportunity_id, company_id)
+    return await scenario_for(session, city_rules, opp, overrides)
+
+
+async def scenario_for(session, city_rules, opp: Opportunity, overrides: ScenarioOverrides) -> dict[str, Any]:
+    """התרחיש **בלי בדיקת הרשאה** — בשביל `scenario` ובדיקת ההדגמה (`demo_preflight`)."""
+    assessment = await city_rules.assess(session, opp.id)
+    fields = await fields_for(session, opp.id)
+    return await _economics(session, opp, assessment, fields, overrides=overrides)
+
+
+async def _entitled_opportunity(session, opportunity_id: UUID, company_id: UUID):
     delivery = await _entitlement(session, opportunity_id, company_id)
     opp = await session.get(Opportunity, opportunity_id)
     if opp is None:
         raise NotEntitled("ההזדמנות אינה קיימת")
-    return await assemble(session, city_rules, opp, delivery)
+    return opp, delivery
 
 
-async def assemble(session, city_rules, opp: Opportunity, delivery: Delivery | None) -> dict[str, Any]:
+async def assemble(session, city_rules, opp: Opportunity, delivery: Delivery | None,
+                   overrides: ScenarioOverrides | None = None) -> dict[str, Any]:
     """התיק עצמו, **בלי בדיקת הרשאה**. ‏`build` הוא הדרך היחידה ללקוח.
 
     נפרד מ-`build` בשביל ‏`scripts/check_surfaces.py` (B14): ה-CI זורע
@@ -1218,7 +1474,7 @@ async def assemble(session, city_rules, opp: Opportunity, delivery: Delivery | N
     opportunity_id = opp.id
     assessment = await city_rules.assess(session, opportunity_id)
     fields = await fields_for(session, opportunity_id)
-    economics = await _economics(session, opp, assessment, fields)
+    economics = await _economics(session, opp, assessment, fields, overrides=overrides)
 
     return {
         "identity": {

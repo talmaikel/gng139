@@ -399,88 +399,16 @@ async def test_a_second_hand_price_never_becomes_the_sale_price(session):
     assert "יד שנייה" in price["label"]
 
 
-# ── B15 · התמהיל מוצג בתיק, והרווח אינו זז ──
-
-_MIX_META = {
-    "source": "b15_profit_optimizer", "status": "estimate",
-    "compensation_sqm_per_existing_unit": 30.0, "existing_units_basis": "building_average",
-    "tenant_units": 28, "developer_units": 40,
-    "unused_developer_sqm": 900.0, "developer_available_sqm": 4000.0,
-}
-
-
-@pytest.mark.asyncio
-async def test_a_saved_unit_mix_reads_the_same_on_screen_pdf_and_excel(session):
-    import pymupdf
-
-    from app.cities.herzliya import exports
-    from app.cities.herzliya.surfaces import _cells, _words
-
-    c, _, opp = await _delivered(session, block="9646")
-    opp.metadata_json = {**(opp.metadata_json or {}),
-                         "planned_unit_mix": [{"rooms": 4, "area_sqm": 100.0, "units": 30},
-                                              {"rooms": 3, "area_sqm": 75.0, "units": 10}],
-                         "planned_unit_mix_meta": _MIX_META}
-    await session.flush()
-
-    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
-    mix = d["economics"]["unit_mix"]
-    summary = mix["summary"]
-    assert mix["developer_units"] == 40
-    assert summary.startswith("תמהיל דירות ליזם (אומדן): 10 × 3 חד׳ (75 מ״ר) · 30 × 4 חד׳ (100 מ״ר)")
-    assert "28 לבעלי הדירות" in summary
-    assert "לפי תוספת של 30 מ״ר" in summary
-    assert "ממוצע הבניין" in summary
-    assert "הרווח בתיק עדיין מחושב לפי 25 מ״ר" in summary     # התמורה שונה מזו שבתיק
-    assert "900 מ״ר מתוך 4,000" in summary                   # שטח שלא נכנס נאמר
-
-    doc = pymupdf.open(stream=exports.pdf(d), filetype="pdf")
-    words = set().union(*(_words(ln) for page in doc for ln in page.get_text().splitlines()))
-    assert {"תמהיל", "ליזם", "חד׳"} <= words, "שורת התמהיל אינה ב-PDF"
-    strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
-    assert summary in strings
-
+# ── B15 · התמהיל אינו נקרא מההזדמנות ──
+#
+# ‏W8 · התמהיל נשמר על ההזדמנות, שמשותפת לכל החברות שקיבלו אותה, והופיע בתיק
+# של חברה אחרת. הוא חי עכשיו רק במחשבון התרחיש — ראו `test_scenario.py`.
 
 @pytest.mark.asyncio
 async def test_a_dossier_without_a_mix_says_nothing_about_one(session):
     c, _, opp = await _delivered(session, block="9647")
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
     assert d["economics"]["unit_mix"] == {"rows": [], "summary": None}
-
-
-@pytest.mark.asyncio
-async def test_running_b15_on_a_dossier_leaves_its_price_and_profit_alone(session):
-    """מקצה לקצה: ‏B15 רץ על תיק שנמסר, שומר תמהיל, והתיק מציג אותו —
-    עם אותו מחיר ואותו רווח כמו לפני."""
-    from app.services.unit_mix.service import prepare_unit_mix
-
-    c, _, opp = await _delivered(session, block="9648")
-    # ‏28 דירות × 2.8 מחייבות 51 דירות ליזם, ו-3,540 מ״ר אינם מכילים אותן
-    # גם ב-75 מ״ר — אין תמהיל חוקי. ‏20 דירות משאירות מקום לתמהיל.
-    opp.existing_units = 20
-    await session.flush()
-    before = await build(session, HerzliyaCityRules(), opp.id, c.id)
-    assert before["economics"]["scenario"] is not None, "הבדיקה צריכה תרחיש מחושב"
-    rights_ = before["rights"]
-    opp.metadata_json = {**(opp.metadata_json or {}), "assessment": {
-        "cap_400_sqm": rights_["cap_400_sqm"],
-        "policy_area_sqm": rights_["policy_area"]["base"]["sqm"],
-        "floors_low": (rights_.get("floors") or {}).get("low")}}
-    await session.flush()
-
-    prepared = await prepare_unit_mix(session, opp, compensation_sqm_per_existing_unit=None,
-                                      persist=True)
-    assert prepared.metadata["existing_units_basis"] == "building_average"
-    after = await build(session, HerzliyaCityRules(), opp.id, c.id)
-
-    b, a = before["economics"], after["economics"]
-    assert a["assumptions"]["sale_price_per_sqm_ils"] == b["assumptions"]["sale_price_per_sqm_ils"]
-    assert a["scenario"]["projected_profit_ils"] == b["scenario"]["projected_profit_ils"]
-    assert a["unit_mix"]["summary"] and a["unit_mix"]["rows"] == sorted(
-        prepared.planned_unit_mix, key=lambda r: r["rooms"])
-    # ‏המסך של התמהיל ושל התיק על אותו מחיר ואותו שטח ליזם
-    assert prepared.result.developer_available_sqm == pytest.approx(
-        a["scenario"]["developer_allocation_sqm"], abs=0.01)
 
 
 # ── B11 · סף ההשבחה ──

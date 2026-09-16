@@ -44,6 +44,8 @@ After persistence B15 creates a new immutable market-valuation snapshot from the
 
 `POST /api/v1/unit-mix/{opportunity_id}/optimize` accepts an optional `compensation_sqm_per_existing_unit`. Calling it again with a different value recalculates owner allocation, available developer area, feasible mixes and Report-0 profit. Omitting the field uses the labelled default above.
 
+W8: `persist` defaults to false and is refused (403) for non-staff users. The opportunity row is shared by every company it is delivered to, so a saved mix leaked from one customer's dossier to another's; the dossier no longer reads `planned_unit_mix`. Customers compute a mix in the dossier's scenario calculator (`POST /api/v1/candidates/{city}/{id}/dossier/scenario` with `mix: "optimize"` or 3/4/5-room counts), where the mix drives developer revenue and nothing is stored.
+
 ## Herzliya constraints implemented
 
 The optimizer enforces the policy's numeric constraints: total unit multiplier 2.8–3.18, at least 25% small units in the 56–80 sqm band, and no more than 10% micro units up to 55 sqm. The policy also says typical floors should contain mainly 3- and 4-room apartments, but does not define a numeric threshold; B15 therefore does not invent one and keeps an architectural-review warning. The 10% accessibility requirement is treated as a design requirement rather than a separate size bucket.

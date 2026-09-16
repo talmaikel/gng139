@@ -192,7 +192,8 @@ async def check_data() -> None:
     from app.models.package import Balance
     from app.models.tenant import Company
     from app.services.deliveries import delivered_ids
-    from app.services.unit_mix.service import UnitMixUnavailable, prepare_unit_mix
+    from app.cities.herzliya.dossier import scenario_for
+    from app.cities.herzliya.scenario import ScenarioOverrides, ScenarioRejected
 
     rules = HerzliyaCityRules()
     wanted = demo.DELIVERED + [demo.FOURTH]
@@ -226,10 +227,12 @@ async def check_data() -> None:
 
         # ‏S2 · הסריקה שהמציג יריץ: אותו אזור, אותם תנאים, ואותו סדר שהשרת
         # מוסר בו — מוכנים קודם. היא חייבת למסור בדיוק את שלוש חלקות ההדגמה.
-        from app.api.v1.candidates import SCAN_SIZE, ScanArea, _scan_queue
-        queue = await _scan_queue(s, rules, ScanArea(
-            polygon=demo.area_polygon(), min_units=demo.MIN_UNITS,
-            preferences=[{"field": demo.SORT_FIELD, "direction": "desc"}]), company.id)
+        # ‏W6 · הסריקה מחזירה שני תורים — כלכליות, והגדלת זכויות — ו-`_offered`
+        # קובע מה ייצא בפועל. ההדגמה מסמנת הגדלת זכויות ומאשרת, כמו המציג.
+        from app.api.v1.candidates import SCAN_SIZE, ScanArea, _offered, _scan_queue
+        area = ScanArea(polygon=demo.area_polygon(), include_rights_request=True,
+                        accept_rights_request=True, ready_only=True)
+        queue = _offered(await _scan_queue(s, rules, area, company.id), area)
         would = [r["address"] for r in queue[:min(SCAN_SIZE, demo.STARTING_CREDITS)]]
         expected = [a for _, _, a in demo.DELIVERED]
         if would == expected:
@@ -262,20 +265,17 @@ async def check_data() -> None:
                 else:
                     report(OK, f"{address} מוכנה · מקום {where} בסריקה · מסך = PDF = אקסל",
                            f"{len(d['economics'].get('caveats') or [])} סייגים בתיק")
-                # ‏B15 · מסך התמהיל עונה לחלקה, בלי לשמור דבר
+                # ‏W8 · מחשבון התרחיש בתיק מחשב תמהיל מיטבי, בלי לשמור דבר. תמהיל שנשמר
+                # על החלקה בחזרה כבר אינו מופיע בתיק, ולכן אינו חוסם את ההדגמה.
                 try:
-                    mix = await prepare_unit_mix(s, o, compensation_sqm_per_existing_unit=None,
-                                                 persist=False)
-                    best = mix.result.candidates[0]
-                    report(OK, f"{address}: מסך התמהיל מחשב",
-                           f"{best.developer_units} דירות ליזם · "
-                           f"{best.profit_margin_on_cost_ratio:.1%} על העלות לפי התמהיל · "
-                           f"{best.unused_developer_sqm:,.0f} מ״ר לא נכנסים")
-                except UnitMixUnavailable as e:
-                    report(BLOCK, f"{address}: מסך התמהיל מסרב", str(e))
-                if (d["economics"].get("unit_mix") or {}).get("summary"):
-                    report(BLOCK, f"{address}: כבר נשמר תמהיל מהחזרה",
-                           ".venv/bin/python scripts/demo_reset.py --apply")
+                    econ = await scenario_for(s, rules, o, ScenarioOverrides(mix="optimize"))
+                    mix = econ["unit_mix"]
+                    report(OK, f"{address}: מחשבון התרחיש מחשב תמהיל",
+                           f"{mix['developer_units']} דירות ליזם · "
+                           f"{econ['scenario']['profit_margin_on_cost_ratio']:.1%} על העלות לפי התמהיל · "
+                           f"{mix['unused_developer_sqm']:,.0f} מ״ר לא נכנסים")
+                except ScenarioRejected as e:
+                    report(WARN, f"{address}: אין תמהיל מיטבי בחלקה", f"{e} — לא להדגים כאן את כפתור התמהיל")
         await s.rollback()
 
 

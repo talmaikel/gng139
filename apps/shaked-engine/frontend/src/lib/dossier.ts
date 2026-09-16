@@ -58,6 +58,8 @@ export interface AfterLevy {
   margin_low: number;
   margin_high: number;
   meets_target: boolean;
+  /** ‏W8 · ההשבחה הוזנה על ידי היזם — מספר אחד, בלי טווח. */
+  manual?: boolean;
 }
 
 /** ‏A כלכלי לפי המדיניות · B רק עם הגדלת זכויות · C לא גם ב-400% · D לא חושב. */
@@ -90,3 +92,65 @@ export interface LevyExplainParagraph { id: string; title: string; text: string 
 
 /** ‏W4 · שורה בטבלת העלויות: מה היא, הנוסחה עם המספרים, ומאיפה הקלט. */
 export interface CostRow { id: string; label: string; value_ils: number; formula: string; explain: string; source: string }
+
+// ── W8 · מחשבון התרחיש ──
+
+/** השטח שהתרחיש מחושב עליו. ‏`policy` בתשובה הוא אומדן הבסיס לפי המדיניות. */
+export type AreaBasis = "policy_low" | "policy_base" | "policy_high" | "cap_400" | "custom";
+
+export interface MixRow { rooms: 3 | 4 | 5; units: number }
+
+/** מה שהיזם שינה. שדה שלא נשלח נשאר ברירת המחדל של התיק. */
+export interface ScenarioOverrides {
+  area_basis?: AreaBasis;
+  custom_area_sqm?: number;
+  sale_price_per_sqm?: number;
+  construction_cost_per_sqm?: number;
+  underground_cost_per_sqm?: number;
+  tenant_compensation_sqm_per_existing_unit?: number;
+  average_existing_unit_sqm?: number;
+  existing_price_per_sqm?: number;
+  betterment_ils?: number;
+  developer_profit_target_ratio?: number;
+  finance_ratio?: number;
+  mix?: "optimize" | MixRow[];
+}
+
+/** ערך אחד שהיזם שינה, מול ברירת המחדל — אותה רשימה ב-PDF ובאקסל. */
+export interface OverrideApplied {
+  id: string;
+  label: string;
+  default: number | string | null;
+  value: number | string;
+  unit: string;
+  unit_label: string;
+}
+
+/** התמהיל של התרחיש. בלי תמהיל: ‏`{rows: [], summary: null}`. */
+export interface ScenarioMix {
+  rows: { rooms: number; area_sqm: number; units: number }[];
+  summary: string | null;
+  source?: "optimize" | "developer";
+  developer_units?: number;
+  tenant_units?: number;
+  developer_used_sqm?: number;
+  developer_available_sqm?: number;
+  unused_developer_sqm?: number;
+  developer_sale_revenue_ils?: number;
+  policy_warnings?: string[];
+  notes?: string[];
+}
+
+export interface LiveInput { value: number | null; resolved: boolean; label: string; certainty?: string }
+
+export type ScenarioEconomics = Omit<PolicyDossier["economics"], "area_basis" | "unit_mix"> & {
+  area_basis?: "policy" | "policy_low" | "policy_high" | "cap_400" | "custom";
+  live_inputs?: { sale_price?: LiveInput; unit_area?: LiveInput; existing_price?: LiveInput };
+  unit_mix?: ScenarioMix;
+  overrides_applied?: OverrideApplied[];
+};
+
+export interface ScenarioResponse {
+  economics: ScenarioEconomics;
+  overrides_applied: OverrideApplied[];
+}

@@ -167,15 +167,20 @@ async def prepare_unit_mix(
     opportunity: Opportunity,
     *,
     compensation_sqm_per_existing_unit: float | None,
-    persist: bool = True,
+    persist: bool = False,
 ) -> PreparedUnitMix:
     """Run B15 from the opportunity's existing B3/B16/Report-0 inputs.
 
     If ``persist`` is true, the recommended mix is written to
-    ``opportunity.metadata_json['planned_unit_mix']``. The dossier shows it,
-    and its profit does not move: no valuation snapshot is created, because a
-    mix-weighted price of second-hand comparables must not become the sale
-    price (see ``_unit_types``).
+    ``opportunity.metadata_json['planned_unit_mix']``. No valuation snapshot is
+    created, because a mix-weighted price of second-hand comparables must not
+    become the sale price (see ``_unit_types``).
+
+    W8: ``metadata_json`` is shared by every company the parcel is delivered
+    to, so one customer's saved mix showed up in another customer's dossier.
+    Persisting is off by default and staff-only at the API; the dossier no
+    longer reads the saved mix -- a developer's mix lives in the scenario
+    calculator's response (``dossier.scenario_for``) and is never stored.
     """
 
     if opportunity.city_code != "herzliya":

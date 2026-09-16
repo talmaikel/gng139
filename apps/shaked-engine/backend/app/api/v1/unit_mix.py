@@ -27,9 +27,11 @@ class UnitMixRequest(BaseModel):
             "versioned market-default compensation assumption."
         ),
     )
+    # W8: the opportunity row is shared by every company it is delivered to, so
+    # a saved mix leaked from one customer to the next. Staff only, off by default.
     persist: bool = Field(
-        default=True,
-        description="Persist the recommended planned_unit_mix and its valuation snapshot.",
+        default=False,
+        description="Persist the recommended planned_unit_mix on the shared opportunity (staff only).",
     )
 
 
@@ -70,6 +72,13 @@ async def optimize_opportunity_unit_mix(
     compensation value recalculates the mix immediately.
     """
 
+    # Before the entitlement check, so the refusal says nothing about the id.
+    if request.persist and not user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="שמירת תמהיל על החלקה משותפת לכל החברות, ולכן שמורה לצוות. "
+                   "את התמהיל מחשבים בלי לשמור, במחשבון שבתיק.",
+        )
     opportunity = await _entitled_opportunity(
         session, opportunity_id, user.company_id
     )
