@@ -61,7 +61,10 @@ def parse_building_file(record):
             for row in table['rows']:
                 if row:plans.append({'number':row[0],'name':row[1] if len(row)>1 else None,'status':row[2] if len(row)>2 else None})
     plain=record['text'];address=re.search(r'כתובת:\s*([^\r\n]+)',plain)
-    return {'file_number':int(record['id']),'address':address.group(1).strip() if address else None,
+    lines=[x.strip() for x in plain.splitlines() if x.strip()];neighborhood=None
+    for index,line in enumerate(lines):
+        if line=='שכונה' and index+1<len(lines) and lines[index+1] not in ('בעלי עניין','כתובות'):neighborhood=lines[index+1];break
+    return {'file_number':int(record['id']),'address':address.group(1).strip() if address else None,'neighborhood':neighborhood,
             'parcels':list({(p['gush'],p['parcel']):(p) for p in parcels}.values()),
             'requests':sorted(set(requests)),'plans':plans,'tables':tables,'source':record['source'],
             'retrieved_at':utcnow(),'source_html_sha256':hashlib.sha256(record['html'].encode()).hexdigest()}
@@ -89,8 +92,8 @@ class ArchiveCatalogSync:
     def retry_failed_streets(self):
         for row in self.store.archive_streets('failed'):
             self.store.save_archive_street(row['id'],row['name'],'pending')
-    def hydrate(self,max_files=None):
-        rows=self.store.pending_archive_files(max_files);completed=failed=attempted=0
+    def hydrate(self,max_files=None,ids=None):
+        rows=self.store.pending_archive_files(max_files,ids);completed=failed=attempted=0
         for row in rows:
             attempted+=1
             try:

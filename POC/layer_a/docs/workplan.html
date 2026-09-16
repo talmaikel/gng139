@@ -300,17 +300,17 @@ metadata_json.fields[name] = {     # מועבר מה-POC
 
     <div class="task c new"><span class="tid">C13</span><h3>חבילות, יתרה ומסירה — אין API</h3><span class="added">13.09 · חסר</span>
       <p>הטבלאות קיימות, <strong>ואין להן אף נתיב</strong>. שנים-עשר הנתיבים של ה-engine הם auth, candidates, dossiers, economic ו-filters בלבד. ‏C5 מניחה מסך יתרה שאין מי שמשרת אותו.</p>
-      <span class="done"><b>נגמר כש:</b> רכישה מדומה יוצרת חבילה, מסירה מקטינה יתרה, ו-<span class="m">ACC-03</span> עובר — סריקה ריקה אינה מקטינה.</span><div class="tick" data-t="C13">
+      <span class="done"><b class="ok">✓ בוצע</b> — ראוטר <span class="m">account</span> נוסף (<span class="m">api/v1/account.py</span>): <span class="m">GET /account/balance</span>, <span class="m">GET /account/packages</span>, <span class="m">POST /account/packages/{id}/purchase</span>; המסירה ב-<span class="m">services/deliveries.py</span> מקטינה יתרה רק אחרי בדיקת כשירות ואשראי — <span class="m">ACC-03</span> עובר. <span class="m">12df62a</span>. <b>נגמר כש:</b> רכישה מדומה יוצרת חבילה, מסירה מקטינה יתרה, ו-<span class="m">ACC-03</span> עובר — סריקה ריקה אינה מקטינה.</span><div class="tick" data-t="C13">
         <input type="checkbox" aria-label="הושלם"><input type="text" placeholder="מי" maxlength="24"><span class="when"></span>
       </div></div>
     <div class="task c new"><span class="tid">C4</span><h3>סידור העדפות</h3><span class="added">13.09</span>
       <p>גרירה לסדר, כיוון מיון, הפרדה בין חובה להעדפה.</p>
-      <span class="done"><b>נגמר כש:</b> שינוי הסדר משנה תוצאות בפועל.</span><div class="tick" data-t="C4">
+      <span class="done"><b class="ok">✓ בוצע</b> — <span class="m">SearchControls.tsx</span> מפריד "תנאי חובה" מ-"סדר העדפות", עם כיוון מיון וכפתורי ↑/↓ לסידור (לא drag). ה-backend ממיין לקסיקוגרפית לפי <span class="m">preferences</span> ומחזיר <span class="m">why_selected</span>. <span class="m">a3c6001</span>. <b>נגמר כש:</b> שינוי הסדר משנה תוצאות בפועל.</span><div class="tick" data-t="C4">
         <input type="checkbox" aria-label="הושלם"><input type="text" placeholder="מי" maxlength="24"><span class="when"></span>
       </div></div>
     <div class="task c new"><span class="tid">C5</span><h3>מסך תוצאות ויתרה</h3><span class="added">13.09</span>
       <p>טבלאות <span class="m">Balance</span> ו-<span class="m">Package</span> קיימות. חסר המסך והחיבור.</p>
-      <span class="done"><b>נגמר כש:</b> ‏<span class="m">ACC-02</span> עובר — שתי תוצאות ואז השלמה אחת.</span><div class="tick" data-t="C5">
+      <span class="done"><b class="ok">✓ בוצע</b> — <span class="m">Balance.tsx</span> ו-<span class="m">DeliveredTable.tsx</span> מחוברים ב-<span class="m">dashboard/page.tsx</span> עם רענון אוטומטי אחרי כל מסירה; <span class="m">ACC-01</span> עד <span class="m">ACC-05</span> נבדקו בדפדפן. <span class="m">a28374d</span>. <b>נגמר כש:</b> ‏<span class="m">ACC-02</span> עובר — שתי תוצאות ואז השלמה אחת.</span><div class="tick" data-t="C5">
         <input type="checkbox" aria-label="הושלם"><input type="text" placeholder="מי" maxlength="24"><span class="when"></span>
       </div></div>
     <div class="task c"><span class="tid">C6</span><h3>תצוגת תיק</h3><span class="added">13.09</span>

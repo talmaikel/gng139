@@ -7,7 +7,7 @@ from .rules import evidence,evaluate,resolve_evidence,core_eligibility,usable
 from . import bridge
 from .documents import archive_tables
 from .xplan import XPlanCatalog,XPlanScreen,combine_screenings,resolve_with_archive,snapshot_is_fresh
-from .archive_catalog import archive_designation
+from .archive_catalog import archive_designation,_iso_date
 
 MISSING_FIELDS=['units','floors','permit_date','strengthened','engineer_opinion','residential_zoning','residential_share','scope_parcels','scope_buildings','renewal_policy_category','planning_lot','planning_basis','overriding_plans_checked','existing_legal_area']
 
@@ -44,6 +44,24 @@ def xplan_zoning(xplan):
     return evidence(category=='primary_candidate',{'url':m['source_url'],'retrieved_at':xplan.get('snapshot_created_at')},'official',
                     f"{m['evidence_location']} · {m.get('mavat_name') or ''} · כיסוי {round(m['overlap']*100,1)}%",m.get('extraction_method'))
 
+def archive_permit_date(record):
+    """Earliest issued permit in the building file's requests table.
+
+    Only a pre-1985 permit is evidence: the digital archive may lack the original permit, so a
+    later earliest permit proves nothing about when the building was permitted."""
+    permits=[]
+    for table in record.get('tables') or []:
+        headers=[h.replace('‏','').strip() for h in table['headers']]
+        if 'היתר' not in headers or 'תאריך היתר' not in headers:continue
+        pi,di=headers.index('היתר'),headers.index('תאריך היתר')
+        for row in table['rows']:
+            date=_iso_date(row[di]) if len(row)>max(pi,di) and row[pi].strip() else None
+            if date:permits.append((date,row[pi].strip()))
+    if not permits:return evidence(None),None
+    date,permit=min(permits)
+    if date>='1985-01-01':return evidence(None),f'ההיתר המוקדם בתיק בניין {record["id"]} הוא מ־{date[:4]}; ההיתר המקורי עשוי לחסור בארכיון הדיגיטלי'
+    return evidence(date,record['source'],'official',f'תיק בניין {record["id"]} · טבלת בקשות · היתר {permit}','structured public-page extraction'),None
+
 def make_dossier(building,parcels,archive,filters,issues,documents=None,xplan_screening=None):
     geom=shape(building['geometry']);matches=match_parcels(geom,parcels)
     fields={key:evidence(None) for key in MISSING_FIELDS}
@@ -77,6 +95,10 @@ def make_dossier(building,parcels,archive,filters,issues,documents=None,xplan_sc
     # Parcel-level evidence applies to the building only when it sits on a single parcel.
     if len(matches)==1 and matches[0][0]>=.95:
         layer_a_fields(fields,matches[0][1])
+        # With several files on one parcel we cannot tell which one is this building.
+        if len(archive_records)==1:
+            fields['permit_date'],gap=archive_permit_date(archive_records[0])
+            if gap:gaps.append(gap)
         if not usable(fields['residential_zoning']):fields['residential_zoning']=xplan_zoning(xplan_screening)
     checks=evaluate(fields,filters)
     eligibility,core_summary=core_eligibility(checks)

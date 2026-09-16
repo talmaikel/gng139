@@ -174,11 +174,12 @@ class Store:
                 old.update(payload);payload=old
             self.run(c,'INSERT INTO archive_files VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,payload=excluded.payload,updated_at=excluded.updated_at',
                      (str(file_number),state,json.dumps(payload,ensure_ascii=False),utcnow()))
-    def pending_archive_files(self,limit=None):
+    def pending_archive_files(self,limit=None,ids=None):
         sql="SELECT id,payload FROM archive_files WHERE state!='metadata_complete' ORDER BY CAST(id AS INTEGER)"
-        args=()
-        if limit is not None:sql+=' LIMIT ?';args=(int(limit),)
-        with self.connect() as c:rows=self.run(c,sql,args).fetchall()
+        with self.connect() as c:rows=self.run(c,sql).fetchall()
+        if ids is not None:
+            wanted={str(int(x)) for x in ids};rows=[x for x in rows if x['id'] in wanted]
+        if limit is not None:rows=rows[:int(limit)]
         return [{'id':x['id'],'payload':json.loads(x['payload'])} for x in rows]
     def retry_failed_archive_files(self):
         with self.connect(write=True) as c:self.run(c,"UPDATE archive_files SET state='discovered' WHERE state='metadata_failed'")

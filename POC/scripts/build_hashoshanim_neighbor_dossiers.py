@@ -18,7 +18,7 @@ from app.archive_catalog import parse_building_file,parse_request_page
 from app.config import DATA
 from app.local_ocr import extract_local
 from app.pilot_dossiers import build_case_dossier
-from app.sources import ARCHIVE,BuildingArchive,GovMap,PublicClient,SourceError,text_from_html,utcnow
+from app.sources import ARCHIVE,BuildingArchive,GovMap,PublicClient,SourceError,assert_archive_page,text_from_html,utcnow
 from app.store import Store
 
 BATCH=DATA/"pilot-batch-02-hashoshanim"
@@ -86,6 +86,7 @@ def collect(target,radius):
             chosen=None
             for request_id in parsed["requests"]:
                 raw,page_source=client.get(ARCHIVE,dict(appname="cixpa",prgname="GetBakashaFile",siteid=121,b=request_id,arguments="siteid,b"))
+                assert_archive_page(raw,f"request {request_id}")
                 html=raw.decode("utf-8",errors="replace");page=parse_request_page(html)
                 if page["permit"] and page["permit_date"] and page["request_type"]=="בקשה להיתר":
                     chosen=(request_id,page,html,page_source);break

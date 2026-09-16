@@ -114,3 +114,13 @@ def test_xplan_zoning_evidence_is_usable_only_when_decisive():
     assert field['value'] is True and usable(field)
     partial=combine_screenings([XPlanScreen(snapshot([land(10,geometry=box(0,0,5,10))])).screen(parcel())],1,1)
     assert xplan_zoning(partial)['value'] is None
+
+def test_archive_permit_date_uses_earliest_issued_permit_and_never_fails_on_absence():
+    from app.collector import archive_permit_date
+    src={'url':'https://example.org','retrieved_at':utcnow()}
+    table=lambda rows:{'id':'1','source':src,'tables':[{'headers':['מספר בקשה','תאריך הגשה','ארוע אחרון להצגה','\u200fהיתר','תאריך היתר'],'rows':rows}]}
+    field,gap=archive_permit_date(table([['2','01/01/2001','לאשר','2','02/02/2001'],['1','01/01/1969','','1','12/04/1970'],['3','01/01/1960','נדחה','','']]))
+    assert field['value']=='1970-04-12' and 'היתר 1' in field['location'] and gap is None
+    field,gap=archive_permit_date(table([['2','01/01/2001','לאשר','2','02/02/2001']]))
+    assert field['value'] is None and '2001' in gap
+    assert archive_permit_date(table([]))==(evidence(None),None)

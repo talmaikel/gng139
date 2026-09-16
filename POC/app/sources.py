@@ -17,6 +17,13 @@ def utcnow(): return datetime.now(timezone.utc).isoformat()
 
 class SourceError(RuntimeError): pass
 
+SOFT_BLOCK_MARKER='לא ניתן להציג את המידע המבוקש'
+
+def assert_archive_page(raw,context):
+    # The archive rate-limits with an HTTP 200 apology page; the '429' token routes it to the back-off logic.
+    s=raw.decode('utf8',errors='replace') if isinstance(raw,bytes) else raw
+    if SOFT_BLOCK_MARKER in s and len(s)<4000: raise SourceError(f'HTTP 429 (soft block): archive refused to display {context}')
+
 class PublicClient:
     def __init__(self, cache=None, transport=None):
         self.cache = Path(cache or DATA/'cache'); self.cache.mkdir(parents=True, exist_ok=True)
@@ -222,6 +229,7 @@ class BuildingArchive:
         return {'ids':ids,'declared_count':int(declared.group(1)) if declared else len(ids),'status':state,'source':meta}
     def file(self,tik):
         raw,meta=self.client.get(ARCHIVE,dict(appname='cixpa',prgname='GetTikFile',siteid=121,t=int(tik),arguments='siteid,t'))
+        assert_archive_page(raw,f'building file {tik}')
         s=raw.decode('utf8',errors='replace')
         return {'id':str(tik),'source':meta,'text':text_from_html(s),'html':s}
     def documents(self,tik):
