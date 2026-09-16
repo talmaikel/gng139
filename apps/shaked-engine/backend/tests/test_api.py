@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app.core.database import get_async_session
-from app.core.security import current_active_user
+from app.core.security import current_active_user, current_superuser
 from app.main import app
 from app.models.opportunity import Opportunity, VerificationLevel
 from app.models.tenant import Company, User
@@ -51,6 +51,8 @@ async def client(session):
     user = await _user(session)
     app.dependency_overrides[get_async_session] = lambda: session
     app.dependency_overrides[current_active_user] = lambda: user
+    # הבדיקות כאן על התנהגות החיפוש, לא על ההרשאה — שנבדקת בנפרד למטה (#89)
+    app.dependency_overrides[current_superuser] = lambda: user
     async with AsyncClient(transport=ASGITransport(app=app),
                            base_url="http://test") as c:
         c.user = user
@@ -444,3 +446,30 @@ async def test_a_dossier_that_was_not_delivered_cannot_be_generated(client, sess
     r = await client.post("/api/v1/dossiers/generate-batch", json={"opportunity_ids": [str(opp.id)]})
     assert r.status_code == 404
     assert (await client.post(f"/api/v1/dossiers/{uuid.uuid4()}/generate")).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_a_customer_cannot_list_candidates_only_the_team_can(session):
+    """‏#89 · הלקוח מקבל תיקים דרך הסריקה ואינו רואה מועמדים. הרשימה המלאה —
+    ‏GET וחיפוש — היא למסך הצוות, ולקוח מחובר מקבל 403."""
+    from app.core.security import get_jwt_strategy
+
+    customer = await _user(session, "לקוח")
+    team = await _user(session, "צוות")
+    team.is_superuser = True
+    await session.flush()
+
+    app.dependency_overrides[get_async_session] = lambda: session
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            for who, expected in ((customer, 403), (team, 200)):
+                token = await get_jwt_strategy().write_token(who)
+                h = {"Authorization": f"Bearer {token}"}
+                assert (await c.get("/api/v1/candidates/herzliya", headers=h)).status_code == expected
+                r = await c.post("/api/v1/candidates/herzliya/search", headers=h, json={"polygon": INSIDE})
+                assert r.status_code == expected
+                # הסריקה פתוחה לכל לקוח
+                r = await c.post("/api/v1/candidates/herzliya/scan/preview", headers=h, json={"polygon": INSIDE})
+                assert r.status_code == 200
+    finally:
+        app.dependency_overrides.clear()
