@@ -31,7 +31,7 @@ services:
         value: https://gng139.online
       - key: CORS_ORIGINS
         value: https://gng139.online,https://www.gng139.online
-      - key: PAYMENTS_MOCK         # production must not hand out free dossiers
+      - key: SIMULATED_PAYMENTS    # production must not hand out free dossiers
         value: "false"
       - key: RUN_WORKER_IN_PROCESS # free plan has no background workers
         value: "true"
