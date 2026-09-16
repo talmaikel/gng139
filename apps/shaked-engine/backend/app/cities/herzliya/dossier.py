@@ -75,7 +75,27 @@ FIELD_LABEL = {
     "strengthened": "בוצע חיזוק בהיתר",
     "occupied": "יוזמה פעילה של אחר",
     "post_2005_permit": "היתר אחרי 18.5.2005",
+    "tama38_event": "ארוע בתיק הבניין מזכיר תמ״א 38 או חיזוק",
+    "representative_event": "ארוע בתיק הבניין מזכיר מייצג",
+    "renewal_status": "סימני חידוש הבניין",
+    "not_renewed": "הבניין לא חודש ואינו בפרויקט חתום",
 }
+
+# ‏`renewal_status` נשמר כמבנה (סטטוס, נימוקים, מי בדק). בתיק מוצג משפט —
+# מי בדק והערות הצוות אינם נמסרים ללקוח.
+RENEWAL_LABEL = {
+    "verified_renewed": "אומת: הבניין חודש או בפרויקט חתום",
+    "suspected": "חשד לחידוש — ממתין לבדיקת הצוות",
+    "none": "לא נמצא סימן לחידוש בארכיון ובשכבה · לא נבדק בשטח",
+}
+
+
+def _shown(name: str, value: Any) -> Any:
+    if name == "renewal_status" and isinstance(value, dict):
+        if value.get("status") == "none" and value.get("manual"):
+            return "נבדק ידנית: לא חודש ואינו בפרויקט חתום"
+        return RENEWAL_LABEL.get(value.get("status"), value.get("status"))
+    return value
 
 # ההנחות הכלכליות. **התווית חיה כאן ולא בדפדפן.** עד היום היא הייתה
 # ב-`frontend/src/lib/labels.ts` בלבד, והמפה נשרה מהקוד: `betterment_levy_ratio`
@@ -181,7 +201,7 @@ def _evidence_rows(fields: dict[str, dict]) -> list[dict[str, Any]]:
         out.append({
             "field": name,
             "label": FIELD_LABEL.get(name, name),
-            "value": f.get("value"),
+            "value": _shown(name, f.get("value")),
             "certainty": f.get("certainty"),
             "certainty_label": CERTAINTY_LABEL.get(f.get("certainty"), f.get("certainty")),
             "decides": usable(f, get_settings().source_max_age_days),
@@ -207,7 +227,9 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
     # ״מעולם לא נשאל״ ו״אין לו מקור פתוח״ הופיעו שניהם על אותו שדה, וזה
     # קורא כמו רשלנות: שער שאין לו מקור לא ״לא נשאל״ — הוא נשאל ואין
     # ממי לקבל תשובה. כל שדה מופיע בקטגוריה אחת בלבד.
-    never_asked = sorted(set(rights.THRESHOLD_IDS) - set(fields) - set(rights.UNOBTAINABLE))
+    never_asked = sorted(g for g in rights.THRESHOLD_IDS
+                         if g not in rights.UNOBTAINABLE
+                         and rights.GATE_FIELD.get(g, g) not in fields)
     return {
         "unknown_gates": unknown,
         # שער שאין לו מקור פתוח — גבול הנתונים, לא עבודה חסרה.
@@ -871,7 +893,8 @@ def _assumption_rows(a, live: dict, construction_cost, construction_cost_per_sqm
     return rows
 
 
-async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) -> dict[str, Any]:
+async def _economics(session, opp: Opportunity, assessment: dict, fields: dict,
+                     solve_required: bool = True) -> dict[str, Any]:
     """התרחיש הגנרי — ‏PRD 6.4. **אינו דוח שמאי חתום, וזה נכתב בתיק.**"""
     cap = assessment.get("cap_400_sqm")
     a = get_assumptions(opp.city_code)
@@ -1008,7 +1031,8 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
                        f"הקיימות — {betterment['levy'].get('estimate_ils', 0) / 1e6:,.1f} מיליון ₪ היטל. "
                        "אינו שומה")}
 
-    rights_verdict = _rights_verdict(policy_run, cap_run, run, assessment, target)
+    rights_verdict = _rights_verdict(policy_run, cap_run, run, assessment, target,
+                                     solve_required=solve_required)
     head_inputs = inputs.model_copy(update={
         "buildable_area_sqm": head["area_sqm"],
         "betterment_base_ils": after["betterment_ils"] if after else inputs.betterment_base_ils})
@@ -1100,7 +1124,8 @@ def _policy_basis(assessment: dict) -> str:
 REQUIRED_AREA_ITERATIONS = 30
 
 
-def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float) -> dict[str, Any]:
+def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float,
+                    solve_required: bool = True) -> dict[str, Any]:
     """‏**W2 · האם כלכלי לפי המדיניות, ואם לא — כמה זכויות צריך לבקש.**
 
     ארבעה מצבים, ולא כן/לא: ״לא כלכלי לפי המדיניות וכלכלי ב-400%״ הוא בדיוק
@@ -1130,6 +1155,8 @@ def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float) -
                 "text": (f"לא כלכלי לפי המדיניות ({pm:.1%} על העלות {when}), וגם לא בניצול מלא של "
                          f"תקרת ה-400% ({cm:.1%}). הגדלת זכויות אינה פותרת — הפער במחיר, "
                          "בעלויות או בתמורה לדיירים.")}
+    if not solve_required:
+        return {"case": "B", "basis": "after_levy" if after else "before_levy"}
     lo, hi = area, cap
     for _ in range(REQUIRED_AREA_ITERATIONS):
         mid = (lo + hi) / 2
@@ -1150,6 +1177,26 @@ def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float) -
                    f"כ-{addition:,.0f} מ״ר מעל המדיניות{add_far} ({required / cap:.0%} מהתקרה). "
                    "זה הבסיס לבקשת הגדלת זכויות מהוועדה המקומית, עד תקרת החוק.")
     return out
+
+
+async def screening(session, city_rules, opportunity_id: UUID) -> dict[str, Any]:
+    """‏W6 · הכלכלה של מועמד לסריקה — מקרה ושיעור רווח, בלי שום פרט מזהה.
+
+    אותו חישוב כמו התיק (`_economics`), כך שהסריקה מדרגת לפי המספר שהלקוח
+    יראה אחר כך. בלי פתרון תוספת הזכויות: הסריקה צריכה רק לדעת שהוא B.
+    """
+    opp = await session.get(Opportunity, opportunity_id)
+    assessment = await city_rules.assess(session, opportunity_id)
+    fields = await fields_for(session, opportunity_id)
+    econ = await _economics(session, opp, assessment, fields, solve_required=False)
+    s = econ.get("scenario") or {}
+    cap = (econ.get("scenarios") or {}).get("cap_400") or {}
+    cap_margin = (cap.get("margin_after_levy") if cap.get("margin_after_levy") is not None
+                  else cap.get("margin_before_levy"))
+    return {"case": (econ.get("rights_verdict") or {}).get("case"),
+            "margin": s.get("profit_margin_on_cost_ratio"),
+            "cap_margin": cap_margin,
+            "after_levy": econ.get("after_levy") is not None}
 
 
 async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> dict[str, Any]:

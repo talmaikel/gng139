@@ -36,6 +36,7 @@
 הינה מדיניות בלבד. הוועדה המקומית רשאית לקבוע מס׳ קומות ונפחים שונים
 בהתאם לשיקול דעתה״*. כל מספר כאן הוא **תקרה נתונה לבחינה, לא זכות**.
 """
+import math
 from dataclasses import dataclass, field as dc_field
 
 # גרסת הכללים שלפיה מחושבות הזכויות. קשורה למסמך המדיניות שאומת מול
@@ -123,10 +124,11 @@ MAIN_AXES = {"דרך ירושלים", "העצמאות", "הרב קוק", "ארל
 class Check:
     id: str
     label: str
-    # passed | failed | unknown | routed | undefined | needs_measurement
+    # passed | failed | unknown | routed | undefined | needs_measurement | needs_review
     #
     # ‏`undefined` = המדיניות שותקת. ‏`needs_measurement` = המדיניות ברורה
     # והמדידה שלנו אינה. שניהם אינם ״עבר״, ושניהם מובילים לפעולה אחרת.
+    # ‏`needs_review` = חשד שהצוות צריך להכריע בו; עד אז אינו נמסר (W5).
     status: str
     source_url: str
     page: int | None = None
@@ -154,13 +156,23 @@ SECTION_70A_IDS = ("residential_zoning", "residential_share", "permit_date",
 # אחר כבר מול הדיירים. המגרש כשיר בדין ואינו זמין בפועל, ולכן אין לו עמוד
 # לצטט ואין להציג אותו כסעיף בחוק. השם הקודם היה `THRESHOLD_IDS` בלבד,
 # והוא הציג את השער המסחרי הזה כאילו הוא §70א.
-THRESHOLD_IDS = SECTION_70A_IDS + ("occupied",)
+THRESHOLD_IDS = SECTION_70A_IDS + ("occupied", "not_renewed")
+
+# שער ששמו אינו שם השדה שהוא קורא. ‏`dossier._gaps` צריך לדעת את זה, אחרת
+# השער נראה ״מעולם לא נשאל״ גם כשהשדה קיים.
+GATE_FIELD = {"not_renewed": "renewal_status"}
 
 # שער שאין לו מקור פתוח, ולכן ״לא ידוע״ בו אינו מעיד על עבודה חסרה אלא על
-# גבול הנתונים. הוא נשאר שאלה פתוחה בתיק ואינו פוסל מסירה — אבל הוא גם
-# לעולם לא ייקרא כ״עבר״: `threshold_checks` מחזיר בו unknown, והסטטוס יורד
-# ל-needs_verification בכל מקרה.
-UNOBTAINABLE = {"residential_share"}
+# גבול הנתונים. הוא נשאר שאלה פתוחה בתיק ואינו פוסל מסירה, והסטטוס יורד
+# ל-needs_verification. ‏W10 · שער ה-70% מוכרע רק כשאדם הזין את היחס מטבלת
+# השטחים בהיתר (`services/residential_share.py`) — ואז הוא עובר או נכשל ככל שער.
+UNOBTAINABLE = {"residential_share", "strengthened", "occupied"}
+# ‏W5 · 16.09 · `strengthened` ו-`occupied` נגזרו מ״ארוע אחרון להצגה״ בתיק,
+# שאינו תיאור הבקשה — והיו עיוורים. דף הבקשה (GetBakashaFile) עונה עליהם,
+# ואינו נקרא. עד אז הם שאלה פתוחה בתיק, וההגנה בפועל היא `not_renewed`.
+
+# ‏§70א: ״70% לפחות משטח הבנייה הכולל הקיים שלו משמש כדין למגורים״.
+RESIDENTIAL_SHARE_MIN = 0.7
 
 
 MIXED_ZONING_WORDS = ("מסחר", "תעסוקה", "מעורב")
@@ -178,6 +190,24 @@ def _zoning_note(names) -> str:
     return f" · הייעוד מגורים בלבד ({', '.join(sorted(set(residential)))}) — סביר, ועדיין לא מוכרע"
 
 
+def share_basis(field: dict | None) -> str | None:
+    """‏W10 · על מה נשען יחס המגורים: המקום במקור, והאם אדם אימת אותו.
+
+    ‏0.82 לבדו אינו אומר מאיפה בא, ושער שעבר בלי לומר זאת נקרא כמו הנחה."""
+    if not field or not field.get("location"):
+        return None
+    manual = field.get("certainty") == "manually_verified"
+    return f"לפי {field['location']}" + (" (אומת ידנית)" if manual else "")
+
+
+def _share_pct(share: float) -> str:
+    """‏69.96% שנכשל אינו מוצג ״70%״ — זה נקרא כמו באג בשער."""
+    shown = f"{share:.0%}"
+    if share < RESIDENTIAL_SHARE_MIN and int(shown[:-1]) >= RESIDENTIAL_SHARE_MIN * 100:
+        return f"{math.floor(round(share * 1000, 6)) / 10:.1f}%"
+    return shown
+
+
 def threshold_checks(f: dict) -> list[Check]:
     """חמשת תנאי §70א: שניים מההגדרה עצמה ושלושה מהסעיפים הממוספרים."""
     out = []
@@ -192,8 +222,14 @@ def threshold_checks(f: dict) -> list[Check]:
 
     share = f.get("residential_share")
     zoning_note = _zoning_note(f.get("zoning_names"))
+    # ‏W10 · הבסיס מגיע מ-`assess()`; בלעדיו לא טוענים מקור שאינו ידוע.
+    basis = f.get("residential_share_basis")
+    share_detail = None if share is None else (
+        f"{_share_pct(share)} מגורים" + (f" {basis}" if basis else "")
+        + ("" if share >= RESIDENTIAL_SHARE_MIN else " — פחות מ-70%"))
     out.append(Check("residential_share", "לפחות 70% מהשטח הבנוי משמש כדין למגורים",
-                     "unknown" if share is None else ("passed" if share >= 0.7 else "failed"),
+                     "unknown" if share is None else
+                     ("passed" if share >= RESIDENTIAL_SHARE_MIN else "failed"),
                      POLICY_URL, 3,
                      # ‏G1 · 15.09 · בועז שאל אם ״מגורים א/ב״ בשכבות העירייה עונה על
                      # זה. לא: הייעוד הוא התנאי הראשון (השער שלמעלה), וכאן נבדק
@@ -201,7 +237,7 @@ def threshold_checks(f: dict) -> list[Check]:
                      # נספרת כאן. ‏״97%״ בנוסח הקודם לא נמצא בשום חישוב בריפו.
                      "הייעוד בתכנית אינו מראה שימוש בפועל. היחס נקבע מטבלת השטחים בהיתר "
                      "(תיק הבניין) או בביקור, ואין לו מקור פתוח" + zoning_note
-                     if share is None else f"{share:.0%}"))
+                     if share is None else share_detail))
 
     permit, opinion = f.get("permit_date"), f.get("engineer_opinion")
     if permit is None:
@@ -220,7 +256,9 @@ def threshold_checks(f: dict) -> list[Check]:
     out.append(Check("strengthened", "לא בוצע חיזוק מכוח היתר",
                      "unknown" if s is None else ("passed" if s is False else "failed"),
                      POLICY_URL, 3,
-                     None if s is None else ("לא נמצאה בקשת חיזוק עם היתר" if not s else "חוזק — §70א(2)")))
+                     "תיק הבניין מציג רק את הארוע האחרון בכל בקשה ולא את תיאורה — "
+                     "לא נקבע; ראו שער החידוש" if s is None else
+                     ("לא נמצאה בקשת חיזוק עם היתר" if not s else "חוזק — §70א(2)")))
 
     # ״תפוס״ אינו תנאי סף בחוק — מבנה כזה כשיר לחלוטין. הוא פשוט אינו
     # זמין: בקשת חיזוק שהוגשה ולא הבשילה להיתר פירושה שיזם אחר כבר עובד
@@ -232,10 +270,13 @@ def threshold_checks(f: dict) -> list[Check]:
     out.append(Check("occupied", "לא נמצאה בקשה פעילה של יזם אחר בארכיון",
                      "unknown" if occ is None else ("passed" if occ is False else "routed"),
                      POLICY_URL, None,
-                     None if occ is None else
+                     "תיק הבניין אינו מציג את תיאור הבקשות — לא נקבע · "
+                     "החתמת דיירים אינה במקור ציבורי ולא נבדקה" if occ is None else
                      ("אין בקשת חיזוק פתוחה בתיק הבניין · החתמת דיירים אינה במקור ציבורי ולא נבדקה"
                       if not occ else
                       "בקשת חיזוק ללא היתר — יזם אחר כבר מול הדיירים")))
+
+    out.append(renewal_check(f.get("renewal_status")))
 
     fl, un = f.get("floors"), f.get("units")
     # §70א(3) קובע כלל ספירה משלו: קומת עמודים **נספרת**, וקומה עליונה
@@ -250,6 +291,29 @@ def threshold_checks(f: dict) -> list[Check]:
                      "unknown" if un is None else ("passed" if un >= 4 else "failed"),
                      POLICY_URL, 3, None if un is None else f"{un} דירות"))
     return out
+
+
+def renewal_check(rs) -> Check:
+    """‏W5 · בניין שכבר חודש, או בפרויקט חתום, אינו נמסר ואינו מחויב (בועז, 16.09).
+
+    כמו `occupied` — אינו תנאי סף בחוק, ואין לו עמוד לצטט. אומת → נפסל;
+    חשד → ממתין לצוות; ״לא נמצא״ אומר גם מה **לא** נבדק.
+    """
+    rs = rs if isinstance(rs, dict) else {}
+    status, why = rs.get("status"), " · ".join(rs.get("reasons") or [])
+    if status == "verified_renewed":
+        result, detail = "failed", "אומת: הבניין חודש או בפרויקט חתום" + (f" · {why}" if why else "")
+    elif status == "suspected":
+        result, detail = "needs_review", ("חשד שהבניין כבר חודש או בפרויקט חתום — ממתין לבדיקת "
+                                          "הצוות, ואינו נמסר ואינו מחויב" + (f" · {why}" if why else ""))
+    elif status == "none":
+        result = "passed"
+        detail = ("נבדק ידנית: לא חודש ואינו בפרויקט חתום" if rs.get("manual") else
+                  "לא נמצא סימן לחידוש בארכיון ובשכבה · לא נבדק בשטח")
+    else:
+        result, detail = "unknown", "לא נבדק — נדרשים היתרי תיק הבניין מול שכבת המבנים"
+    return Check("not_renewed", "הבניין לא חודש ואינו בפרויקט חתום", result,
+                 POLICY_URL, None, detail)
 
 
 # ─────────────────────── שלב 4 · גובה מול חתך הרחוב ───────────────────────

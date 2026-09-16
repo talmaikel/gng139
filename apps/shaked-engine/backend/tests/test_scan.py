@@ -22,6 +22,25 @@ AREA = {"type": "Polygon", "coordinates": [[[34.8100, 32.1600], [34.8120, 32.160
                                             [34.8100, 32.1600]]]}
 BY_CAP = {"polygon": AREA, "preferences": [{"field": "cap_400", "direction": "desc"}]}
 
+# ‏W6 · הסריקה מדרגת לפי הכלכלה של כל מועמד. במגרשים הסינתטיים כאן אין ראיות
+# לתרחיש, ולכן הכלכלה מוזרקת: כברירת מחדל כל מגרש כלכלי, והרווח עולה עם
+# התקרה — כך הבדיקות של מוכנות, דילוג וחיוב שומרות על המשמעות שלהן.
+# בדיקה שצריכה מקרה אחר קובעת אותו ב-`ECONOMICS[block]`.
+ECONOMICS: dict[str, dict] = {}
+
+
+@pytest.fixture(autouse=True)
+def _economics(monkeypatch):
+    ECONOMICS.clear()
+
+    async def fake(session, rules, oid):
+        opp = await session.get(Opportunity, oid)
+        if opp.block in ECONOMICS:
+            return ECONOMICS[opp.block]
+        cap = ((opp.metadata_json or {}).get("assessment") or {}).get("cap_400_sqm") or 0
+        return {"case": "A", "margin": 0.2 + cap / 1e6, "cap_margin": 0.3, "after_levy": True}
+    monkeypatch.setattr(api, "parcel_economics", fake)
+
 
 async def _parcel(session, block, cap, ready=True):
     geom = ("MULTIPOLYGON(((34.8105000 32.1605000,34.8109000 32.1605000,"
@@ -60,7 +79,8 @@ async def test_the_preview_is_numbers_only(client, session):  # noqa: F811
     r = await client.post("/api/v1/candidates/herzliya/scan/preview", json=BY_CAP)
     assert r.status_code == 200
     body = r.json()
-    assert body == {"found": 4, "offer": 3, "ready": 3, "needs_fetch": 0, "credits_remaining": 3}
+    assert body == {"found": 4, "offer": 3, "ready": 3, "needs_fetch": 0, "credits_remaining": 3,
+                    "found_economic": 4, "found_rights_request": 0, "needs_rights_confirmation": None}
     assert "רחוב הסריקה" not in r.text and "9501" not in r.text
     assert await _balance(session, client.user.company_id) == 3     # תצוגה אינה מחייבת
 
@@ -111,7 +131,8 @@ async def test_a_second_scan_completes_what_the_first_left(client, session):  # 
 
     await _parcel(session, "9533", 5000)
     preview = (await client.post("/api/v1/candidates/herzliya/scan/preview", json=BY_CAP)).json()
-    assert preview == {"found": 1, "offer": 1, "ready": 1, "needs_fetch": 0, "credits_remaining": 1}
+    assert preview == {"found": 1, "offer": 1, "ready": 1, "needs_fetch": 0, "credits_remaining": 1,
+                       "found_economic": 1, "found_rights_request": 0, "needs_rights_confirmation": None}
     again = (await client.post("/api/v1/candidates/herzliya/scan/deliver", json=BY_CAP)).json()
     assert [d["address"] for d in again["delivered"]] == ["רחוב הסריקה 9533"]
     assert {str(o.id) for o in first}.isdisjoint(d["opportunity_id"] for d in again["delivered"])
@@ -185,3 +206,99 @@ async def test_a_bad_area_is_refused_not_treated_as_the_whole_city(client, sessi
         r = await client.post(f"/api/v1/candidates/herzliya/scan/{path}", json={"polygon": outside})
         assert r.status_code == 422, (path, json.dumps(r.json(), ensure_ascii=False))
     assert await _balance(session, client.user.company_id) == 3
+
+
+# ── W6 · תנאים ליזם, הרווחיות קודם, והגדלת זכויות רק בסימון ──
+
+def _econ(case, margin, cap_margin):
+    return {"case": case, "margin": margin, "cap_margin": cap_margin, "after_levy": True}
+
+
+@pytest.mark.asyncio
+async def test_the_most_profitable_parcels_come_first(client, session):  # noqa: F811
+    """בועז, 16.09: שלושת התיקים הם הרווחיים ביותר — לא לפי תקרה ולא לפי מזהה."""
+    await _credits(session, client.user.company_id, 3)
+    parcels = {b: await _parcel(session, b, 9000) for b in ("9601", "9602", "9603", "9604")}
+    for b, m in (("9601", 0.18), ("9602", 0.25), ("9603", 0.20), ("9604", 0.17)):
+        ECONOMICS[b] = _econ("A", m, 0.3)
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                              json={"polygon": AREA})).json()
+    assert [d["opportunity_id"] for d in body["delivered"]] == [
+        str(parcels[b].id) for b in ("9602", "9603", "9601")]
+
+
+@pytest.mark.asyncio
+async def test_a_parcel_that_is_not_economic_even_at_400_is_never_delivered(client, session):  # noqa: F811
+    await _credits(session, client.user.company_id, 3)
+    await _parcel(session, "9611", 9000)
+    ECONOMICS["9611"] = _econ("C", -0.2, 0.11)
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                              json={"polygon": AREA, "include_rights_request": True})).json()
+    assert body["delivered"] == [] and body["found"] == 0
+    assert body["found_economic"] == 0 and body["found_rights_request"] == 0
+    assert body["credits_remaining"] == 3 and await _balance(session, client.user.company_id) == 3
+
+
+@pytest.mark.asyncio
+async def test_a_rights_request_parcel_needs_the_checkbox(client, session):  # noqa: F811
+    await _credits(session, client.user.company_id, 3)
+    await _parcel(session, "9621", 9000)
+    ECONOMICS["9621"] = _econ("B", -0.1, 0.22)
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                              json={"polygon": AREA})).json()
+    assert body["delivered"] == [] and body["found"] == 0
+    assert body["found_rights_request"] == 1             # מספר בלבד — ״סמנו כדי לקבל״
+    assert body["needs_rights_confirmation"] is None
+    assert await _balance(session, client.user.company_id) == 3
+
+
+@pytest.mark.asyncio
+async def test_with_no_economic_parcel_the_customer_confirms_before_any_address(client, session):  # noqa: F811
+    """בועז: *״לפני שהוא נחשף אליו (אסור לו לדעת את הכתובת) הוא צריך לאשר שהוא
+    מקבל תיק כלכלי רק עם הגדלת זכויות — או לבצע חיפוש נוסף.״*"""
+    await _credits(session, client.user.company_id, 3)
+    b = await _parcel(session, "9631", 9000)
+    ECONOMICS["9631"] = _econ("B", -0.1, 0.22)
+    ask = {"polygon": AREA, "include_rights_request": True}
+
+    r = await client.post("/api/v1/candidates/herzliya/scan/preview", json=ask)
+    assert r.json()["needs_rights_confirmation"] == {"count": 1} and r.json()["offer"] == 0
+
+    r = await client.post("/api/v1/candidates/herzliya/scan/deliver", json=ask)
+    body = r.json()
+    assert body["needs_rights_confirmation"] == {"count": 1}
+    assert body["delivered"] == [] and body["credits_remaining"] == 3
+    assert str(b.id) not in r.text and "רחוב הסריקה" not in r.text and "9631" not in r.text
+
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                              json={**ask, "accept_rights_request": True})).json()
+    assert [d["opportunity_id"] for d in body["delivered"]] == [str(b.id)]
+    assert body["credits_remaining"] == 2
+
+
+@pytest.mark.asyncio
+async def test_with_the_checkbox_rights_requests_follow_the_economic_parcels(client, session):  # noqa: F811
+    await _credits(session, client.user.company_id, 3)
+    a = await _parcel(session, "9641", 9000)
+    b = await _parcel(session, "9642", 9000)
+    ECONOMICS.update({"9641": _econ("A", 0.18, 0.3), "9642": _econ("B", -0.1, 0.4)})
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                              json={"polygon": AREA, "include_rights_request": True})).json()
+    assert [d["opportunity_id"] for d in body["delivered"]] == [str(a.id), str(b.id)]
+    assert body["needs_rights_confirmation"] is None
+
+
+@pytest.mark.asyncio
+async def test_max_units_and_the_customers_minimum_profit_filter(client, session):  # noqa: F811
+    await _credits(session, client.user.company_id, 3)
+    small = await _parcel(session, "9651", 9000)
+    big = await _parcel(session, "9652", 9000)
+    big.existing_units = 40
+    await session.flush()
+    thin = await _parcel(session, "9653", 9000)
+    ECONOMICS.update({"9651": _econ("A", 0.24, 0.3), "9652": _econ("A", 0.30, 0.4),
+                      "9653": _econ("A", 0.18, 0.19)})
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                              json={"polygon": AREA, "max_units": 20, "min_profit_ratio": 0.22})).json()
+    assert [d["opportunity_id"] for d in body["delivered"]] == [str(small.id)]
+    assert str(big.id) not in str(body) and str(thin.id) not in str(body)

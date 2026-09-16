@@ -12,9 +12,11 @@ from app.models.tenant import User
 from app.cities.herzliya.archive_facts import (ArchiveUnavailable, NoBuildingFile,
                                                fetch_for_delivery)
 from app.cities.herzliya import exports
-from app.cities.herzliya.dossier import NotEntitled, build as build_dossier
+from app.cities.herzliya.dossier import NotEntitled, build as build_dossier, screening
+from app.services.economic.assumptions import get_assumptions
 from app.services.deliveries import (NoCredits, NotDeliverable, _credits, deliver,
-                                     delivered_ids, for_company, provenance)
+                                     delivered_ids, for_company, held_for_renewal,
+                                     provenance)
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -89,43 +91,92 @@ MAX_FETCHES_PER_SCAN = 2
 
 
 class ScanArea(BaseModel):
-    """אותו אזור ואותם תנאים כמו `SearchArea`, בלי `limit`: הסריקה קובעת
-    כמה, לפי היתרה."""
+    """האזור והתנאים של הלקוח. **הסריקה קובעת כמה** — לפי היתרה — **ובאיזה סדר.**
+
+    ‏**W6 · בועז, 16.09:** ללקוח שלושה תנאים — גודל מגרש, רווח יזמי מזערי ומקסימום
+    דירות קיימות — ובלי סדר העדפות. שלושת התיקים הם הרווחיים ביותר, לפי הרווח
+    אחרי אומדן היטל על השטח שמותר לפי מדיניות הרצליה.
+    """
     polygon: dict[str, Any]
     min_area_sqm: float | None = Field(default=None, ge=0)
+    max_units: int | None = Field(default=None, ge=0)
+    # ברירת המחדל היא הרווח היזמי המזערי בספריית ההנחות (16%).
+    min_profit_ratio: float | None = Field(default=None, ge=0, le=1)
+    # חלקה שכלכלית רק עם הגדלת זכויות נמסרת רק בסימון, ואחרי הכלכליות.
+    include_rights_request: bool = False
+    # ‏כשאין אף חלקה כלכלית, הלקוח מאשר לפני שכתובת נחשפת (בועז, 16.09).
+    accept_rights_request: bool = False
+    # ‏״תיקים מושלמים״ (טל, 16.09): רק מגרשים שתיק הבניין שלהם כבר שלם. בלי
+    # שליפה מהארכיון בזמן החיפוש — התוצאה מיידית, ואין תיק שנשלף חלקית.
+    ready_only: bool = False
+    # ‏W6 · נשארו עד שמסך הסריקה יורד מהם. **אינם משפיעים על הסריקה** — הם
+    # תנאי צוות, ונשארים ב-`/search` של המנהל.
     min_units: int | None = Field(default=None, ge=0)
     min_floors: float | None = Field(default=None, ge=0)
     min_cap_400_sqm: float | None = Field(default=None, ge=0)
     certain_floors_only: bool = False
     preferences: list[Preference] = Field(default_factory=list, max_length=3)
-    # ‏״תיקים מושלמים״ (טל, 16.09): רק מגרשים שתיק הבניין שלהם כבר שלם. בלי
-    # שליפה מהארכיון בזמן החיפוש — התוצאה מיידית, ואין תיק שנשלף חלקית.
-    ready_only: bool = False
 
 
 def _ready(row: dict[str, Any]) -> bool:
     return bool((row.get("assessment") or {}).get("deliverable"))
 
 
-async def _scan_queue(session, rules, body: ScanArea, company_id) -> list[dict[str, Any]]:
-    """המועמדים שהסריקה תמסור, בסדר שבו תמסור אותם.
+# נקודת החלפה לבדיקות: הכלכלה של מועמד אחד, מאותו חישוב כמו התיק.
+parcel_economics = screening
 
-    **מוכנים קודם** (בועז, 15.09): תיק שכבר נשלף נמסר מיד ובוודאות. אחריהם
-    מי שבמסלול המגרשי אבל דורש שליפה מהארכיון. בתוך כל קבוצה — לפי
-    ההעדפות של הלקוח, כי `screen_candidates` כבר מיין כך והמיון יציב.
+
+async def _scan_queue(session, rules, body: ScanArea, company_id) -> dict[str, list[dict[str, Any]]]:
+    """שני תורים: **כלכליות** לפי המדיניות, ו**כלכליות רק עם הגדלת זכויות**.
+
+    בכל תור — מוכנות קודם (בועז, 15.09), ובתוך זה הרווחיות קודם (16.09).
+    חלקה שאינה כלכלית גם בתקרת ה-400%, או שאין לה תרחיש, אינה מוצעת כלל:
+    אין בה הזדמנות, והלקוח לא ישלם עליה.
     """
-    filters = body.model_dump(exclude={"ready_only"}) | {
-        "limit": 500,
-        "exclude_delivered_ids": await delivered_ids(session, company_id),
-    }
+    filters = {"polygon": body.polygon, "min_area_sqm": body.min_area_sqm,
+               "max_units": body.max_units, "limit": 500,
+               "exclude_delivered_ids": await delivered_ids(session, company_id)}
     try:
         rows = await rules.screen_candidates(session, filters)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+    # ‏W5 · מחודש או חשוד — לא בתור כלל. לא נספר ב-``found``, לא נשלף ולא מחויב.
     in_track = [r for r in rows
-                if _ready(r) or (r.get("assessment") or {}).get("screenable")]
-    ready = [r for r in in_track if _ready(r)]
-    return ready if body.ready_only else ready + [r for r in in_track if not _ready(r)]
+                if not held_for_renewal(r.get("assessment"))
+                and (_ready(r) or (r.get("assessment") or {}).get("screenable"))]
+    if body.ready_only:
+        in_track = [r for r in in_track if _ready(r)]
+
+    threshold = (body.min_profit_ratio if body.min_profit_ratio is not None
+                 else get_assumptions(rules.city_code).developer_profit_target_ratio.value)
+    economic, rights = [], []
+    for r in in_track:
+        e = await parcel_economics(session, rules, UUID(r["id"]))
+        r["economics"] = e
+        if e.get("margin") is not None and e["margin"] >= threshold:
+            economic.append(r)
+        elif e.get("cap_margin") is not None and e["cap_margin"] >= threshold:
+            rights.append(r)
+    economic.sort(key=lambda r: (not _ready(r), -r["economics"]["margin"]))
+    rights.sort(key=lambda r: (not _ready(r), -r["economics"]["cap_margin"]))
+    return {"economic": economic, "rights": rights}
+
+
+def _offered(q: dict[str, list], body: ScanArea) -> list[dict[str, Any]]:
+    """מה שייצא, בסדר: כלכליות, ואחריהן חלקות הגדלת זכויות — רק בסימון, ואם אין
+    כלכליות כלל, רק אחרי אישור."""
+    if not body.include_rights_request:
+        return q["economic"]
+    if not q["economic"] and not body.accept_rights_request:
+        return []
+    return q["economic"] + q["rights"]
+
+
+def _needs_confirmation(q: dict[str, list], body: ScanArea) -> dict[str, int] | None:
+    if body.include_rights_request and not body.accept_rights_request \
+            and not q["economic"] and q["rights"]:
+        return {"count": len(q["rights"])}
+    return None
 
 
 @router.post("/{city_code}/scan/preview")
@@ -137,12 +188,15 @@ async def scan_preview(
 ) -> dict[str, Any]:
     """כמה יימסרו, לפני החיוב. **מספרים בלבד** — בלי כתובת, מזהה או גאומטריה."""
     rules = get_city_rules(city_code)
-    queue = await _scan_queue(session, rules, body, user.company_id)
+    q = await _scan_queue(session, rules, body, user.company_id)
+    queue = _offered(q, body)
     credits = await _credits(session, user.company_id)
     offer = min(SCAN_SIZE, credits, len(queue))
     ready = sum(1 for r in queue[:offer] if _ready(r))
     return {"found": len(queue), "offer": offer, "ready": ready,
-            "needs_fetch": offer - ready, "credits_remaining": credits}
+            "needs_fetch": offer - ready, "credits_remaining": credits,
+            "found_economic": len(q["economic"]), "found_rights_request": len(q["rights"]),
+            "needs_rights_confirmation": _needs_confirmation(q, body)}
 
 
 @router.post("/{city_code}/scan/deliver")
@@ -158,6 +212,10 @@ async def scan_deliver(
     ואינו מחויב (ACC-05). ארכיון שסירב — עוצרים ומחזירים `retryable`:
     קריאה חוזרת משלימה, כי מה שכבר נמסר אינו מוצע שוב. כל מסירה נשמרת
     מיד, כך שבקשה שנקטעה באמצע אינה מאבדת את מה שכבר נמסר.
+
+    ‏**W6 · אין אף חלקה כלכלית, והלקוח סימן הגדלת זכויות:** מוחזר
+    `needs_rights_confirmation` — מספר בלבד, בלי חיוב ובלי כתובת — והמסירה
+    קורית רק בקריאה חוזרת עם `accept_rights_request`.
     """
     rules = get_city_rules(city_code)
     # ‏rollback על מגרש שדולג מפקיע את כל האובייקטים בסשן, כולל המשתמש;
@@ -166,7 +224,13 @@ async def scan_deliver(
     credits = await _credits(session, company_id)
     if credits < 1:
         raise HTTPException(status_code=402, detail="לא נותרה זכאות לחברה. יש לרכוש חבילה כדי להמשיך.")
-    queue = await _scan_queue(session, rules, body, company_id)
+    q = await _scan_queue(session, rules, body, company_id)
+    counts = {"found_economic": len(q["economic"]), "found_rights_request": len(q["rights"])}
+    if (confirm := _needs_confirmation(q, body)) is not None:
+        return {"delivered": [], "found": 0, "requested": 0, "skipped": 0, "retryable": False,
+                "message": None, "credits_remaining": credits, **counts,
+                "needs_rights_confirmation": confirm}
+    queue = _offered(q, body)
     target = min(SCAN_SIZE, credits)
 
     async def prepare(s, oid):
@@ -217,6 +281,8 @@ async def scan_deliver(
         "retryable": retryable,
         "message": message,
         "credits_remaining": await _credits(session, company_id),
+        **counts,
+        "needs_rights_confirmation": None,
     }
 
 
@@ -332,6 +398,43 @@ async def deliver_opportunity(
     await session.commit()
     return {"delivery_id": str(row.id), "opportunity_id": str(row.opportunity_id),
             "charged": charged, "delivered_at": row.delivered_at.isoformat()}
+
+
+class RenewalDecision(BaseModel):
+    """הכרעת הצוות על חשד לחידוש. בלי קישור אין ראיה — ולכן הוא חובה."""
+    status: Literal["verified_renewed", "suspected", "none"]
+    source: str = Field(min_length=2, max_length=300)
+    evidence_url: str = Field(min_length=10, max_length=1000, pattern=r"^https?://")
+    note: str | None = Field(default=None, max_length=1000)
+
+
+@router.post("/{city_code}/{opportunity_id}/renewal")
+async def set_renewal(
+    city_code: str,
+    opportunity_id: UUID,
+    body: RenewalDecision,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_superuser),
+) -> dict[str, Any]:
+    """‏W5 · הצוות מאשר שהבניין חודש, או פוסל את החשד. נכתב כ-MANUALLY_VERIFIED
+    וההערכה מחושבת מחדש מיד — כך שהסריקה הבאה כבר רואה את ההכרעה."""
+    from app.cities.herzliya import renewal
+    from app.cities.herzliya.assessments import refresh_one
+    from app.models.opportunity import Opportunity
+
+    rules = get_city_rules(city_code)
+    opp = await session.get(Opportunity, opportunity_id)
+    if opp is None or opp.city_code != city_code:
+        raise HTTPException(status_code=404, detail="המועמד לא נמצא")
+    await renewal.record_team_decision(
+        session, opp, status=body.status, source=body.source, evidence_url=body.evidence_url,
+        note=body.note, checked_by=user.email)
+    assessment = await refresh_one(session, rules, opportunity_id)
+    await session.commit()
+    return {"opportunity_id": str(opportunity_id),
+            "renewal_status": assessment.get("renewal_status"),
+            "renewal_reasons": assessment.get("renewal_reasons") or [],
+            "assessment": assessment}
 
 
 @router.get("/{city_code}")

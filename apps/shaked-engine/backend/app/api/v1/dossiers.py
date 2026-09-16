@@ -2,7 +2,7 @@ import uuid
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from app.models.opportunity import Opportunity
 from app.models.package import Delivery
 from app.models.task_queue import TaskQueue
 from app.models.tenant import User
+from app.services import residential_share
 from app.services.dwelling_units import load_units, resolve_existing_unit_area
 
 router = APIRouter(prefix="/dossiers", tags=["dossiers"])
@@ -46,6 +47,21 @@ class DwellingUnitReviewRequest(BaseModel):
     unit_label: str | None = Field(default=None, max_length=40)
     floor: str | None = Field(default=None, max_length=20)
     area_sqm: float | None = Field(default=None, ge=15, le=400)
+
+
+class ResidentialShareRequest(BaseModel):
+    """‏W10 · שני השטחים מטבלת השטחים בגרמושקה. שירות למגורים נספר כמגורים (§70א)."""
+    residential_sqm: float = Field(gt=0, le=100_000)
+    total_sqm: float = Field(gt=0, le=100_000)
+    source_url: str = Field(max_length=2000, pattern=r"^https?://\S+$")
+    page: str | None = Field(default=None, max_length=20)
+    note: str | None = Field(default=None, max_length=300)
+
+    @model_validator(mode="after")
+    def _residential_within_total(self):
+        if self.residential_sqm > self.total_sqm:
+            raise ValueError("שטח המגורים אינו יכול לעלות על השטח הבנוי הכולל")
+        return self
 
 
 def _unit_payload(unit: DwellingUnit) -> dict[str, Any]:
@@ -194,6 +210,39 @@ async def review_dwelling_unit(
     _apply_dwelling_review(unit, review)
     await session.commit()
     return await _dwelling_review_state(session, opportunity)
+
+
+def _herzliya_only(opportunity: Opportunity) -> None:
+    # שרשרת הזכויות, ושער ה-70% שבה, קיימות היום להרצליה בלבד
+    if opportunity.city_code != "herzliya":
+        raise HTTPException(status_code=422, detail="הזנת יחס המגורים זמינה כרגע להרצליה בלבד.")
+
+
+@router.get("/{opportunity_id}/residential-share")
+async def get_residential_share(
+    opportunity_id: uuid.UUID,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> dict[str, Any]:
+    """‏W10 · יחס המגורים שהוזן מטבלת השטחים בהיתר, ושער ה-70% שהוא מכריע."""
+    opportunity = await _reviewable_opportunity(session, opportunity_id, user.company_id)
+    _herzliya_only(opportunity)
+    return await residential_share.state(session, opportunity)
+
+
+@router.put("/{opportunity_id}/residential-share")
+async def put_residential_share(
+    opportunity_id: uuid.UUID,
+    body: ResidentialShareRequest,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> dict[str, Any]:
+    """‏W10 · הזנה ידנית מטבלת השטחים בגרמושקה. מחליפה הזנה ידנית קודמת."""
+    opportunity = await _reviewable_opportunity(session, opportunity_id, user.company_id)
+    _herzliya_only(opportunity)
+    await residential_share.record(session, opportunity.id, **body.model_dump())
+    await session.commit()
+    return await residential_share.state(session, opportunity)
 
 
 async def _require_delivered(session: AsyncSession, company_id, opportunity_ids) -> None:

@@ -1,10 +1,9 @@
 {
  "6424/144": {
   "fields": {
-   "occupied": true,
    "permit_date": "1978-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": true
   },
   "location": "גוש 6424 חלקה 144 · 8 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -13,10 +12,9 @@
  },
  "6424/145": {
   "fields": {
-   "occupied": false,
    "permit_date": "1979-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 6424 חלקה 145 · 8 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -25,10 +23,9 @@
  },
  "6424/152": {
   "fields": {
-   "occupied": false,
    "permit_date": "1991-01-01",
    "post_2005_permit": false,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 6424 חלקה 152 · 2 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -37,10 +34,9 @@
  },
  "6424/76": {
   "fields": {
-   "occupied": false,
    "permit_date": "1966-01-01",
    "post_2005_permit": false,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 6424 חלקה 76 · 3 בקשות בתיק הבניין",
   "method": null,
@@ -49,10 +45,9 @@
  },
  "6531/156": {
   "fields": {
-   "occupied": false,
    "permit_date": "1972-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "תיק 3892 · 4 בקשות",
   "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
@@ -61,10 +56,9 @@
  },
  "6532/271": {
   "fields": {
-   "occupied": false,
    "permit_date": "1950-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "תיק 1546 · 6 בקשות",
   "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
@@ -73,10 +67,9 @@
  },
  "6536/501": {
   "fields": {
-   "occupied": false,
    "permit_date": "1970-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "תיק 3988 · 6 בקשות",
   "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
@@ -85,10 +78,9 @@
  },
  "6537/120": {
   "fields": {
-   "occupied": false,
    "permit_date": "1971-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "תיק 1613 · 6 בקשות",
   "method": "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא",
@@ -97,10 +89,9 @@
  },
  "6546/384": {
   "fields": {
-   "occupied": false,
    "permit_date": "1981-01-01",
    "post_2005_permit": false,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 6546 חלקה 384 · 2 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -109,10 +100,9 @@
  },
  "6546/791": {
   "fields": {
-   "occupied": false,
    "permit_date": "2001-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 6546 חלקה 791 · 4 בקשות בתיק הבניין",
   "method": "היתר בתיק שתאריכו אחרי 18.5.2005",
@@ -121,10 +111,9 @@
  },
  "7291/114": {
   "fields": {
-   "occupied": false,
    "permit_date": "1981-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 7291 חלקה 114 · 10 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -133,10 +122,9 @@
  },
  "7291/140": {
   "fields": {
-   "occupied": false,
    "permit_date": "1973-01-01",
    "post_2005_permit": false,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 7291 חלקה 140 · 8 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -145,10 +133,9 @@
  },
  "7291/141": {
   "fields": {
-   "occupied": false,
    "permit_date": "1974-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 7291 חלקה 141 · 16 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -157,10 +144,9 @@
  },
  "7291/145": {
   "fields": {
-   "occupied": false,
    "permit_date": "1966-01-01",
    "post_2005_permit": false,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 7291 חלקה 145 · 5 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -169,10 +155,9 @@
  },
  "7291/146": {
   "fields": {
-   "occupied": false,
    "permit_date": "1962-01-01",
    "post_2005_permit": false,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 7291 חלקה 146 · 7 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -181,10 +166,9 @@
  },
  "7291/147": {
   "fields": {
-   "occupied": false,
    "permit_date": "1980-01-01",
    "post_2005_permit": false,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 7291 חלקה 147 · 7 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -193,10 +177,9 @@
  },
  "7291/149": {
   "fields": {
-   "occupied": false,
    "permit_date": "1965-01-01",
    "post_2005_permit": false,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 7291 חלקה 149 · 5 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -205,10 +188,9 @@
  },
  "7291/151": {
   "fields": {
-   "occupied": false,
    "permit_date": "1966-01-01",
    "post_2005_permit": false,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 7291 חלקה 151 · 6 בקשות בתיק הבניין",
   "method": "בקשת חיזוק שהוגשה ולא הופק לה היתר",
@@ -217,10 +199,9 @@
  },
  "7291/218": {
   "fields": {
-   "occupied": false,
    "permit_date": "1969-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": false
   },
   "location": "גוש 7291 חלקה 218 · 6 בקשות בתיק הבניין",
   "method": "שנת הבקשה המוקדמת ביותר בתיק",
@@ -229,10 +210,9 @@
  },
  "7291/231": {
   "fields": {
-   "occupied": true,
    "permit_date": "1978-01-01",
    "post_2005_permit": true,
-   "strengthened": false
+   "tama38_event": true
   },
   "location": "גוש 7291 חלקה 231 · 3 בקשות בתיק הבניין",
   "method": null,
