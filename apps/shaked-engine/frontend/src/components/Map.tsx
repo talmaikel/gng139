@@ -47,6 +47,9 @@ function FitToCandidates({ candidates, paused }: { candidates: Candidate[]; paus
 
 interface Props {
   candidates?: Candidate[];
+  /** על מה להתמקד. ברירת המחדל: כל ה-candidates. מערך ריק משאיר את המפה
+   *  על הרצליה כולה. */
+  fitTo?: Candidate[];
   /** מצב ציור/בחירה פעיל */
   drawing?: boolean;
   /** ‏polygon: הצוות מצייר; ‏circle: הלקוח לוחץ נקודה והרדיוס נבחר במחוון */
@@ -67,6 +70,7 @@ interface Props {
 
 export default function OpportunityMap({
   candidates = [],
+  fitTo,
   drawing = false,
   mode = "polygon",
   searchArea = null,
@@ -147,7 +151,7 @@ export default function OpportunityMap({
           onProgress={onDrawProgress}
         />
       )}
-      <FitToCandidates candidates={candidates} paused={drawing} />
+      <FitToCandidates candidates={fitTo ?? candidates} paused={drawing} />
     </MapContainer>
   );
 }

@@ -79,18 +79,29 @@ async def test_the_preview_is_numbers_only(client, session):  # noqa: F811
     r = await client.post("/api/v1/candidates/herzliya/scan/preview", json=BY_CAP)
     assert r.status_code == 200
     body = r.json()
-    assert body == {"found": 4, "offer": 3, "ready": 3, "needs_fetch": 0, "credits_remaining": 3,
+    # המוכנות אינה משנה את הסדר: 9502 בשלושת הראשונים, ויישלף במסירה
+    assert body == {"found": 4, "offer": 3, "ready": 2, "needs_fetch": 1, "credits_remaining": 3,
                     "found_economic": 4, "found_rights_request": 0, "needs_rights_confirmation": None}
     assert "רחוב הסריקה" not in r.text and "9501" not in r.text
     assert await _balance(session, client.user.company_id) == 3     # תצוגה אינה מחייבת
 
 
+async def _passes_on_fetch(s, oid):
+    """שליפה שענתה על השער: ההערכה מחדש מסמנת את המגרש כמוכן."""
+    opp = await s.get(Opportunity, oid)
+    meta = dict(opp.metadata_json)
+    meta["assessment"] = {**meta["assessment"], "deliverable": True}
+    opp.metadata_json = meta
+    await s.flush()
+    return True
+
+
 @pytest.mark.asyncio
-async def test_a_scan_delivers_ready_parcels_first_in_the_customers_order(client, session):  # noqa: F811
+async def test_a_scan_delivers_in_order_and_leaves_the_rest_unseen(client, session, monkeypatch):  # noqa: F811
     await _credits(session, client.user.company_id, 3)
-    unready = await _parcel(session, "9511", 9900, ready=False)       # הגבוה ביותר, אבל לא מוכן
+    monkeypatch.setattr(api, "fetch_for_delivery", _passes_on_fetch)
     top = [await _parcel(session, b, c) for b, c in (("9512", 9000), ("9513", 8000), ("9514", 7000))]
-    left_out = await _parcel(session, "9515", 6000)
+    left_out = await _parcel(session, "9515", 6000, ready=False)
 
     r = await client.post("/api/v1/candidates/herzliya/scan/deliver", json=BY_CAP)
     assert r.status_code == 200
@@ -100,8 +111,103 @@ async def test_a_scan_delivers_ready_parcels_first_in_the_customers_order(client
     assert body["skipped"] == 0 and body["retryable"] is False
     assert body["credits_remaining"] == 0
     # מה שלא נמסר אינו מופיע בתשובה בשום צורה
-    assert str(unready.id) not in r.text and str(left_out.id) not in r.text
-    assert "9511" not in r.text and "9515" not in r.text
+    assert str(left_out.id) not in r.text and "9515" not in r.text
+
+
+# ── טל, 16.09 · לפי scan.html rev 35: ביטחון ואז רווח, ושליפה חיה אחד-אחד ──
+
+@pytest.mark.asyncio
+async def test_confidence_tier_comes_before_profit_and_readiness(client, session, monkeypatch):  # noqa: F811
+    """חלקה בשכבה 0 שעוד לא נשלפה עוקפת חלקה מוכנה ורווחית יותר בשכבה 1."""
+    await _credits(session, client.user.company_id, 3)
+    fetched = []
+
+    async def fetch(s, oid):
+        fetched.append(oid)
+        return await _passes_on_fetch(s, oid)
+    monkeypatch.setattr(api, "fetch_for_delivery", fetch)
+    stable = await _parcel(session, "9701", 9000, ready=False)
+    rich = await _parcel(session, "9702", 9000)
+    stable_poor = await _parcel(session, "9703", 9000)
+    ECONOMICS.update({"9701": _econ("A", 0.18, 0.3) | {"tier": 0},
+                      "9702": _econ("A", 0.40, 0.5) | {"tier": 1},
+                      "9703": _econ("A", 0.17, 0.3) | {"tier": 0}})
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                              json={"polygon": AREA})).json()
+    assert [d["opportunity_id"] for d in body["delivered"]] == [
+        str(stable.id), str(stable_poor.id), str(rich.id)]
+    assert fetched == [stable.id]
+
+
+@pytest.mark.asyncio
+async def test_a_fetched_parcel_that_fails_is_skipped_for_the_next(client, session, monkeypatch):  # noqa: F811
+    await _credits(session, client.user.company_id, 3)
+    # ‏rollback על מגרש שדולג מגלגל גם את הזריעה שלא נשמרה בבדיקה — לכן העובר ראשון
+    passing = await _parcel(session, "9712", 9900, ready=False)
+    failing = await _parcel(session, "9711", 9000, ready=False)
+    failing_id, passing_id = failing.id, passing.id
+
+    async def fetch(s, oid):
+        if oid == failing_id:
+            return False                  # התיק נקרא ולא ענה על השער
+        return await _passes_on_fetch(s, oid)
+    monkeypatch.setattr(api, "fetch_for_delivery", fetch)
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver", json=BY_CAP)).json()
+    assert [d["opportunity_id"] for d in body["delivered"]] == [str(passing_id)], body
+    assert body["skipped_ids"] == [str(failing_id)] and body["checked"] == 2
+    assert body["more"] is False and body["credits_remaining"] == 2
+
+
+@pytest.mark.asyncio
+async def test_past_the_time_budget_no_new_fetch_starts_and_the_scan_continues(client, session, monkeypatch):  # noqa: F811
+    await _credits(session, client.user.company_id, 3)
+    monkeypatch.setattr(api, "SCAN_TIME_BUDGET_S", 0.0)
+    fetched = []
+
+    async def fetch(s, oid):
+        fetched.append(oid)
+        return await _passes_on_fetch(s, oid)
+    monkeypatch.setattr(api, "fetch_for_delivery", fetch)
+    ready = await _parcel(session, "9721", 9900)
+    later = await _parcel(session, "9722", 9000, ready=False)
+
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver", json=BY_CAP)).json()
+    assert [d["opportunity_id"] for d in body["delivered"]] == [str(ready.id)]  # מוכן — בלי שליפה
+    assert body["more"] is True and fetched == [] and body["retryable"] is False
+
+    monkeypatch.setattr(api, "SCAN_TIME_BUDGET_S", 60.0)
+    again = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                               json=BY_CAP | {"want": 2})).json()
+    assert [d["opportunity_id"] for d in again["delivered"]] == [str(later.id)]
+    assert again["more"] is False and again["credits_remaining"] == 1
+
+
+@pytest.mark.asyncio
+async def test_skip_ids_are_not_fetched_again_and_want_limits_the_delivery(client, session, monkeypatch):  # noqa: F811
+    await _credits(session, client.user.company_id, 3)
+    fetched = []
+
+    async def fetch(s, oid):
+        fetched.append(oid)
+        return await _passes_on_fetch(s, oid)
+    monkeypatch.setattr(api, "fetch_for_delivery", fetch)
+    fell = await _parcel(session, "9731", 9900, ready=False)
+    a = await _parcel(session, "9732", 9000)
+    await _parcel(session, "9733", 8000)
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                              json=BY_CAP | {"want": 1, "skip_ids": [str(fell.id)]})).json()
+    assert [d["opportunity_id"] for d in body["delivered"]] == [str(a.id)]
+    assert fetched == [] and body["credits_remaining"] == 2
+
+
+def test_confidence_tier_follows_the_binding_limit():
+    from app.cities.herzliya.dossier import confidence_tier
+    cap = {"floors": {"low": 7}, "cap_400_sqm": 3000.0}
+    assert confidence_tier({"floors": {"low": None}}) == 2
+    assert confidence_tier(cap | {"policy_area": {"why": "אין פוליגון"}}) == 2
+    assert confidence_tier(cap | {"policy_area": {"binding": "cap", "low": {"sqm": 3000.0}}}) == 0
+    assert confidence_tier(cap | {"policy_area": {"binding": "cap", "low": {"sqm": 2400.0}}}) == 1
+    assert confidence_tier(cap | {"policy_area": {"binding": "envelope", "low": {"sqm": 2000.0}}}) == 1
 
 
 @pytest.mark.asyncio

@@ -278,6 +278,8 @@ export interface SearchOptions {
   minCap400Sqm?: number;
   certainFloorsOnly?: boolean;
   deliverableOnly?: boolean;
+  /** ‏W6 · גם חלקות שכלכליות רק עם הגדלת זכויות — אחרי הכלכליות, ורק בסימון. */
+  includeRightsRequest?: boolean;
   // ── סדר העדפות, עד שלוש ──
   preferences?: Preference[];
   limit?: number;
@@ -343,15 +345,37 @@ export interface ScanResult {
   found: number;
   requested: number;
   skipped: number;
+  /** מה שנבדק ונפל בקריאה הזו — נשלח חזרה בהמשך, כדי שלא יישלף שוב. */
+  skipped_ids: string[];
+  /** כמה מועמדים נבדקו בקריאה הזו. */
+  checked: number;
+  /** נגמר תקציב הזמן ויש עוד תור: המסך קורא שוב עם `want` ו-`skipIds`. */
+  more: boolean;
   retryable: boolean;
   message: string | null;
   credits_remaining: number;
+  found_economic: number;
+  found_rights_request: number;
+  /** אין אף חלקה כלכלית, ויש כאלה שכלכליות רק עם הגדלת זכויות: לא נמסר ולא
+   *  חויב כלום, והמסירה קורית רק בקריאה חוזרת עם `acceptRightsRequest`. */
+  needs_rights_confirmation: { count: number } | null;
 }
 
-function scanBody(polygon: object, options: SearchOptions, readyOnly = false): string {
+export interface ScanContinuation {
+  /** כמה תיקים עוד חסרים לסריקה הזו. */
+  want?: number;
+  skipIds?: string[];
+}
+
+function scanBody(polygon: object, options: SearchOptions, readyOnly = false,
+                  acceptRightsRequest = false, next: ScanContinuation = {}): string {
   return JSON.stringify({
     polygon,
     ready_only: readyOnly,
+    want: next.want,
+    skip_ids: next.skipIds ?? [],
+    include_rights_request: options.includeRightsRequest ?? false,
+    accept_rights_request: acceptRightsRequest,
     min_area_sqm: options.minAreaSqm,
     min_units: options.minUnits,
     min_floors: options.minFloors,
@@ -368,10 +392,11 @@ export function previewScan(cityCode: string, polygon: object, options: SearchOp
 }
 
 /** מוסר עד שלושה תיקים מהאזור. עם `readyOnly` — רק תיקים שלמים, מיד, בלי
- *  שליפה מהארכיון; בלעדיו עשוי לקחת עד כדקה. */
-export function runScan(cityCode: string, polygon: object, options: SearchOptions = {}, readyOnly = false): Promise<ScanResult> {
+ *  שליפה מהארכיון; בלעדיו שולף מועמד אחד בכל פעם, ועד כדקה לקריאה (`more`). */
+export function runScan(cityCode: string, polygon: object, options: SearchOptions = {}, readyOnly = false,
+                        acceptRightsRequest = false, next: ScanContinuation = {}): Promise<ScanResult> {
   return request<ScanResult>(`/api/v1/candidates/${cityCode}/scan/deliver`, {
-    method: "POST", body: scanBody(polygon, options, readyOnly),
+    method: "POST", body: scanBody(polygon, options, readyOnly, acceptRightsRequest, next),
   });
 }
 

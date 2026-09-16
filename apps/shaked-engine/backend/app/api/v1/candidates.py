@@ -1,3 +1,4 @@
+import time
 from typing import Any, Literal
 from uuid import UUID
 
@@ -85,9 +86,9 @@ async def search_candidates(
 # לקנות את שלוש הראשונות. הסריקה מחזירה מספר לפני החיוב, ותיקים אחריו.
 
 SCAN_SIZE = 3
-# שליפה מהארכיון היא 10–20 שניות, והארכיון מוגבל בקצב. יותר משתיים
-# בבקשה אחת עוברות את זמן ההמתנה של הדפדפן; השאר מושלמות בקריאה נוספת.
-MAX_FETCHES_PER_SCAN = 2
+# שליפה מהארכיון היא 10–20 שניות, והדפדפן ממתין עד 90. אחרי התקציב לא
+# מתחילים שליפה חדשה: מחזירים ``more``, והמסך קורא שוב עם מה שנשאר (טל, 16.09).
+SCAN_TIME_BUDGET_S = 60.0
 
 
 class ScanArea(BaseModel):
@@ -109,6 +110,10 @@ class ScanArea(BaseModel):
     # ‏״תיקים מושלמים״ (טל, 16.09): רק מגרשים שתיק הבניין שלהם כבר שלם. בלי
     # שליפה מהארכיון בזמן החיפוש — התוצאה מיידית, ואין תיק שנשלף חלקית.
     ready_only: bool = False
+    # ‏המשך אוטומטי של אותה סריקה: כמה תיקים עוד חסרים, ומה כבר נבדק ונפל
+    # בקריאה קודמת — ‏`NoBuildingFile` אינו נשמר, ובלעדיו ההמשך היה שולף שוב.
+    want: int | None = Field(default=None, ge=1, le=SCAN_SIZE)
+    skip_ids: list[UUID] = Field(default_factory=list, max_length=200)
     # ‏W6 · נשארו עד שמסך הסריקה יורד מהם. **אינם משפיעים על הסריקה** — הם
     # תנאי צוות, ונשארים ב-`/search` של המנהל.
     min_units: int | None = Field(default=None, ge=0)
@@ -129,13 +134,14 @@ parcel_economics = screening
 async def _scan_queue(session, rules, body: ScanArea, company_id) -> dict[str, list[dict[str, Any]]]:
     """שני תורים: **כלכליות** לפי המדיניות, ו**כלכליות רק עם הגדלת זכויות**.
 
-    בכל תור — מוכנות קודם (בועז, 15.09), ובתוך זה הרווחיות קודם (16.09).
+    בכל תור — שכבת הביטחון קודם (‏scan.html rev 35), ובתוכה הרווחיות קודם.
+    המוכנות אינה משנה את הסדר (טל, 16.09): מגרש חזק שעוד לא נשלף נבדק ראשון.
     חלקה שאינה כלכלית גם בתקרת ה-400%, או שאין לה תרחיש, אינה מוצעת כלל:
     אין בה הזדמנות, והלקוח לא ישלם עליה.
     """
     filters = {"polygon": body.polygon, "min_area_sqm": body.min_area_sqm,
                "max_units": body.max_units, "limit": 500,
-               "exclude_delivered_ids": await delivered_ids(session, company_id)}
+               "exclude_delivered_ids": await delivered_ids(session, company_id) | set(body.skip_ids)}
     try:
         rows = await rules.screen_candidates(session, filters)
     except ValueError as e:
@@ -157,8 +163,8 @@ async def _scan_queue(session, rules, body: ScanArea, company_id) -> dict[str, l
             economic.append(r)
         elif e.get("cap_margin") is not None and e["cap_margin"] >= threshold:
             rights.append(r)
-    economic.sort(key=lambda r: (not _ready(r), -r["economics"]["margin"]))
-    rights.sort(key=lambda r: (not _ready(r), -r["economics"]["cap_margin"]))
+    economic.sort(key=lambda r: (r["economics"].get("tier", 2), -r["economics"]["margin"]))
+    rights.sort(key=lambda r: (r["economics"].get("tier", 2), -r["economics"]["cap_margin"]))
     return {"economic": economic, "rights": rights}
 
 
@@ -206,7 +212,11 @@ async def scan_deliver(
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user),
 ) -> dict[str, Any]:
-    """מוסר עד שלושה מגרשים מהאזור, לפי סדר `_scan_queue`.
+    """מוסר עד שלושה מגרשים מהאזור, לפי סדר `_scan_queue`, **אחד-אחד**.
+
+    מגרש שלא נשלף עדיין — שולפים אותו עכשיו, מעריכים מחדש, ומוסרים רק אם
+    עבר את תנאי הסף. אחרי ``SCAN_TIME_BUDGET_S`` לא מתחילים שליפה חדשה
+    ומחזירים ``more``; המסך ממשיך עם ``want`` ו-``skip_ids``.
 
     מגרש שאין לו תיק בניין או שהשליפה לא ענתה על השער — מדלגים לבא אחריו,
     ואינו מחויב (ACC-05). ארכיון שסירב — עוצרים ומחזירים `retryable`:
@@ -229,24 +239,25 @@ async def scan_deliver(
     if (confirm := _needs_confirmation(q, body)) is not None:
         return {"delivered": [], "found": 0, "requested": 0, "skipped": 0, "retryable": False,
                 "message": None, "credits_remaining": credits, **counts,
+                "skipped_ids": [], "checked": 0, "more": False,
                 "needs_rights_confirmation": confirm}
     queue = _offered(q, body)
-    target = min(SCAN_SIZE, credits)
+    target = min(body.want or SCAN_SIZE, credits)
+    started = time.monotonic()
 
     async def prepare(s, oid):
         return await fetch_for_delivery(s, oid)
 
     delivered: list[str] = []
-    skipped, fetches, retryable, message = 0, 0, False, None
+    skipped_ids: list[str] = []
+    checked, more, retryable, message = 0, False, False, None
     for candidate in queue:
         if len(delivered) >= target:
             break
-        if not _ready(candidate):
-            if fetches >= MAX_FETCHES_PER_SCAN:
-                retryable = True
-                message = "חלק מהתיקים עוד נשלפים מהארכיון. לחיצה נוספת תשלים אותם."
-                break
-            fetches += 1
+        if not _ready(candidate) and time.monotonic() - started >= SCAN_TIME_BUDGET_S:
+            more = True
+            break
+        checked += 1
         oid = UUID(candidate["id"])
         try:
             row, charged = await deliver(session, oid, company_id, user_id,
@@ -261,7 +272,7 @@ async def scan_deliver(
                 delivered.append(str(oid))
         except (NoBuildingFile, NotDeliverable):
             await session.rollback()
-            skipped += 1
+            skipped_ids.append(str(oid))
         except ArchiveUnavailable:
             await session.rollback()
             retryable = True
@@ -277,7 +288,10 @@ async def scan_deliver(
         # כמה מועמדים היו באזור בכלל: 0 הוא ״אין הזדמנויות כאן״, לא ״נכשל״.
         "found": len(queue),
         "requested": target,
-        "skipped": skipped,
+        "skipped": len(skipped_ids),
+        "skipped_ids": skipped_ids,
+        "checked": checked,
+        "more": more,
         "retryable": retryable,
         "message": message,
         "credits_remaining": await _credits(session, company_id),

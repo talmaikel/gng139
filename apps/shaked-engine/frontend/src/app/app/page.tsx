@@ -35,6 +35,7 @@ const OpportunityMap = dynamic(() => import("@/components/Map"), { ssr: false })
 
 const CITY = "herzliya";
 const DEFAULT_RADIUS_M = 200;
+const SCAN_SIZE = 3;
 const MIN_RADIUS_M = 80;
 
 /** המפה מקבלת מועמדים; הלקוח רואה עליה רק את מה שכבר נמסר לו. */
@@ -79,6 +80,7 @@ export default function DashboardPage() {
 
   const [result, setResult] = useState<ScanResult | null>(null);
   const [busy, setBusy] = useState<"search" | null>(null);
+  const [progress, setProgress] = useState<{ checked: number; found: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -105,6 +107,9 @@ export default function DashboardPage() {
   // מתחלף, ומערך חדש בכל render החזיר אותה לחלקות בכל הקלדה — המשתמש לא
   // יכול היה להתרחק כדי לבחור נקודה.
   const mapRows = useMemo(() => asMapRows(mine), [mine]);
+  // בכניסה המפה פתוחה על הרצליה כולה, לא על תיק ישן מהמאגר — אחרת נראה
+  // כאילו כבר נסרק משהו. ממקדים רק על מה שהסריקה האחרונה מסרה.
+  const fitRows = useMemo(() => asMapRows(result?.delivered ?? []), [result]);
 
   // אזור החיפוש: העיגול כפוליגון, כמו שהשרת מצפה. השטח נמדד כאן רק כרמז מוקדם.
   const area = useMemo(() => (center ? circlePolygon(center, radiusM) : null), [center, radiusM]);
@@ -124,23 +129,40 @@ export default function DashboardPage() {
     resetScan();
   }
 
-  /** חיפוש = מסירה: עד שלושה תיקים שלמים מהאזור, בלחיצה אחת. */
-  async function search() {
+  /** חיפוש = מסירה: עד שלושה תיקים מהאזור, בלחיצה אחת. מועמד שעוד לא נשלף
+   *  נשלף מהארכיון בזמן אמת, אחד-אחד; כשהשרת מחזיר `more` ממשיכים לבד. */
+  async function search(acceptRightsRequest = false) {
     if (!searchArea) return;
     setBusy("search");
     setResult(null);
     setError(null);
     setSelectedId(null);
+    setProgress({ checked: 0, found: 0 });
     try {
-      const r = await runScan(CITY, searchArea, options, true);
-      setResult(r);
-      if (r.delivered[0]) setSelectedId(r.delivered[0].opportunity_id);
+      let r = await runScan(CITY, searchArea, options, false, acceptRightsRequest);
+      // ‏`found` של הקריאה הראשונה: בהמשך הוא כבר אינו כולל את מה שנמסר או נבדק
+      const found = r.found;
+      const delivered = [...r.delivered];
+      const skipIds = [...r.skipped_ids];
+      let checked = r.checked, skipped = r.skipped;
+      while (r.more && delivered.length < SCAN_SIZE && r.credits_remaining > 0) {
+        setProgress({ checked, found: delivered.length });
+        r = await runScan(CITY, searchArea, options, false, acceptRightsRequest,
+                          { want: SCAN_SIZE - delivered.length, skipIds });
+        delivered.push(...r.delivered);
+        skipIds.push(...r.skipped_ids);
+        checked += r.checked;
+        skipped += r.skipped;
+      }
+      setResult({ ...r, delivered, skipped, skipped_ids: skipIds, checked, found });
+      if (delivered[0]) setSelectedId(delivered[0].opportunity_id);
     } catch (e) {
       if (signInIfUnauthorized(e)) return;
       // ‏422 הוא MAP-01 עושה את עבודתו, והמשפט בעברית הוא מה שהמשתמש צריך.
       setError(e instanceof ApiError ? e.detail : "החיפוש נכשל. אפשר לנסות שוב.");
     } finally {
       setBusy(null);
+      setProgress(null);
       loadAccount();
     }
   }
@@ -206,10 +228,14 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={search}
+            onClick={() => search()}
             disabled={!searchArea || picking || busy !== null || credits < 1}
           >
-            {busy === "search" ? "מאתר תיקים…" : <><IconSearch size={14} /> חפש</>}
+            {busy === "search"
+              ? (progress && progress.checked > 0
+                  ? `נבדקו ${progress.checked} חלקות · נמצאו ${progress.found} תיקים…`
+                  : "מאתר תיקים…")
+              : <><IconSearch size={14} /> חפש</>}
           </button>
 
           <span className="text-muted" style={{ fontSize: ".88rem" }}>{hint}</span>
@@ -230,6 +256,18 @@ export default function DashboardPage() {
             {radiusM} מ׳ · {dunam(Math.PI * radiusM * radiusM)}
           </span>
         </div>
+
+        {/* ‏W6 · בועז, 16.09: חלקה שכלכלית רק עם הגדלת זכויות נמסרת רק בסימון, ואחרי הכלכליות */}
+        <label style={{ display: "flex", gap: ".5rem", alignItems: "center", marginTop: ".7rem", fontSize: ".88rem", cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={options.includeRightsRequest ?? false}
+            disabled={busy !== null}
+            onChange={(e) => { setOptions({ ...options, includeRightsRequest: e.target.checked }); resetScan(); }}
+          />
+          כולל חלקות שכלכליות רק עם בקשה להגדלת זכויות
+          <span className="text-muted">· אחרי הכלכליות לפי המדיניות</span>
+        </label>
       </div>
 
       {showControls && (
@@ -247,6 +285,7 @@ export default function DashboardPage() {
       <div className="card" style={{ marginBottom: "1.2rem", padding: 0, overflow: "hidden" }}>
         <OpportunityMap
           candidates={mapRows}
+          fitTo={fitRows}
           mode="circle"
           drawing={picking}
           circle={center ? { center, radiusM } : null}
@@ -258,15 +297,38 @@ export default function DashboardPage() {
         />
       </div>
 
-      {result && result.found === 0 && (
+      {result?.needs_rights_confirmation && (
+        <div className="card tone-warn" style={{ marginBottom: "1rem" }}>
+          <strong className="text-warn" style={{ fontSize: "1.05rem" }}>אין באזור חלקה כלכלית לפי המדיניות</strong>
+          <p style={{ margin: ".35rem 0 .6rem", fontSize: ".9rem" }}>
+            {result.needs_rights_confirmation.count === 1
+              ? "נמצאה חלקה אחת שכלכלית רק עם בקשה להגדלת זכויות"
+              : `נמצאו ${result.needs_rights_confirmation.count} חלקות שכלכליות רק עם בקשה להגדלת זכויות`}
+            . הבקשה אינה מובטחת. <strong>עדיין לא חויבת.</strong>
+          </p>
+          <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap" }}>
+            <button onClick={() => search(true)} disabled={busy !== null || credits < 1}>
+              קבל עד {Math.min(3, credits, result.needs_rights_confirmation.count)} תיקים
+            </button>
+            <button className="btn-secondary" onClick={resetScan} disabled={busy !== null}>לא עכשיו</button>
+          </div>
+        </div>
+      )}
+
+      {result && result.found === 0 && !result.needs_rights_confirmation && (
         <div className="card tone-warn" style={{ marginBottom: "1rem" }}>
           <strong className="text-warn" style={{ fontSize: "1.05rem" }}>אין הזדמנויות באזור הזה</strong>
           <p style={{ margin: ".35rem 0 .2rem", fontSize: ".9rem" }}>
-            לא נמצא סביב הנקודה מגרש עם תיק שלם שעומד בתנאי הסף{conditionsCount > 0 ? " ובתנאים שהגדרת" : ""}. <strong>לא חויבת.</strong>
+            לא נמצא סביב הנקודה מגרש שעומד בתנאי הסף{conditionsCount > 0 ? " ובתנאים שהגדרת" : ""}. <strong>לא חויבת.</strong>
           </p>
           <p className="text-muted" style={{ margin: 0, fontSize: ".88rem" }}>
             אפשר להגדיל את הרדיוס, לבחור נקודה אחרת{conditionsCount > 0 ? ", או להקל בתנאים" : ""}.
           </p>
+          {!options.includeRightsRequest && result.found_rights_request > 0 && (
+            <p style={{ margin: ".35rem 0 0", fontSize: ".88rem" }}>
+              באזור {result.found_rights_request === 1 ? "יש חלקה אחת" : `יש ${result.found_rights_request} חלקות`} שכלכליות רק עם בקשה להגדלת זכויות. סמנו את האפשרות למעלה כדי לקבל אותן.
+            </p>
+          )}
         </div>
       )}
 
@@ -287,7 +349,7 @@ export default function DashboardPage() {
           )}
           {result.delivered.length > 0 && result.delivered.length < 3 && result.credits_remaining > 0 && (
             <p className="text-muted" style={{ margin: ".3rem 0 0", fontSize: ".88rem" }}>
-              באזור היו רק {result.delivered.length === 1 ? "תיק שלם אחד" : `${result.delivered.length} תיקים שלמים`}. נותרו {result.credits_remaining} זכאויות — אפשר לבחור נקודה נוספת.
+              באזור נמצאו רק {result.delivered.length === 1 ? "תיק אחד" : `${result.delivered.length} תיקים`}. נותרו {result.credits_remaining} זכאויות — אפשר לבחור נקודה נוספת.
             </p>
           )}
         </div>

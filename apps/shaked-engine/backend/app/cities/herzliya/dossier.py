@@ -1196,7 +1196,26 @@ async def screening(session, city_rules, opportunity_id: UUID) -> dict[str, Any]
     return {"case": (econ.get("rights_verdict") or {}).get("case"),
             "margin": s.get("profit_margin_on_cost_ratio"),
             "cap_margin": cap_margin,
-            "after_levy": econ.get("after_levy") is not None}
+            "after_levy": econ.get("after_levy") is not None,
+            "tier": confidence_tier(assessment)}
+
+
+def confidence_tier(assessment: dict[str, Any]) -> int:
+    """שכבת ביטחון לדירוג הסריקה — ‏scan.html rev 35, ו-`layer_a/scripts/rank.py:tier`.
+
+    ערך גדול שאי אפשר להגן עליו אינו עדיף על ערך קטן שכן. **0** — תקרת
+    ה-400% חוסמת בכל הטווח, גם בקצה הנמוך של המעטפת; **1** — המעטפת חוסמת,
+    או שהחסם מתהפך בתוך הטווח; **2** — חסם עליון בלבד: אין קומות, מעטפת או תקרה.
+    הטווח כאן הוא נמוך–גבוה של ‏`policy_envelope`, המקביל לטווח k ב-POC.
+    """
+    policy = assessment.get("policy_area") or {}
+    cap = assessment.get("cap_400_sqm")
+    if (assessment.get("floors") or {}).get("low") is None or not policy.get("binding") or not cap:
+        return 2
+    low = (policy.get("low") or {}).get("sqm")
+    if policy["binding"] == "cap" and low is not None and low >= cap - 1:
+        return 0
+    return 1
 
 
 async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> dict[str, Any]:
