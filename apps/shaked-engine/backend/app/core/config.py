@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     source_cache_dir: str = ".cache/sources"
     source_cache_ttl_seconds: int = 86400
     source_max_age_days: int = 30  # evidence older than this cannot decide an eligibility check
+    # ‏16.09 · תיק בניין הוא היסטוריה: היתר שהופק אינו משתנה, ובקשה חדשה
+    # נדירה. יממה (ברירת המחדל של המקורות) פירושה שכל חלקה שנמסרה אתמול
+    # נשלפת שוב היום — ב-10 שניות לבקשה — גם בהפקת התיק וגם בסריקה הבאה.
+    # ‏90 יום: הראיות עצמן מפסיקות להכריע אחרי `source_max_age_days`, אבל
+    # דף שנקרא פעם אחת אינו סיבה לפנות שוב לארכיון שחסם סריקה.
+    archive_cache_days: int = Field(default=90, ge=1, le=365)
     # מגבלת שטח לאזור חיפוש מצויר. הערך ייקבע בפיילוט (PRD MAP-01);
     # 250 דונם הוא הערך שה-POC עבד לפיו והוא נקודת המוצא.
     max_search_area_sqm: float = 250_000
