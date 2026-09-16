@@ -30,7 +30,7 @@ from uuid import UUID
 from sqlalchemy import delete, select
 
 from app.cities.herzliya import renewal
-from app.cities.herzliya.archive_client import HerzliyaArchiveClient
+from app.cities.herzliya.archive_client import ArchiveBlocked, HerzliyaArchiveClient
 from app.evidence import Certainty
 from app.models.evidence import FieldEvidence
 from app.models.opportunity import Opportunity
@@ -132,7 +132,7 @@ async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveCl
     # אינו תקלת תקשורת אלא **ממצא על החלקה**. הן נספרו יחד, ולכן תיק ריק
     # דווח ללקוח כ״הארכיון לא השיב, נסה שוב״ — והוא היה מנסה לנצח.
     result = {"fetched": 0, "no_tik": 0, "empty": 0, "failed": 0,
-              "requests": 0, "last_error": None}
+              "requests": 0, "last_error": None, "blocked": False}
     try:
         for oid in opportunity_ids:
             opp = await session.get(Opportunity, oid)
@@ -157,6 +157,14 @@ async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveCl
                 await renewal.apply(session, opp)
                 result["fetched"] += 1
                 result["requests"] += len(reqs)
+            except ArchiveBlocked as exc:
+                # סירוב אינו תקלה בתיק אחד: כל בקשה נוספת רק מאריכה את החסימה.
+                # החלקות שלא נשאלו נספרות כנכשלות — ״נסה שוב״, לא ״אין תיק״.
+                result["failed"] += len(opportunity_ids) - sum(
+                    result[k] for k in ("fetched", "no_tik", "empty", "failed"))
+                result["blocked"] = True
+                result["last_error"] = f"{type(exc).__name__}: {exc}"[:200]
+                break
             except Exception as exc:                # תקלה בתיק אחד אינה מפילה את השאר
                 result["failed"] += 1
                 # הסיבה נשמרת: במסלול המסירה היא ההבדל בין ״נסה שוב״

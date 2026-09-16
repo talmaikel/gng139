@@ -77,3 +77,26 @@ async def test_find_documents_keeps_pdf_links_and_resolves_relative_ones(tmp_pat
     documents = await archive(tmp_path, page(links)).find_documents("1652")
     assert [d.url for d in documents] == ["https://handasi.complot.co.il/files/a.pdf", "https://archive.gis-net.co.il/b.PDF"]
     assert {d.tik_id for d in documents} == {"1652"}
+
+
+# ‏16.09 · שני העמודים כפי שהארכיון החזיר אותם אחרי פרץ בקשות — ב-200.
+CAPTCHA = "<h2>אימות משתמש</h2><p>נדרש אימות משתמש</p><div class='g-recaptcha'></div>"
+REFUSED = "<p>מצטערים, לא ניתן להציג את המידע המבוקש. לא אותרו תוצאות התואמות את מאפייני החיפוש שהוגדרו</p>"
+
+
+async def test_a_refusal_page_raises_and_is_not_kept_in_the_cache(tmp_path):
+    """65 תיקים ״ריקים״ ברצף היו סירוב, והסירוב נשמר במטמון ליממה."""
+    from app.cities.herzliya.archive_client import ArchiveBlocked
+    answers = [REFUSED, CAPTCHA, "<table><tr><td>20170371</td></tr></table>"]
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, text=answers[len(calls) - 1])
+
+    client = archive(tmp_path, handler)
+    for _ in range(2):
+        with pytest.raises(ArchiveBlocked):
+            await client.file("8817")
+    assert "20170371" in (await client.file("8817"))["html"]
+    assert len(calls) == 3

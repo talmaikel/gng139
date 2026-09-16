@@ -169,3 +169,40 @@ async def test_enrich_reads_every_building_file_of_the_parcel(session):
     assert "1546" in rows["post_2005_permit"].location and "7351" in rows["post_2005_permit"].location
     assert rows["permit_date"].value == "1972-01-01"
     assert "strengthened" not in rows and "occupied" not in rows
+
+
+class Refusing:
+    """ארכיון שמסרב מהתיק הראשון."""
+    def __init__(self):
+        self.files = 0
+
+    async def find_tik_ids(self, block, parcel):
+        return ["1546"]
+
+    async def file(self, tik):
+        from app.cities.herzliya.archive_client import ArchiveBlocked
+        self.files += 1
+        raise ArchiveBlocked("verification page")
+
+    async def close(self):
+        pass
+
+
+@pytest.mark.asyncio
+async def test_a_refusal_stops_the_list_and_counts_as_failed_not_empty(session):
+    """סירוב אינו ״תיק ריק״: ריק הופך למסירה שמדלגת על החלקה, ונכשל — ל״נסה שוב״."""
+    from app.models.opportunity import Opportunity, VerificationLevel
+    ids = []
+    for n in range(3):
+        opp = Opportunity(city_code="herzliya", address=f"רחוב הסירוב {n}", block="9812", block_suffix=0,
+                          parcel=str(uuid.uuid4().int % 100000), verification_level=VerificationLevel.RAW.value,
+                          geom="SRID=4326;MULTIPOLYGON(((34.84 32.16,34.8404 32.16,34.8404 32.1603,"
+                               "34.84 32.1603,34.84 32.16)))", metadata_json={})
+        session.add(opp)
+        await session.flush()
+        ids.append(opp.id)
+    archive = Refusing()
+
+    out = await enrich(session, ids, client=archive)
+    assert archive.files == 1, "אחרי סירוב אין פונים שוב"
+    assert out["blocked"] is True and out["failed"] == 3 and out["empty"] == 0

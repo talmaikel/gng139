@@ -49,10 +49,19 @@ TIK_ID_PATTERN = re.compile(r"(?:getBuilding\s*\(\s*['\"]?|#building/)(\d+)")
 PDF_HREF_PATTERN = re.compile(r'href=["\']([^"\']+)', re.IGNORECASE)
 DECLARED_COUNT_PATTERN = re.compile(r"נמצאו\s*(\d+)\s*תיקי\s*בניין")
 NO_RESULTS_MARKERS = ("ERR_NO_RESULTS", "לא נמצאו")
+# ‏16.09 · אחרי פרץ בקשות הארכיון מחזיר עמוד ״אימות משתמש״ עם reCAPTCHA, ואחריו
+# ‏״מצטערים, לא ניתן להציג את המידע המבוקש״ לכל דף תיק — ב-200. דף התיק נקרא
+# עד אז כ״תיק בלי בקשות״, והחלקה דולגה כאילו אין לה תיק. בקצב של בקשה ל-10
+# שניות: 65 תיקים ״ריקים״ ברצף, ואף אחד מהם לא היה ריק.
+BLOCKED_MARKERS = ("g-recaptcha", "אימות משתמש", "לא ניתן להציג את המידע המבוקש")
 
 
 class HerzliyaArchiveError(SourceError):
     pass
+
+
+class ArchiveBlocked(HerzliyaArchiveError):
+    """הארכיון סירב לענות. אינו ממצא על החלקה, ואין להמשיך לפנות אליו עכשיו."""
 
 
 @dataclass
@@ -97,7 +106,12 @@ class HerzliyaArchiveClient:
 
     async def _page(self, params: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         raw, meta = await self._public.get(ARCHIVE_URL, params)
-        return raw.decode("utf-8", errors="replace"), meta
+        page = raw.decode("utf-8", errors="replace")
+        if any(marker in page for marker in BLOCKED_MARKERS):
+            # מהמטמון החוצה: אחרת כל ניסיון חוזר ביממה הקרובה קורא את הסירוב שוב
+            self._public.forget(ARCHIVE_URL, params)
+            raise ArchiveBlocked(f"The archive refused the request (verification page): {meta.get('url')}")
+        return page, meta
 
     async def search(self, gush: str, parcel: str) -> ArchiveSearch:
         """Building-permit files ("tik binyan") for a gush/parcel, with how the archive answered."""
