@@ -114,6 +114,12 @@ function BettermentBlock({ b }: { b: Betterment }) {
                 value={`${ilsApprox(levy.low_ils)}–${ilsApprox(levy.high_ils)}`} />
         )}
       </StatStrip>
+      {b.calculation && (
+        <div style={{ marginTop: ".65rem", padding: ".65rem .8rem", background: "var(--surface-2)", borderRadius: "var(--mantine-radius-sm)" }}>
+          <Text size="xs" c="dimmed" fw={600}>כך חושב האומדן</Text>
+          <Text size="sm" fw={600}>{b.calculation}</Text>
+        </div>
+      )}
       <Group gap="xs" mt="sm">
         <Group gap={2} wrap="nowrap" maw="100%">
           <StatusBadge tone={tone}>{b.category_label}</StatusBadge><Term id="levy_category" />
