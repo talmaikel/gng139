@@ -893,7 +893,8 @@ def _assumption_rows(a, live: dict, construction_cost, construction_cost_per_sqm
     return rows
 
 
-async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) -> dict[str, Any]:
+async def _economics(session, opp: Opportunity, assessment: dict, fields: dict,
+                     solve_required: bool = True) -> dict[str, Any]:
     """התרחיש הגנרי — ‏PRD 6.4. **אינו דוח שמאי חתום, וזה נכתב בתיק.**"""
     cap = assessment.get("cap_400_sqm")
     a = get_assumptions(opp.city_code)
@@ -1030,7 +1031,8 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
                        f"הקיימות — {betterment['levy'].get('estimate_ils', 0) / 1e6:,.1f} מיליון ₪ היטל. "
                        "אינו שומה")}
 
-    rights_verdict = _rights_verdict(policy_run, cap_run, run, assessment, target)
+    rights_verdict = _rights_verdict(policy_run, cap_run, run, assessment, target,
+                                     solve_required=solve_required)
     head_inputs = inputs.model_copy(update={
         "buildable_area_sqm": head["area_sqm"],
         "betterment_base_ils": after["betterment_ils"] if after else inputs.betterment_base_ils})
@@ -1122,7 +1124,8 @@ def _policy_basis(assessment: dict) -> str:
 REQUIRED_AREA_ITERATIONS = 30
 
 
-def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float) -> dict[str, Any]:
+def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float,
+                    solve_required: bool = True) -> dict[str, Any]:
     """‏**W2 · האם כלכלי לפי המדיניות, ואם לא — כמה זכויות צריך לבקש.**
 
     ארבעה מצבים, ולא כן/לא: ״לא כלכלי לפי המדיניות וכלכלי ב-400%״ הוא בדיוק
@@ -1152,6 +1155,8 @@ def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float) -
                 "text": (f"לא כלכלי לפי המדיניות ({pm:.1%} על העלות {when}), וגם לא בניצול מלא של "
                          f"תקרת ה-400% ({cm:.1%}). הגדלת זכויות אינה פותרת — הפער במחיר, "
                          "בעלויות או בתמורה לדיירים.")}
+    if not solve_required:
+        return {"case": "B", "basis": "after_levy" if after else "before_levy"}
     lo, hi = area, cap
     for _ in range(REQUIRED_AREA_ITERATIONS):
         mid = (lo + hi) / 2
@@ -1172,6 +1177,26 @@ def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float) -
                    f"כ-{addition:,.0f} מ״ר מעל המדיניות{add_far} ({required / cap:.0%} מהתקרה). "
                    "זה הבסיס לבקשת הגדלת זכויות מהוועדה המקומית, עד תקרת החוק.")
     return out
+
+
+async def screening(session, city_rules, opportunity_id: UUID) -> dict[str, Any]:
+    """‏W6 · הכלכלה של מועמד לסריקה — מקרה ושיעור רווח, בלי שום פרט מזהה.
+
+    אותו חישוב כמו התיק (`_economics`), כך שהסריקה מדרגת לפי המספר שהלקוח
+    יראה אחר כך. בלי פתרון תוספת הזכויות: הסריקה צריכה רק לדעת שהוא B.
+    """
+    opp = await session.get(Opportunity, opportunity_id)
+    assessment = await city_rules.assess(session, opportunity_id)
+    fields = await fields_for(session, opportunity_id)
+    econ = await _economics(session, opp, assessment, fields, solve_required=False)
+    s = econ.get("scenario") or {}
+    cap = (econ.get("scenarios") or {}).get("cap_400") or {}
+    cap_margin = (cap.get("margin_after_levy") if cap.get("margin_after_levy") is not None
+                  else cap.get("margin_before_levy"))
+    return {"case": (econ.get("rights_verdict") or {}).get("case"),
+            "margin": s.get("profit_margin_on_cost_ratio"),
+            "cap_margin": cap_margin,
+            "after_levy": econ.get("after_levy") is not None}
 
 
 async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> dict[str, Any]:

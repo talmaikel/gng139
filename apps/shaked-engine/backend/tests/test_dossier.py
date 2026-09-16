@@ -1235,3 +1235,20 @@ async def test_every_cost_row_says_how_it_was_computed_and_where_its_input_came_
     assert all(r["formula"] and r["explain"] and r["source"] for r in econ["cost_rows"])
     assert "17 עסקאות" in rows["revenue"]["source"]
     assert econ["assumptions"]["sale_price_per_sqm_ils"]["unit_label"] == "₪ למ״ר"
+
+
+@pytest.mark.asyncio
+async def test_the_scan_ranks_by_the_same_numbers_the_dossier_shows(session):
+    """‏W6 · הסריקה ממיינת לפי הכלכלה שהלקוח יראה בתיק — אותו חישוב, לא עותק."""
+    from app.cities.herzliya.dossier import screening
+    c, opp = await _small(session, "9696", street_frontages=1)
+    opp.existing_units = 10
+    await session.flush()
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    e = await screening(session, HerzliyaCityRules(), opp.id)
+    econ = d["economics"]
+    assert e["case"] == econ["rights_verdict"]["case"]
+    assert e["margin"] == pytest.approx(econ["scenario"]["profit_margin_on_cost_ratio"])
+    cap = econ["scenarios"]["cap_400"]
+    assert e["cap_margin"] == pytest.approx(cap["margin_after_levy"] if cap["margin_after_levy"] is not None
+                                            else cap["margin_before_levy"])

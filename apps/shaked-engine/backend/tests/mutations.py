@@ -80,6 +80,15 @@ MUTS = [
    "        result = mid\n", "        result = before\n"),
   ("cities/herzliya/dossier.py", "תוספת הזכויות הנדרשת אינה נפתרת",
    "    required = hi\n", "    required = cap\n"),
+  # ‏W6 · הסריקה: הגדלת זכויות רק בסימון, ואישור לפני חשיפה
+  ("api/v1/candidates.py", "חלקות הגדלת זכויות נמסרות בלי סימון",
+   'if not body.include_rights_request:\n        return q["economic"]',
+   'if not body.include_rights_request:\n        return q["economic"] + q["rights"]'),
+  ("api/v1/candidates.py", "חלקות הגדלת זכויות נמסרות בלי אישור כשאין כלכליות",
+   'if not q["economic"] and not body.accept_rights_request:\n        return []',
+   'if False:\n        return []'),
+  ("api/v1/candidates.py", "הסריקה אינה ממיינת לפי רווח",
+   'economic.sort(key=lambda r: (not _ready(r), -r["economics"]["margin"]))', 'pass'),
   # ‏A24 · קצב לשרתי הגרמושקות, ומשותף לכל התהליך
   ("sources/client.py", "הגרמושקות יורדות בלי קצב",
    '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),
