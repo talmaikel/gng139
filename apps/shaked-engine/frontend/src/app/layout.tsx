@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Shaked Engine · shakdan",
   description: "איתור מגרשים להתחדשות עירונית במסלול חלופת שקד, לחברות יזמיות",
   // Google Search Console ownership (HTML tag method).
-  verification: { google: "pWC8MXe9GW7rxtnj0cGusER9pZ1x8epQtjQfBg7A1y8" },
+  verification: { google: "PMkx6b-8Hl4Pi3CxSms9eg1PZIj8a3ckVkdM0QLDRIU" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
