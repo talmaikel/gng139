@@ -328,8 +328,37 @@ export interface DeliveredOpportunity {
 
 // ── S1/S2 · סריקה: פוליגון → עד שלושה תיקים, בלי לחשוף מועמדים ──
 
+/**
+ * ‏W6 · התנאים של הלקוח בסריקה (בועז, 16.09): שלושה, ובלי סדר העדפות.
+ *
+ * **נפרד מ-`SearchOptions` במכוון:** שם נשארים תנאי הצוות וסדר ההעדפות של
+ * מסך המנהל. הסדר בסריקה נקבע בשרת — מוכנות קודם, ובתוכן הרווחיות ביותר.
+ */
+export interface ScanConditions {
+  minAreaSqm?: number;
+  // ‏בלי רווח יזמי מזערי (טל, 16.09): השרת משתמש בסף שלו (16%).
+  maxUnits?: number;
+  /** ״כלול חלקות שכלכליות רק עם הגדלת זכויות״ */
+  includeRightsRequest?: boolean;
+}
+
+export interface ScanFlags {
+  /** רק תיקים שלמים, מיד, בלי שליפה מהארכיון. */
+  readyOnly?: boolean;
+  /** הלקוח אישר את הדילמה: אין חלקה כלכלית, ומקבלים חלקות הגדלת זכויות. */
+  acceptRightsRequest?: boolean;
+}
+
+/** מה שנמצא באזור לפי שני התורים. מספרים בלבד — בלי כתובות. */
+interface ScanCounts {
+  found_economic: number;
+  found_rights_request: number;
+  /** לא `null`: לא נמסר כלום, לא חויב כלום, והלקוח צריך לאשר. */
+  needs_rights_confirmation: { count: number } | null;
+}
+
 /** מספרים בלבד, לפני החיוב. */
-export interface ScanPreview {
+export interface ScanPreview extends ScanCounts {
   found: number;
   offer: number;
   ready: number;
@@ -337,9 +366,9 @@ export interface ScanPreview {
   credits_remaining: number;
 }
 
-export interface ScanResult {
+export interface ScanResult extends ScanCounts {
   delivered: DeliveredOpportunity[];
-  /** כמה מועמדים היו באזור. 0 = אין הזדמנויות כאן. */
+  /** כמה מועמדים הוצעו מהאזור. 0 = אין הזדמנויות כאן (או שנדרש אישור). */
   found: number;
   requested: number;
   skipped: number;
@@ -348,30 +377,32 @@ export interface ScanResult {
   credits_remaining: number;
 }
 
-function scanBody(polygon: object, options: SearchOptions, readyOnly = false): string {
+function scanBody(polygon: object, conditions: ScanConditions, flags: ScanFlags): string {
   return JSON.stringify({
     polygon,
-    ready_only: readyOnly,
-    min_area_sqm: options.minAreaSqm,
-    min_units: options.minUnits,
-    min_floors: options.minFloors,
-    min_cap_400_sqm: options.minCap400Sqm,
-    certain_floors_only: options.certainFloorsOnly ?? false,
-    preferences: options.preferences ?? [],
+    min_area_sqm: conditions.minAreaSqm,
+    max_units: conditions.maxUnits,
+    include_rights_request: conditions.includeRightsRequest ?? false,
+    accept_rights_request: flags.acceptRightsRequest ?? false,
+    ready_only: flags.readyOnly ?? false,
   });
 }
 
-export function previewScan(cityCode: string, polygon: object, options: SearchOptions = {}): Promise<ScanPreview> {
+export function previewScan(
+  cityCode: string, polygon: object, conditions: ScanConditions = {}, flags: ScanFlags = {},
+): Promise<ScanPreview> {
   return request<ScanPreview>(`/api/v1/candidates/${cityCode}/scan/preview`, {
-    method: "POST", body: scanBody(polygon, options),
+    method: "POST", body: scanBody(polygon, conditions, flags),
   });
 }
 
 /** מוסר עד שלושה תיקים מהאזור. עם `readyOnly` — רק תיקים שלמים, מיד, בלי
  *  שליפה מהארכיון; בלעדיו עשוי לקחת עד כדקה. */
-export function runScan(cityCode: string, polygon: object, options: SearchOptions = {}, readyOnly = false): Promise<ScanResult> {
+export function runScan(
+  cityCode: string, polygon: object, conditions: ScanConditions = {}, flags: ScanFlags = {},
+): Promise<ScanResult> {
   return request<ScanResult>(`/api/v1/candidates/${cityCode}/scan/deliver`, {
-    method: "POST", body: scanBody(polygon, options, readyOnly),
+    method: "POST", body: scanBody(polygon, conditions, flags),
   });
 }
 
