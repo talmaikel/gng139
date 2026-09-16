@@ -163,6 +163,21 @@ THRESHOLD_IDS = SECTION_70A_IDS + ("occupied",)
 UNOBTAINABLE = {"residential_share"}
 
 
+MIXED_ZONING_WORDS = ("מסחר", "תעסוקה", "מעורב")
+
+
+def _zoning_note(names) -> str:
+    """‏#95 · רמז, לא הכרעה. ייעוד מעורב אינו אומר שהשימוש בפועל אינו 70% מגורים,
+    וייעוד מגורים בלבד אינו מבטיח שהוא כן — אבל הראשון הוא סיבה לבדוק קודם."""
+    residential = [n for n in (names or []) if "מגורים" in n]
+    if not residential:
+        return ""
+    mixed = [n for n in residential if any(w in n for w in MIXED_ZONING_WORDS)]
+    if mixed:
+        return f" · ייעוד מעורב בתכנית ({mixed[0]}) — סיכון שהשימוש בפועל אינו 70% מגורים, לבדוק קודם"
+    return f" · הייעוד מגורים בלבד ({', '.join(sorted(set(residential)))}) — סביר, ועדיין לא מוכרע"
+
+
 def threshold_checks(f: dict) -> list[Check]:
     """חמשת תנאי §70א: שניים מההגדרה עצמה ושלושה מהסעיפים הממוספרים."""
     out = []
@@ -176,6 +191,7 @@ def threshold_checks(f: dict) -> list[Check]:
                                                   else "אין ייעוד מגורים")))
 
     share = f.get("residential_share")
+    zoning_note = _zoning_note(f.get("zoning_names"))
     out.append(Check("residential_share", "לפחות 70% מהשטח הבנוי משמש כדין למגורים",
                      "unknown" if share is None else ("passed" if share >= 0.7 else "failed"),
                      POLICY_URL, 3,
@@ -184,7 +200,7 @@ def threshold_checks(f: dict) -> list[Check]:
                      # **שימוש כדין בשטח הבנוי** — חנות בקומת קרקע בייעוד מגורים
                      # נספרת כאן. ‏״97%״ בנוסח הקודם לא נמצא בשום חישוב בריפו.
                      "הייעוד בתכנית אינו מראה שימוש בפועל. היחס נקבע מטבלת השטחים בהיתר "
-                     "(תיק הבניין) או בביקור, ואין לו מקור פתוח"
+                     "(תיק הבניין) או בביקור, ואין לו מקור פתוח" + zoning_note
                      if share is None else f"{share:.0%}"))
 
     permit, opinion = f.get("permit_date"), f.get("engineer_opinion")

@@ -34,5 +34,11 @@
   "url": "https://handasi.complot.co.il/magicscripts/mgrqispi.dll",
   "retrieved_at": "2026-09-12T12:00:00+00:00",
   "note": "עמודי תיק בניין. שם המבקש אינו נקרא בפרסור. כיסוי חלקי — 16 מ-699."
+ },
+ "iplan_xplan_zoning_names": {
+  "label": "שמות הייעוד המאושרים · iplan XPlan שכבה 4",
+  "url": "https://ags.iplan.gov.il/arcgisiplan/rest/services/PlanningPublic/Xplan/MapServer/4",
+  "retrieved_at": "2026-09-15T22:18:00+00:00",
+  "note": "נבנה ב-scripts/build_zoning_names.py: שמות הייעוד של הפוליגונים המאושרים שמכילים את מרכז החלקה (#95)."
  }
 }
