@@ -16,13 +16,14 @@ import {
   type Candidate,
   type CreditPackage,
   type DeliveredOpportunity,
+  type ScanConditions,
   type ScanResult,
-  type SearchOptions,
 } from "@/lib/api";
 import Balance from "@/components/Balance";
 import VerifyEmailNotice from "@/components/VerifyEmailNotice";
 import DeliveredTable from "@/components/DeliveredTable";
-import SearchControls from "@/components/SearchControls";
+import RightsRequestDialog from "@/components/RightsRequestDialog";
+import ScanConditionsControls, { countConditions } from "@/components/ScanConditions";
 // מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
 // לחבילת ה-SSR, שם אין `window`, והדף מחזיר 500 בטעינה נקייה.
 import { MAX_RADIUS_M, circlePolygon, geodesicArea, type LatLngTuple } from "@/lib/searchArea";
@@ -74,7 +75,7 @@ export default function DashboardPage() {
   const [picking, setPicking] = useState(false);
   const [center, setCenter] = useState<LatLngTuple | null>(null);
   const [radiusM, setRadiusM] = useState(DEFAULT_RADIUS_M);
-  const [options, setOptions] = useState<SearchOptions>({});
+  const [options, setOptions] = useState<ScanConditions>({});
   const [showControls, setShowControls] = useState(false);
 
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -124,19 +125,23 @@ export default function DashboardPage() {
     resetScan();
   }
 
-  /** חיפוש = מסירה: עד שלושה תיקים שלמים מהאזור, בלחיצה אחת. */
-  async function search() {
+  /** חיפוש = מסירה: עד שלושה תיקים שלמים מהאזור, בלחיצה אחת.
+   *  ‏`accept` — הלקוח אישר את הדילמה של הגדלת הזכויות (W6). */
+  async function search(accept = false) {
     if (!searchArea) return;
     setBusy("search");
-    setResult(null);
+    // בזמן האישור התוצאה הקודמת נשארת, כדי שחלון הדילמה לא ייסגר באמצע.
+    if (!accept) setResult(null);
     setError(null);
     setSelectedId(null);
     try {
-      const r = await runScan(CITY, searchArea, options, true);
+      const r = await runScan(CITY, searchArea, options, { readyOnly: true, acceptRightsRequest: accept });
       setResult(r);
       if (r.delivered[0]) setSelectedId(r.delivered[0].opportunity_id);
     } catch (e) {
       if (signInIfUnauthorized(e)) return;
+      // אישור שנכשל סוגר את חלון הדילמה, אחרת השגיאה נשארת מוסתרת מאחוריו.
+      if (accept) setResult(null);
       // ‏422 הוא MAP-01 עושה את עבודתו, והמשפט בעברית הוא מה שהמשתמש צריך.
       setError(e instanceof ApiError ? e.detail : "החיפוש נכשל. אפשר לנסות שוב.");
     } finally {
@@ -145,10 +150,11 @@ export default function DashboardPage() {
     }
   }
 
-  const conditionsCount =
-    [options.minAreaSqm, options.minUnits, options.minFloors, options.minCap400Sqm]
-      .filter((v) => v !== undefined).length
-    + (options.certainFloorsOnly ? 1 : 0) + (options.preferences?.length ?? 0);
+  const conditionsCount = countConditions(options);
+  // השרת לא מסר ולא חייב: אין חלקה כלכלית, והלקוח צריך להחליט על הגדלת זכויות.
+  const rightsConfirm = result?.needs_rights_confirmation ?? null;
+  // יש באזור חלקות הגדלת זכויות, אבל הלקוח לא סימן אותן — שווה לומר לו.
+  const hiddenRights = result && !rightsConfirm && !options.includeRightsRequest ? result.found_rights_request : 0;
 
   const hint = picking
     ? "לחיצה על המפה קובעת את מרכז החיפוש · Escape לביטול"
@@ -199,14 +205,14 @@ export default function DashboardPage() {
           )}
 
           <button className="btn-secondary" onClick={() => setShowControls((v) => !v)}>
-            תנאים והעדפות
+            תנאים
             {conditionsCount > 0 && (
               <span className="text-warn"> · {conditionsCount}</span>
             )}
           </button>
 
           <button
-            onClick={search}
+            onClick={() => search()}
             disabled={!searchArea || picking || busy !== null || credits < 1}
           >
             {busy === "search" ? "מאתר תיקים…" : <><IconSearch size={14} /> חפש</>}
@@ -234,8 +240,19 @@ export default function DashboardPage() {
 
       {showControls && (
         <div style={{ marginBottom: "1rem" }}>
-          <SearchControls value={options} onChange={(next) => { setOptions(next); resetScan(); }} />
+          <ScanConditionsControls value={options} onChange={(next) => { setOptions(next); resetScan(); }} />
         </div>
+      )}
+
+      {rightsConfirm && (
+        <RightsRequestDialog
+          count={rightsConfirm.count}
+          offer={Math.min(3, credits, rightsConfirm.count)}
+          busy={busy !== null}
+          onAccept={() => search(true)}
+          onOtherArea={() => { resetScan(); setPicking(true); }}
+          onClose={resetScan}
+        />
       )}
 
       {error && (
@@ -258,12 +275,18 @@ export default function DashboardPage() {
         />
       </div>
 
-      {result && result.found === 0 && (
+      {result && !rightsConfirm && result.found === 0 && (
         <div className="card tone-warn" style={{ marginBottom: "1rem" }}>
           <strong className="text-warn" style={{ fontSize: "1.05rem" }}>אין הזדמנויות באזור הזה</strong>
           <p style={{ margin: ".35rem 0 .2rem", fontSize: ".9rem" }}>
-            לא נמצא סביב הנקודה מגרש עם תיק שלם שעומד בתנאי הסף{conditionsCount > 0 ? " ובתנאים שהגדרת" : ""}. <strong>לא חויבת.</strong>
+            לא נמצא סביב הנקודה מגרש כלכלי עם תיק שלם שעומד בתנאי הסף{conditionsCount > 0 ? " ובתנאים שהגדרת" : ""}. <strong>לא חויבת.</strong>
           </p>
+          {hiddenRights > 0 && (
+            <p style={{ margin: ".2rem 0", fontSize: ".9rem" }}>
+              יש באזור {hiddenRights === 1 ? "חלקה אחת" : `${hiddenRights} חלקות`} שכלכליות רק עם הגדלת זכויות.
+              אפשר לסמן אותן ב״תנאים״.
+            </p>
+          )}
           <p className="text-muted" style={{ margin: 0, fontSize: ".88rem" }}>
             אפשר להגדיל את הרדיוס, לבחור נקודה אחרת{conditionsCount > 0 ? ", או להקל בתנאים" : ""}.
           </p>
