@@ -497,9 +497,9 @@ export interface GlossaryEntry {
  *  הזו** ונופל כשמזהה כאן אינו במילון בשרת — ״?״ שנפתח ריק הוא באג שקט. */
 export const TERM_IDS = [
   "shaked_conditions", "routed", "needs_measurement", "policy_silent", "certain_floors",
-  "category_floors", "residential_share", "cap_400", "post_2005",
+  "category_floors", "residential_share", "cap_400", "post_2005", "policy_area",
   "deciding", "certainty",
-  "profit_on_cost", "developer_area",
+  "profit_on_cost", "profit_after_levy", "developer_area",
   "levy_ceiling", "breakeven_land_value", "levy_estimate", "levy_category",
 ] as const;
 export type TermId = (typeof TERM_IDS)[number];
