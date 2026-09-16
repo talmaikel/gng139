@@ -27,8 +27,8 @@
 השטח העיקרי בלבד.
 
 טבלת רוחב הרחוב אינה רציפה: עד 8 מ׳ אין תוספת, **8–9 מ׳ אינו מוגדר בה
-כלל**, ומעל 15 מ׳ היא מפנה למדיניות מרכז העיר — שם תקרת הקטגוריה קובעת
-ולא הרחוב. החזית הצרה קובעת, לא הרחבה.
+כלל**, ומעל 15 מ׳ היא מפנה למדיניות מרכז העיר — שם מספר הקומות המרבי לפי
+קטגוריית המדיניות קובע, ולא הרחוב. החזית הצרה קובעת, לא הרחבה.
 
 מספר הקומות בטבלה **כולל את קומת הקרקע** (הערה 1 לטבלה).
 
@@ -78,7 +78,7 @@ TOLERANCE_M = 1.0
 # חזיתות שנמדדו ביד — 27 בתוך ±1 מ׳. אבל במדגם אקראי של 10 מעל 12 מ׳ עדיין
 # הגזמה אחת שהעבירה חזית מ-11 ל-17.9 (ליברמן), ולכן הסף נשאר.
 RELIABLE_MAX_M = 12.0
-UNBOUND = float("inf")   # הרחוב אינו מגביל; תקרת הקטגוריה קובעת
+UNBOUND = float("inf")   # הרחוב אינו מגביל; מספר הקומות המרבי של הקטגוריה קובע
 
 # מדיניות §5, "גובה אל מול חתך הרחוב" (עמ׳ 8). (גבול עליון כולל, מקסימום קומות)
 #
@@ -271,7 +271,7 @@ def floors_for_width(width_m: float | None):
 
 def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M, *,
            verified: bool = True, narrow: str | None = None) -> Rights:
-    """תקרת הקטגוריה, מוקטנת לפי רוחב הרחוב.
+    """מספר הקומות המרבי לפי קטגוריית המדיניות, מוקטן לפי רוחב הרחוב.
 
     סורק את כל התחום [w-tol, w+tol] בצעדים של 0.1 מ׳ — פער לא מוגדר שנופל
     *בתוך* התחום ולא על קצותיו נתפס כך גם הוא.
@@ -290,7 +290,7 @@ def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M
                               "unknown", STRATEGIC_URL, 8, "אין קטגוריה מזוהה"))
         return r
     r.checks.append(Check("renewal_policy_category", "קטגוריה במפת המדיניות",
-                          "passed", STRATEGIC_URL, 8, f"{category} · תקרה {ceiling}"))
+                          "passed", STRATEGIC_URL, 8, f"{category} · עד {ceiling:g} קומות"))
 
     narrow_text = (f"חזית צרה מ-8 מ׳: {narrow} — אם זה רחוב, אין תוספת; "
                    "אם דרך שירות או חניון, היא לא נספרת") if narrow else None
@@ -360,7 +360,8 @@ def floors(width_m: float | None, category: str | None, tol: float = TOLERANCE_M
         bits.append(f"טווח ±{tol:g} מ׳ חוצה שורות בטבלה — {r.floors_low:g} עד {r.floors_high:g} קומות; "
                     "מדידה בשטח תכריע")
     if r.case_by_case:
-        bits.append("מעל 15 מ׳ — הרחוב אינו מגביל, תקרת הקטגוריה קובעת ונתונה לבחינה נקודתית")
+        bits.append("מעל 15 מ׳ — הרחוב אינו מגביל; מספר הקומות המרבי לפי קטגוריית המדיניות "
+                    "קובע, ונתון לבחינה נקודתית")
     if narrow_text:
         bits.append(narrow_text)
     r.checks.append(Check("street_width", "רוחב רחוב מול מספר קומות", status,

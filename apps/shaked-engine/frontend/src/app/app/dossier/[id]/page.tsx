@@ -6,19 +6,28 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { use } from "react";
 import { ApiError, downloadDossier, getDossier, getUnitReviewCounts,
-         type Betterment, type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
+         type Betterment, type Dossier, type EvidenceRow, type Gate, type TermId } from "@/lib/api";
 import { fmtDate as date, ils, ilsApprox, sqm } from "@/lib/format";
 import type { Tone } from "@/lib/labels";
 import { IconFile, IconSheet } from "@/components/brand/icons";
 import { assumptionBadge, gateBadge, PageHeader, Section, Stat, StatStrip, StatusBadge } from "@/components/brand/ui";
+import { GlossaryContext, Term, WithTerm } from "@/components/Term";
 
 const CITY = "herzliya";
 
-/** שער אחד בשרשרת, עם הסעיף שאפשר לפתוח ולבדוק אותנו לפיו. */
+/** ‏W4 · סטטוס שער שאינו מסביר את עצמו ← המונח שמסביר אותו. */
+const GATE_TERM: Partial<Record<string, TermId>> = {
+  routed: "routed", undefined: "policy_silent", needs_measurement: "needs_measurement",
+};
+
+/** שער אחד מתנאי חלופת שקד, עם הסעיף שאפשר לפתוח ולבדוק אותנו לפיו. */
 function GateRow({ gate }: { gate: Gate }) {
+  const term = GATE_TERM[gate.status];
   return (
     <Table.Tr>
-      <Table.Td w="7rem">{gateBadge(gate.status)}</Table.Td>
+      <Table.Td w="7rem" style={{ whiteSpace: "nowrap" }}>
+        {term ? <WithTerm id={term}>{gateBadge(gate.status)}</WithTerm> : gateBadge(gate.status)}
+      </Table.Td>
       <Table.Td fw={600}>{gate.label}</Table.Td>
       <Table.Td c="var(--ink-2)">{gate.detail || "—"}</Table.Td>
       <Table.Td w="5rem" style={{ whiteSpace: "nowrap" }}>
@@ -38,8 +47,10 @@ function EvidenceTable({ rows }: { rows: EvidenceRow[] }) {
       <Table>
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>שדה</Table.Th><Table.Th>ערך</Table.Th><Table.Th>ודאות</Table.Th>
-            <Table.Th>מכריע?</Table.Th><Table.Th>נשלף</Table.Th><Table.Th>מקור</Table.Th>
+            <Table.Th>שדה</Table.Th><Table.Th>ערך</Table.Th>
+            <Table.Th><WithTerm id="certainty">ודאות</WithTerm></Table.Th>
+            <Table.Th><WithTerm id="deciding">מכריע?</WithTerm></Table.Th>
+            <Table.Th>נשלף</Table.Th><Table.Th>מקור</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -49,7 +60,7 @@ function EvidenceTable({ rows }: { rows: EvidenceRow[] }) {
                   המפה המקומית הוסרה: ״גיבוי״ שאיש אינו רואה כשהוא נכנס
                   לפעולה אינו גיבוי אלא באג שקט. אם השרת לא שלח תווית,
                   בדיקת `test_labels.py` כבר נפלה. */}
-              <Table.Td fw={600}>{r.label}</Table.Td>
+              <Table.Td fw={600}>{r.term ? <WithTerm id={r.term}>{r.label}</WithTerm> : r.label}</Table.Td>
               <Table.Td className="num">{r.value === null || r.value === undefined ? "—"
                 : typeof r.value === "boolean" ? (r.value ? "כן" : "לא")
                 : typeof r.value === "number" ? r.value.toLocaleString("he-IL")
@@ -89,19 +100,23 @@ function BettermentBlock({ b }: { b: Betterment }) {
     <div style={{ marginTop: "1rem", paddingTop: ".9rem", borderTop: "1px solid var(--rule-2)" }}>
       <StatStrip cols={{ base: 1, sm: 3 }}>
         <Stat
-          label={`תקרת היטל ההשבחה · ${Math.round(levy.rate * 100)}% מההשבחה`}
+          label={<WithTerm id="levy_ceiling">{`תקרת היטל ההשבחה · ${Math.round(levy.rate * 100)}% מההשבחה`}</WithTerm>}
           value={levy.viable_up_to_ils != null ? `עד ${ilsApprox(levy.viable_up_to_ils)}` : "אין תקרה"}
           tone={tone}
         />
         {b.breakeven_land_value_per_right_ils != null && (
-          <Stat label="שווי מ״ר זכויות שבו הרווח יורד למזערי" value={ils(b.breakeven_land_value_per_right_ils)} />
+          <Stat label={<WithTerm id="breakeven_land_value">שווי מ״ר זכויות שבו הרווח יורד למזערי</WithTerm>}
+                value={ils(b.breakeven_land_value_per_right_ils)} />
         )}
         {levy.low_ils != null && levy.high_ils != null && (
-          <Stat label="אומדן ההיטל" value={`${ilsApprox(levy.low_ils)}–${ilsApprox(levy.high_ils)}`} />
+          <Stat label={<WithTerm id="levy_estimate">אומדן ההיטל</WithTerm>}
+                value={`${ilsApprox(levy.low_ils)}–${ilsApprox(levy.high_ils)}`} />
         )}
       </StatStrip>
       <Group gap="xs" mt="sm">
-        <StatusBadge tone={tone}>{b.category_label}</StatusBadge>
+        <Group gap={2} wrap="nowrap" maw="100%">
+          <StatusBadge tone={tone}>{b.category_label}</StatusBadge><Term id="levy_category" />
+        </Group>
         {levy.within_range === false && (
           <Text size="sm" fw={600} className="text-bad">הקצה העליון של אומדן ההיטל גבוה מהתקרה.</Text>
         )}
@@ -174,7 +189,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
   const s = d.economics.scenario as Record<string, number> | null;
 
   return (
-    <>
+    <GlossaryContext.Provider value={d.glossary ?? {}}>
       <PageHeader
         back={{ href: "/app", label: "חזרה" }}
         eyebrow="תיק הזדמנות · הרצליה"
@@ -205,7 +220,8 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
 
       <Section
         id="rights"
-        title="שרשרת הזכויות"
+        title="עמידה בתנאי חלופת שקד"
+        help={<Term id="shaked_conditions" />}
         note="כל שער עם הסעיף שאפשר לפתוח ולבדוק אותנו לפיו. ״לא ידוע״ אינו ״עבר״."
       >
         <Table.ScrollContainer minWidth={560}>
@@ -217,12 +233,12 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
         <div style={{ paddingTop: ".4rem", borderTop: "1px solid var(--rule-2)" }}>
           <StatStrip>
             <Stat
-              label="קומות מותרות"
+              label={<WithTerm id="certain_floors">קומות מותרות</WithTerm>}
               value={floorsText}
               hint={f.case_by_case ? "בחינה נקודתית" : f.certain ? undefined : "דורש מדידה"}
             />
             <Stat
-              label="תקרת 400%"
+              label={<WithTerm id="cap_400">תקרת 400%</WithTerm>}
               value={d.rights.cap_400_sqm ? sqm(d.rights.cap_400_sqm) : "—"}
               hint={d.rights.cap_400_certainty === "estimate" ? "על אומדן" : undefined}
             />
@@ -242,7 +258,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
       <Section
         id="evidence"
         title="מאיפה הגיע כל מספר"
-        note="מקור, מועד וודאות לכל שדה מהותי. ״מכריע״ פירושו שהתצפית רשאית להכריע שער — ודאות, מקור, מיקום וגיל, כולם יחד."
+        note="מקור, מועד וודאות לכל שדה מהותי. ״מכריע״ פירושו שהערך רשאי להכריע שער: ודאות רשמית, נגזרת או מאומתת ידנית, מקור עם כתובת ומועד שליפה, מיקום בתוך המקור, ושליפה שלא התיישנה — כולם יחד."
       >
         <EvidenceTable rows={d.evidence} />
       </Section>
@@ -256,14 +272,14 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                 value={ilsApprox(s.projected_profit_ils)}
               />
               <Stat
-                label="רווח על העלות"
+                label={<WithTerm id="profit_on_cost">רווח על העלות</WithTerm>}
                 value={`${Math.round(s.profit_margin_on_cost_ratio * 100)}%`}
                 tone={s.meets_developer_target ? "ok" : "warn"}
               />
               {/* ‏C14 · היה ״שטח נמכר״, והמספר הוא השטח שנשאר ליזם אחרי הדיירים.
                   באקסל ״שטח נמכר (עיקרי)״ הוא כל השטח העיקרי — שם אחד, שני
                   מספרים, בדיוק ברגע שהיזם פותח את האקסל מול המסך. */}
-              <Stat label="שטח ליזם" value={sqm(s.developer_allocation_sqm)} />
+              <Stat label={<WithTerm id="developer_area">שטח ליזם</WithTerm>} value={sqm(s.developer_allocation_sqm)} />
             </StatStrip>
 
             {/* ‏E1 · מעל או מתחת ל-16%, במילים ולא רק בצבע. המשפט מהשרת, כמו ב-PDF ובאקסל. */}
@@ -405,6 +421,6 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
         כללים {d.versions.rules_version} · נתונים {d.versions.data_version || "—"} ·
         תבנית {d.versions.template_version}
       </Text>
-    </>
+    </GlossaryContext.Provider>
   );
 }

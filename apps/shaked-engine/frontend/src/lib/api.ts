@@ -478,11 +478,31 @@ export interface EvidenceRow {
   certainty_label?: string;
   /** האם התצפית רשאית להכריע שער — ודאות, מקור, מיקום וגיל, כולם יחד */
   decides: boolean;
+  /** המונח שמסביר את השדה, כשהתווית לבדה אינה מספיקה. */
+  term?: TermId | null;
   source_url: string | null;
   retrieved_at: string | null;
   location: string | null;
   method: string | null;
 }
+
+/** ‏W4 · מונח אחד מהמילון שבשרת (`glossary.py`). אותו נוסח במסך, ב-PDF ובאקסל. */
+export interface GlossaryEntry {
+  term: string;
+  short: string;
+  source_url?: string | null;
+}
+
+/** המונחים שהמסך מציג ליד תוויות. **`tests/test_glossary.py` קורא את הרשימה
+ *  הזו** ונופל כשמזהה כאן אינו במילון בשרת — ״?״ שנפתח ריק הוא באג שקט. */
+export const TERM_IDS = [
+  "shaked_conditions", "routed", "needs_measurement", "policy_silent", "certain_floors",
+  "category_floors", "residential_share", "cap_400", "post_2005",
+  "deciding", "certainty",
+  "profit_on_cost", "developer_area",
+  "levy_ceiling", "breakeven_land_value", "levy_estimate", "levy_category",
+] as const;
+export type TermId = (typeof TERM_IDS)[number];
 
 export interface Dossier {
   identity: {
@@ -554,6 +574,8 @@ export interface Dossier {
   versions: { rules_version: string; data_version: string; template_version: string };
   delivery: { delivered_at: string | null; why_selected: Record<string, unknown> | null };
   stale_fields: string[];
+  /** ‏W4 · מזהה → מונח. ה״?״ שליד תווית נפתח עם ההסבר מכאן. */
+  glossary: Record<string, GlossaryEntry>;
 }
 
 /** ‏B11 · סף ההשבחה. ‏`viable_up_to_ils` — ההיטל הגבוה ביותר שהרווח עוד סופג. */

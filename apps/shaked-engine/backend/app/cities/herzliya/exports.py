@@ -13,6 +13,8 @@
 import io
 from typing import Any
 
+from app.cities.herzliya.glossary import GLOSSARY
+
 # ── PDF בעברית ──
 #
 # נדרשת גופן שיש בו אותיות עבריות. ‏reportlab מגיע עם Vera בלבד, ואין בו
@@ -106,11 +108,11 @@ def pdf(d: dict[str, Any]) -> bytes:
          9.5, (0.42, 0.40, 0.36))
     rule()
 
-    # ── שרשרת הזכויות ──
+    # ── עמידה בתנאי חלופת שקד ──
     STATUS = {"passed": "עבר", "failed": "נכשל", "unknown": "לא ידוע",
               "routed": "נותב למתחמים", "undefined": "המדיניות שותקת",
               "needs_measurement": "דורש מדידה"}
-    line("שרשרת הזכויות", 13, (0.06, 0.15, 0.12), gap=6)
+    line("עמידה בתנאי חלופת שקד", 13, (0.06, 0.15, 0.12), gap=6)
     for g in d["rights"]["checks"]:
         page = f" · עמ׳ {g['page']}" if g.get("page") else ""
         line(f'[{STATUS.get(g["status"], g["status"])}]  {g["label"]}{page}', 9.5, gap=2)
@@ -207,6 +209,15 @@ def pdf(d: dict[str, Any]) -> bytes:
     y[0] -= 6
     line(f'כללים {v["rules_version"]} · נתונים {v["data_version"] or "—"} · '
          f'תבנית {v["template_version"]}', 8, (0.55, 0.53, 0.49))
+
+    # ‏W4 · נספח המונחים, בעמוד משלו ואחרי כל התיק — אותו מילון שה״?״ במסך
+    # פותח ושהאקסל שם בגיליון ״מונחים״.
+    c.showPage()
+    header()
+    line("נספח · מונחים", 13, (0.06, 0.15, 0.12), gap=6)
+    for entry in _glossary(d).values():
+        line(entry["term"], 9.5, (0.06, 0.15, 0.12), gap=2)
+        line(entry["short"], 8.5, (0.42, 0.40, 0.36), gap=6, indent=10)
 
     c.showPage()
     c.save()
@@ -346,6 +357,10 @@ def _pdf_rights_comparison(econ: dict[str, Any], rights_: dict[str, Any], line) 
     if verdict.get("text"):
         colour = (0.12, 0.37, 0.33) if verdict.get("case") == "A" else (0.54, 0.38, 0.00)
         line(verdict["text"], 9.5, colour, gap=5)
+
+def _glossary(d: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """המונחים שבתיק. תיק שנבנה בלי מילון (פיקסטורה ישנה) מקבל את המילון עצמו."""
+    return d.get("glossary") or GLOSSARY
 
 
 def _levy_unknown(econ: dict[str, Any]) -> bool:
@@ -502,6 +517,18 @@ def excel(d: dict[str, Any]) -> bytes:
                    f'תבנית {v["template_version"]}', note)
 
     _excel_rights_sheet(wb, d, head, note, wrap)
+
+    # ── מונחים ──
+    # ‏W4 · אותו נוסח שה״?״ במסך פותח. בלי מזהי קוד: הגיליון נקרא ליזם.
+    gl = wb.add_worksheet("מונחים")
+    gl.right_to_left()
+    gl.freeze_panes(1, 0)
+    for col, width in enumerate((30, 90, 50)):
+        gl.set_column(col, col, width)
+    gl.write_row(0, 0, ["מונח", "הסבר", "מקור"], head)
+    for i, entry in enumerate(_glossary(d).values(), 1):
+        gl.write_row(i, 0, [entry["term"], entry["short"], entry.get("source_url") or ""], wrap)
+
     wb.close()
     return buf.getvalue()
 
