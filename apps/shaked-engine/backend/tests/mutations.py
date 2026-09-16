@@ -78,6 +78,16 @@ MUTS = [
    '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),
   ("sources/client.py", "כל לקוח חדש מאפס את הקצב",
    "self._slots = slots if slots is not None else SHARED_SLOTS", "self._slots = slots if slots is not None else HostSlots()"),
+  # ‏W10 · יחס המגורים מטבלת השטחים בהיתר מכריע את שער ה-70%
+  ("cities/herzliya/rights.py", "שער ה-70% עובר על כל יחס",
+   "RESIDENTIAL_SHARE_MIN = 0.7", "RESIDENTIAL_SHARE_MIN = 0.0"),
+  ("services/residential_share.py", "הזנה ידנית נכתבת כקריאה שאינה מכריעה",
+   "certainty=Certainty.MANUALLY_VERIFIED,", "certainty=Certainty.AI_CANDIDATE,"),
+  ("services/residential_share.py", "הזנה שנייה נערמת על הראשונה",
+   "await session.execute(delete(FieldEvidence).where(", "await session.execute(select(FieldEvidence).where("),
+  ("cities/herzliya/rules.py", "השער עובר בלי לומר על מה נשען",
+   'd["residential_share_basis"] = rights.share_basis(f["residential_share"])',
+   'd["residential_share_basis"] = None'),
 ]
 root = pathlib.Path("app")
 # ‏**עד 14.09 הסקריפט רק הדפיס.** מוטציה ששרדה הדפיסה ״X שרד״, והשלב ב-CI

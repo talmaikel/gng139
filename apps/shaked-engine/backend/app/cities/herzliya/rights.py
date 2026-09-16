@@ -36,6 +36,7 @@
 הינה מדיניות בלבד. הוועדה המקומית רשאית לקבוע מס׳ קומות ונפחים שונים
 בהתאם לשיקול דעתה״*. כל מספר כאן הוא **תקרה נתונה לבחינה, לא זכות**.
 """
+import math
 from dataclasses import dataclass, field as dc_field
 
 # גרסת הכללים שלפיה מחושבות הזכויות. קשורה למסמך המדיניות שאומת מול
@@ -157,10 +158,13 @@ SECTION_70A_IDS = ("residential_zoning", "residential_share", "permit_date",
 THRESHOLD_IDS = SECTION_70A_IDS + ("occupied",)
 
 # שער שאין לו מקור פתוח, ולכן ״לא ידוע״ בו אינו מעיד על עבודה חסרה אלא על
-# גבול הנתונים. הוא נשאר שאלה פתוחה בתיק ואינו פוסל מסירה — אבל הוא גם
-# לעולם לא ייקרא כ״עבר״: `threshold_checks` מחזיר בו unknown, והסטטוס יורד
-# ל-needs_verification בכל מקרה.
+# גבול הנתונים. הוא נשאר שאלה פתוחה בתיק ואינו פוסל מסירה, והסטטוס יורד
+# ל-needs_verification. ‏W10 · הוא מוכרע רק כשאדם הזין את היחס מטבלת השטחים
+# בהיתר (`services/residential_share.py`) — ואז הוא עובר או נכשל ככל שער.
 UNOBTAINABLE = {"residential_share"}
+
+# ‏§70א: ״70% לפחות משטח הבנייה הכולל הקיים שלו משמש כדין למגורים״.
+RESIDENTIAL_SHARE_MIN = 0.7
 
 
 MIXED_ZONING_WORDS = ("מסחר", "תעסוקה", "מעורב")
@@ -178,6 +182,24 @@ def _zoning_note(names) -> str:
     return f" · הייעוד מגורים בלבד ({', '.join(sorted(set(residential)))}) — סביר, ועדיין לא מוכרע"
 
 
+def share_basis(field: dict | None) -> str | None:
+    """‏W10 · על מה נשען יחס המגורים: המקום במקור, והאם אדם אימת אותו.
+
+    ‏0.82 לבדו אינו אומר מאיפה בא, ושער שעבר בלי לומר זאת נקרא כמו הנחה."""
+    if not field or not field.get("location"):
+        return None
+    manual = field.get("certainty") == "manually_verified"
+    return f"לפי {field['location']}" + (" (אומת ידנית)" if manual else "")
+
+
+def _share_pct(share: float) -> str:
+    """‏69.96% שנכשל אינו מוצג ״70%״ — זה נקרא כמו באג בשער."""
+    shown = f"{share:.0%}"
+    if share < RESIDENTIAL_SHARE_MIN and int(shown[:-1]) >= RESIDENTIAL_SHARE_MIN * 100:
+        return f"{math.floor(round(share * 1000, 6)) / 10:.1f}%"
+    return shown
+
+
 def threshold_checks(f: dict) -> list[Check]:
     """חמשת תנאי §70א: שניים מההגדרה עצמה ושלושה מהסעיפים הממוספרים."""
     out = []
@@ -192,8 +214,14 @@ def threshold_checks(f: dict) -> list[Check]:
 
     share = f.get("residential_share")
     zoning_note = _zoning_note(f.get("zoning_names"))
+    # ‏W10 · הבסיס מגיע מ-`assess()`; בלעדיו לא טוענים מקור שאינו ידוע.
+    basis = f.get("residential_share_basis")
+    share_detail = None if share is None else (
+        f"{_share_pct(share)} מגורים" + (f" {basis}" if basis else "")
+        + ("" if share >= RESIDENTIAL_SHARE_MIN else " — פחות מ-70%"))
     out.append(Check("residential_share", "לפחות 70% מהשטח הבנוי משמש כדין למגורים",
-                     "unknown" if share is None else ("passed" if share >= 0.7 else "failed"),
+                     "unknown" if share is None else
+                     ("passed" if share >= RESIDENTIAL_SHARE_MIN else "failed"),
                      POLICY_URL, 3,
                      # ‏G1 · 15.09 · בועז שאל אם ״מגורים א/ב״ בשכבות העירייה עונה על
                      # זה. לא: הייעוד הוא התנאי הראשון (השער שלמעלה), וכאן נבדק
@@ -201,7 +229,7 @@ def threshold_checks(f: dict) -> list[Check]:
                      # נספרת כאן. ‏״97%״ בנוסח הקודם לא נמצא בשום חישוב בריפו.
                      "הייעוד בתכנית אינו מראה שימוש בפועל. היחס נקבע מטבלת השטחים בהיתר "
                      "(תיק הבניין) או בביקור, ואין לו מקור פתוח" + zoning_note
-                     if share is None else f"{share:.0%}"))
+                     if share is None else share_detail))
 
     permit, opinion = f.get("permit_date"), f.get("engineer_opinion")
     if permit is None:
