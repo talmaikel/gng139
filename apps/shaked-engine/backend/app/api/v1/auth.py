@@ -13,14 +13,22 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_async_session
+from app.core.rate_limit import (email_account_limit, email_ip_limit, login_account_limit,
+                                 login_ip_limit, signup_ip_limit)
 from app.core.schemas import UserCreate, UserRead, UserUpdate
 from app.core.security import UserManager, auth_backend, fastapi_users, get_jwt_strategy, get_user_manager
 from app.models.tenant import Company
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-router.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/jwt")
+router.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/jwt",
+                      dependencies=[Depends(login_ip_limit), Depends(login_account_limit)])
 router.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users")
+# ‏forgot-password עונה 202 גם למייל שאינו רשום — אין דרך לברר מי לקוח שלנו.
+router.include_router(fastapi_users.get_reset_password_router(),
+                      dependencies=[Depends(email_ip_limit), Depends(email_account_limit)])
+router.include_router(fastapi_users.get_verify_router(UserRead),
+                      dependencies=[Depends(email_ip_limit), Depends(email_account_limit)])
 
 
 class SignupRequest(BaseModel):
@@ -35,7 +43,8 @@ class SignupResponse(BaseModel):
     token_type: str = "bearer"
 
 
-@router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=SignupResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(signup_ip_limit)])
 async def signup(
     body: SignupRequest,
     session: AsyncSession = Depends(get_async_session),
@@ -70,7 +79,7 @@ async def signup(
         raise HTTPException(status.HTTP_409_CONFLICT, detail="כבר קיים חשבון עם כתובת הדואר הזו.")
     except exceptions.InvalidPasswordException as exc:
         await session.rollback()
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.reason)
+        raise HTTPException(422, detail=exc.reason)
 
     token = await get_jwt_strategy().write_token(user)
     return SignupResponse(access_token=token)

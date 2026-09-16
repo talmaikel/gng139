@@ -59,7 +59,7 @@ async def list_packages(
 ) -> list[dict[str, Any]]:
     rows = (await session.execute(select(Package).order_by(Package.credits))).scalars().all()
     return [{"id": str(p.id), "name": p.name, "credits": p.credits,
-             "price_ils": p.price_ils} for p in rows]
+             "price_ils": float(p.price_ils)} for p in rows]
 
 
 # ‏**אין כאן נתיב רכישה.** הייתה ״רכישה מדומה״ שהוסיפה זכאות בלחיצה, בלי

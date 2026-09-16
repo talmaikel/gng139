@@ -7,6 +7,8 @@
 *.tsbuildinfo
 .env
 .env.local
+# Secrets kept as plain files (backend/resend.key). The repo is public.
+*.key
 .next/
 .venv/
 __pycache__/

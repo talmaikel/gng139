@@ -99,6 +99,31 @@ user; any other address (a LAN IP or a tunnel) shows the login screen.
   `.venv/bin/python scripts/demo_setup.py --apply`
 - **Before a demo:** `.venv/bin/python scripts/demo_preflight.py` (0 = ready, 1 = warnings,
   2 = do not start). **After a rehearsal:** `.venv/bin/python scripts/demo_reset.py --apply`.
+- **Price list** (name, credits, price) lives in `scripts/seed_packages.py`; sync it into the
+  database with `.venv/bin/python scripts/seed_packages.py --apply`. Pilot prices: 3 / 12 / 30
+  opportunities for 19.90 / 49.90 / 99.90 ILS.
+- **The payment buttons are not wired to a processor.** Card, Bit and PayPal open a dialog
+  that hands the customer over to WhatsApp, phone or email, carrying the package and the
+  company id so the admin can find it in `/admin`. The phone and address come from
+  `NEXT_PUBLIC_SALES_PHONE` / `NEXT_PUBLIC_SALES_EMAIL` in `frontend/.env.local`, kept out of
+  this public repo.
+
+### Email: password reset and address verification
+
+Without a key the email is **not sent** — it is written to the server log together with the
+link (`[email not sent — RESEND_API_KEY missing] … link=…`), so development and tests send
+nothing outside. For real delivery: a Resend account, a verified sending domain, and the key
+in `RESEND_API_KEY` or in `backend/resend.key` (gitignored). `FRONTEND_URL` decides where the
+links in the email point. Verification never blocks a customer; the dashboard only reminds.
+
+### Rate limits
+
+Login is capped **per account** (10 attempts / 15 minutes) and so are reset and verification
+emails (3 per address / hour) — per-IP alone would be worthless here: Next does not add
+`X-Forwarded-For` and passes through whatever the browser sent, so an IP count is both easy
+to dodge and one shared bucket for every customer behind the proxy. Signup is capped per IP
+(5 / hour) **only** when `TRUSTED_IP_HEADER` names a header the deployment's proxy overwrites
+(`cf-connecting-ip` behind Cloudflare). Counters live in process memory; a restart clears them.
 
 ## Checks
 

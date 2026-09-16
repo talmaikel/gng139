@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { formatPrice } from "@/components/PurchaseDialog";
 import {
   adminFindCompanies,
   adminGrantCredits,
@@ -171,7 +172,7 @@ export default function AdminPage() {
                     <option value="">— מספר חופשי —</option>
                     {packages.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} · {p.credits} הזדמנויות · {p.price_ils.toLocaleString("he-IL")} ₪
+                        {p.name} · {formatPrice(p)}
                       </option>
                     ))}
                   </select>

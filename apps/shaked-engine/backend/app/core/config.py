@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from secrets import token_urlsafe
 
 from pydantic import Field
@@ -19,6 +20,22 @@ class Settings(BaseSettings):
     # shared key. Deployments must provide a stable JWT_SECRET explicitly.
     jwt_secret: str = Field(default_factory=lambda: token_urlsafe(32))
     jwt_lifetime_seconds: int = 3600
+
+    # ── מייל: שחזור סיסמה ואימות כתובת ──
+    # בלי מפתח המייל אינו נשלח אלא נכתב ללוג השרת — פיתוח מקומי עובד בלי חשבון.
+    resend_api_key: str | None = None
+    # או מקובץ: ‏`backend/resend.key` (ב-.gitignore). משתנה סביבה גובר על הקובץ.
+    resend_api_key_file: str = "resend.key"
+    # הדומיין חייב להיות מאומת ב-Resend (רשומות DNS), אחרת השליחה נדחית.
+    email_from: str = "שקדן <no-reply@gng139.online>"
+    # לאן מובילים הקישורים שבמייל. בפריסה: כתובת האתר הציבורית.
+    frontend_url: str = "http://localhost:3000"
+
+    # כותרת שהפריסה קובעת ובה כתובת הגולש האמיתית — ‏`cf-connecting-ip` מאחורי
+    # Cloudflare, ‏`x-real-ip` מאחורי nginx. **רק כותרת שהשרת שלפנינו דורס**:
+    # כותרת שהגולש יכול לשלוח בעצמו הופכת את ההגבלה לפי כתובת לחסרת ערך.
+    # ריק = אין הגבלה לפי כתובת מאחורי Next (ההגבלה לפי חשבון נשארת).
+    trusted_ip_header: str | None = None
 
     openai_api_key: str | None = None
     openai_extraction_model: str = "gpt-4o-mini"
@@ -41,6 +58,19 @@ class Settings(BaseSettings):
     # ‏localhost ו-127.0.0.1 הם מקורות שונים לדפדפן, ושניהם בשימוש בהרצה
     # מקומית — origin אחד בלבד נכשל ב-CORS בלי שהשרת מדווח על כלום.
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    def resend_key(self) -> str | None:
+        """המפתח מהסביבה, ואם אין — מהקובץ. נקרא בכל שליחה, כך שהדבקה בקובץ
+        אינה דורשת הפעלה מחדש."""
+        if self.resend_api_key:
+            return self.resend_api_key
+        path = Path(self.resend_api_key_file)
+        if not path.is_absolute():
+            path = Path(__file__).resolve().parents[2] / path     # backend/
+        try:
+            return path.read_text(encoding="utf-8").strip() or None
+        except OSError:
+            return None
 
     @property
     def cors_origin_list(self) -> list[str]:

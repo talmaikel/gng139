@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { login, setToken } from "@/lib/api";
+import { ApiError, login, setToken } from "@/lib/api";
 
 function isLocalBrowser(): boolean {
   if (typeof window === "undefined") return false;
@@ -57,8 +57,9 @@ export default function LoginPage() {
       const { access_token } = await login(email, password);
       setToken(access_token);
       router.push("/dashboard");
-    } catch {
-      setError("כתובת או סיסמה שגויות.");
+    } catch (e) {
+      // ‏429 אינו ״סיסמה שגויה״ — מי שנחסם צריך לדעת שעליו לחכות.
+      setError(e instanceof ApiError && e.status === 429 ? e.detail : "כתובת או סיסמה שגויות.");
     } finally {
       setSubmitting(false);
     }
@@ -116,6 +117,8 @@ export default function LoginPage() {
         </form>
         <p style={{ marginTop: "1.2rem", fontSize: ".88rem" }}>
           לקוח חדש? <Link href="/signup">הרשמה</Link>
+          {" · "}
+          <Link href="/forgot-password">שכחתי סיסמה</Link>
         </p>
       </div>
     </main>

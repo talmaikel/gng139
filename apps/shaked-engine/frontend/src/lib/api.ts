@@ -96,7 +96,15 @@ export async function login(email: string, password: string): Promise<LoginRespo
     body,
   });
   if (!response.ok) {
-    throw new Error("Login failed");
+    let detail = "Login failed";
+    if (response.status === 429) {
+      try {
+        detail = (await response.json())?.detail ?? detail;
+      } catch {
+        /* לא JSON */
+      }
+    }
+    throw new ApiError(response.status, detail);
   }
   return response.json() as Promise<LoginResponse>;
 }
@@ -116,6 +124,43 @@ export function signup(input: SignupInput): Promise<LoginResponse> {
     body: JSON.stringify(input),
   });
 }
+
+// ── שחזור סיסמה ואימות מייל (FastAPI-Users) ──
+//
+// השגיאות שם מגיעות כקוד ולא כמשפט: ‏"RESET_PASSWORD_BAD_TOKEN", או
+// ‏{code, reason} כשהסיסמה נדחתה. בלי המיפוי הזה המסך היה מציג את הקוד.
+
+const AUTH_CODES: Record<string, string> = {
+  RESET_PASSWORD_BAD_TOKEN: "הקישור אינו תקף או שכבר נוצל. אפשר לבקש קישור חדש.",
+  VERIFY_USER_BAD_TOKEN: "קישור האימות אינו תקף או שפג תוקפו.",
+  VERIFY_USER_ALREADY_VERIFIED: "כתובת המייל כבר מאומתת.",
+};
+
+async function authPost(path: string, body: object): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (response.ok) return;
+  let detail = FALLBACK[response.status] ?? `השרת החזיר ${response.status}.`;
+  try {
+    const data = await response.json();
+    const d = data?.detail;
+    if (typeof d === "string") detail = AUTH_CODES[d] ?? d;
+    else if (d && typeof d.reason === "string") detail = d.reason;
+  } catch {
+    /* לא JSON */
+  }
+  throw new ApiError(response.status, detail);
+}
+
+/** תמיד מצליח למייל קיים ולא-קיים — השרת אינו מגלה מי רשום. */
+export const forgotPassword = (email: string) => authPost("forgot-password", { email });
+export const resetPassword = (token: string, password: string) =>
+  authPost("reset-password", { token, password });
+export const requestVerification = (email: string) => authPost("request-verify-token", { email });
+export const verifyEmail = (token: string) => authPost("verify", { token });
 
 export interface MultiPolygonGeometry {
   type: "MultiPolygon";
@@ -356,6 +401,7 @@ export interface Me {
   role: string;
   company_id: string;
   is_superuser: boolean;
+  is_verified: boolean;
 }
 
 export function getMe(): Promise<Me> {

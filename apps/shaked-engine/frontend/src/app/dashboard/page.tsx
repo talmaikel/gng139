@@ -21,6 +21,7 @@ import {
   type SearchOptions,
 } from "@/lib/api";
 import Balance from "@/components/Balance";
+import VerifyEmailNotice from "@/components/VerifyEmailNotice";
 import DeliveredTable from "@/components/DeliveredTable";
 import SearchControls from "@/components/SearchControls";
 // מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
@@ -149,6 +150,8 @@ export default function DashboardPage() {
   return (
     <main className="page" style={{ maxWidth: 1100 }}>
       <h1 style={{ marginBottom: "1rem" }}>חלופת שקד · הרצליה</h1>
+
+      <VerifyEmailNotice />
 
       <div style={{ marginBottom: "1rem" }}>
         <Balance balance={balance} packages={packages} onChanged={loadAccount} />
