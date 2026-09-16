@@ -1215,3 +1215,22 @@ async def test_the_dossier_explains_the_levy_with_its_own_numbers(session):
     b2 = (await build(session, HerzliyaCityRules(), opp2.id, c2.id))["economics"]["betterment"]
     assert [p["id"] for p in b2["explain"]][:2] == ["what", "estimate"]
     assert b2["explain"][1]["title"] == "למה אין אומדן"
+
+
+@pytest.mark.asyncio
+async def test_every_cost_row_says_how_it_was_computed_and_where_its_input_came_from(session):
+    """נקודה 6: מאיפה הגיע כל מספר, ומה המשמעות של כל שורה."""
+    c, opp = await _with_resolved_inputs(session, "9699")
+    opp.existing_units = 10
+    await session.flush()
+    econ = (await build(session, HerzliyaCityRules(), opp.id, c.id))["economics"]
+    rows = {r["id"]: r for r in econ["cost_rows"]}
+    s = econ["scenario"]
+    assert rows["revenue"]["value_ils"] == pytest.approx(s["total_revenue_ils"])
+    assert rows["construction"]["value_ils"] == pytest.approx(-s["total_construction_cost_ils"])
+    assert rows["levy"]["value_ils"] == pytest.approx(-s["betterment_levy_ils"])
+    # סכום השורות הוא הרווח שבכותרת — הטבלה והמספר אינם יכולים להיפרד
+    assert sum(r["value_ils"] for r in econ["cost_rows"]) == pytest.approx(s["projected_profit_ils"], abs=2)
+    assert all(r["formula"] and r["explain"] and r["source"] for r in econ["cost_rows"])
+    assert "17 עסקאות" in rows["revenue"]["source"]
+    assert econ["assumptions"]["sale_price_per_sqm_ils"]["unit_label"] == "₪ למ״ר"

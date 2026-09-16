@@ -750,6 +750,69 @@ def _levy_summary(category: str, band: dict, estimate, target: float) -> str:
     return text
 
 
+# ‏W4 · יחידות שיזם קורא. ‏״ILS/sqm״ ו-״ratio״ הודפסו למסך כמו שהם.
+UNIT_LABEL = {"ILS/sqm": "₪ למ״ר", "ILS/unit": "₪ לדירה", "ILS/month": "₪ לחודש", "ILS": "₪",
+              "sqm": "מ״ר", "months": "חודשים", "ratio": "שיעור"}
+
+
+def _cost_rows(r, inputs, assumptions: dict[str, dict]) -> list[dict[str, Any]]:
+    """‏W4 · נקודה 6: לכל שורה בטבלת העלויות — מה היא, איך חושבה ומאיפה הקלט.
+
+    הנוסחה נכתבת עם המספרים של התרחיש, כך שאפשר לבדוק אותה במחשבון.
+    """
+    def src(*keys: str) -> str:
+        return " · ".join(f'{assumptions[k]["label"]}: {assumptions[k].get("source") or "ספריית ההנחות"}'
+                          for k in keys if k in assumptions)
+
+    net = inputs.sale_price_per_sqm / (1 + inputs.vat_rate)
+    underground = inputs.buildable_area_sqm * inputs.underground_ratio
+    rows = [
+        ("revenue", "הכנסות (נטו ממע״מ)", r.total_revenue_ils,
+         f"{r.sellable_main_sqm:,.0f} מ״ר עיקרי × {inputs.sale_price_per_sqm:,.0f} ₪ ÷ {1 + inputs.vat_rate:g} (מע״מ)",
+         "שווי כל השטח העיקרי בבניין החדש — כולל הדירות שנמסרות לבעלים, שחוזרות כעלות הקרקע.",
+         src("sale_price_per_sqm_ils", "main_area_ratio")),
+        ("land", "קרקע — פיצוי הדיירים", -r.land_cost_ils,
+         f"{r.tenant_allocation_sqm:,.0f} מ״ר לבעלים × {net:,.0f} ₪ למ״ר נטו",
+         f"הדירות החדשות שהבעלים מקבלים: לכל דירה קיימת שטחה הממוצע ועוד "
+         f"{inputs.tenant_compensation_sqm_per_existing_unit:g} מ״ר. זו התמורה על הקרקע.",
+         src("average_existing_unit_sqm", "tenant_compensation_sqm_per_existing_unit")),
+        ("construction", "בנייה מעל הקרקע", -r.total_construction_cost_ils,
+         f"{inputs.buildable_area_sqm:,.0f} מ״ר × {inputs.construction_cost_per_sqm:,.0f} ₪",
+         "עלות ישירה לבניית השטח מעל הקרקע, כולל שירות וממ״ד.",
+         src("construction_cost_per_sqm_ils")),
+        ("underground", "חניון תת-קרקעי", -r.total_underground_cost_ils,
+         f"{underground:,.0f} מ״ר ({inputs.underground_ratio:.0%} מהשטח מעל הקרקע) × {inputs.underground_cost_per_sqm:,.0f} ₪",
+         "מרתף וחניון. שטח שירות מתחת לקרקע אינו נספר ב-400%.",
+         src("underground_ratio", "underground_cost_per_sqm_ils")),
+        ("soft", "עלויות רכות", -r.total_soft_cost_ils,
+         f"{inputs.soft_cost_ratio:.0%} מהבנייה והחניון",
+         "תכנון, יועצים, פיקוח, אגרות והיתרים.", src("soft_cost_ratio")),
+        ("demolition", "הריסה", -r.total_demolition_cost_ils,
+         f"{inputs.existing_units} דירות × {inputs.demolition_cost_per_unit:,.0f} ₪",
+         "הריסת הבניין הקיים ופינוי.", src("demolition_cost_per_unit_ils")),
+        ("tenants", "שכירות והובלות לדיירים", -r.total_tenant_cost_ils,
+         f"{inputs.existing_units} דירות × ({inputs.tenant_rent_months:g} חודשים × {inputs.tenant_monthly_rent_ils:,.0f} ₪ "
+         f"+ {inputs.tenant_moving_cost_ils:,.0f} ₪ הובלות + {inputs.tenant_legal_cost_per_unit_ils:,.0f} ₪ עו״ד)",
+         "שכר דירה לבעלים בזמן הבנייה, הובלות, ושכר טרחת עורך דין לבעלים.",
+         src("tenant_rent_months", "tenant_monthly_rent_ils", "tenant_moving_cost_ils", "tenant_legal_cost_per_unit_ils")),
+        ("marketing", "שיווק ותיווך", -r.total_marketing_ils,
+         f"{inputs.marketing_ratio:.1%} מהכנסות היזם ({r.developer_revenue_ils / 1e6:,.1f} מיליון ₪)",
+         "רק על הדירות שהיזם מוכר — דירות הבעלים אינן משווקות.", src("marketing_ratio")),
+        ("guarantees", "ערבויות וביטוח", -r.total_guarantees_ils,
+         f"{inputs.guarantees_ratio:.2%} מכל ההכנסות",
+         "ערבויות חוק מכר לרוכשים וערבויות לבעלים, וביטוח.", src("guarantees_ratio")),
+        ("finance", "מימון", -r.total_finance_ils,
+         f"{inputs.finance_ratio:.0%} מהעלויות שאינן קרקע",
+         "עלות האשראי לאורך הפרויקט. אינה מחושבת על שווי דירות הבעלים.", src("finance_ratio")),
+    ]
+    if r.betterment_levy_ils:
+        rows.append(("levy", "היטל השבחה (אומדן)", -r.betterment_levy_ils,
+                     f"{inputs.betterment_levy_rate:.0%} × השבחה של {inputs.betterment_base_ils / 1e6:,.1f} מיליון ₪",
+                     "אומדן בשיטת היזם ולא שומה — הפירוט בהסבר ההיטל.", src("betterment_base_ils")))
+    return [{"id": i, "label": label, "value_ils": value, "formula": formula,
+             "explain": explain, "source": source} for i, label, value, formula, explain, source in rows]
+
+
 def _assumption_rows(a, live: dict, construction_cost, construction_cost_per_sqm,
                      underground_cost, underground_cost_per_sqm) -> dict[str, dict]:
     """טבלת ״כל ההנחות״ — **השורה מציגה את הערך שהתרחיש השתמש בו.** (A20)
@@ -765,11 +828,13 @@ def _assumption_rows(a, live: dict, construction_cost, construction_cost_per_sqm
     ‏`unit`, ‏`source`, ‏`label`. **‏`value` לעולם אינו ריק** — כשאין נתון
     לחלקה, זה ערך הספרייה שהתרחיש באמת השתמש בו, והסטטוס אומר את זה.
     """
-    rows = {k: {**v, "label": ASSUMPTION_LABEL.get(k, k)} for k, v in a.report().items()}
+    rows = {k: {**v, "label": ASSUMPTION_LABEL.get(k, k), "unit_label": UNIT_LABEL.get(v["unit"], v["unit"])}
+            for k, v in a.report().items()}
 
     def row(key: str, value, status: str, source: str | None, **extra) -> None:
+        unit = getattr(a, key).unit
         rows[key] = {"value": value, "status": status,
-                     "unit": getattr(a, key).unit, "source": source,
+                     "unit": unit, "unit_label": UNIT_LABEL.get(unit, unit), "source": source,
                      "label": ASSUMPTION_LABEL.get(key, key), **extra}
 
     # ‏**הסטטוס נגזר מ-`resolved` ולא מהוודאות.** לוח מאומת-ידנית שמכסה
@@ -944,6 +1009,9 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
                        "אינו שומה")}
 
     rights_verdict = _rights_verdict(policy_run, cap_run, run, assessment, target)
+    head_inputs = inputs.model_copy(update={
+        "buildable_area_sqm": head["area_sqm"],
+        "betterment_base_ils": after["betterment_ils"] if after else inputs.betterment_base_ils})
     return {**base,
             "scenario": result.model_dump(),
             "live_inputs": live,
@@ -957,6 +1025,7 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             "scenarios": {"policy": _scenario_card(policy_run, assessment) if policy_run else None,
                           "cap_400": _scenario_card(cap_run, assessment)},
             "rights_verdict": rights_verdict,
+            "cost_rows": _cost_rows(result, head_inputs, base["assumptions"]),
             "inputs_missing": result.inputs_missing,
             "not_delivered_reason": _not_delivered(result.inputs_missing),
             "is_deliverable": result.is_deliverable,

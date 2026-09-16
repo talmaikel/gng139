@@ -1,6 +1,6 @@
 "use client";
 
-import { Accordion, Alert, Anchor, Button, Group, List, Paper, Table, Text } from "@mantine/core";
+import { Accordion, ActionIcon, Alert, Anchor, Button, Group, List, Paper, Popover, Table, Text } from "@mantine/core";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,10 +9,10 @@ import { ApiError, downloadDossier, getDossier, getUnitReviewCounts,
          type Betterment, type Dossier, type EvidenceRow, type Gate, type TermId } from "@/lib/api";
 import { fmtDate as date, ils, ilsApprox, sqm } from "@/lib/format";
 import type { Tone } from "@/lib/labels";
-import { IconFile, IconSheet } from "@/components/brand/icons";
+import { IconFile, IconHelp, IconSheet } from "@/components/brand/icons";
 import { assumptionBadge, gateBadge, PageHeader, Section, Stat, StatStrip, StatusBadge } from "@/components/brand/ui";
 import { GlossaryContext, Term, WithTerm } from "@/components/Term";
-import type { LevyExplainParagraph, PolicyArea, PolicyDossier, RightsVerdict, ScenarioCard } from "@/lib/dossier";
+import type { CostRow, LevyExplainParagraph, PolicyArea, PolicyDossier, RightsVerdict, ScenarioCard } from "@/lib/dossier";
 
 const CITY = "herzliya";
 
@@ -210,6 +210,36 @@ function PolicyAreaBlock({ p }: { p: PolicyArea }) {
       ))}
     </div>
   );
+}
+
+/** ‏W4 · נקודה 6: ״?״ ליד שורה בטבלת העלויות — מה השורה, הנוסחה ומאיפה הקלט. בלחיצה, כמו המונחים. */
+function RowInfo({ row }: { row: CostRow }) {
+  return (
+    <Popover width={340} position="bottom" withArrow shadow="md" trapFocus returnFocus>
+      <Popover.Target>
+        <ActionIcon variant="subtle" color="gray" size={24} my={-4} radius="xl"
+                    aria-label={`מה זה: ${row.label}`} style={{ verticalAlign: "middle", flex: "none" }}>
+          <IconHelp size={14} />
+        </ActionIcon>
+      </Popover.Target>
+      <Popover.Dropdown style={{ maxWidth: "calc(100vw - 2rem)" }}>
+        <Text size="sm" fw={600}>{row.label}</Text>
+        <Text size="sm" mt={4} style={{ lineHeight: 1.55 }}>{row.explain}</Text>
+        <Text size="sm" mt={6} className="mono" style={{ lineHeight: 1.55 }}>{row.formula}</Text>
+        <Text size="xs" c="dimmed" mt={6} style={{ lineHeight: 1.5 }}>מקור: {row.source}</Text>
+      </Popover.Dropdown>
+    </Popover>
+  );
+}
+
+/** ‏W4 · ערך הנחה ביחידה שיזם קורא: שיעור כאחוז, ו-₪ למ״ר במקום ILS/sqm. */
+function assumptionValue(a: { value: number; unit: string; unit_label?: string }) {
+  if (a.unit === "ratio") return `${(a.value * 100).toLocaleString("he-IL", { maximumFractionDigits: 2 })}%`;
+  return `${a.value.toLocaleString("he-IL")} ${a.unit_label ?? a.unit}`;
+}
+
+function WithRowInfo({ row }: { row: CostRow }) {
+  return <span>{row.label}{"\u00a0"}<RowInfo row={row} /></span>;
 }
 
 const VERDICT: Record<RightsVerdict["case"], { title: string; color: string }> = {
@@ -493,7 +523,14 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
 
             <Table>
               <Table.Tbody>
-                {([
+                {econ.cost_rows ? econ.cost_rows.map((row) => (
+                  <Table.Tr key={row.id}>
+                    <Table.Td><WithRowInfo row={row} /></Table.Td>
+                    <Table.Td ta="end" className={`num ${row.value_ils < 0 ? "text-bad" : "text-ok"}`} fw={600}>
+                      {ilsApprox(row.value_ils)}
+                    </Table.Td>
+                  </Table.Tr>
+                )) : ([
                   ["הכנסות (נטו ממע״מ)", s.total_revenue_ils],
                   ["קרקע — פיצוי הדיירים", -s.land_cost_ils],
                   ["בנייה מעל הקרקע", -s.total_construction_cost_ils],
@@ -504,10 +541,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                   ["שיווק ותיווך", -s.total_marketing_ils],
                   ["ערבויות וביטוח", -s.total_guarantees_ils],
                   ["מימון", -s.total_finance_ils],
-                  // ‏0 ₪ כאן אינו ״אין היטל״ אלא ״ההשבחה אינה ידועה״. התקרה מתחת.
-                  // ‏W2 · כשיש אומדן הוא בתוך הרווח, ולכן מוצג כשורת עלות.
-                  ...(after ? [["היטל השבחה (אומדן)", -s.betterment_levy_ils]]
-                    : d.economics.betterment ? [] : [["היטל השבחה", -s.betterment_levy_ils]]),
+                  ...(d.economics.betterment ? [] : [["היטל השבחה", -s.betterment_levy_ils]]),
                 ] as [string, number][]).map(([name, value]) => (
                   <Table.Tr key={name}>
                     <Table.Td>{name}</Table.Td>
@@ -516,6 +550,12 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                     </Table.Td>
                   </Table.Tr>
                 ))}
+                <Table.Tr>
+                  <Table.Td fw={700}>{after ? "רווח אחרי אומדן היטל" : "רווח"}</Table.Td>
+                  <Table.Td ta="end" className={`num ${s.projected_profit_ils < 0 ? "text-bad" : "text-ok"}`} fw={700}>
+                    {ilsApprox(s.projected_profit_ils)}
+                  </Table.Td>
+                </Table.Tr>
                 {/* ‏B13 · שורת ההיטל נכתבת פעם אחת בשרת, וה-PDF והאקסל מדפיסים
                     אותה כמו שהיא. נוסח מקומי כאן היה נפרד מהם בשקט. */}
                 {d.economics.betterment && (
@@ -550,9 +590,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                     {Object.entries(d.economics.assumptions).map(([k, a]) => (
                       <Table.Tr key={k}>
                         <Table.Td>{a.label}</Table.Td>
-                        <Table.Td className="num">
-                          {a.value.toLocaleString("he-IL")} <Text span c="dimmed" size="sm">{a.unit}</Text>
-                        </Table.Td>
+                        <Table.Td className="num">{assumptionValue(a)}</Table.Td>
                         <Table.Td>{assumptionBadge(a.status)}</Table.Td>
                         <Table.Td c="dimmed" fz="sm">{a.source ?? "—"}</Table.Td>
                       </Table.Tr>

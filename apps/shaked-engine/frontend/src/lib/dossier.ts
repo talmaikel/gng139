@@ -81,8 +81,12 @@ export type PolicyDossier = Dossier & {
     buildable_area_sqm?: number;
     scenarios?: { policy: ScenarioCard | null; cap_400: ScenarioCard };
     rights_verdict?: RightsVerdict;
+    cost_rows?: CostRow[];
   };
 };
 
 /** ‏W3 · פסקה אחת בהסבר ההיטל: מה ההיטל, האומדן, הטווח, התקרה, הקטגוריה. */
 export interface LevyExplainParagraph { id: string; title: string; text: string }
+
+/** ‏W4 · שורה בטבלת העלויות: מה היא, הנוסחה עם המספרים, ומאיפה הקלט. */
+export interface CostRow { id: string; label: string; value_ils: number; formula: string; explain: string; source: string }
