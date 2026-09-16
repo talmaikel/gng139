@@ -8,6 +8,8 @@ import { MantineShell } from "@/components/brand/MantineShell";
 export const metadata: Metadata = {
   title: "Shaked Engine · shakdan",
   description: "איתור מגרשים להתחדשות עירונית במסלול חלופת שקד, לחברות יזמיות",
+  // Google Search Console ownership (HTML tag method).
+  verification: { google: "pWC8MXe9GW7rxtnj0cGusER9pZ1x8epQtjQfBg7A1y8" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
