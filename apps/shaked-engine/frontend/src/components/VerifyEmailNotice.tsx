@@ -32,16 +32,15 @@ export default function VerifyEmailNotice() {
   }
 
   return (
-    <div className="card" style={{ padding: ".6rem 1rem", marginBottom: "1rem", fontSize: ".9rem",
+    <div className="card tone-info" style={{ padding: ".6rem 1rem", marginBottom: "1rem", fontSize: ".9rem",
                                    display: "flex", gap: ".8rem", alignItems: "center", flexWrap: "wrap" }}>
       <span>
         כדאי לאמת את כתובת המייל: שלחנו קישור אל <span dir="ltr">{me.email}</span>
       </span>
-      <button type="button" onClick={resend} disabled={busy}
-              style={{ background: "transparent", color: "#1d4e89", padding: 0 }}>
+      <button type="button" className="btn-link" onClick={resend} disabled={busy}>
         {busy ? "שולח…" : "שליחה חוזרת"}
       </button>
-      {status && <span style={{ color: "#6b655c" }}>{status}</span>}
+      {status && <span className="text-muted">{status}</span>}
     </div>
   );
 }

@@ -26,7 +26,7 @@ export default function SignupPage() {
         password,
       });
       setToken(access_token);
-      router.push("/dashboard");
+      router.push("/app");
     } catch (e) {
       // ‏422 של ולידציה (למשל מייל לא תקין) מגיע בלי משפט — ה-FALLBACK
       // אומר ״הבקשה אינה תקינה״, וזה מספיק כדי שהגולש יבדוק את השדות.
@@ -38,11 +38,9 @@ export default function SignupPage() {
 
   return (
     <main className="page">
-      <div className="card" style={{ maxWidth: 380, margin: "3.5rem auto" }}>
-        <p style={{ margin: 0, color: "#6b655c", fontSize: ".82rem", letterSpacing: ".08em" }}>
-          חלופת שקד · הרצליה
-        </p>
-        <h1 style={{ margin: ".15rem 0 1.2rem" }}>הרשמה</h1>
+      <div className="card auth-card">
+        <p className="eyebrow">חלופת שקד · הרצליה</p>
+        <h1>הרשמה</h1>
         <form onSubmit={handleSubmit}>
           <div className="form-field">
             <label htmlFor="company">שם החברה</label>
@@ -92,13 +90,13 @@ export default function SignupPage() {
               style={{ textAlign: "start" }}
             />
           </div>
-          {error && <p style={{ color: "#a8321e", fontSize: ".88rem" }}>{error}</p>}
+          {error && <p className="text-bad" style={{ fontSize: ".88rem" }}>{error}</p>}
           <button type="submit" disabled={submitting}>
             {submitting ? "נרשם…" : "הרשמה"}
           </button>
         </form>
         <p style={{ marginTop: "1.2rem", fontSize: ".88rem" }}>
-          כבר יש חשבון? <Link href="/login">כניסה</Link>
+          כבר יש חשבון? <Link href="/login" className="text-link">כניסה</Link>
         </p>
       </div>
     </main>

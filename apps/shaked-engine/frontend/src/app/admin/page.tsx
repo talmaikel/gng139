@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { AppShell } from "@/components/brand/AppShell";
 import { formatPrice } from "@/components/PurchaseDialog";
 import {
   adminFindCompanies,
@@ -94,28 +95,26 @@ export default function AdminPage() {
     }
   }
 
-  if (allowed === null) return <main className="page"><p>טוען…</p></main>;
+  if (allowed === null) return <AppShell><p className="text-muted">טוען…</p></AppShell>;
   if (!allowed) {
     return (
-      <main className="page">
-        <div className="card" style={{ maxWidth: 420, margin: "3.5rem auto" }}>
-          <h1 style={{ marginTop: 0 }}>אין הרשאה</h1>
+      <AppShell>
+        <div className="card auth-card">
+          <h1>אין הרשאה</h1>
           <p>המסך הזה מיועד לצוות שקדן בלבד.</p>
-          <Link href="/dashboard">חזרה</Link>
+          <Link href="/app" className="text-link">חזרה</Link>
         </div>
-      </main>
+      </AppShell>
     );
   }
 
   const amountChosen = packageId !== "" || Number(credits) > 0;
 
   return (
-    <main className="page" style={{ maxWidth: 960, margin: "0 auto" }}>
-      <p style={{ margin: 0, color: "#6b655c", fontSize: ".82rem", letterSpacing: ".08em" }}>
-        חלופת שקד · ניהול
-      </p>
+    <AppShell width={960}>
+      <p className="eyebrow">חלופת שקד · ניהול</p>
       <h1 style={{ margin: ".15rem 0 .4rem" }}>הוספת זכאות</h1>
-      <p style={{ marginTop: 0, color: "#6b655c", fontSize: ".92rem" }}>
+      <p className="text-muted" style={{ marginTop: 0, fontSize: ".92rem" }}>
         אחרי שהתשלום התקבל והחשבונית יצאה. כל הוספה נרשמת עם האסמכתה ועם מי שהוסיף.
       </p>
 
@@ -146,8 +145,10 @@ export default function AdminPage() {
                 width: "100%",
                 textAlign: "start",
                 margin: ".2rem 0",
-                background: selected?.id === c.id ? "#1f5f55" : "#f3efe7",
-                color: selected?.id === c.id ? "white" : "#14231f",
+                background: selected?.id === c.id ? "var(--almond-soft)" : "var(--paper)",
+                color: "var(--ink)",
+                border: `1px solid ${selected?.id === c.id ? "var(--almond)" : "var(--rule)"}`,
+                fontWeight: 400,
               }}
             >
               <strong>{c.name}</strong> · יתרה {c.credits_remaining}
@@ -200,12 +201,12 @@ export default function AdminPage() {
               </form>
 
               {message && (
-                <p style={{ color: message.ok ? "#1f5f55" : "#a8321e", fontSize: ".9rem" }}>{message.text}</p>
+                <p className={message.ok ? "text-ok" : "text-bad"} style={{ fontSize: ".9rem" }}>{message.text}</p>
               )}
 
               <h3 style={{ fontSize: ".95rem", marginBottom: ".3rem" }}>היסטוריה</h3>
               {history.length === 0 ? (
-                <p style={{ margin: 0, fontSize: ".88rem", color: "#6b655c" }}>לא נוספה זכאות עדיין.</p>
+                <p className="text-muted" style={{ margin: 0, fontSize: ".88rem" }}>לא נוספה זכאות עדיין.</p>
               ) : (
                 <ul style={{ margin: 0, paddingInlineStart: "1.1rem", fontSize: ".88rem" }}>
                   {history.map((h, i) => (
@@ -220,6 +221,6 @@ export default function AdminPage() {
           )}
         </div>
       </div>
-    </main>
+    </AppShell>
   );
 }

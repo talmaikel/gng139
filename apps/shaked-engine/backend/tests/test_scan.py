@@ -132,6 +132,26 @@ async def test_an_empty_area_charges_nothing(client, session):  # noqa: F811
     await _credits(session, client.user.company_id, 3)
     body = (await client.post("/api/v1/candidates/herzliya/scan/deliver", json=BY_CAP)).json()
     assert body["delivered"] == [] and body["credits_remaining"] == 3
+    # ‏״אין הזדמנויות באזור״ ולא ״נכשל״: המסך מבחין ביניהם לפי `found`.
+    assert body["found"] == 0
+
+
+@pytest.mark.asyncio
+async def test_a_complete_dossiers_scan_never_fetches_from_the_archive(client, session, monkeypatch):  # noqa: F811
+    """‏`ready_only` (טל, 16.09): רק מגרשים שתיק הבניין שלהם כבר שלם. מגרש שדורש
+    שליפה אינו נמסר ואינו נשלף — גם כשהוא הגבוה ביותר בסדר ההעדפות."""
+    await _credits(session, client.user.company_id, 3)
+    await _parcel(session, "9561", 9900, ready=False)
+    ready = [str((await _parcel(session, b, c)).id) for b, c in (("9562", 9000), ("9563", 8000))]
+
+    async def no_fetch(*_a, **_k):
+        raise AssertionError("ready_only must not touch the archive")
+    monkeypatch.setattr(api, "fetch_for_delivery", no_fetch)
+
+    body = (await client.post("/api/v1/candidates/herzliya/scan/deliver",
+                              json=BY_CAP | {"ready_only": True})).json()
+    assert [d["opportunity_id"] for d in body["delivered"]] == ready
+    assert body["found"] == 2 and body["credits_remaining"] == 1
 
 
 @pytest.mark.asyncio

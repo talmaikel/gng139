@@ -288,10 +288,13 @@ async def test_balance_starts_at_zero_rather_than_erroring(client):
 
 
 @pytest.mark.asyncio
-async def test_a_customer_sees_packages_but_cannot_add_credits_to_itself(client, session):
-    """הרכישה המדומה הוסרה: עם הרשמה פתוחה היא נתנה תיקים בחינם לכל נרשם.
-    זכאות נוספת רק על ידי אדמין — `test_admin_credits.py`."""
+async def test_a_customer_sees_packages_but_cannot_add_credits_to_itself(client, session, monkeypatch):
+    """עם הרשמה פתוחה, רכישה מדומה נותנת תיקים בחינם לכל נרשם. לכן היא
+    קיימת **רק מאחורי `SIMULATED_PAYMENTS`**, וכשהדגל כבוי — ברירת המחדל —
+    הנתיב אינו קיים. זכאות אמיתית רק על ידי אדמין — `test_admin_credits.py`."""
+    from app.core.config import get_settings
     from app.models.package import Package
+    monkeypatch.setattr(get_settings(), "simulated_payments", False)
     pkg = Package(name="שלוש הזדמנויות", credits=3, price_ils=30_000)
     session.add(pkg)
     await session.flush()
@@ -299,9 +302,32 @@ async def test_a_customer_sees_packages_but_cannot_add_credits_to_itself(client,
     listed = (await client.get("/api/v1/account/packages")).json()
     assert any(p["id"] == str(pkg.id) for p in listed)
 
-    r = await client.post(f"/api/v1/account/packages/{pkg.id}/purchase")
+    r = await client.post(f"/api/v1/account/packages/{pkg.id}/purchase", json={"method": "bit"})
     assert r.status_code in (404, 405)
     assert (await client.get("/api/v1/account/balance")).json()["credits_remaining"] == 0
+
+
+@pytest.mark.asyncio
+async def test_a_simulated_purchase_adds_the_package_and_leaves_a_record(client, session, monkeypatch):
+    """הדגל דלוק: לחיצה על אמצעי תשלום מוסיפה את זכאות החבילה, ורושמת
+    ב-`credit_grants` שזה היה תשלום מדומה — כדי שלא ייראה כמו תשלום אמיתי."""
+    from app.core.config import get_settings
+    from app.models.package import CreditGrant, Package
+    monkeypatch.setattr(get_settings(), "simulated_payments", True)
+    pkg = Package(name="שלוש הזדמנויות", credits=3, price_ils=19.90)
+    session.add(pkg)
+    await session.flush()
+
+    r = await client.post(f"/api/v1/account/packages/{pkg.id}/purchase", json={"method": "bit"})
+    assert r.status_code == 200, r.text
+    assert r.json()["credits_remaining"] == 3
+    assert (await client.get("/api/v1/account/balance")).json()["credits_remaining"] == 3
+    grant = (await session.execute(select(CreditGrant)
+                                   .where(CreditGrant.company_id == client.user.company_id))).scalar_one()
+    assert grant.credits == 3 and "מדומה" in grant.note and "Bit" in grant.note
+
+    bad = await client.post(f"/api/v1/account/packages/{pkg.id}/purchase", json={"method": "cash"})
+    assert bad.status_code == 422
 
 
 @pytest.mark.asyncio

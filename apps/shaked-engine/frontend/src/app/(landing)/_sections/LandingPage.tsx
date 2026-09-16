@@ -111,7 +111,7 @@ export function LandingPage() {
                 <li><a href="#contact">צרו קשר</a></li>
               </ul>
               <div className="sk-nav-actions">
-                <Link href="/login">כניסה</Link>
+                <Link href="/login">האזור האישי</Link>
                 <a className="sk-btn sk-primary sk-small" href="#contact">בקשת הדגמה</a>
               </div>
             </nav>
@@ -124,7 +124,7 @@ export function LandingPage() {
               <p data-bf="">המנוע של shakdan מאתר כל מגרש בהרצליה שעומד בתנאי הסף של חלופת שקד, ומגיש לכל אחד תיק מוכן ליזם.</p>
               <div className="sk-ctas" data-bf="">
                 <a className="sk-btn sk-primary" href="#contact">בקשת הדגמה</a>
-                <Link className="sk-btn sk-ghost" href="/login">כניסה ללקוחות</Link>
+                <Link className="sk-btn sk-ghost" href="/login">כניסה לאזור האישי</Link>
               </div>
               <p className="sk-meta" data-bf=""><span><b>כל חלקה</b> בעיר</span><span><b>תנאי הסף</b>, אחד אחד</span><span><b>מקור</b> לכל מספר</span></p>
             </div>

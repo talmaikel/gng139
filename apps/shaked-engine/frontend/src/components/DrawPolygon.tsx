@@ -4,6 +4,7 @@ import type { LeafletMouseEvent } from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import { CircleMarker, Polygon, Polyline, useMap } from "react-leaflet";
 import { MAX_AREA_SQM, geodesicArea, toGeoJson, type LatLngTuple } from "@/lib/searchArea";
+import { MAP_COLOUR } from "@/lib/labels";
 
 interface Props {
   active: boolean;
@@ -100,7 +101,7 @@ export default function DrawPolygon({ active, onFinish, onCancel, onProgress }: 
 
   const area = geodesicArea(points);
   const tooLarge = points.length >= 3 && area > MAX_AREA_SQM;
-  const colour = tooLarge ? "#a8321e" : "#1d4e89";
+  const colour = tooLarge ? MAP_COLOUR.tooLarge : MAP_COLOUR.area;
 
   return (
     <>

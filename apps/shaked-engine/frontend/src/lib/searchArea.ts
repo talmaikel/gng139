@@ -4,7 +4,7 @@
  * הקבועים והפונקציות האלה ישבו קודם ב-`components/DrawPolygon.tsx`, ו-
  * `dashboard/page.tsx` ייבא משם את `MAX_AREA_SQM`. ייבוא אחד כזה גורר את
  * כל המודול — כולל `react-leaflet` ודרכו `leaflet` — לתוך חבילת ה-SSR,
- * ושם אין `window`. התוצאה הייתה **500 על טעינה נקייה של /dashboard**,
+ * ושם אין `window`. התוצאה הייתה **500 על טעינה נקייה של /app**,
  * שלא נראתה בדפדפן כי ניווט פנימי באפליקציה שכבר נטענה עוקף את השרת.
  *
  * הכלל שנובע: ‏`Map` ו-`DrawPolygon` נטענים דינמית עם `ssr: false`, ולכן
@@ -44,4 +44,26 @@ export function toGeoJson(ring: LatLngTuple[]): object {
   const last = coords[coords.length - 1];
   if (first[0] !== last[0] || first[1] !== last[1]) coords.push(first);
   return { type: "Polygon", coordinates: [coords] };
+}
+
+/** רדיוס שאינו חורג מ-MAP-01: ‏π·r² ≤ 250 דונם → ‏r ≤ ~282 מ׳. */
+export const MAX_RADIUS_M = Math.floor(Math.sqrt(MAX_AREA_SQM / Math.PI));
+
+/**
+ * עיגול סביב נקודה → פוליגון GeoJSON של 48 קודקודים.
+ *
+ * הלקוח בוחר נקודה ורדיוס; השרת מקבל פוליגון כמו תמיד, ומודד אותו בעצמו.
+ * ההיסט במעלות מחושב לפי קו הרוחב, אחרת העיגול יוצא אליפסה.
+ */
+export function circlePolygon(center: LatLngTuple, radiusM: number, steps = 48): { polygon: object; ring: LatLngTuple[] } {
+  const [lat, lng] = center;
+  const d2r = Math.PI / 180;
+  const dLat = radiusM / 111_320;
+  const dLng = radiusM / (111_320 * Math.cos(lat * d2r));
+  const ring: LatLngTuple[] = [];
+  for (let i = 0; i < steps; i++) {
+    const a = (i / steps) * 2 * Math.PI;
+    ring.push([lat + dLat * Math.sin(a), lng + dLng * Math.cos(a)]);
+  }
+  return { polygon: toGeoJson(ring), ring };
 }

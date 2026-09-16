@@ -1,11 +1,14 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
+import Link from "next/link";
 import { useEffect } from "react";
 import { MapContainer, Polygon, Popup, TileLayer, useMap } from "react-leaflet";
 import type { Candidate, MultiPolygonGeometry } from "@/lib/api";
 import DrawPolygon from "@/components/DrawPolygon";
+import PickCircle from "@/components/PickCircle";
 import type { LatLngTuple } from "@/lib/searchArea";
+import { MAP_COLOUR } from "@/lib/labels";
 
 const HERZLIYA_CENTER: [number, number] = [32.1624, 34.8447];
 
@@ -44,31 +47,42 @@ function FitToCandidates({ candidates, paused }: { candidates: Candidate[]; paus
 
 interface Props {
   candidates?: Candidate[];
-  /** מצב ציור פעיל */
+  /** מצב ציור/בחירה פעיל */
   drawing?: boolean;
-  /** הפוליגון שנבחר, שנשאר על המפה כדי שרואים מה נסרק */
+  /** ‏polygon: הצוות מצייר; ‏circle: הלקוח לוחץ נקודה והרדיוס נבחר במחוון */
+  mode?: "polygon" | "circle";
+  /** הפוליגון שנבחר, שנשאר על המפה כדי שרואים מה נסרק (במצב polygon) */
   searchArea?: object | null;
+  /** מרכז ורדיוס (במצב circle) */
+  circle?: { center: LatLngTuple; radiusM: number; tooLarge?: boolean } | null;
   onPolygon?: (polygon: object, areaSqm: number) => void;
+  onPick?: (center: LatLngTuple) => void;
   onCancelDraw?: () => void;
   onDrawProgress?: (points: number, areaSqm: number) => void;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
+  /** קישור לתיק מתוך החלון הקופץ של חלקה שנמסרה */
+  dossierHref?: (id: string) => string;
 }
 
 export default function OpportunityMap({
   candidates = [],
   drawing = false,
+  mode = "polygon",
   searchArea = null,
+  circle = null,
   onPolygon,
+  onPick,
   onCancelDraw,
   onDrawProgress,
   selectedId = null,
   onSelect,
+  dossierHref,
 }: Props) {
-  const areaRings = ringsOf(searchArea);
+  const areaRings = mode === "polygon" ? ringsOf(searchArea) : null;
 
   return (
-    <MapContainer center={HERZLIYA_CENTER} zoom={13} style={{ height: 460, width: "100%", borderRadius: 10 }}>
+    <MapContainer center={HERZLIYA_CENTER} zoom={13} style={{ height: 460, width: "100%", borderRadius: 5 }}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -77,7 +91,7 @@ export default function OpportunityMap({
       {areaRings && !drawing && (
         <Polygon
           positions={areaRings}
-          pathOptions={{ color: "#1d4e89", weight: 2, dashArray: "6 4", fill: false }}
+          pathOptions={{ color: MAP_COLOUR.area, weight: 2, dashArray: "6 4", fill: false }}
         />
       )}
 
@@ -91,9 +105,9 @@ export default function OpportunityMap({
               positions={toLeafletRings(candidate.geometry as MultiPolygonGeometry)}
               eventHandlers={!drawing && onSelect ? { click: () => onSelect(candidate.id) } : undefined}
               pathOptions={{
-                color: selected ? "#8a3f00" : "#1f6f4f",
+                color: selected ? MAP_COLOUR.selected : MAP_COLOUR.candidate,
                 weight: selected ? 3 : 2,
-                fillOpacity: selected ? 0.45 : 0.25,
+                fillOpacity: selected ? 0.35 : 0.22,
                 // בזמן ציור החלקות אינן ניתנות ללחיצה, אחרת קודקוד שנופל
                 // על מועמד נבלע בו ולא מגיע למפה — והמשתמש רואה לחיצה
                 // שלא עשתה כלום, בדיוק מעל האזור שהוא הכי רוצה לסמן.
@@ -104,19 +118,35 @@ export default function OpportunityMap({
                 <strong>{candidate.address}</strong>
                 <br />
                 גוש {candidate.block ?? "—"} · חלקה {candidate.parcel ?? "—"}
-                <br />
-                {candidate.area_sqm ?? "—"} מ״ר
+                {candidate.area_sqm ? <><br />{candidate.area_sqm} מ״ר</> : null}
+                {dossierHref && (
+                  <>
+                    <br />
+                    <Link href={dossierHref(candidate.id)} className="text-link">פתח תיק ←</Link>
+                  </>
+                )}
               </Popup>
             </Polygon>
           );
         })}
 
-      <DrawPolygon
-        active={drawing}
-        onFinish={(polygon, area) => onPolygon?.(polygon, area)}
-        onCancel={() => onCancelDraw?.()}
-        onProgress={onDrawProgress}
-      />
+      {mode === "circle" ? (
+        <PickCircle
+          active={drawing}
+          center={circle?.center ?? null}
+          radiusM={circle?.radiusM ?? 0}
+          tooLarge={circle?.tooLarge}
+          onPick={(c) => onPick?.(c)}
+          onCancel={() => onCancelDraw?.()}
+        />
+      ) : (
+        <DrawPolygon
+          active={drawing}
+          onFinish={(polygon, area) => onPolygon?.(polygon, area)}
+          onCancel={() => onCancelDraw?.()}
+          onProgress={onDrawProgress}
+        />
+      )}
       <FitToCandidates candidates={candidates} paused={drawing} />
     </MapContainer>
   );

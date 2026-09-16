@@ -66,7 +66,7 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
     <div className="card" style={{ padding: "1rem 1.1rem", display: "grid", gap: "1rem" }}>
       <section>
         <h3 style={{ margin: "0 0 .1rem", fontSize: ".95rem" }}>תנאי חובה</h3>
-        <p style={{ margin: "0 0 .55rem", color: "#6b655c", fontSize: ".82rem" }}>
+        <p className="text-muted" style={{ margin: "0 0 .55rem", fontSize: ".82rem" }}>
           מועמד שאינו עומד בהם אינו מוצג כלל. ערך לא ידוע אינו עומד בתנאי מזערי.
         </p>
         <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap", alignItems: "center" }}>
@@ -83,7 +83,7 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
                 }
                 style={{ width: 92, padding: ".3rem .45rem", fontSize: ".85rem" }}
               />
-              <span style={{ color: "#6b655c" }}>{unit}</span>
+              <span className="text-muted">{unit}</span>
             </label>
           ))}
 
@@ -101,7 +101,7 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
 
       <section>
         <h3 style={{ margin: "0 0 .1rem", fontSize: ".95rem" }}>סדר העדפות</h3>
-        <p style={{ margin: "0 0 .55rem", color: "#6b655c", fontSize: ".82rem" }}>
+        <p className="text-muted" style={{ margin: "0 0 .55rem", fontSize: ".82rem" }}>
           הראשונה מכריעה; הבאה נכנסת רק בשוויון. לא ניקוד משוקלל — סדר מפורש.
         </p>
 
@@ -126,18 +126,18 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
               <span
                 aria-hidden
                 title="גרור לסידור"
-                style={{ cursor: "grab", color: "#9c9481", fontSize: ".9rem", width: "1.1rem", textAlign: "center" }}
+                style={{ cursor: "grab", color: "var(--faint)", fontSize: ".9rem", width: "1.1rem", textAlign: "center" }}
               >
                 ⠿
               </span>
-              <span style={{ color: "#6b655c", fontSize: ".82rem", width: "1.1rem" }}>{i + 1}.</span>
+              <span className="text-muted" style={{ fontSize: ".82rem", width: "1.1rem" }}>{i + 1}.</span>
               <strong style={{ fontSize: ".87rem", minWidth: "10.5rem" }}>{FIELD_LABEL[pref.field]}</strong>
               <button
                 onClick={() =>
                   setPrefs(prefs.map((p, j) =>
                     j === i ? { ...p, direction: p.direction === "desc" ? "asc" : "desc" } : p))
                 }
-                style={{ background: "#eef0ee", color: "#1a1a1a", padding: ".28rem .6rem", fontSize: ".8rem" }}
+                className="btn-secondary btn-sm"
               >
                 {pref.direction === "desc" ? "מהגדול לקטן" : "מהקטן לגדול"}
               </button>
@@ -145,7 +145,7 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
                 onClick={() => moveTo(i, i - 1)}
                 disabled={i === 0}
                 aria-label="העלה"
-                style={{ background: "#eef0ee", color: "#1a1a1a", padding: ".28rem .55rem", fontSize: ".8rem" }}
+                className="btn-secondary btn-sm"
               >
                 ↑
               </button>
@@ -153,13 +153,13 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
                 onClick={() => moveTo(i, i + 1)}
                 disabled={i === prefs.length - 1}
                 aria-label="הורד"
-                style={{ background: "#eef0ee", color: "#1a1a1a", padding: ".28rem .55rem", fontSize: ".8rem" }}
+                className="btn-secondary btn-sm"
               >
                 ↓
               </button>
               <button
                 onClick={() => setPrefs(prefs.filter((_, j) => j !== i))}
-                style={{ background: "transparent", color: "#a8321e", padding: ".28rem .5rem", fontSize: ".8rem" }}
+                className="btn-ghost btn-sm text-bad"
               >
                 הסר
               </button>
@@ -167,7 +167,7 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
           ))}
 
           {prefs.length === 0 && (
-            <span style={{ color: "#6b655c", fontSize: ".85rem" }}>
+            <span className="text-muted" style={{ fontSize: ".85rem" }}>
               לא הוגדרו העדפות — הסדר יהיה לפי מזהה יציב.
             </span>
           )}
@@ -179,8 +179,8 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
               <button
                 key={field}
                 onClick={() => setPrefs([...prefs, { field, direction: "desc" }])}
-                style={{ background: "transparent", border: "1px dashed #c9c9c3", color: "#1a1a1a",
-                         padding: ".28rem .65rem", fontSize: ".8rem" }}
+                className="btn-secondary btn-sm"
+                style={{ borderStyle: "dashed" }}
               >
                 + {FIELD_LABEL[field]}
               </button>
@@ -195,10 +195,7 @@ export default function SearchControls({ value, onChange, onApply, disabled }: P
             החל על האזור המסומן
           </button>
         )}
-        <button
-          onClick={() => onChange({})}
-          style={{ background: "transparent", color: "#6b655c", border: "1px solid #d8d8d3" }}
-        >
+        <button className="btn-ghost" onClick={() => onChange({})}>
           אפס הכל
         </button>
       </div>

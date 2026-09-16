@@ -11,6 +11,12 @@ class Settings(BaseSettings):
 
     environment: str = "development"
 
+    # ── תשלום מדומה ──
+    # לחיצה על אמצעי תשלום מוסיפה את זכאות החבילה מיד, בלי סליקה. **כבוי
+    # כברירת מחדל**: עם הרשמה פתוחה, כל נרשם היה מקבל תיקים בחינם. מדליקים
+    # ב-.env מקומי להדגמה (SIMULATED_PAYMENTS=true) עד שתחובר סליקה אמיתית.
+    simulated_payments: bool = False
+
     # Development defaults rely on local/peer authentication and contain no
     # repository-stored credentials. Deployments should set both URLs.
     database_url: str = "postgresql+asyncpg://localhost/shaked_engine"

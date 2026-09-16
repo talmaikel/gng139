@@ -8,15 +8,18 @@
 זה לא במקרה: יתרה שאפשר להקטין מכמה מקומות מתחילה לסטות מהמסירות, ואז
 אי אפשר לענות ללקוח על מה חויב.
 """
-from typing import Any
+from typing import Any, Literal
+from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import get_async_session
 from app.core.security import current_active_user
-from app.models.package import Balance, Delivery, Package
+from app.models.package import Balance, CreditGrant, Delivery, Package
 from app.models.tenant import User
 
 router = APIRouter(prefix="/account", tags=["account"])
@@ -62,6 +65,40 @@ async def list_packages(
              "price_ils": float(p.price_ils)} for p in rows]
 
 
-# ‏**אין כאן נתיב רכישה.** הייתה ״רכישה מדומה״ שהוסיפה זכאות בלחיצה, בלי
-# תשלום — סבירה כל עוד ההרשמה הייתה סגורה, ותיקים בחינם לכל נרשם מרגע
-# שנפתחה. בפיילוט הלקוח משלם מחוץ למערכת ואדמין מוסיף זכאות: `admin.py`.
+# ── רכישה מדומה, מאחורי דגל ──
+#
+# הרכישה המדומה הוסרה כי עם הרשמה פתוחה היא נתנה תיקים בחינם לכל נרשם.
+# היא חוזרת **רק כש-`SIMULATED_PAYMENTS` דלוק** (טל, 16.09), כדי שאפשר יהיה
+# להדגים את הזרימה המלאה עד שתחובר סליקה. כשהדגל כבוי הנתיב אינו קיים
+# (404), והפיילוט ממשיך כמו קודם: תשלום בקישור, ואדמין מוסיף ב-`admin.py`.
+# כל רכישה נרשמת ב-`credit_grants`, כך שיתרה מדומה אינה מתערבבת בשקט עם אמיתית.
+
+
+class Purchase(BaseModel):
+    method: Literal["card", "bit", "paypal"]
+
+
+METHOD_LABEL = {"card": "כרטיס אשראי", "bit": "Bit", "paypal": "PayPal"}
+
+
+@router.post("/packages/{package_id}/purchase")
+async def purchase_package(
+    package_id: UUID,
+    body: Purchase,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> dict[str, Any]:
+    if not get_settings().simulated_payments:
+        raise HTTPException(status_code=404, detail="Not Found")
+    package = await session.get(Package, package_id)
+    if package is None:
+        raise HTTPException(status_code=404, detail="החבילה אינה קיימת.")
+    company_id, user_id = user.company_id, user.id
+    balance = await _balance(session, company_id)
+    balance.credits_remaining += package.credits
+    session.add(CreditGrant(company_id=company_id, credits=package.credits, package_id=package.id,
+                            note=f"תשלום מדומה · {METHOD_LABEL[body.method]}",
+                            granted_by_user_id=user_id))
+    await session.commit()
+    return {"package": package.name, "credits_added": package.credits,
+            "credits_remaining": balance.credits_remaining}
