@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 interface Props {
   /** התקדמות הסריקה, אם כבר יש: כמה חלקות נבדקו וכמה תיקים נמצאו. */
   progress?: { checked: number; found: number } | null;
@@ -23,13 +21,6 @@ const BLIPS: { x: number; y: number; delay: number }[] = [
 export default function SearchingOverlay({ progress }: Props) {
   // ‏המונה מופיע רק אחרי שהשרת החזיר משהו — לפני כן ״0 חלקות״ נראה כתקלה.
   const hasProgress = !!progress && progress.checked > 0;
-  const [seconds, setSeconds] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setSeconds((s) => s + 1), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
-  const ss = String(seconds % 60).padStart(2, "0");
 
   return (
     <div
@@ -71,12 +62,11 @@ export default function SearchingOverlay({ progress }: Props) {
 
         <h2 id="searching-title" className="sk-searching-title">מחפשים הזדמנויות באזור</h2>
         <p className="sk-searching-note">פעולה זו עשויה להימשך מספר דקות</p>
-        <p className="sk-searching-progress" aria-live="polite">
-          {hasProgress
-            ? <>נבדקו <strong>{progress!.checked}</strong> חלקות · נמצאו <strong>{progress!.found}</strong> תיקים</>
-            : "סורקים את הארכיון העירוני חלקה אחר חלקה"}
-        </p>
-        <p className="sk-searching-timer" dir="ltr">{mm}:{ss}</p>
+        {hasProgress && (
+          <p className="sk-searching-progress" aria-live="polite">
+            נבדקו <strong>{progress!.checked}</strong> חלקות · נמצאו <strong>{progress!.found}</strong> תיקים
+          </p>
+        )}
       </div>
     </div>
   );
