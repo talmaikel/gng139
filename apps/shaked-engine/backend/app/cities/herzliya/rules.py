@@ -45,6 +45,9 @@ class HerzliyaCityRules(BaseCityRules):
         """
         f = await fields_for(session, opportunity_id)
         d = deciding(f)
+        # ‏W10 · שער ה-70% אומר על מה נשען היחס. הערך לבדו אינו אומר.
+        if "residential_share" in d:
+            d["residential_share_basis"] = rights.share_basis(f["residential_share"])
 
         checks = rights.threshold_checks(d)
         checks.append(_scope_check(d.get("scope_buildings")))

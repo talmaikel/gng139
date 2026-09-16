@@ -1,9 +1,15 @@
 "use client";
 
-import { Alert, Anchor, Button, Group, NumberInput, Paper, Table, Text, TextInput } from "@mantine/core";
+import { Alert, Anchor, Button, Group, NumberInput, Paper, SimpleGrid, Table, Text, TextInput } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { PageHeader, Section, Stat, StatStrip, StatusBadge } from "@/components/brand/ui";
+import { PageHeader, Section, Stat, StatStrip, StatusBadge, gateBadge } from "@/components/brand/ui";
+import { ApiError } from "@/lib/api";
+import { fmtDate } from "@/lib/format";
+import {
+  RESIDENTIAL_SHARE_MIN, getResidentialShare, saveResidentialShare, shareOf, sharePct,
+  type ResidentialShareState,
+} from "@/lib/residential";
 
 type UnitRow = {
   id: string;
@@ -72,6 +78,117 @@ function draftFor(unit: UnitRow): Draft {
   };
 }
 
+const num = (v: string | number) => (v === "" ? null : Number(v));
+
+/** ‏W10 · §70א — יחס המגורים מטבלת השטחים בגרמושקה, שמכריע את שער ה-70%. */
+function ResidentialShareSection({ id }: { id: string }) {
+  const router = useRouter();
+  const [share, setShare] = useState<ResidentialShareState | null>(null);
+  const [residential, setResidential] = useState<string | number>("");
+  const [total, setTotal] = useState<string | number>("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [page, setPage] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getResidentialShare(id)
+      .then((s) => { setShare(s); setSourceUrl(s.entry?.source_url ?? ""); })
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) { router.replace("/login"); return; }
+        setError(e instanceof Error ? e.message : "לא ניתן לטעון את יחס המגורים.");
+      });
+  }, [id, router]);
+
+  const r = num(residential);
+  const t = num(total);
+  const tooLarge = r != null && t != null && r > t;
+  const live = r != null && t != null && r > 0 && t > 0 && !tooLarge ? shareOf(r, t) : null;
+  const urlOk = /^https?:\/\/\S+$/.test(sourceUrl.trim());
+  const canSave = live != null && urlOk && !saving;
+
+  async function save() {
+    if (live == null || r == null || t == null) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const next = await saveResidentialShare(id, {
+        residential_sqm: r, total_sqm: t, source_url: sourceUrl.trim(),
+        page: page.trim() || null, note: note.trim() || null,
+      });
+      setShare(next);
+      setResidential(""); setTotal(""); setPage(""); setNote("");
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) { router.replace("/login"); return; }
+      setError(e instanceof Error ? e.message : "לא ניתן לשמור את יחס המגורים.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const entry = share?.entry;
+  return (
+    <Section
+      title="70% מגורים — מטבלת השטחים בהיתר"
+      note={<>
+        ‏§70א הוא תנאי סף לחלופת שקד: לפחות 70% מהשטח הבנוי הקיים צריך לשמש כדין למגורים.
+        היחס אינו בשום מקור פתוח — קוראים אותו בטבלת השטחים שבגרמושקה ומזינים כאן, והוא מכריע את השער בתיק.
+        {" "}<b>שטחי שירות למגורים נספרים כמגורים</b> (חדרי מדרגות, מעליות, ממ״דים); מסחר, משרדים והשירות שלהם — לא.
+      </>}
+    >
+      {share && (
+        <>
+          <StatStrip>
+            <Stat label="יחס שמור" value={entry ? sharePct(entry.residential_share) : "—"} />
+            <Stat label="שער ה-70%" value={gateBadge(share.gate.status)} />
+            <Stat label="הוזן" value={entry ? fmtDate(entry.retrieved_at) : "טרם הוזן"} />
+            <Stat label="ניתן למסירה" value={share.assessment.deliverable ? "כן" : "לא"}
+                  tone={share.assessment.deliverable ? "ok" : "warn"} />
+          </StatStrip>
+          {share.gate.detail && <Text size="sm" c="dimmed" mt="sm">{share.gate.detail}</Text>}
+          {entry?.source_url && (
+            <Anchor href={entry.source_url} target="_blank" rel="noreferrer" size="sm" c="almond.7">פתח את הגרמושקה שהוזנה</Anchor>
+          )}
+          {share.stale && (
+            <Alert color="almond" mt="sm">ההזנה ישנה מכדי להכריע. יש לבדוק שוב מול הגרמושקה ולשמור מחדש.</Alert>
+          )}
+          {share.certainty === "conflict" && (
+            <Alert color="brick" mt="sm">ההזנה סותרת קריאה אחרת של אותו יחס, ולכן השער אינו מוכרע.</Alert>
+          )}
+        </>
+      )}
+
+      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md" mt="lg">
+        <NumberInput label="שטח מגורים, כולל שירות למגורים" description="מ״ר, מטבלת השטחים" min={0} max={100000}
+                     hideControls decimalScale={2} value={residential} onChange={setResidential}
+                     error={tooLarge ? "שטח המגורים אינו יכול לעלות על השטח הבנוי הכולל" : undefined} />
+        <NumberInput label="שטח בנוי כולל" description="מ״ר, כל השימושים וכל שטחי השירות" min={0} max={100000}
+                     hideControls decimalScale={2} value={total} onChange={setTotal} />
+        <TextInput label="קישור לגרמושקה" description="המסמך שממנו נקראה הטבלה" placeholder="https://…" dir="ltr"
+                   value={sourceUrl} onChange={(e) => setSourceUrl(e.currentTarget.value)}
+                   error={sourceUrl.trim() && !urlOk ? "קישור מלא, שמתחיל ב-https://" : undefined} />
+        <TextInput label="עמוד בגרמושקה" description="לא חובה" maxLength={20}
+                   value={page} onChange={(e) => setPage(e.currentTarget.value)} />
+      </SimpleGrid>
+      <TextInput label="הערה" description="לא חובה · מוצגת בתיק ליד המקור" maxLength={300} mt="md"
+                 value={note} onChange={(e) => setNote(e.currentTarget.value)} />
+
+      <Group justify="space-between" mt="md" wrap="wrap">
+        <Text size="sm" fw={600} c={live == null ? "dimmed" : live >= RESIDENTIAL_SHARE_MIN ? "moss.7" : "brick.7"}>
+          {live == null ? "היחס יחושב כשיוזנו שני השטחים"
+            : live >= RESIDENTIAL_SHARE_MIN ? `${sharePct(live)} מגורים — עומד בסף ה-70%`
+            : `${sharePct(live)} מגורים — מתחת ל-70%, השער ייכשל`}
+        </Text>
+        <Button loading={saving} disabled={!canSave} onClick={save}>
+          {entry ? "שמור במקום ההזנה הקודמת" : "שמור והכרע את השער"}
+        </Button>
+      </Group>
+      {error && <Alert color="brick" mt="md">{error}</Alert>}
+    </Section>
+  );
+}
+
 export default function DwellingUnitReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -133,6 +250,8 @@ export default function DwellingUnitReviewPage({ params }: { params: Promise<{ i
         title="אימות שטחי הדירות"
         meta={<>{state.address} · ספירה עירונית: {state.municipal_unit_count ?? "—"} דירות</>}
       />
+
+      <ResidentialShareSection id={id} />
 
       <Section title="מצב הלוח">
         <StatStrip>
