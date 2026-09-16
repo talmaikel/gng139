@@ -1184,3 +1184,20 @@ async def test_profit_after_levy_meets_16_exactly_when_the_estimate_is_under_the
     cells = _cells(exports.excel(d))
     from tests.test_exports import _evaluate_sheet
     assert _evaluate_sheet(d)["profit"] == pytest.approx(after["profit_ils"], abs=5)
+
+
+@pytest.mark.asyncio
+async def test_the_scan_ranks_by_the_same_numbers_the_dossier_shows(session):
+    """‏W6 · הסריקה ממיינת לפי הכלכלה שהלקוח יראה בתיק — אותו חישוב, לא עותק."""
+    from app.cities.herzliya.dossier import screening
+    c, opp = await _small(session, "9696", street_frontages=1)
+    opp.existing_units = 10
+    await session.flush()
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    e = await screening(session, HerzliyaCityRules(), opp.id)
+    econ = d["economics"]
+    assert e["case"] == econ["rights_verdict"]["case"]
+    assert e["margin"] == pytest.approx(econ["scenario"]["profit_margin_on_cost_ratio"])
+    cap = econ["scenarios"]["cap_400"]
+    assert e["cap_margin"] == pytest.approx(cap["margin_after_levy"] if cap["margin_after_levy"] is not None
+                                            else cap["margin_before_levy"])

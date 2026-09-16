@@ -48,6 +48,9 @@ def _mandatory(stmt, filters: dict[str, Any]):
     for key, (col, _) in MANDATORY.items():
         if (value := filters.get(key)) is not None:
             stmt = stmt.where(col >= value)
+    # ‏W6 · ״מקסימום דירות קיימות״ (בועז, 16.09): פחות בעלים להחתים. ‏NULL אינו עומד.
+    if (value := filters.get("max_units")) is not None:
+        stmt = stmt.where(Opportunity.existing_units <= value)
 
     # קביעת קומות ודאית: כל רוחב הרחוב בטווח הסובלנות נותן אותה תשובה.
     # יזם שמתכנן לפי המספר צריך לדעת שהוא אינו זז.
