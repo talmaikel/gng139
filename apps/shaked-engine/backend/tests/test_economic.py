@@ -44,9 +44,9 @@ def test_construction_is_paid_on_everything_built_and_sold_on_main_area_only():
     והחניון התת-קרקעי אינו נספר בתקרה כלל אבל כן משולם."""
     r = calc(FI(**BASE))
     assert r.total_construction_cost_ils == 3396.0 * _CONSTRUCTION_COST_PER_SQM
-    assert r.constructed_area_sqm == 3396.0 * 1.40                # ועוד חניון
+    assert r.constructed_area_sqm == pytest.approx(3396.0 * 1.60)  # ועוד חניון (דוחות 0: 56%–77%)
     assert r.total_underground_cost_ils > 0
-    assert r.sellable_main_sqm == pytest.approx(3396.0 * 0.78)    # ורק זה נמכר
+    assert r.sellable_main_sqm == pytest.approx(3396.0 * 0.85)    # ורק זה נמכר (דוחות 0: 82%–90%)
     assert r.sellable_main_sqm < 3396.0
 
 
@@ -65,7 +65,7 @@ def test_tenant_area_is_sized_off_the_old_building_not_the_new_one():
     big = calc(FI(**{**BASE, "buildable_area_sqm": 6792.0}))
     assert small.tenant_allocation_sqm == big.tenant_allocation_sqm
     assert big.developer_allocation_sqm == pytest.approx(
-        small.developer_allocation_sqm + 3396.0 * 0.78)
+        small.developer_allocation_sqm + 3396.0 * 0.85)
 
 
 def test_extra_compensation_comes_out_of_the_developers_share():
@@ -75,17 +75,36 @@ def test_extra_compensation_comes_out_of_the_developers_share():
     assert plus25.developer_revenue_ils < plain.developer_revenue_ils
 
 
-def test_the_land_is_in_the_cost_base_and_is_not_deducted_twice():
-    """פיצוי הדיירים **הוא** התמורה על הקרקע. הגרסה הקודמת ניכתה אותו
-    מההכנסה ולא הכניסה אותו לעלות — התשומה הגדולה ביותר מחוץ למכנה,
-    ו״רווח על העלות״ החזיר 305%. הבדיקה נועלת את שתי הזהויות."""
+def test_the_owners_flats_are_neither_revenue_nor_cost():
+    """‏16.09 · ״רווחיות מעלויות״ כמו בדוח 0. פיצוי הדיירים **הוא** התמורה על
+    הקרקע: הוא מוצג, ואינו נספר לא כהכנסה ולא כעלות. הגרסה הקודמת ספרה
+    אותו בשני הצדדים — הרווח בשקלים לא השתנה, אבל המכנה כמעט הוכפל, ו-16%
+    שלנו היה רף כפול מ-16% של היזם (גולומב 17: 16.5% בדוח, 10.4% אצלנו)."""
     r = calc(FI(**BASE))
-    assert r.land_cost_ils > 0
-    assert r.developer_revenue_ils == pytest.approx(r.total_revenue_ils - r.land_cost_ils, abs=1)
-    # לא פעמיים: הרווח זהה לחישוב ללא קרקע בשני הצדדים
-    assert r.projected_profit_ils == pytest.approx(
-        r.developer_revenue_ils - (r.total_cost_ils - r.land_cost_ils), abs=1)
-    assert r.profit_margin_on_cost_ratio < 1.0      # מכנה שכולל את הקרקע
+    assert r.owners_flats_value_ils > 0
+    assert r.total_revenue_ils == pytest.approx(r.developer_revenue_ils, abs=1)
+    assert r.projected_profit_ils == pytest.approx(r.total_revenue_ils - r.total_cost_ils, abs=1)
+    # דירות הבעלים אינן במכנה: הכפלת שווין (מחיר כפול) אינה מכפילה את העלות
+    parts = sum(getattr(r, n) for n in COST_LINES)
+    assert parts == pytest.approx(r.total_cost_ils, abs=1)
+    assert r.owners_flats_value_ils == pytest.approx(
+        r.tenant_allocation_sqm * BASE["sale_price_per_sqm"] / 1.18, abs=1)
+
+
+def test_balconies_are_built_for_everyone_and_sold_only_on_the_developers_flats():
+    """בדוחות 0 כל דירה חדשה מקבלת 12 מ״ר מרפסת שאינה בשטח המותר, נבנית
+    ב-2,500 ₪ ונמכרת בחצי מחיר מ״ר עיקרי."""
+    r = calc(FI(**BASE))
+    assert r.new_units_estimate >= 7
+    assert r.balcony_sqm == pytest.approx(r.new_units_estimate * 12.0)
+    assert r.total_balcony_cost_ils == pytest.approx(r.balcony_sqm * 2_500.0)
+    share = r.developer_allocation_sqm / r.sellable_main_sqm
+    assert r.balcony_revenue_ils == pytest.approx(
+        r.balcony_sqm * share * 0.5 * BASE["sale_price_per_sqm"] / 1.18, abs=1)
+    assert r.developer_revenue_ils == pytest.approx(
+        r.developer_allocation_sqm * BASE["sale_price_per_sqm"] / 1.18 + r.balcony_revenue_ils, abs=1)
+    none = calc(FI(**BASE, balcony_sqm_per_new_unit=0.0))
+    assert none.balcony_revenue_ils == 0 and none.total_balcony_cost_ils == 0
 
 
 def test_a_building_that_cannot_rehouse_its_own_tenants_says_so(session=None):
@@ -98,7 +117,7 @@ def test_a_building_that_cannot_rehouse_its_own_tenants_says_so(session=None):
 
 
 def test_the_target_is_compared_and_not_assumed():
-    """המועמד הטיפוסי מחזיר כ-34.5% -- **מעל** היעד המקובל של 20%.
+    """המועמד הטיפוסי מחזיר כ-62% -- **מעל** היעד.
 
     לפני B2 המספר נשען על עלות בנייה שהוערכה ידנית (10,000 ₪/מ״ר, טווח לא
     מבוסס), וההחזר נראה גבולי -- כ-17%, מתחת ליעד. אחרי שעלות הבנייה
@@ -106,13 +125,16 @@ def test_the_target_is_compared_and_not_assumed():
     ~7,367 ₪/מ״ר להרצליה+רמת השרון), אותו מועמד בדיוק נמצא **מעל** היעד.
     זו הייתה ההערכה שהשתנתה, לא הפרויקט.
 
-    ‏15.09 (הנחות v4): מחיר המכירה ירד מ-45,000 ל-42,000 ₪ למ״ר — אומדן מוצלב
-    מעסקאות יד שנייה ומפער חדש/יד שנייה — והמועמד ירד ל-~29%. עדיין מעל
-    היעד של 20%, ולכן הטענה של הבדיקה לא השתנתה, רק הטווח."""
+    ‏15.09 (הנחות v4): מחיר המכירה ירד מ-45,000 ל-42,000 ₪ למ״ר, והמועמד ירד ל-~29%.
+
+    ‏16.09 (הנחות v6): ״רווחיות מעלויות״ כמו בדוח 0 — דירות הבעלים יצאו
+    מהמכנה — ואותו מועמד קורא ~62%. זה אותו רווח בשקלים על מכנה קטן
+    בהרבה: ‏3,396 מ״ר לשבע דירות של 70 מ״ר הוא פרויקט נדיר, והמדידה החדשה
+    אומרת זאת במספר."""
     r = calc(FI(**BASE))
-    assert 0.25 < r.profit_margin_on_cost_ratio < 0.35
+    assert 0.55 < r.profit_margin_on_cost_ratio < 0.70
     assert calc(FI(**BASE, developer_profit_target_ratio=0.20)).meets_developer_target
-    assert not calc(FI(**BASE, developer_profit_target_ratio=0.40)).meets_developer_target
+    assert not calc(FI(**BASE, developer_profit_target_ratio=0.80)).meets_developer_target
 
 
 # ── ECO-02 · ״לעולם לא להציג אומדן כנתון מאומת״ ──
@@ -169,10 +191,11 @@ def test_every_figure_in_the_library_is_marked_and_dated():
     a = get_assumptions("herzliya")
     assert a.version and a.effective_date
     assert all(x["status"] in {s.value for s in AssumptionStatus} for x in a.report().values())
-    # ‏DATA שמורה למי שיש לה מקור חיצוני קשיח. היום שתיים: שיעור המע״מ,
-    # ושיעור היטל ההשבחה — רבע ההשבחה לפי §19(ב)(10א), שנוסף בתיקון 139.
+    # ‏DATA שמורה למי שיש לה מקור חיצוני קשיח. היום שלוש: שיעור המע״מ,
+    # שיעור היטל ההשבחה — רבע ההשבחה לפי §19(ב)(10א), שנוסף בתיקון 139 —
+    # ושיעור מס הרכישה על מקרקעין שאינם דירת מגורים.
     assert sorted(n for n, x in a.report().items() if x["status"] == "data") == \
-        ["betterment_levy_rate", "vat_rate"]
+        ["betterment_levy_rate", "purchase_tax_ratio", "vat_rate"]
     # וכל הנחה שאינה DATA חייבת להסביר מאיפה המספר, או להיות MISSING.
     for name, x in a.report().items():
         assert x["source"] or x["status"] == "estimate", name
@@ -202,24 +225,44 @@ def test_impossible_inputs_are_refused_rather_than_computed(bad):
 
 def test_the_margin_lands_in_a_commercially_plausible_range():
     """הגרסה הקודמת החזירה 305% רווח על העלות — אף פרויקט התחדשות אינו
-    נראה כך. זו הייתה הראיה שהמודל חלקי, לא שהפרויקט מצוין."""
+    נראה כך. זו הייתה הראיה שהמודל חלקי, לא שהפרויקט מצוין.
+
+    ‏16.09 · במדידה של דוח 0 (דירות הבעלים מחוץ למכנה) פרויקט טוב במיוחד
+    קורא עשרות אחוזים, ולא מאות. גולומב 17 — פרויקט אמיתי — הוא 16.5%."""
     r = calc(FI(**BASE))
-    assert 0.0 < r.profit_margin_on_cost_ratio < 0.60
+    assert 0.0 < r.profit_margin_on_cost_ratio < 1.0
+
+
+COST_LINES = ("total_construction_cost_ils", "total_underground_cost_ils", "total_balcony_cost_ils",
+              "total_soft_cost_ils", "total_demolition_cost_ils", "total_tenant_cost_ils",
+              "total_consultants_ils", "total_fees_ils", "purchase_tax_ils",
+              "total_marketing_ils", "total_guarantees_ils", "total_bank_fees_ils",
+              "total_finance_ils", "betterment_levy_ils")
 
 
 def test_every_cost_line_is_present_and_none_is_silently_zero():
     """כל שורה שהתווספה חייבת להשפיע. שורה שנשארת אפס היא שורה שלא חוברה."""
     r = calc(FI(**BASE))
-    for line in ("land_cost_ils", "total_construction_cost_ils", "total_underground_cost_ils",
-                 "total_soft_cost_ils", "total_demolition_cost_ils", "total_tenant_cost_ils",
-                 "total_marketing_ils", "total_guarantees_ils", "total_finance_ils"):
-        assert getattr(r, line) > 0, line
-    parts = sum(getattr(r, n) for n in (
-        "land_cost_ils", "total_construction_cost_ils", "total_underground_cost_ils",
-        "total_soft_cost_ils", "total_demolition_cost_ils", "total_tenant_cost_ils",
-        "total_marketing_ils", "total_guarantees_ils", "total_finance_ils",
-        "betterment_levy_ils"))
+    for line in COST_LINES:
+        if line != "betterment_levy_ils":          # ההשבחה MISSING, ולכן 0 בכוונה
+            assert getattr(r, line) > 0, line
+    parts = sum(getattr(r, n) for n in COST_LINES)
     assert parts == pytest.approx(r.total_cost_ils, abs=1)
+
+
+def test_the_report_0_cost_lines_are_what_the_reports_charge():
+    """‏16.09 · השורות שנוספו מהדוחות, כל אחת עם הנוסחה שלה."""
+    inp = FI(**BASE)
+    r = calc(inp)
+    assert r.total_demolition_cost_ils == 250_000            # לבניין, ״קומפלט״
+    assert r.total_fees_ils == pytest.approx(r.constructed_area_sqm * 300.0)
+    assert r.purchase_tax_ils == pytest.approx(0.06 * 12_000.0 * r.developer_allocation_sqm)
+    assert r.total_consultants_ils == pytest.approx(r.new_units_estimate * 50_000.0 + 150_000.0)
+    assert r.total_tenant_cost_ils == pytest.approx(
+        7 * (36 * 7_500.0 + 16_000.0 + 30_000.0) + 250_000.0)
+    before_finance = r.total_cost_ils - r.total_finance_ils - r.total_bank_fees_ils
+    assert r.total_bank_fees_ils == pytest.approx(before_finance * 0.013, abs=1)
+    assert r.total_finance_ils == pytest.approx(before_finance * 0.04, abs=1)
 
 
 def test_a_price_quoted_with_vat_is_netted_before_it_meets_net_costs():
@@ -248,14 +291,17 @@ def test_the_betterment_levy_is_never_silently_zero_in_the_report():
 
 
 def test_marketing_and_finance_are_not_charged_on_the_owners_flats():
-    """‏E1 · 15.09 (בועז). שווי דירות הבעלים נכנס להכנסות ולעלויות (״קרקע״) —
-    ועד היום גם לבסיס של שיווק ושל מימון. באלוף יגאל אלון 40 אלה היו כ-3.2
-    ו-7.6 מיליון ₪ על דירות שאיש אינו משווק ושווי שאיש אינו מממן."""
+    """‏E1 · 15.09 (בועז). שווי דירות הבעלים היה בבסיס של שיווק ושל מימון.
+    באלוף יגאל אלון 40 אלה היו כ-3.2 ו-7.6 מיליון ₪ על דירות שאיש אינו
+    משווק ושווי שאיש אינו מממן. ‏16.09: הוא כבר אינו עלות בכלל, והמימון
+    מחושב על כל העלויות לפני מימון."""
     inp = FI(**BASE)
     r = calc(inp)
     assert r.total_marketing_ils == pytest.approx(r.developer_revenue_ils * inp.marketing_ratio, abs=1)
-    before_finance = r.total_cost_ils - r.total_finance_ils
-    assert r.total_finance_ils == pytest.approx((before_finance - r.land_cost_ils)
-                                                * inp.finance_ratio, abs=1)
+    before_finance = r.total_cost_ils - r.total_finance_ils - r.total_bank_fees_ils
+    assert r.total_finance_ils == pytest.approx(before_finance * inp.finance_ratio, abs=1)
+    assert r.owners_flats_value_ils > 0 and r.owners_flats_value_ils not in (
+        before_finance, r.total_cost_ils)
     # ערבויות נשארות על הכול: היזם נותן ערבויות גם לבעלים
-    assert r.total_guarantees_ils == pytest.approx(r.total_revenue_ils * inp.guarantees_ratio, abs=1)
+    assert r.total_guarantees_ils == pytest.approx(
+        (r.total_revenue_ils + r.owners_flats_value_ils) * inp.guarantees_ratio, abs=1)

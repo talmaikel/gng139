@@ -174,7 +174,13 @@ class PolicyArea:
             "sources": [{"label": "מדיניות חלופת שקד הרצליה, אפריל 2026 · §5 עמ׳ 8 · §6 עמ׳ 10 · §7 עמ׳ 12",
                          "url": POLICY_URL}],
         }
-        for name, sqm in (("low", self.low_sqm), ("base", self.base_sqm), ("high", self.high_sqm)):
+        # ‏**16.09 · ״אמצע״ — השטח שהסריקה והתיק מחשבים עליו.** ‏`base` הוא הקצה
+        # השמרני של המעטפת; היזמים בדוחות 0 תכננו מעליו (לייב יפה 13: 2,200
+        # מול בסיס 1,889 בטווח 1,792–2,671), ולכן הרווח נשפט על אמצע הטווח.
+        # ‏`base` ו-`high` כבר חסומים בתקרה, ולכן גם האמצע.
+        mid_sqm = (self.base_sqm + self.high_sqm) / 2
+        for name, sqm in (("low", self.low_sqm), ("base", self.base_sqm),
+                          ("mid", mid_sqm), ("high", self.high_sqm)):
             far = self.far(sqm)
             out[name] = {
                 "sqm": round(sqm, 1),

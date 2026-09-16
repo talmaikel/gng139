@@ -55,9 +55,14 @@ export const ASSESSMENT_STATUS: Record<string, Status> = {
   ineligible: status("אינו כשיר", "bad"),
 };
 
+/** ‏16.09 · הכותרת של הקבוצה הצהובה: תיקים שכלכליים רק עם בקשה להגדלת זכויות. */
+export const RIGHTS_REQUEST_LABEL = "תיקים שנדרש להגדיל בהם את הזכויות";
+
 /** ‏Leaflet מצייר בקנבס וצריך צבע ממשי, לא משתנה CSS. */
 export const MAP_COLOUR = {
   candidate: "#E8894A",
+  /** תיק שנדרש להגדיל בו את הזכויות — אותו צהוב כמו --rights-border */
+  rights: "#D9B800",
   selected: "#13161E",
   area: "#13161E",
   tooLarge: "#A2402E",

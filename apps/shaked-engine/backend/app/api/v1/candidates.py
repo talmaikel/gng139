@@ -244,6 +244,10 @@ async def scan_deliver(
     queue = _offered(q, body)
     target = min(body.want or SCAN_SIZE, credits)
     started = time.monotonic()
+    # ‏16.09 · מאיזה תור הגיע כל תיק — כלכלי לפי המדיניות, או רק עם הגדלת זכויות.
+    # נשמר עם המסירה, כי המסך מסמן את השניים בצבע ובכותרת, וגם ״התיקים שלי״.
+    track_of = ({r["id"]: "economic" for r in q["economic"]}
+                | {r["id"]: "rights_request" for r in q["rights"]})
 
     async def prepare(s, oid):
         return await fetch_for_delivery(s, oid)
@@ -264,8 +268,12 @@ async def scan_deliver(
                                          on_unready=prepare)
             if charged:
                 p = await provenance(session, oid)
+                e = candidate.get("economics") or {}
                 row.rules_version, row.data_version, row.why_selected = (
-                    p["rules_version"], p["data_version"], p["why"])
+                    p["rules_version"], p["data_version"],
+                    {**p["why"], "track": track_of.get(candidate["id"]),
+                     "case": e.get("case"), "margin": e.get("margin"),
+                     "cap_margin": e.get("cap_margin")})
                 await session.flush()
             await session.commit()
             if charged:

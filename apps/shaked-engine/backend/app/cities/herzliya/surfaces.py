@@ -115,7 +115,7 @@ _REF = re.compile(r"\$?([A-Z]{1,3})\$?(\d+)")
 
 def _evaluate(cells: dict[str, tuple[str, Any]], ref: str, seen: frozenset = frozenset()) -> Any:
     """מחשב תא כמו שאקסל מחשב אותו — רק מה שהגיליון שלנו משתמש בו:
-    ארבע פעולות, השוואה, ‏MIN ו-IF. **תא ריק בחשבון הוא 0**, כמו באקסל."""
+    ארבע פעולות, השוואה, ‏MIN, ‏MAX, ‏ROUND ו-IF. **תא ריק בחשבון הוא 0**, כמו באקסל."""
     if ref in seen:
         raise _ExcelError(f"הפניה מעגלית ב-{ref}")
     kind, val = cells.get(ref, ("blank", None))
@@ -129,18 +129,28 @@ def _evaluate(cells: dict[str, tuple[str, Any]], ref: str, seen: frozenset = fro
         return 0.0 if v is None else v
 
     expr = _REF.sub(lambda m: f'arg("{m.group(1)}{m.group(2)}")', val)
-    expr = (expr.replace("<>", "!=").replace("MIN(", "_min(").replace("IF(", "_if("))
+    expr = (expr.replace("<>", "!=").replace("MIN(", "_min(").replace("MAX(", "_max(")
+            .replace("ROUND(", "_round(").replace("IF(", "_if("))
     expr = re.sub(r"(?<![<>!=])=(?!=)", "==", expr)
 
     def _min(*xs):
         nums = [x for x in xs if isinstance(x, (int, float))]
         return min(nums) if nums else 0.0
 
+    def _max(*xs):
+        nums = [x for x in xs if isinstance(x, (int, float))]
+        return max(nums) if nums else 0.0
+
+    def _round(x, n=0):
+        # ‏ROUND באקסל מעגל חצי הרחק מאפס; המחשבון מעגל חצי כלפי מעלה על חיוביים.
+        return float(int(x * 10 ** n + 0.5)) / 10 ** n
+
     def _if(cond, a, b):
         return a if cond else b
 
     try:
-        return eval(expr, {"__builtins__": {}}, {"arg": arg, "_min": _min, "_if": _if})
+        return eval(expr, {"__builtins__": {}},
+                    {"arg": arg, "_min": _min, "_max": _max, "_round": _round, "_if": _if})
     except ZeroDivisionError as e:
         raise _ExcelError(f"#DIV/0! ב-{ref}") from e
     except TypeError as e:
@@ -154,7 +164,7 @@ def excel_surface(xlsx: bytes) -> Surface:
     cells = _cells(xlsx)
     rows = sorted({int(_REF.fullmatch(r).group(2)) for r in cells if _REF.fullmatch(r)})
     section = "inputs"
-    wanted_out = {"הכנסות (נטו ממע״מ)": "revenue", "סך העלויות": "total_cost",
+    wanted_out = {"הכנסות היזם (נטו ממע״מ)": "revenue", "סך העלויות": "total_cost",
                   "רווח": "profit", "רווח על העלות": "margin"}
     for n in rows:
         kind, label = cells.get(f"A{n}", ("blank", None))
@@ -212,7 +222,7 @@ def pdf_surface(pdf: bytes) -> Surface:
         if not money:
             continue
         amount = float(_signed(money).replace(",", ""))
-        if words == _words("הכנסות (נטו ממע״מ)") and out.revenue is None:
+        if words == _words("הכנסות היזם (נטו ממע״מ)") and out.revenue is None:
             out.revenue = amount
         elif words == _words("רווח על העלות") and out.profit is None:
             out.profit = amount

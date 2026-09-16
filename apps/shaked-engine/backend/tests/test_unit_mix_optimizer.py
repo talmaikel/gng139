@@ -16,7 +16,7 @@ def _economic_input(**overrides):
         underground_ratio=0.40,
         underground_cost_per_sqm=6_000,
         soft_cost_ratio=0.15,
-        demolition_cost_per_unit=150_000,
+        demolition_cost_ils=250_000,
         average_existing_unit_sqm=77.5,
         tenant_compensation_sqm_per_existing_unit=12,
         tenant_rent_months=42,

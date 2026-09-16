@@ -63,7 +63,7 @@ def _inputs():
         sale_price_per_sqm=A.sale_price_per_sqm_ils.value,
         construction_cost_per_sqm=A.construction_cost_per_sqm_ils.value,
         soft_cost_ratio=A.soft_cost_ratio.value,
-        demolition_cost_per_unit=A.demolition_cost_per_unit_ils.value,
+        demolition_cost_ils=A.demolition_cost_ils.value,
         average_existing_unit_sqm=A.average_existing_unit_sqm.value,
         tenant_compensation_sqm_per_existing_unit=A.tenant_compensation_sqm_per_existing_unit.value,
         main_area_ratio=A.main_area_ratio.value, underground_ratio=A.underground_ratio.value,
@@ -88,9 +88,12 @@ def _evaluate_sheet(d):
     for key, _, formula, _ in exports.OUTPUT_ROWS:
         expr = formula.lstrip("=")
         # הנוסחאות משתמשות במפתחות לוגיים; כאן הם משתני פייתון.
-        expr = expr.replace("MIN(", "min(").replace("IF(", "_if(")
+        expr = (expr.replace("MIN(", "min(").replace("MAX(", "max(")
+                .replace("ROUND(", "_round(").replace("IF(", "_if("))
         expr = re.sub(r"\{(\w+)\}", r'env["\1"]', expr)
-        env[key] = eval(expr, {"min": min, "_if": lambda c, a, b: a if c else b},
+        # ‏ROUND באקסל מעגל חצי כלפי מעלה, כמו המחשבון — ולא כמו round של פייתון.
+        env[key] = eval(expr, {"min": min, "max": max, "_if": lambda c, a, b: a if c else b,
+                               "_round": lambda x, n: float(int(x + 0.5))},
                         {"env": {k: (0.0 if v is None else v) for k, v in env.items()}})
     return env
 
@@ -103,14 +106,21 @@ def test_the_spreadsheet_computes_exactly_what_the_calculator_does():
     calc = d["economics"]["scenario"]
 
     for sheet_key, calc_key in (("revenue", "total_revenue_ils"),
-                                ("land", "land_cost_ils"),
+                                ("owners_value", "owners_flats_value_ils"),
+                                ("balcony_revenue", "balcony_revenue_ils"),
+                                ("new_units", "new_units_estimate"),
                                 ("build_cost", "total_construction_cost_ils"),
                                 ("under", "total_underground_cost_ils"),
+                                ("balcony_cost_total", "total_balcony_cost_ils"),
                                 ("soft_cost", "total_soft_cost_ils"),
                                 ("demo_cost", "total_demolition_cost_ils"),
                                 ("tenant_cost", "total_tenant_cost_ils"),
+                                ("consultants_cost", "total_consultants_ils"),
+                                ("fees_cost", "total_fees_ils"),
+                                ("purchase_tax", "purchase_tax_ils"),
                                 ("marketing_cost", "total_marketing_ils"),
                                 ("guarantee_cost", "total_guarantees_ils"),
+                                ("bank_fees_cost", "total_bank_fees_ils"),
                                 ("finance_cost", "total_finance_ils"),
                                 ("total_cost", "total_cost_ils"),
                                 ("profit", "projected_profit_ils")):

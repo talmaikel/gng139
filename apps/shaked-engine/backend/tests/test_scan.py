@@ -392,6 +392,13 @@ async def test_with_the_checkbox_rights_requests_follow_the_economic_parcels(cli
                               json={"polygon": AREA, "include_rights_request": True})).json()
     assert [d["opportunity_id"] for d in body["delivered"]] == [str(a.id), str(b.id)]
     assert body["needs_rights_confirmation"] is None
+    # ‏16.09 · מאיזה תור הגיע כל תיק נשמר עם המסירה — המסך צובע את השני בצהוב,
+    # וגם ״התיקים שלי״ יודע להבחין.
+    tracks = {d["opportunity_id"]: d["why_selected"]["track"] for d in body["delivered"]}
+    assert tracks == {str(a.id): "economic", str(b.id): "rights_request"}
+    assert body["delivered"][1]["why_selected"]["case"] == "B"
+    mine = (await client.get("/api/v1/candidates/herzliya/mine")).json()
+    assert {m["opportunity_id"]: m["why_selected"]["track"] for m in mine} == tracks
 
 
 @pytest.mark.asyncio

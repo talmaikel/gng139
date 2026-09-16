@@ -11,6 +11,7 @@ import {
   getBalance,
   getMyDeliveries,
   getPackages,
+  isRightsRequest,
   runScan,
   type AccountBalance,
   type Candidate,
@@ -26,6 +27,7 @@ import SearchControls from "@/components/SearchControls";
 // מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
 // לחבילת ה-SSR, שם אין `window`, והדף מחזיר 500 בטעינה נקייה.
 import { MAX_RADIUS_M, circlePolygon, geodesicArea, type LatLngTuple } from "@/lib/searchArea";
+import { RIGHTS_REQUEST_LABEL } from "@/lib/labels";
 import { dunam } from "@/lib/format";
 import { AppShell } from "@/components/brand/AppShell";
 import { IconSearch } from "@/components/brand/icons";
@@ -44,6 +46,7 @@ function asMapRows(mine: DeliveredOpportunity[]): Candidate[] {
     id: m.opportunity_id, address: m.address, block: m.block, parcel: m.parcel,
     area_sqm: null, verification_level: "", category: null,
     geometry: m.geometry ?? null, centroid: m.centroid ?? null, assessment: m.assessment,
+    track: m.why_selected?.track,
   }));
 }
 
@@ -355,29 +358,46 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* עד שלושה תיקים מהסריקה האחרונה, מתחת למפה; לחיצה על שורה מדגישה את החלקה על המפה */}
-      {result && result.delivered.length > 0 && (
-        <div className="results">
-          {result.delivered.slice(0, 3).map((d) => (
-            <div
-              key={d.opportunity_id}
-              className={`card result${selectedId === d.opportunity_id ? " is-selected" : ""}`}
-              onClick={() => setSelectedId(d.opportunity_id)}
-            >
-              <div>
-                <strong>{d.address}</strong>
-                <div className="text-muted" style={{ fontSize: ".82rem" }}>
-                  גוש <span className="mono">{d.block ?? "—"}</span> · חלקה <span className="mono">{d.parcel ?? "—"}</span>
-                </div>
-                <div style={{ marginTop: ".35rem" }}>{d.assessment ? assessmentBadge(d.assessment.status) : null}</div>
+      {/* עד שלושה תיקים מהסריקה האחרונה, מתחת למפה; לחיצה על שורה מדגישה את החלקה על המפה.
+          ‏16.09 · הכלכליים קודם, ואחריהם — בצהוב ותחת כותרת משלהם — התיקים שכלכליים
+          רק עם בקשה להגדלת זכויות. */}
+      {result && result.delivered.length > 0 && (() => {
+        const shown = result.delivered.slice(0, 3);
+        const economic = shown.filter((d) => !isRightsRequest(d));
+        const rights = shown.filter(isRightsRequest);
+        const card = (d: DeliveredOpportunity) => (
+          <div
+            key={d.opportunity_id}
+            className={`card result${isRightsRequest(d) ? " is-rights" : ""}${selectedId === d.opportunity_id ? " is-selected" : ""}`}
+            onClick={() => setSelectedId(d.opportunity_id)}
+          >
+            <div>
+              <strong>{d.address}</strong>
+              <div className="text-muted" style={{ fontSize: ".82rem" }}>
+                גוש <span className="mono">{d.block ?? "—"}</span> · חלקה <span className="mono">{d.parcel ?? "—"}</span>
               </div>
-              <Link href={`/app/dossier/${d.opportunity_id}`} className="sk-btn-like" onClick={(e) => e.stopPropagation()}>
-                פתח תיק ←
-              </Link>
+              <div style={{ marginTop: ".35rem", display: "flex", gap: ".4rem", flexWrap: "wrap", alignItems: "center" }}>
+                {d.assessment ? assessmentBadge(d.assessment.status) : null}
+                {isRightsRequest(d) && <span className="pill rights">נדרשת הגדלת זכויות</span>}
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+            <Link href={`/app/dossier/${d.opportunity_id}`} className="sk-btn-like" onClick={(e) => e.stopPropagation()}>
+              פתח תיק ←
+            </Link>
+          </div>
+        );
+        return (
+          <>
+            {economic.length > 0 && <div className="results">{economic.map(card)}</div>}
+            {rights.length > 0 && (
+              <div>
+                <h3 className="results-title">{RIGHTS_REQUEST_LABEL}</h3>
+                <div className="results">{rights.map(card)}</div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {mine.length > 0 && !result && (
         <p className="text-muted" style={{ fontSize: ".82rem", marginTop: "-.6rem" }}>

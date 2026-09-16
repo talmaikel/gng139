@@ -244,7 +244,8 @@ function WithRowInfo({ row }: { row: CostRow }) {
 
 const VERDICT: Record<RightsVerdict["case"], { title: string; color: string }> = {
   A: { title: "כלכלי לפי מדיניות הרצליה", color: "moss" },
-  B: { title: "כלכלי רק עם הגדלת זכויות", color: "almond" },
+  // ‏16.09 · צהוב, כמו הכרטיס במסך הסריקה: ״תיקים שנדרש להגדיל בהם את הזכויות״
+  B: { title: "כלכלי רק עם הגדלת זכויות", color: "yellow" },
   C: { title: "לא כלכלי גם בתקרת 400%", color: "brick" },
   D: { title: "לא חושב שטח לפי המדיניות", color: "gray" },
 };
@@ -531,15 +532,21 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                     </Table.Td>
                   </Table.Tr>
                 )) : ([
-                  ["הכנסות (נטו ממע״מ)", s.total_revenue_ils],
-                  ["קרקע — פיצוי הדיירים", -s.land_cost_ils],
+                  // ‏16.09 · ״רווחיות מעלויות״ כמו בדוח 0: הכנסות היזם בלבד, ודירות
+                  // הבעלים לא כהכנסה ולא כעלות. השורות בשרת (cost_rows) הן המקור.
+                  ["הכנסות היזם (נטו ממע״מ)", s.total_revenue_ils],
                   ["בנייה מעל הקרקע", -s.total_construction_cost_ils],
                   ["חניון תת-קרקעי", -s.total_underground_cost_ils],
+                  ["מרפסות", -(s.total_balcony_cost_ils ?? 0)],
                   ["עלויות רכות", -s.total_soft_cost_ils],
                   ["הריסה", -s.total_demolition_cost_ils],
-                  ["שכירות והובלות לדיירים", -s.total_tenant_cost_ils],
+                  ["שכירות, הובלות ועו״ד לדיירים", -s.total_tenant_cost_ils],
+                  ["יועצים ותב״ע", -(s.total_consultants_ils ?? 0)],
+                  ["אגרות בנייה", -(s.total_fees_ils ?? 0)],
+                  ["מס רכישה", -(s.purchase_tax_ils ?? 0)],
                   ["שיווק ותיווך", -s.total_marketing_ils],
                   ["ערבויות וביטוח", -s.total_guarantees_ils],
+                  ["עמלות בנק", -(s.total_bank_fees_ils ?? 0)],
                   ["מימון", -s.total_finance_ils],
                   ...(d.economics.betterment ? [] : [["היטל השבחה", -s.betterment_levy_ils]]),
                 ] as [string, number][]).map(([name, value]) => (
@@ -567,6 +574,13 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                 )}
               </Table.Tbody>
             </Table>
+            {/* ‏16.09 · דירות הבעלים הן התמורה על הקרקע: מוצגות, ואינן במכנה. */}
+            {s.owners_flats_value_ils != null && (
+              <Text size="sm" c="dimmed" mt="xs">
+                דירות הבעלים — {ilsApprox(s.owners_flats_value_ils)} — הן התמורה על הקרקע, ואינן נספרות לא
+                כהכנסה ולא כעלות (רווחיות מעלויות, כמו בדוח 0).
+              </Text>
+            )}
 
             {d.economics.betterment && <BettermentBlock b={d.economics.betterment} />}
           </>

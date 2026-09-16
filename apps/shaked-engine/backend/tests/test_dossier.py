@@ -665,11 +665,10 @@ def test_the_residual_land_value_is_what_the_developer_can_pay():
     from app.services.economic.betterment import residual_land_value
 
     land = residual_land_value(
-        total_revenue_ils=100e6, total_cost_ils=80e6, land_cost_ils=30e6,
-        finance_ratio=0.05, developer_profit_target_ratio=0.20)
+        total_revenue_ils=100e6, total_cost_ils=50e6, developer_profit_target_ratio=0.20)
     # בדיקת ההיפוך: עם הקרקע הזו, ההכנסות הן בדיוק עלות ועוד רווח היעד.
-    # ‏E1 · המימון אינו על הקרקע, ולכן החלק שאינו קרקע (כולל מימונו) קבוע.
-    cost = land + (80e6 - 30e6)
+    # ‏16.09 · כמו בדוח 0: העלויות אינן כוללות את דירות הבעלים — הן הקרקע.
+    cost = land + 50e6
     assert cost == pytest.approx(100e6 / 1.20, rel=1e-9)
 
 
@@ -933,7 +932,7 @@ async def test_the_levy_ceiling_leaves_the_minimum_developer_profit(session):
         construction_cost_per_sqm=rows["construction_cost_per_sqm_ils"],
         underground_cost_per_sqm=rows["underground_cost_per_sqm_ils"],
         average_existing_unit_sqm=rows["average_existing_unit_sqm"],
-        soft_cost_ratio=a.soft_cost_ratio.value, demolition_cost_per_unit=a.demolition_cost_per_unit_ils.value,
+        soft_cost_ratio=a.soft_cost_ratio.value, demolition_cost_ils=a.demolition_cost_ils.value,
         developer_profit_target_ratio=target, tenant_compensation_sqm_per_existing_unit=a.tenant_compensation_sqm_per_existing_unit.value,
         main_area_ratio=a.main_area_ratio.value, underground_ratio=a.underground_ratio.value,
         tenant_rent_months=a.tenant_rent_months.value, tenant_monthly_rent_ils=a.tenant_monthly_rent_ils.value,
@@ -952,7 +951,10 @@ async def test_the_levy_ceiling_leaves_the_minimum_developer_profit(session):
 
 @pytest.mark.asyncio
 async def test_below_the_minimum_profit_there_is_no_ceiling_and_it_says_why(session):
-    c, _, opp = await _delivered(session, block="9680")     # 28 דירות: כ-12%
+    # ‏16.09 · במדידה של דוח 0 28 דירות כבר עוברות 16%; 40 דירות יוצאות כ-15%.
+    c, _, opp = await _delivered(session, block="9680")
+    opp.existing_units = 40
+    await session.flush()
     econ = (await build(session, HerzliyaCityRules(), opp.id, c.id))["economics"]
     assert not econ["scenario"]["meets_developer_target"]
     assert econ["betterment"]["category"] == "no_threshold"
@@ -1101,8 +1103,8 @@ async def test_the_scenario_runs_on_the_policy_area_and_400_is_only_a_comparison
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
     econ, policy = d["economics"], d["rights"]["policy_area"]
     assert econ["area_basis"] == "policy"
-    assert econ["buildable_area_sqm"] == pytest.approx(policy["base"]["sqm"])
-    assert econ["scenarios"]["policy"]["area_sqm"] == pytest.approx(policy["base"]["sqm"])
+    assert econ["buildable_area_sqm"] == pytest.approx(policy["mid"]["sqm"])
+    assert econ["scenarios"]["policy"]["area_sqm"] == pytest.approx(policy["mid"]["sqm"])
     assert econ["scenarios"]["cap_400"]["area_sqm"] == pytest.approx(d["rights"]["cap_400_sqm"])
     # פחות שטח — פחות רווח; 400% הוא ״מה היה אילו״
     assert (econ["scenarios"]["policy"]["profit_before_levy_ils"]
@@ -1111,7 +1113,7 @@ async def test_the_scenario_runs_on_the_policy_area_and_400_is_only_a_comparison
 
     xlsx, pdf = exports.excel(d), exports.pdf(d)
     from tests.test_exports import _evaluate_sheet
-    assert _evaluate_sheet(d)["buildable"] == pytest.approx(policy["base"]["sqm"])
+    assert _evaluate_sheet(d)["buildable"] == pytest.approx(policy["mid"]["sqm"])
     assert compare(d, xlsx, pdf) == []
     import zipfile, io
     assert "מדיניות מול 400%" in zipfile.ZipFile(io.BytesIO(xlsx)).read("xl/workbook.xml").decode()
@@ -1139,15 +1141,17 @@ async def test_rights_verdict_says_whether_more_rights_would_make_it_economic(se
     d = await build(session, HerzliyaCityRules(), b_opp.id, cb.id)
     b, econ = d["economics"]["rights_verdict"], d["economics"]
     assert b["case"] == "B", b
-    policy_sqm, cap = d["rights"]["policy_area"]["base"]["sqm"], d["rights"]["cap_400_sqm"]
+    policy_sqm, cap = d["rights"]["policy_area"]["mid"]["sqm"], d["rights"]["cap_400_sqm"]
     assert policy_sqm < b["required_area_sqm"] < cap * 0.99      # נפתר, לא ״כל התקרה״
     assert b["required_addition_sqm"] == pytest.approx(b["required_area_sqm"] - policy_sqm)
     assert "הגדלת זכויות" in b["text"]
     assert not econ["scenario"]["meets_developer_target"]
     assert econ["scenarios"]["cap_400"]["meets_target"]
 
-    # C: ‏28 דירות — מתחת ל-16% גם בתקרה
+    # C: ‏40 דירות — מתחת ל-16% גם בתקרה (16.09: במדידה של דוח 0, 28 עוברות בתקרה)
     cc, c_opp = await _small(session, "9693", street_frontages=1)
+    c_opp.existing_units = 40
+    await session.flush()
     cverdict = (await build(session, HerzliyaCityRules(), c_opp.id, cc.id))["economics"]["rights_verdict"]
     assert cverdict["case"] == "C" and "הגדלת זכויות אינה פותרת" in cverdict["text"]
 

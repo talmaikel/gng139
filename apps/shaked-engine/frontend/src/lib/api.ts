@@ -229,6 +229,8 @@ export interface Candidate {
   /** W5 · מסך הצוות בלבד */
   renewal_status?: RenewalStatus | null;
   renewal_reasons?: string[];
+  /** ‏16.09 · תיק שנמסר מתור הגדלת הזכויות נצבע בצהוב על המפה */
+  track?: DeliveryTrack;
 }
 
 /** ‏W5 · הכרעת הצוות על חשד לחידוש. בלי קישור אין ראיה, והשרת מסרב. */
@@ -321,11 +323,20 @@ export interface DeliveredOpportunity {
   credits_charged: number;
   rules_version: string;
   data_version: string;
-  why_selected: Record<string, unknown> | null;
+  /** ‏16.09 · `track` אומר מאיזה תור הסריקה הגיע התיק: כלכלי לפי המדיניות, או
+   *  רק עם הגדלת זכויות. מסירה ידנית באה בלי `track`. */
+  why_selected: (Record<string, unknown> & { track?: DeliveryTrack; case?: string | null }) | null;
   assessment: Assessment | null;
   /** ‏S1 · המפה של הלקוח מציגה רק את מה שנמסר לו */
   geometry?: MultiPolygonGeometry | null;
   centroid?: { lat: number; lng: number } | null;
+}
+
+export type DeliveryTrack = "economic" | "rights_request";
+
+/** תיק שכלכלי רק עם בקשה להגדלת זכויות — מוצג בצהוב, תחת כותרת משלו. */
+export function isRightsRequest(d: Pick<DeliveredOpportunity, "why_selected">): boolean {
+  return d.why_selected?.track === "rights_request";
 }
 
 // ── S1/S2 · סריקה: פוליגון → עד שלושה תיקים, בלי לחשוף מועמדים ──

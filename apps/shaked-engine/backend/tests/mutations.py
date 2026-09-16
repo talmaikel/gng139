@@ -47,10 +47,19 @@ MUTS = [
   # ‏E1 · רווח מזערי 16%, ושיווק ומימון לא על דירות הבעלים
   ("services/economic/calculator.py", "שיווק מחושב שוב על דירות הבעלים",
    "total_marketing_ils = developer_revenue_ils * inputs.marketing_ratio",
-   "total_marketing_ils = total_revenue_ils * inputs.marketing_ratio"),
-  ("services/economic/calculator.py", "מימון מחושב שוב על שווי דירות הבעלים",
-   "total_finance_ils = (cost_before_finance - land_cost_ils) * inputs.finance_ratio",
-   "total_finance_ils = cost_before_finance * inputs.finance_ratio"),
+   "total_marketing_ils = (developer_revenue_ils + owners_flats_value_ils) * inputs.marketing_ratio"),
+  # ‏16.09 · ״רווחיות מעלויות״ כמו בדוח 0: דירות הבעלים לא בהכנסות ולא בעלויות
+  ("services/economic/calculator.py", "דירות הבעלים נספרות שוב כהכנסה",
+   "total_revenue_ils = developer_revenue_ils\n",
+   "total_revenue_ils = developer_revenue_ils + owners_flats_value_ils\n"),
+  ("services/economic/calculator.py", "דירות הבעלים חוזרות למכנה",
+   "total_cost_ils = cost_before_finance + total_bank_fees_ils + total_finance_ils",
+   "total_cost_ils = cost_before_finance + total_bank_fees_ils + total_finance_ils + owners_flats_value_ils"),
+  ("services/economic/calculator.py", "מרפסות היזם אינן נמכרות",
+   "developer_revenue_ils = developer_allocation_sqm * net_price + balcony_revenue_ils",
+   "developer_revenue_ils = developer_allocation_sqm * net_price"),
+  ("cities/herzliya/dossier.py", "התרחיש חוזר לבסיס השמרני של המעטפת",
+   'policy = pa.get("mid") or pa.get("base") or {}', 'policy = pa.get("base") or {}'),
   ("cities/herzliya/dossier.py", "תקרת ההיטל חוזרת לרווח אפס",
    "return r.projected_profit_ils - target * r.total_cost_ils", "return r.projected_profit_ils"),
   # ‏B15 · מחיר יד שנייה אינו מחיר מכירה, והתמהיל נכתב בכל משטח

@@ -42,7 +42,7 @@ class EconomicAssumptionSet:
     effective_date: date
     sale_price_per_sqm_ils: Assumption
     construction_cost_per_sqm_ils: Assumption
-    demolition_cost_per_unit_ils: Assumption
+    demolition_cost_ils: Assumption
     soft_cost_ratio: Assumption
     developer_profit_target_ratio: Assumption
 
@@ -50,6 +50,12 @@ class EconomicAssumptionSet:
     main_area_ratio: Assumption
     underground_ratio: Assumption
     underground_cost_per_sqm_ils: Assumption
+
+    # ── מרפסות (16.09 · דוחות 0) ──
+    balcony_sqm_per_new_unit: Assumption
+    balcony_price_factor: Assumption
+    balcony_cost_per_sqm_ils: Assumption
+    average_new_unit_sqm: Assumption
 
     # ── פיצוי הדיירים ──
     # The single largest deduction from the developer's share, and until now
@@ -65,10 +71,19 @@ class EconomicAssumptionSet:
     tenant_monthly_rent_ils: Assumption
     tenant_moving_cost_ils: Assumption
     tenant_legal_cost_per_unit_ils: Assumption
+    tenants_supervisor_ils: Assumption
+
+    # ── תכנון, אגרות ומיסים (16.09 · דוחות 0) ──
+    consultants_per_new_unit_ils: Assumption
+    plan_cost_ils: Assumption
+    permit_fee_per_sqm_ils: Assumption
+    purchase_tax_ratio: Assumption
+    rights_value_per_sqm_ils: Assumption
 
     # ── שיעורים ──
     marketing_ratio: Assumption
     guarantees_ratio: Assumption
+    bank_fees_ratio: Assumption
     finance_ratio: Assumption
     betterment_levy_rate: Assumption
     betterment_base_ils: Assumption
@@ -100,10 +115,16 @@ class EconomicAssumptionSet:
                 if isinstance(a := getattr(self, name), Assumption)}
 
 
-HERZLIYA_2026_V1 = EconomicAssumptionSet(
+# ‏**v6 · 16.09.2026 · הכיול לפי שלושה דוחות 0 של יזם.** דוח ללא כתובת, גולומב 17
+# ולייב יפה 13 (הרצליה, 2026). ״רווחיות מעלויות״ בדוחות: 7.5%, 16.5%, 6.9%.
+# הקבצים אינם בגיט (שמות משפחות); המספרים שנגזרו מהם הם המקור של כל שורה
+# שמסומנת ״דוחות 0״ למטה.
+REPORT0_SOURCE = "שלושה דוחות 0 של יזם בהרצליה, 2026 (נמסרו 16.09.2026)"
+
+HERZLIYA_2026_V2 = EconomicAssumptionSet(
     city_code="herzliya",
-    version="2026-v5",
-    effective_date=date(2026, 1, 1),
+    version="2026-v6",
+    effective_date=date(2026, 9, 16),
     # ‏v4 (15.09.2026): 45,000 → 42,000, ועם מקור. 45,000 היה ניחוש אחיד לעיר.
     # ‏42,000 מוצלב משני מקורות, ועדיין אומדן ולא נתון:
     #   1. ‏GovMap — 44 עסקאות יד שנייה ברדיוס 500 מ׳ מחלקות ההדגמה, 12 חודשים:
@@ -127,12 +148,16 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
         source="Placeholder only -- no developer figure and no appraisers' survey entry for this city"),
     # ‏B8 · שלוש השורות האלה הוצגו בתיק עם מקור ריק (״—״). אין להן מקור
     # שנשלף, ולכן המקור אומר בדיוק את זה — ולא מצטט טווח ״מקובל״ שאיש לא בדק.
-    demolition_cost_per_unit_ils=Assumption(
-        150_000.0, AssumptionStatus.ESTIMATE, "ILS/unit",
-        source="הנחת עבודה — לא נשלפה ממקור; היזם מחליף בהצעת מחיר"),
+    # ‏v6: היה 150,000 ₪ לדירה (0.9–1.2 מיליון לבניין). בשלושת הדוחות:
+    # ״הריסת מבנה קיים · קומפלט · 250,000״.
+    demolition_cost_ils=Assumption(
+        250_000.0, AssumptionStatus.ESTIMATE, "ILS",
+        source=f"הריסת הבניין כולו, ״קומפלט״ — {REPORT0_SOURCE}"),
+    # ‏v6: בדוחות תקורת חברה 3% + פיקוח הנדסי 4.5% + בצ״מ 5% מהבנייה הישירה,
+    # ועו״ד ומשפטיות 0.75%–1% מהכנסות היזם. יחד כ-13%–14%; 15% נשאר.
     soft_cost_ratio=Assumption(
         0.15, AssumptionStatus.ESTIMATE, "ratio",
-        source="הנחת עבודה, כשיעור מעלות הבנייה — לא נשלפה ממקור"),
+        source=f"תקורה 3% + פיקוח 4.5% + בצ״מ 5% + משפטיות, כשיעור מהבנייה הישירה — {REPORT0_SOURCE}"),
     # ‏v5 · 15.09 (בועז): *״הרווח היזמי חייב להיות מעל 16% כדי שיהיה כדאי״*.
     # מספר אחד לכל התיק — הסימון ליד הרווח, תקרת ההיטל (ההיטל שמשאיר 16%)
     # ושווי הקרקע השיורי שממנו נגזר אומדן ההיטל. היה 20%, והמשפט כאן אמר
@@ -142,43 +167,93 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
         source="רווח יזמי מזערי לכדאיות, על העלות (בועז, 15.09) — קובע את הסימון ליד הרווח, "
                "את תקרת ההיטל ואת אומדן ההיטל; אינו משנה את הרווח"),
 
+    # ‏v6: היה 78%. בדוחות העיקרי (״פלדלת״) הוא 82%, 85% ו-90% מהברוטו.
     main_area_ratio=Assumption(
-        0.78, AssumptionStatus.ESTIMATE, "ratio",
-        source="תקרת 400% כוללת שטחי שירות וממ״ד (§70ב(א)(1)); רק העיקרי נמכר במחיר דירה"),
+        0.85, AssumptionStatus.ESTIMATE, "ratio",
+        source=f"תקרת 400% כוללת שטחי שירות וממ״ד (§70ב(א)(1)); רק העיקרי נמכר במחיר דירה. "
+               f"82%–90% ב{REPORT0_SOURCE}"),
+    # ‏v6: היה 40%. בדוחות שתיים–שלוש קומות מרתף על 90% מהמגרש: 56%–77% מהברוטו.
     underground_ratio=Assumption(
-        0.40, AssumptionStatus.ESTIMATE, "ratio",
-        source="חניון תת-קרקעי אינו נספר בתקרה אך נבנה ומשולם"),
+        0.60, AssumptionStatus.ESTIMATE, "ratio",
+        source=f"חניון תת-קרקעי אינו נספר בתקרה אך נבנה ומשולם; תקן חניה 1.5–2 לדירה. "
+               f"56%–77% ב{REPORT0_SOURCE}"),
     # ‏**גיבוי בלבד.** להרצליה המספר נקבע ב-`construction_costs.py` מסקר
     # לשכת שמאי המקרקעין (3,900 ₪). הערך כאן משמש רק עיר שהסקר לא מכסה.
     underground_cost_per_sqm_ils=Assumption(
         6_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm",
         source="גיבוי לעיר שאינה בסקר השמאים — להרצליה נקבע ב-construction_costs.py"),
 
+    # ── מרפסות · v6 ──
+    # המרפסת אינה בשטח המותר (§2ו), נבנית ונמכרת: בדוחות 12 מ״ר לכל דירה,
+    # ‏2,500 ₪ למ״ר, ומחיר הדירה מחולק ב-(שטח + 0.5 × מרפסת).
+    balcony_sqm_per_new_unit=Assumption(
+        12.0, AssumptionStatus.ESTIMATE, "sqm",
+        source=f"12 מ״ר מרפסת שמש לכל דירה חדשה — {REPORT0_SOURCE}"),
+    balcony_price_factor=Assumption(
+        0.5, AssumptionStatus.ESTIMATE, "ratio",
+        source=f"מ״ר מרפסת נמכר בחצי ממחיר מ״ר עיקרי (״מחיר למ״ר אקוויוולנטי״) — {REPORT0_SOURCE}"),
+    balcony_cost_per_sqm_ils=Assumption(
+        2_500.0, AssumptionStatus.ESTIMATE, "ILS/sqm",
+        source=f"עלות בניית מרפסת שמש — {REPORT0_SOURCE}"),
+    average_new_unit_sqm=Assumption(
+        100.0, AssumptionStatus.ESTIMATE, "sqm",
+        source=f"לאומדן מספר הדירות החדשות כשאין תמהיל: 79–124 מ״ר עיקרי לדירה ב{REPORT0_SOURCE}"),
+
     average_existing_unit_sqm=Assumption(
         70.0, AssumptionStatus.MISSING, "sqm",
         source="נדרש מהגרמושקה או מהיתר הבנייה — 70 הוא מציין מקום לחישוב, לא נתון"),
     tenant_compensation_sqm_per_existing_unit=Assumption(
         25.0, AssumptionStatus.ESTIMATE, "sqm", source="תוספת מקובלת בהתחדשות עירונית"),
+    # ‏v6: היה 42. בשלושת הדוחות 36 חודשים.
     tenant_rent_months=Assumption(
-        42.0, AssumptionStatus.ESTIMATE, "months", source="תקופת בנייה 3.5 שנים"),
+        36.0, AssumptionStatus.ESTIMATE, "months", source=f"תקופת בנייה 3 שנים — {REPORT0_SOURCE}"),
     tenant_monthly_rent_ils=Assumption(
         7_500.0, AssumptionStatus.ESTIMATE, "ILS/month",
-        source="שכ״ד לדירת 4 חדרים בהרצליה — טווח, לא נתון שנשלף"),
+        source=f"שכ״ד לדירת 4 חדרים בהרצליה: 7,000–8,500 ב{REPORT0_SOURCE}"),
+    # ‏v6: היה 10,000. בדוחות 6,000–10,000 להובלה, פעמיים.
     tenant_moving_cost_ils=Assumption(
-        10_000.0, AssumptionStatus.ESTIMATE, "ILS/unit", source="שתי הובלות"),
+        16_000.0, AssumptionStatus.ESTIMATE, "ILS/unit", source=f"שתי הובלות — {REPORT0_SOURCE}"),
     tenant_legal_cost_per_unit_ils=Assumption(
         30_000.0, AssumptionStatus.ESTIMATE, "ILS/unit",
-        source="עו״ד ושמאי לדיירים, על חשבון היזם"),
+        source=f"עו״ד לדיירים 35,000 ועו״ד מיסוי 2,500 לדירה ב{REPORT0_SOURCE}; כאן כולל שמאי"),
+    tenants_supervisor_ils=Assumption(
+        250_000.0, AssumptionStatus.ESTIMATE, "ILS",
+        source=f"מפקח מטעם הדיירים, לפרויקט: 250,000–300,000 ב{REPORT0_SOURCE}"),
 
+    # ── תכנון, אגרות ומיסים · v6 ──
+    consultants_per_new_unit_ils=Assumption(
+        50_000.0, AssumptionStatus.ESTIMATE, "ILS/unit",
+        source=f"יועצים (אדריכל, קונסטרוקטור, יועצים) לדירה חדשה: 50,000–55,000 ב{REPORT0_SOURCE}"),
+    plan_cost_ils=Assumption(
+        150_000.0, AssumptionStatus.ESTIMATE, "ILS",
+        source=f"תב״ע נקודתית — {REPORT0_SOURCE}"),
+    permit_fee_per_sqm_ils=Assumption(
+        300.0, AssumptionStatus.ESTIMATE, "ILS/sqm",
+        source=f"אגרות בנייה עילי ומרתפים, למ״ר — {REPORT0_SOURCE}"),
+    # שיעור מס הרכישה על מקרקעין שאינם דירת מגורים הוא בחוק; הבסיס — שווי
+    # מ״ר זכויות — הוא ההנחה שהדוחות מניחים (״אופציה ב״: 12,000 ₪).
+    purchase_tax_ratio=Assumption(
+        0.06, AssumptionStatus.DATA, "ratio",
+        source="מס רכישה על זכויות במקרקעין שאינם דירת מגורים — 6%, חוק מיסוי מקרקעין"),
+    rights_value_per_sqm_ils=Assumption(
+        12_000.0, AssumptionStatus.ESTIMATE, "ILS/sqm",
+        source=f"שווי מ״ר זכויות בנייה, הבסיס למס הרכישה של היזם: 12,000 ב{REPORT0_SOURCE}"),
+
+    # ‏v6: היה 2.5%. בשלושת הדוחות 1.5% מהכנסות היזם נטו.
     marketing_ratio=Assumption(
-        0.025, AssumptionStatus.ESTIMATE, "ratio",
-        source="שיווק ותיווך, טווח מקובל 2%-3% מהכנסות הדירות שהיזם מוכר"),
+        0.015, AssumptionStatus.ESTIMATE, "ratio",
+        source=f"שיווק ופרסום, מהכנסות הדירות שהיזם מוכר — {REPORT0_SOURCE}"),
     guarantees_ratio=Assumption(
         0.0125, AssumptionStatus.ESTIMATE, "ratio",
-        source="ערבויות חוק המכר וביטוח, 1%-1.5% מההכנסות"),
+        source=f"ערבויות חוק המכר לרוכשים ולבעלים, וביטוח: 0.75% × 1.5 על שניהם ב{REPORT0_SOURCE}"),
+    bank_fees_ratio=Assumption(
+        0.013, AssumptionStatus.ESTIMATE, "ratio",
+        source=f"עמלת הקצאת אשראי 0.3% ועמלת ליווי 1% מהעלויות — {REPORT0_SOURCE}"),
+    # ‏v6: היה 6%. בדוחות שורת המימון היא 0 עם ריבית 4% רשומה בצד; יזם
+    # ממונף משלם אותה, ולכן 4% (טל, 16.09).
     finance_ratio=Assumption(
-        0.06, AssumptionStatus.ESTIMATE, "ratio",
-        source="ליווי בנקאי וריבית, טווח מקובל 5%-7% מהעלויות — בלי שווי דירות הבעלים"),
+        0.04, AssumptionStatus.ESTIMATE, "ratio",
+        source=f"ריבית ליווי בנקאי, מהעלויות לפני מימון: 4% ב{REPORT0_SOURCE} (טל, 16.09)"),
     # ── היטל השבחה: השיעור ידוע בוודאות, הבסיס לא ──
     #
     # תיקון 139 הוסיף את סעיף 19(ב)(10א) לתוספת השלישית, וקבע שיעור
@@ -206,7 +281,7 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
 )
 
 ASSUMPTIONS_BY_CITY: dict[str, EconomicAssumptionSet] = {
-    "herzliya": HERZLIYA_2026_V1,
+    "herzliya": HERZLIYA_2026_V2,
 }
 
 

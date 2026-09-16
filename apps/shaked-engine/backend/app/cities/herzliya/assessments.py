@@ -49,6 +49,8 @@ async def _store(opp, a) -> None:
             # ‏W1 · השטח לפי המדיניות, לסינון ולמיון בלי לחשב מעטפת לכל בקשה.
             "policy_area_sqm": ((a.get("policy_area") or {}).get("base") or {}).get("sqm"),
             "policy_share_of_cap": ((a.get("policy_area") or {}).get("base") or {}).get("share_of_cap"),
+            # ‏16.09 · אמצע הטווח — השטח שהתרחיש והסריקה מחושבים עליו.
+            "policy_mid_sqm": ((a.get("policy_area") or {}).get("mid") or {}).get("sqm"),
             "blocking": sorted({c["id"] for c in a["checks"]
                                 if c["status"] in ("failed", "unknown", "routed")}),
             "threshold_open": opens,

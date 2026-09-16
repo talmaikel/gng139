@@ -14,7 +14,7 @@ from app.cities.herzliya.dossier import (
     ASSUMPTION_LABEL, CERTAINTY_LABEL, FIELD_LABEL, _not_delivered,
 )
 from app.models.evidence import Certainty
-from app.services.economic.assumptions import HERZLIYA_2026_V1 as A
+from app.services.economic.assumptions import HERZLIYA_2026_V2 as A
 
 # מזהה קוד: רצף אותיות לטיניות קטנות עם קו תחתון. עברית עוברת, מספרים
 # ויחידות (₪, מ״ר) עוברים, ו-`sale_price_per_sqm_ils` נתפס.

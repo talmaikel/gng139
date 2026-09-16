@@ -148,15 +148,21 @@ def pdf(d: dict[str, Any]) -> bytes:
     line(econ["disclaimer"], 8.5, (0.42, 0.40, 0.36), gap=6)
     s = econ.get("scenario")
     if s:
-        for name, key in (("הכנסות (נטו ממע״מ)", "total_revenue_ils"),
-                          ("קרקע — פיצוי הדיירים", "land_cost_ils"),
+        # ‏16.09 · ״רווחיות מעלויות״ כמו בדוח 0: ההכנסות הן של היזם, ודירות
+        # הבעלים אינן שורה — שווין נאמר אחרי הטבלה.
+        for name, key in (("הכנסות היזם (נטו ממע״מ)", "total_revenue_ils"),
                           ("בנייה מעל הקרקע", "total_construction_cost_ils"),
                           ("חניון תת-קרקעי", "total_underground_cost_ils"),
+                          ("מרפסות", "total_balcony_cost_ils"),
                           ("עלויות רכות", "total_soft_cost_ils"),
                           ("הריסה", "total_demolition_cost_ils"),
-                          ("שכירות והובלות לדיירים", "total_tenant_cost_ils"),
+                          ("שכירות, הובלות ועו״ד לדיירים", "total_tenant_cost_ils"),
+                          ("יועצים ותב״ע", "total_consultants_ils"),
+                          ("אגרות בנייה", "total_fees_ils"),
+                          ("מס רכישה", "purchase_tax_ils"),
                           ("שיווק ותיווך", "total_marketing_ils"),
                           ("ערבויות וביטוח", "total_guarantees_ils"),
+                          ("עמלות בנק", "total_bank_fees_ils"),
                           ("מימון", "total_finance_ils"),
                           ("היטל השבחה", "betterment_levy_ils")):
             if key == "betterment_levy_ils" and _levy_unknown(econ):
@@ -170,6 +176,10 @@ def pdf(d: dict[str, Any]) -> bytes:
                 line(econ["betterment"]["summary"], 8.5, (0.54, 0.38, 0.00), gap=2, indent=10)
         line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪  ·  '
              f'{s["profit_margin_on_cost_ratio"]:.0%} על העלות', 11, (0.06, 0.15, 0.12), gap=5)
+        if s.get("owners_flats_value_ils"):
+            line(f'דירות הבעלים — {s["owners_flats_value_ils"]:,.0f} ₪ — הן התמורה על הקרקע, '
+                 'ואינן נספרות לא כהכנסה ולא כעלות (רווחיות מעלויות, כמו בדוח 0)',
+                 8.5, (0.42, 0.40, 0.36), gap=4)
         if econ.get("profit_verdict"):
             line(econ["profit_verdict"], 9, (0.54, 0.38, 0.00) if not s.get("meets_developer_target")
                  else (0.12, 0.37, 0.33), gap=4)
@@ -238,54 +248,78 @@ def pdf(d: dict[str, Any]) -> bytes:
 INPUT_ROWS = [
     ("plot", 'שטח המגרש', "מ״ר"),
     ("units", "דירות קיימות", "יח״ד"),
-    ("buildable", 'תקרת 400% — שטח בנוי מעל הקרקע', "מ״ר"),
+    ("buildable", 'שטח בנוי מעל הקרקע (לפי המדיניות, אמצע הטווח)', "מ״ר"),
     ("main_ratio", "שיעור השטח העיקרי", "יחס"),
     ("under_ratio", "שיעור חניון תת-קרקעי", "יחס"),
     ("price", 'מחיר מכירה למ״ר (כולל מע״מ)', "₪"),
     ("vat", "מע״מ", "יחס"),
     ("build", 'עלות בנייה למ״ר', "₪"),
     ("under_cost", 'עלות חניון למ״ר', "₪"),
-    ("soft", "עלויות רכות", "יחס מעלות הבנייה"),
-    ("demo", "הריסה ליח״ד", "₪"),
+    ("soft", "עלויות רכות", "יחס מהבנייה הישירה"),
+    ("demo", "הריסת הבניין", "₪"),
     ("avg_unit", "שטח דירה קיימת ממוצע", "מ״ר"),
     ("comp", "תוספת לדייר", "מ״ר"),
     ("rent_months", "חודשי שכירות לדיירים", "חודשים"),
     ("rent", "שכ״ד חודשי לדייר", "₪"),
     ("moving", "הובלות לדייר", "₪"),
     ("legal", "עו״ד ושמאי לדייר", "₪"),
-    ("marketing", "שיווק ותיווך", "יחס מההכנסות"),
-    ("guarantees", "ערבויות וביטוח", "יחס מההכנסות"),
-    ("finance", "מימון", "יחס מהעלויות"),
+    ("marketing", "שיווק ותיווך", "יחס מהכנסות היזם"),
+    ("guarantees", "ערבויות וביטוח", "יחס מהכנסות היזם ושווי דירות הבעלים"),
+    ("finance", "מימון", "יחס מהעלויות לפני מימון"),
     ("levy_rate", "היטל השבחה — שיעור", "יחס מההשבחה"),
     ("levy_base", "ההשבחה (שומה)", "₪"),
+    # ‏16.09 · הכיול לפי דוחות 0
+    ("balcony_sqm", "מרפסת לדירה חדשה", "מ״ר"),
+    ("balcony_factor", "מחיר מ״ר מרפסת מהעיקרי", "יחס"),
+    ("balcony_cost", "עלות מרפסת למ״ר", "₪"),
+    ("avg_new_unit", "שטח דירה חדשה ממוצע", "מ״ר"),
+    ("supervisor", "מפקח מטעם הדיירים", "₪"),
+    ("consultants", "יועצים לדירה חדשה", "₪"),
+    ("plan", "תב״ע", "₪"),
+    ("fee", "אגרות בנייה למ״ר", "₪"),
+    ("purchase_tax_rate", "מס רכישה", "יחס משווי הזכויות"),
+    ("rights_value", "שווי מ״ר זכויות", "₪"),
+    ("bank_fees", "עמלות בנק", "יחס מהעלויות לפני מימון"),
 ]
 
 FIRST_INPUT_ROW = 2                       # אחרי הכותרת
 CELL = {key: f"B{FIRST_INPUT_ROW + i + 1}" for i, (key, _, _) in enumerate(INPUT_ROWS)}
 
+# ‏16.09 · ״רווחיות מעלויות״ כמו בדוח 0: ההכנסה היא של היזם, ודירות הבעלים
+# (״שווי דירות הבעלים״) אינן נכנסות לא להכנסות ולא לעלויות. הנוסחאות כאן
+# הן עותק של `calculator.py`, ו-`tests/test_exports.py` משווה ביניהם.
 OUTPUT_ROWS = [
-    ("sellable", "שטח נמכר (עיקרי)", "={buildable}*{main_ratio}", "מ״ר"),
+    ("sellable", "שטח עיקרי", "={buildable}*{main_ratio}", "מ״ר"),
     ("tenant_area", "שטח לדיירים", "=MIN({units}*({avg_unit}+{comp}),{sellable})", "מ״ר"),
     ("dev_area", "שטח ליזם", "={sellable}-{tenant_area}", "מ״ר"),
+    ("new_units", "דירות חדשות (אומדן)", "=MAX(ROUND({sellable}/{avg_new_unit},0),{units},1)", "יח״ד"),
+    ("balcony_area", "מרפסות (מ״ר)", "={new_units}*{balcony_sqm}", "מ״ר"),
     ("net_price", 'מחיר נטו למ״ר', "={price}/(1+{vat})", "₪"),
-    ("revenue", "הכנסות (נטו ממע״מ)", "={sellable}*{net_price}", "₪"),
-    ("dev_revenue", "מתוכן: דירות היזם", "={dev_area}*{net_price}", "₪"),
-    ("land", "קרקע — פיצוי הדיירים", "={tenant_area}*{net_price}", "₪"),
+    ("owners_value", "שווי דירות הבעלים — התמורה על הקרקע, לא הכנסה ולא עלות",
+     "={tenant_area}*{net_price}", "₪"),
+    ("balcony_revenue", "מרפסות היזם (בחצי מחיר)",
+     "=IF({sellable}>0,{balcony_area}*{dev_area}/{sellable},0)*{balcony_factor}*{net_price}", "₪"),
+    ("revenue", "הכנסות היזם (נטו ממע״מ)", "={dev_area}*{net_price}+{balcony_revenue}", "₪"),
     ("build_cost", "בנייה מעל הקרקע", "={buildable}*{build}", "₪"),
     ("under", "חניון תת-קרקעי", "={buildable}*{under_ratio}*{under_cost}", "₪"),
-    ("soft_cost", "עלויות רכות", "=({build_cost}+{under})*{soft}", "₪"),
-    ("demo_cost", "הריסה", "={units}*{demo}", "₪"),
-    ("tenant_cost", "שכירות, הובלות ויועצים לדיירים",
-     "={units}*({rent_months}*{rent}+{moving}+{legal})", "₪"),
-    # ‏E1 · שיווק על הדירות שהיזם מוכר, ומימון בלי שווי דירות הבעלים.
-    ("marketing_cost", "שיווק ותיווך", "={dev_revenue}*{marketing}", "₪"),
-    ("guarantee_cost", "ערבויות וביטוח", "={revenue}*{guarantees}", "₪"),
+    ("balcony_cost_total", "מרפסות — בנייה", "={balcony_area}*{balcony_cost}", "₪"),
+    ("soft_cost", "עלויות רכות", "=({build_cost}+{under}+{balcony_cost_total})*{soft}", "₪"),
+    ("demo_cost", "הריסה", "={demo}", "₪"),
+    ("tenant_cost", "שכירות, הובלות, עו״ד ומפקח לדיירים",
+     "={units}*({rent_months}*{rent}+{moving}+{legal})+{supervisor}", "₪"),
+    ("consultants_cost", "יועצים ותב״ע", "={new_units}*{consultants}+{plan}", "₪"),
+    ("fees_cost", "אגרות בנייה", "={buildable}*(1+{under_ratio})*{fee}", "₪"),
+    ("purchase_tax", "מס רכישה", "={purchase_tax_rate}*{rights_value}*{dev_area}", "₪"),
+    # ‏E1 · שיווק על הדירות שהיזם מוכר; ערבויות גם על דירות הבעלים.
+    ("marketing_cost", "שיווק ותיווך", "={revenue}*{marketing}", "₪"),
+    ("guarantee_cost", "ערבויות וביטוח", "=({revenue}+{owners_value})*{guarantees}", "₪"),
     ("levy_cost", "היטל השבחה", "={levy_base}*{levy_rate}", "₪"),
     ("before_finance", "סך עלויות לפני מימון",
-     "={land}+{build_cost}+{under}+{soft_cost}+{demo_cost}+{tenant_cost}"
-     "+{marketing_cost}+{guarantee_cost}+{levy_cost}", "₪"),
-    ("finance_cost", "מימון", "=({before_finance}-{land})*{finance}", "₪"),
-    ("total_cost", "סך העלויות", "={before_finance}+{finance_cost}", "₪"),
+     "={build_cost}+{under}+{balcony_cost_total}+{soft_cost}+{demo_cost}+{tenant_cost}"
+     "+{consultants_cost}+{fees_cost}+{purchase_tax}+{marketing_cost}+{guarantee_cost}+{levy_cost}", "₪"),
+    ("bank_fees_cost", "עמלות בנק", "={before_finance}*{bank_fees}", "₪"),
+    ("finance_cost", "מימון", "={before_finance}*{finance}", "₪"),
+    ("total_cost", "סך העלויות", "={before_finance}+{bank_fees_cost}+{finance_cost}", "₪"),
     ("profit", "רווח", "={revenue}-{total_cost}", "₪"),
     ("margin", "רווח על העלות", '=IF({total_cost}>0,{profit}/{total_cost},"")', "%"),
 ]
@@ -296,12 +330,18 @@ INPUT_ASSUMPTION = {
     "main_ratio": "main_area_ratio", "under_ratio": "underground_ratio",
     "price": "sale_price_per_sqm_ils", "vat": "vat_rate",
     "build": "construction_cost_per_sqm_ils", "under_cost": "underground_cost_per_sqm_ils",
-    "soft": "soft_cost_ratio", "demo": "demolition_cost_per_unit_ils",
+    "soft": "soft_cost_ratio", "demo": "demolition_cost_ils",
     "avg_unit": "average_existing_unit_sqm", "comp": "tenant_compensation_sqm_per_existing_unit",
     "rent_months": "tenant_rent_months", "rent": "tenant_monthly_rent_ils",
     "moving": "tenant_moving_cost_ils", "legal": "tenant_legal_cost_per_unit_ils",
     "marketing": "marketing_ratio", "guarantees": "guarantees_ratio", "finance": "finance_ratio",
     "levy_rate": "betterment_levy_rate", "levy_base": "betterment_base_ils",
+    "balcony_sqm": "balcony_sqm_per_new_unit", "balcony_factor": "balcony_price_factor",
+    "balcony_cost": "balcony_cost_per_sqm_ils", "avg_new_unit": "average_new_unit_sqm",
+    "supervisor": "tenants_supervisor_ils", "consultants": "consultants_per_new_unit_ils",
+    "plan": "plan_cost_ils", "fee": "permit_fee_per_sqm_ils",
+    "purchase_tax_rate": "purchase_tax_ratio", "rights_value": "rights_value_per_sqm_ils",
+    "bank_fees": "bank_fees_ratio",
 }
 STATUS_LABEL = {"data": "נתון", "estimate": "אומדן", "missing": "חסר"}
 

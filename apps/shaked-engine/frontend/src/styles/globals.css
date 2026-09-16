@@ -1,6 +1,8 @@
 /* shakdan design language · one token sheet for every screen.
    Font: IBM Plex Sans Hebrew (next/font sets --font-plex on :root).
-   Colour: almond on a cool light ground; green / almond / red only carry meaning. */
+   Colour: almond on a cool light ground; green / almond / red carry meaning,
+   and yellow (--rights-*) marks one thing only: dossiers that are economic
+   only with a rights increase (16.09). */
 
 :root {
   color-scheme: light;
@@ -28,6 +30,11 @@
   --neutral-bg: #ebedf1;
   --info-fg: #2a2e39;
   --info-bg: #ebedf1;
+  /* ‏תיקים שנדרש להגדיל בהם את הזכויות */
+  --rights-fg: #7a5a00;
+  --rights-bg: #fff4c2;
+  --rights-border: #e6c94a;
+  --rights-soft: #fffbe6;
 
   --r: 5px;
   --sans: var(--font-plex), "Segoe UI", Arial, sans-serif;
@@ -70,6 +77,7 @@ small { color: var(--muted); }
 .card.tone-warn { background: #fef7f1; border-color: #f2cfb3; }
 .card.tone-bad { background: #fcf3f1; border-color: #ecc6bd; }
 .card.tone-info { background: #f7f8fa; border-color: var(--rule); }
+.card.tone-rights { background: var(--rights-soft); border-color: var(--rights-border); }
 
 .eyebrow {
   margin: 0;
@@ -170,10 +178,13 @@ tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--almond); }
 .pill.ok { background: var(--ok-bg); color: var(--ok-fg); }
 .pill.warn { background: var(--warn-bg); color: var(--warn-fg); }
 .pill.bad { background: var(--bad-bg); color: var(--bad-fg); }
+.pill.rights { background: var(--rights-bg); color: var(--rights-fg); }
 
 .text-ok { color: var(--ok-fg); }
 .text-warn { color: var(--warn-fg); }
 .text-bad { color: var(--bad-fg); }
+.text-rights { color: var(--rights-fg); }
+tr.is-rights td { background: var(--rights-soft); }
 .text-muted { color: var(--muted); }
 .text-link { color: var(--almond-deep); font-weight: 600; text-decoration: none; }
 .text-link:hover { text-decoration: underline; }
@@ -244,5 +255,9 @@ tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--almond); }
 @media (min-width: 760px) { .results { grid-template-columns: repeat(3, 1fr); } }
 .result { display: flex; flex-direction: column; justify-content: space-between; gap: 0.8rem; padding: 1rem 1.1rem; cursor: pointer; }
 .result.is-selected { border-color: var(--almond); box-shadow: 0 0 0 3px var(--almond-soft); }
+/* ‏16.09 · תיק שכלכלי רק עם הגדלת זכויות: צהוב, תחת כותרת משלו */
+.result.is-rights { background: var(--rights-soft); border-color: var(--rights-border); }
+.result.is-rights.is-selected { box-shadow: 0 0 0 3px var(--rights-bg); }
+.results-title { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 700; color: var(--rights-fg); }
 .sk-btn-like { align-self: flex-start; font-weight: 700; font-size: 0.9rem; color: var(--ink); background: var(--almond); border-radius: var(--r); padding: 0.5rem 0.9rem; text-decoration: none; }
 .sk-btn-like:hover { background: var(--almond-deep); }

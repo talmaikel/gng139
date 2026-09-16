@@ -109,7 +109,9 @@ export default function OpportunityMap({
               positions={toLeafletRings(candidate.geometry as MultiPolygonGeometry)}
               eventHandlers={!drawing && onSelect ? { click: () => onSelect(candidate.id) } : undefined}
               pathOptions={{
-                color: selected ? MAP_COLOUR.selected : MAP_COLOUR.candidate,
+                // ‏16.09 · צהוב לתיק שכלכלי רק עם הגדלת זכויות; הבחירה עדיין שחורה
+                color: selected ? MAP_COLOUR.selected
+                  : candidate.track === "rights_request" ? MAP_COLOUR.rights : MAP_COLOUR.candidate,
                 weight: selected ? 3 : 2,
                 fillOpacity: selected ? 0.35 : 0.22,
                 // בזמן ציור החלקות אינן ניתנות ללחיצה, אחרת קודקוד שנופל

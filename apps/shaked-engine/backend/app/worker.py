@@ -12,6 +12,7 @@ from datetime import datetime
 import pymupdf
 from sqlalchemy import func, select
 
+from app.cities.herzliya import new_build_prices
 from app.cities.herzliya.archive_client import HerzliyaArchiveClient
 from app.core.config import get_settings
 from app.core.database import AsyncSessionLocal
@@ -367,7 +368,11 @@ async def generate_dossier_handler(payload: dict) -> dict:
                 if market_result and market_result.valuation.is_unit_mix_adjusted
                 else None
             )
-            sale_price_per_sqm = market_price or assumptions.sale_price_per_sqm_ils.value
+            # P1 (16.09): the block table before the city-wide estimate, the
+            # same resolver the dossier and the unit-mix screen use.
+            block_price, block_label = new_build_prices.sale_price(
+                opportunity.block, assumptions.sale_price_per_sqm_ils.value)
+            sale_price_per_sqm = market_price or block_price
 
             # Prefer this building's own average over the city-wide assumption.
             # When it cannot decide (unreviewed OCR, or a footprint estimate),
@@ -409,7 +414,18 @@ async def generate_dossier_handler(payload: dict) -> dict:
                     sale_price_per_sqm=sale_price_per_sqm,
                     construction_cost_per_sqm=construction_cost_per_sqm,
                     soft_cost_ratio=assumptions.soft_cost_ratio.value,
-                    demolition_cost_per_unit=assumptions.demolition_cost_per_unit_ils.value,
+                    demolition_cost_ils=assumptions.demolition_cost_ils.value,
+                    balcony_sqm_per_new_unit=assumptions.balcony_sqm_per_new_unit.value,
+                    balcony_price_factor=assumptions.balcony_price_factor.value,
+                    balcony_cost_per_sqm=assumptions.balcony_cost_per_sqm_ils.value,
+                    average_new_unit_sqm=assumptions.average_new_unit_sqm.value,
+                    tenants_supervisor_ils=assumptions.tenants_supervisor_ils.value,
+                    consultants_per_new_unit_ils=assumptions.consultants_per_new_unit_ils.value,
+                    plan_cost_ils=assumptions.plan_cost_ils.value,
+                    permit_fee_per_sqm=assumptions.permit_fee_per_sqm_ils.value,
+                    purchase_tax_ratio=assumptions.purchase_tax_ratio.value,
+                    rights_value_per_sqm_ils=assumptions.rights_value_per_sqm_ils.value,
+                    bank_fees_ratio=assumptions.bank_fees_ratio.value,
                     developer_profit_target_ratio=assumptions.developer_profit_target_ratio.value,
                     # Was never passed, so every dossier silently used the
                     # schema default of 70 sqm -- the largest single deduction
@@ -474,7 +490,7 @@ async def generate_dossier_handler(payload: dict) -> dict:
                     "source": (
                         market_result.valuation.source_url
                         if market_price and market_result
-                        else assumptions.sale_price_per_sqm_ils.source
+                        else (block_label or assumptions.sale_price_per_sqm_ils.source)
                     ),
                     "as_of_date": (
                         market_result.valuation.as_of_date.isoformat()

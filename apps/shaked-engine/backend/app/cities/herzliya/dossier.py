@@ -106,20 +106,31 @@ def _shown(name: str, value: Any) -> Any:
 ASSUMPTION_LABEL = {
     "sale_price_per_sqm_ils": "מחיר מכירה למ״ר",
     "construction_cost_per_sqm_ils": "עלות בנייה למ״ר",
-    "demolition_cost_per_unit_ils": "הריסה ליחידת דיור",
+    "demolition_cost_ils": "הריסת הבניין",
     "soft_cost_ratio": "עלויות רכות",
     "developer_profit_target_ratio": "רווח יזמי מזערי",
     "main_area_ratio": "שיעור השטח העיקרי",
     "underground_ratio": "שיעור חניון תת-קרקעי",
     "underground_cost_per_sqm_ils": "עלות חניון למ״ר",
+    "balcony_sqm_per_new_unit": "מרפסת לדירה חדשה",
+    "balcony_price_factor": "מחיר מ״ר מרפסת מהעיקרי",
+    "balcony_cost_per_sqm_ils": "עלות מרפסת למ״ר",
+    "average_new_unit_sqm": "שטח דירה חדשה ממוצע",
     "average_existing_unit_sqm": "שטח דירה קיימת ממוצע",
     "tenant_compensation_sqm_per_existing_unit": "תוספת שטח לדייר",
     "tenant_rent_months": "חודשי שכירות לדיירים",
     "tenant_monthly_rent_ils": "שכר דירה חודשי לדייר",
     "tenant_moving_cost_ils": "הובלות לדייר",
     "tenant_legal_cost_per_unit_ils": "עורך דין ושמאי לדייר",
+    "tenants_supervisor_ils": "מפקח מטעם הדיירים",
+    "consultants_per_new_unit_ils": "יועצים לדירה חדשה",
+    "plan_cost_ils": "תב״ע",
+    "permit_fee_per_sqm_ils": "אגרות בנייה למ״ר",
+    "purchase_tax_ratio": "מס רכישה",
+    "rights_value_per_sqm_ils": "שווי מ״ר זכויות",
     "marketing_ratio": "שיווק ותיווך",
     "guarantees_ratio": "ערבויות וביטוח",
+    "bank_fees_ratio": "עמלות בנק",
     "finance_ratio": "מימון",
     "betterment_levy_rate": "שיעור היטל ההשבחה",
     "betterment_base_ils": "ההשבחה שעליה מוטל ההיטל",
@@ -298,9 +309,11 @@ def _scenario_caveats(assessment: dict, fields: dict, live: dict,
         share = (f"{low['share_of_cap']:.0%}" if abs(high["share_of_cap"] - low["share_of_cap"]) < 0.005
                  else f"{low['share_of_cap']:.0%}–{high['share_of_cap']:.0%}")
         base = policy.get("base") or {}
+        mid = policy.get("mid") or base
         out.append({"id": "policy_area_below_cap", "text": (
-            f"הרווח מחושב על השטח לפי מדיניות הרצליה — אומדן של כ-{base.get('sqm', 0):,.0f} מ״ר "
-            f"(טווח {span}), {share} מתקרת ה-400% ({cap:,.0f} מ״ר). ‏400% הוא תקרה בחוק ולא "
+            f"הרווח מחושב על השטח לפי מדיניות הרצליה — אמצע הטווח, כ-{mid.get('sqm', 0):,.0f} מ״ר "
+            f"(טווח {span}; אומדן בסיס שמרני {base.get('sqm', 0):,.0f}), {share} מתקרת ה-400% ({cap:,.0f} מ״ר). "
+            "‏400% הוא תקרה בחוק ולא "
             "זכות. המעטפת נשענת על הנחות: קו בניין קדמי 5 מ׳, צלע חזית שאינה ידועה, ו-90% "
             "מהמעטפת בנויים — ובוועדה המקומית השטח עשוי לצאת אחר.")})
     elif cap and policy.get("why"):
@@ -590,11 +603,12 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     prices_are_distinct = (existing_price is not None
                            and live["sale_price"]["value"] != existing_price)
     if existing_area and cap and prices_are_distinct and result is not None:
+        # ‏16.09 · הקרקע שווה את מה שנשאר ממכירת **הבניין כולו** — כולל דירות
+        # הבעלים, שהן חלק הקרקע בפרויקט — אחרי כל העלויות והרווח היזמי. הרווח
+        # בכותרת נמדד על הכנסות היזם בלבד (דוח 0); השומה לא.
         land = residual_land_value(
-            total_revenue_ils=result.total_revenue_ils,
+            total_revenue_ils=result.total_revenue_ils + result.owners_flats_value_ils,
             total_cost_ils=result.total_cost_ils,
-            land_cost_ils=result.land_cost_ils,
-            finance_ratio=a.finance_ratio.value,
             developer_profit_target_ratio=a.developer_profit_target_ratio.value)
         if land > 0:
             estimate = betterment_from_land_values(
@@ -678,12 +692,14 @@ def _levy_explanation(rate, target, band, estimate, threshold, per_right, catego
                      "אומדן ולא שומה.")}]
     if estimate is not None and result is not None:
         after, before = estimate.after_ils, estimate.before_ils
-        non_land = result.total_cost_ils - result.land_cost_ils
+        costs = result.total_cost_ils
+        whole = result.total_revenue_ils + result.owners_flats_value_ils
         count = live["existing_price"].get("comparable_count")
         out.append({"id": "estimate", "title": "איך מחושב האומדן",
                     "text": (f"שיטת היזם: השבחה = שווי הזכויות החדשות פחות שווי המצב הקיים. "
-                             f"שווי הזכויות הוא שווי הקרקע השיורי — מה שנשאר מההכנסות ({m(result.total_revenue_ils)}) "
-                             f"אחרי רווח יזמי של {target:.0%} ואחרי כל העלויות שאינן קרקע ({m(non_land)}): "
+                             f"שווי הזכויות הוא שווי הקרקע השיורי — מה שנשאר ממכירת הבניין כולו ({m(whole)}, "
+                             f"כולל דירות הבעלים שהן חלק הקרקע) "
+                             f"אחרי רווח יזמי של {target:.0%} ואחרי כל העלויות ({m(costs)}): "
                              f"{m(after)}, כ-{after / area:,.0f} ₪ למ״ר זכויות על {area:,.0f} מ״ר. "
                              f"שווי המצב הקיים הוא השטח הבנוי הקיים ({existing_area:,.0f} מ״ר, אומדן) כפול "
                              f"חציון מחיר מ״ר של דירות יד שנייה ליד החלקה ({existing_price:,.0f} ₪"
@@ -730,13 +746,15 @@ def _profit_verdict(result, target: float, after_levy: bool = False) -> str:
     יזם שקרא 31 מיליון ₪ לא ראה שהפרויקט אינו עומד בסף שלו.
     """
     margin = result.profit_margin_on_cost_ratio
+    # ‏16.09 · ״רווחיות מעלויות״ כמו בדוח 0: דירות הבעלים אינן הכנסה ואינן עלות.
+    how = "על העלות (רווחיות מעלויות, כמו בדוח 0)"
     # ‏W2 · נקודה 7: הרווח שנשפט הוא אחרי אומדן ההיטל כשיש אומדן.
     if after_levy:
         side = "מעל הרווח היזמי המזערי" if result.meets_developer_target else "מתחת לרווח היזמי המזערי"
-        return f"{side} ({target:.0%}): {margin:.1%} על העלות, אחרי אומדן היטל השבחה"
+        return f"{side} ({target:.0%}): {margin:.1%} {how}, אחרי אומדן היטל השבחה"
     if result.meets_developer_target:
-        return f"מעל הרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, לפני היטל השבחה"
-    return (f"מתחת לרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, "
+        return f"מעל הרווח היזמי המזערי ({target:.0%}): {margin:.1%} {how}, לפני היטל השבחה"
+    return (f"מתחת לרווח היזמי המזערי ({target:.0%}): {margin:.1%} {how}, "
             "עוד לפני היטל השבחה")
 
 
@@ -788,16 +806,21 @@ def _cost_rows(r, inputs, assumptions: dict[str, dict]) -> list[dict[str, Any]]:
 
     net = inputs.sale_price_per_sqm / (1 + inputs.vat_rate)
     underground = inputs.buildable_area_sqm * inputs.underground_ratio
+    dev_share = r.developer_allocation_sqm / r.sellable_main_sqm if r.sellable_main_sqm else 0.0
+    before_finance = r.total_cost_ils - r.total_finance_ils - r.total_bank_fees_ils
     rows = [
-        ("revenue", "הכנסות (נטו ממע״מ)", r.total_revenue_ils,
-         f"{r.sellable_main_sqm:,.0f} מ״ר עיקרי × {inputs.sale_price_per_sqm:,.0f} ₪ ÷ {1 + inputs.vat_rate:g} (מע״מ)",
-         "שווי כל השטח העיקרי בבניין החדש — כולל הדירות שנמסרות לבעלים, שחוזרות כעלות הקרקע.",
-         src("sale_price_per_sqm_ils", "main_area_ratio")),
-        ("land", "קרקע — פיצוי הדיירים", -r.land_cost_ils,
-         f"{r.tenant_allocation_sqm:,.0f} מ״ר לבעלים × {net:,.0f} ₪ למ״ר נטו",
-         f"הדירות החדשות שהבעלים מקבלים: לכל דירה קיימת שטחה הממוצע ועוד "
-         f"{inputs.tenant_compensation_sqm_per_existing_unit:g} מ״ר. זו התמורה על הקרקע.",
-         src("average_existing_unit_sqm", "tenant_compensation_sqm_per_existing_unit")),
+        # ‏16.09 · ״רווחיות מעלויות״ כמו בדוח 0: ההכנסה היא של היזם בלבד. דירות
+        # הבעלים אינן הכנסה ואינן עלות — הן התמורה על הקרקע, ושווין נאמר כאן.
+        ("revenue", "הכנסות היזם (נטו ממע״מ)", r.total_revenue_ils,
+         f"{r.developer_allocation_sqm:,.0f} מ״ר עיקרי ליזם × {inputs.sale_price_per_sqm:,.0f} ₪ ÷ {1 + inputs.vat_rate:g} (מע״מ)"
+         + (f" + מרפסות {r.balcony_revenue_ils / 1e6:,.1f} מיליון ₪" if r.balcony_revenue_ils else ""),
+         f"הדירות שהיזם מוכר: השטח העיקרי ({inputs.main_area_ratio:.0%} מהברוטו) פחות "
+         f"{r.tenant_allocation_sqm:,.0f} מ״ר לבעלים (לכל דירה קיימת שטחה הממוצע ועוד "
+         f"{inputs.tenant_compensation_sqm_per_existing_unit:g} מ״ר). דירות הבעלים — "
+         f"{r.owners_flats_value_ils / 1e6:,.1f} מיליון ₪ — הן התמורה על הקרקע, ואינן נספרות "
+         "לא כהכנסה ולא כעלות (״רווחיות מעלויות״, כמו בדוח 0).",
+         src("sale_price_per_sqm_ils", "main_area_ratio", "average_existing_unit_sqm",
+             "tenant_compensation_sqm_per_existing_unit", "balcony_sqm_per_new_unit", "balcony_price_factor")),
         ("construction", "בנייה מעל הקרקע", -r.total_construction_cost_ils,
          f"{inputs.buildable_area_sqm:,.0f} מ״ר × {inputs.construction_cost_per_sqm:,.0f} ₪",
          "עלות ישירה לבניית השטח מעל הקרקע, כולל שירות וממ״ד.",
@@ -806,26 +829,44 @@ def _cost_rows(r, inputs, assumptions: dict[str, dict]) -> list[dict[str, Any]]:
          f"{underground:,.0f} מ״ר ({inputs.underground_ratio:.0%} מהשטח מעל הקרקע) × {inputs.underground_cost_per_sqm:,.0f} ₪",
          "מרתף וחניון. שטח שירות מתחת לקרקע אינו נספר ב-400%.",
          src("underground_ratio", "underground_cost_per_sqm_ils")),
+        ("balconies", "מרפסות", -r.total_balcony_cost_ils,
+         f"{r.new_units_estimate} דירות × {inputs.balcony_sqm_per_new_unit:g} מ״ר × {inputs.balcony_cost_per_sqm:,.0f} ₪",
+         f"מרפסות שמש לכל הדירות החדשות; חלק היזם ({dev_share:.0%}) נמכר בחצי מחיר ונכלל בהכנסות.",
+         src("balcony_sqm_per_new_unit", "balcony_cost_per_sqm_ils", "average_new_unit_sqm")),
         ("soft", "עלויות רכות", -r.total_soft_cost_ils,
-         f"{inputs.soft_cost_ratio:.0%} מהבנייה והחניון",
-         "תכנון, יועצים, פיקוח, אגרות והיתרים.", src("soft_cost_ratio")),
+         f"{inputs.soft_cost_ratio:.0%} מהבנייה, החניון והמרפסות",
+         "תקורת חברה, פיקוח הנדסי, בלתי צפוי מראש ומשפטיות.", src("soft_cost_ratio")),
         ("demolition", "הריסה", -r.total_demolition_cost_ils,
-         f"{inputs.existing_units} דירות × {inputs.demolition_cost_per_unit:,.0f} ₪",
-         "הריסת הבניין הקיים ופינוי.", src("demolition_cost_per_unit_ils")),
-        ("tenants", "שכירות והובלות לדיירים", -r.total_tenant_cost_ils,
+         f"{inputs.demolition_cost_ils:,.0f} ₪ לבניין",
+         "הריסת הבניין הקיים ופינוי, ״קומפלט״.", src("demolition_cost_ils")),
+        ("tenants", "שכירות, הובלות ועו״ד לדיירים", -r.total_tenant_cost_ils,
          f"{inputs.existing_units} דירות × ({inputs.tenant_rent_months:g} חודשים × {inputs.tenant_monthly_rent_ils:,.0f} ₪ "
-         f"+ {inputs.tenant_moving_cost_ils:,.0f} ₪ הובלות + {inputs.tenant_legal_cost_per_unit_ils:,.0f} ₪ עו״ד)",
-         "שכר דירה לבעלים בזמן הבנייה, הובלות, ושכר טרחת עורך דין לבעלים.",
-         src("tenant_rent_months", "tenant_monthly_rent_ils", "tenant_moving_cost_ils", "tenant_legal_cost_per_unit_ils")),
+         f"+ {inputs.tenant_moving_cost_ils:,.0f} ₪ הובלות + {inputs.tenant_legal_cost_per_unit_ils:,.0f} ₪ עו״ד) "
+         f"+ {inputs.tenants_supervisor_ils:,.0f} ₪ מפקח",
+         "שכר דירה לבעלים בזמן הבנייה, הובלות, שכר טרחת עורך דין לבעלים, ומפקח מטעמם.",
+         src("tenant_rent_months", "tenant_monthly_rent_ils", "tenant_moving_cost_ils",
+             "tenant_legal_cost_per_unit_ils", "tenants_supervisor_ils")),
+        ("consultants", "יועצים ותב״ע", -r.total_consultants_ils,
+         f"{r.new_units_estimate} דירות × {inputs.consultants_per_new_unit_ils:,.0f} ₪ + {inputs.plan_cost_ils:,.0f} ₪ תב״ע",
+         "אדריכל, קונסטרוקטור ויועצים, ותכנית נקודתית.", src("consultants_per_new_unit_ils", "plan_cost_ils")),
+        ("fees", "אגרות בנייה", -r.total_fees_ils,
+         f"{r.constructed_area_sqm:,.0f} מ״ר (עילי ומרתפים) × {inputs.permit_fee_per_sqm:,.0f} ₪",
+         "אגרות היתר הבנייה לעירייה.", src("permit_fee_per_sqm_ils")),
+        ("purchase_tax", "מס רכישה", -r.purchase_tax_ils,
+         f"{inputs.purchase_tax_ratio:.0%} × {inputs.rights_value_per_sqm_ils:,.0f} ₪ למ״ר זכויות × {r.developer_allocation_sqm:,.0f} מ״ר ליזם",
+         "היזם רוכש מהבעלים את זכויות הבנייה של דירותיו.", src("purchase_tax_ratio", "rights_value_per_sqm_ils")),
         ("marketing", "שיווק ותיווך", -r.total_marketing_ils,
          f"{inputs.marketing_ratio:.1%} מהכנסות היזם ({r.developer_revenue_ils / 1e6:,.1f} מיליון ₪)",
          "רק על הדירות שהיזם מוכר — דירות הבעלים אינן משווקות.", src("marketing_ratio")),
         ("guarantees", "ערבויות וביטוח", -r.total_guarantees_ils,
-         f"{inputs.guarantees_ratio:.2%} מכל ההכנסות",
+         f"{inputs.guarantees_ratio:.2%} מהכנסות היזם ומשווי דירות הבעלים ({r.owners_flats_value_ils / 1e6:,.1f} מיליון ₪)",
          "ערבויות חוק מכר לרוכשים וערבויות לבעלים, וביטוח.", src("guarantees_ratio")),
+        ("bank_fees", "עמלות בנק", -r.total_bank_fees_ils,
+         f"{inputs.bank_fees_ratio:.1%} מהעלויות לפני מימון ({before_finance / 1e6:,.1f} מיליון ₪)",
+         "עמלת הקצאת אשראי ועמלת ליווי.", src("bank_fees_ratio")),
         ("finance", "מימון", -r.total_finance_ils,
-         f"{inputs.finance_ratio:.0%} מהעלויות שאינן קרקע",
-         "עלות האשראי לאורך הפרויקט. אינה מחושבת על שווי דירות הבעלים.", src("finance_ratio")),
+         f"{inputs.finance_ratio:.0%} מהעלויות לפני מימון ({before_finance / 1e6:,.1f} מיליון ₪)",
+         "ריבית הליווי הבנקאי לאורך הפרויקט.", src("finance_ratio")),
     ]
     if r.betterment_levy_ils:
         rows.append(("levy", "היטל השבחה (אומדן)", -r.betterment_levy_ils,
@@ -987,19 +1028,30 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict,
             sale_price_per_sqm=used["sale_price_per_sqm_ils"],
             construction_cost_per_sqm=used["construction_cost_per_sqm_ils"],
             soft_cost_ratio=a.soft_cost_ratio.value,
-            demolition_cost_per_unit=a.demolition_cost_per_unit_ils.value,
+            demolition_cost_ils=a.demolition_cost_ils.value,
             developer_profit_target_ratio=a.developer_profit_target_ratio.value,
             average_existing_unit_sqm=used["average_existing_unit_sqm"],
             tenant_compensation_sqm_per_existing_unit=a.tenant_compensation_sqm_per_existing_unit.value,
             main_area_ratio=a.main_area_ratio.value,
             underground_ratio=a.underground_ratio.value,
             underground_cost_per_sqm=used["underground_cost_per_sqm_ils"],
+            balcony_sqm_per_new_unit=a.balcony_sqm_per_new_unit.value,
+            balcony_price_factor=a.balcony_price_factor.value,
+            balcony_cost_per_sqm=a.balcony_cost_per_sqm_ils.value,
+            average_new_unit_sqm=a.average_new_unit_sqm.value,
             tenant_rent_months=a.tenant_rent_months.value,
             tenant_monthly_rent_ils=a.tenant_monthly_rent_ils.value,
             tenant_moving_cost_ils=a.tenant_moving_cost_ils.value,
             tenant_legal_cost_per_unit_ils=a.tenant_legal_cost_per_unit_ils.value,
+            tenants_supervisor_ils=a.tenants_supervisor_ils.value,
+            consultants_per_new_unit_ils=a.consultants_per_new_unit_ils.value,
+            plan_cost_ils=a.plan_cost_ils.value,
+            permit_fee_per_sqm=a.permit_fee_per_sqm_ils.value,
+            purchase_tax_ratio=a.purchase_tax_ratio.value,
+            rights_value_per_sqm_ils=a.rights_value_per_sqm_ils.value,
             marketing_ratio=a.marketing_ratio.value,
             guarantees_ratio=a.guarantees_ratio.value,
+            bank_fees_ratio=a.bank_fees_ratio.value,
             finance_ratio=a.finance_ratio.value,
             betterment_levy_rate=a.betterment_levy_rate.value,
             betterment_base_ils=a.betterment_base_ils.value,
@@ -1014,7 +1066,11 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict,
 
     # ‏**W2 · 16.09 · הדוח הכלכלי נקבע לפי המדיניות, ו-400% להשוואה בלבד.**
     # ‏400% הוא תקרה בחוק ולא זכות (§70ב); הרווח עליו הוא ״מה היה אילו״.
-    policy = (assessment.get("policy_area") or {}).get("base") or {}
+    # ‏**16.09 (ערב) · אמצע טווח המדיניות, ולא הבסיס השמרני.** היזמים בדוחות 0
+    # תכננו מעל הבסיס (לייב יפה 13: 2,200 מול בסיס 1,889 בטווח 1,792–2,671),
+    # ולכן הרווח נשפט על האמצע; הבסיס והטווח מוצגים לידו.
+    pa = assessment.get("policy_area") or {}
+    policy = pa.get("mid") or pa.get("base") or {}
     policy_sqm = policy.get("sqm")
     cap_run = run(cap)
     policy_run = run(policy_sqm) if policy_sqm else None
@@ -1116,8 +1172,10 @@ def _scenario_card(r: dict[str, Any], assessment: dict) -> dict[str, Any]:
 def _policy_basis(assessment: dict) -> str:
     p = assessment.get("policy_area") or {}
     low, base, high = p.get("low") or {}, p.get("base") or {}, p.get("high") or {}
-    return (f"שטח לפי מדיניות הרצליה, אומדן בסיס {base.get('sqm', 0):,.0f} מ״ר "
-            f"(טווח {low.get('sqm', 0):,.0f}–{high.get('sqm', 0):,.0f}) — בתוך קווי הבניין והנסיגות; "
+    mid = p.get("mid") or base
+    return (f"שטח לפי מדיניות הרצליה, אמצע הטווח {mid.get('sqm', 0):,.0f} מ״ר "
+            f"(טווח {low.get('sqm', 0):,.0f}–{high.get('sqm', 0):,.0f}; אומדן בסיס שמרני {base.get('sqm', 0):,.0f}) "
+            f"— בתוך קווי הבניין והנסיגות; "
             f"תקרת 400% ({p.get('cap_400_sqm') or 0:,.0f} מ״ר) להשוואה בלבד")
 
 

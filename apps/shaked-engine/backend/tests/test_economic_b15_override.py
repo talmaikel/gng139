@@ -24,10 +24,12 @@ def test_without_b15_override_generic_report_zero_behavior_is_unchanged():
     result = calculate_feasibility(inputs)
     net_price = inputs.sale_price_per_sqm / (1 + inputs.vat_rate)
 
+    # ‏16.09 · ועוד מרפסות היזם, בחצי מחיר (דוחות 0).
     assert result.developer_revenue_ils == pytest.approx(
-        result.developer_allocation_sqm * net_price,
+        result.developer_allocation_sqm * net_price + result.balcony_revenue_ils,
         abs=0.02,
     )
+    assert result.balcony_revenue_ils > 0
 
 
 def test_b15_exact_revenue_does_not_sell_unused_residual_area():
@@ -39,7 +41,8 @@ def test_b15_exact_revenue_does_not_sell_unused_residual_area():
         gross_exact_revenue / (1 + inputs.vat_rate),
         abs=0.02,
     )
-    assert result.total_revenue_ils == pytest.approx(
-        result.land_cost_ils + result.developer_revenue_ils,
-        abs=0.02,
-    )
+    # ‏16.09 · ההכנסה היא של היזם בלבד, והתמהיל כבר מתמחר דירה שלמה —
+    # ולכן אין מרפסות נוספות מעליו.
+    assert result.total_revenue_ils == pytest.approx(result.developer_revenue_ils, abs=0.02)
+    assert result.balcony_revenue_ils == 0.0
+    assert result.owners_flats_value_ils > 0

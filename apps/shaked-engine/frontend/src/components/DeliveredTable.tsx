@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import type { DeliveredOpportunity } from "@/lib/api";
+import { isRightsRequest, type DeliveredOpportunity } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
 
 /**
@@ -37,8 +37,14 @@ export default function DeliveredTable({ rows }: { rows: DeliveredOpportunity[] 
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.delivery_id}>
-              <td style={{ fontWeight: 600 }}>{row.address}</td>
+            // ‏16.09 · תיק שכלכלי רק עם הגדלת זכויות: שורה צהובה ותגית
+            <tr key={row.delivery_id} className={isRightsRequest(row) ? "is-rights" : undefined}>
+              <td style={{ fontWeight: 600 }}>
+                {row.address}
+                {isRightsRequest(row) && (
+                  <>{" "}<span className="pill rights">נדרשת הגדלת זכויות</span></>
+                )}
+              </td>
               <td className="mono" style={{ textAlign: "start" }}>
                 {row.block ?? "—"} / {row.parcel ?? "—"}
               </td>
