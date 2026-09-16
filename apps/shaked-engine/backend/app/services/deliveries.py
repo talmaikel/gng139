@@ -58,6 +58,13 @@ def _is_deliverable(opp: Opportunity) -> bool:
     return bool(_assessment(opp).get("deliverable"))
 
 
+def held_for_renewal(assessment: dict[str, Any] | None) -> bool:
+    """‏W5 · בניין שאומת כמחודש או שחשוד ככזה. אינו נמסר, אינו מחויב, וגם
+    אינו גורם לשליפה מהארכיון — התשובה שחסרה היא של הצוות, לא של העירייה."""
+    a = assessment or {}
+    return bool(a.get("under_review")) or a.get("renewal_status") in ("verified_renewed", "suspected")
+
+
 def _open_gates(opp: Opportunity) -> list[str]:
     """רק שערים שאפשר לענות עליהם, ולכן באמת חוסמים.
 
@@ -76,6 +83,10 @@ def _why_not(opp: Opportunity) -> str:
     a = _assessment(opp)
     if not a:
         return "טרם חושבה הערכה למועמד"
+    if a.get("renewal_status") == "verified_renewed":
+        return "הבניין כבר חודש או נמצא בפרויקט חתום"
+    if held_for_renewal(a):
+        return "חשד שהבניין כבר חודש או נמצא בפרויקט חתום — ממתין לבדיקת הצוות"
     if open_gates := _open_gates(opp):
         return f"שערי סף שטרם נענו: {', '.join(open_gates)}"
     if not a.get("screenable"):
@@ -192,6 +203,11 @@ async def deliver(session, opportunity_id: UUID, company_id: UUID,
     opp = await session.get(Opportunity, opportunity_id)
     if opp is None:
         raise NotDeliverable(f"הזדמנות {opportunity_id} אינה קיימת")
+
+    if held_for_renewal(_assessment(opp)):
+        raise NotDeliverable(
+            f"המועמד אינו מוכן למסירה ולכן אינו צורך יתרה (ACC-05). {_why_not(opp)}"
+        )
 
     if not _is_deliverable(opp) and on_unready is not None:
         # ‏**אין שליפה בשביל מי שאינו יכול לקבל את התוצאה.** הסדר היה:

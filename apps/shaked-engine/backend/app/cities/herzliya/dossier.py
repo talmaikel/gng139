@@ -75,7 +75,27 @@ FIELD_LABEL = {
     "strengthened": "בוצע חיזוק בהיתר",
     "occupied": "יוזמה פעילה של אחר",
     "post_2005_permit": "היתר אחרי 18.5.2005",
+    "tama38_event": "ארוע בתיק הבניין מזכיר תמ״א 38 או חיזוק",
+    "representative_event": "ארוע בתיק הבניין מזכיר מייצג",
+    "renewal_status": "סימני חידוש הבניין",
+    "not_renewed": "הבניין לא חודש ואינו בפרויקט חתום",
 }
+
+# ‏`renewal_status` נשמר כמבנה (סטטוס, נימוקים, מי בדק). בתיק מוצג משפט —
+# מי בדק והערות הצוות אינם נמסרים ללקוח.
+RENEWAL_LABEL = {
+    "verified_renewed": "אומת: הבניין חודש או בפרויקט חתום",
+    "suspected": "חשד לחידוש — ממתין לבדיקת הצוות",
+    "none": "לא נמצא סימן לחידוש בארכיון ובשכבה · לא נבדק בשטח",
+}
+
+
+def _shown(name: str, value: Any) -> Any:
+    if name == "renewal_status" and isinstance(value, dict):
+        if value.get("status") == "none" and value.get("manual"):
+            return "נבדק ידנית: לא חודש ואינו בפרויקט חתום"
+        return RENEWAL_LABEL.get(value.get("status"), value.get("status"))
+    return value
 
 # ההנחות הכלכליות. **התווית חיה כאן ולא בדפדפן.** עד היום היא הייתה
 # ב-`frontend/src/lib/labels.ts` בלבד, והמפה נשרה מהקוד: `betterment_levy_ratio`
@@ -181,7 +201,7 @@ def _evidence_rows(fields: dict[str, dict]) -> list[dict[str, Any]]:
         out.append({
             "field": name,
             "label": FIELD_LABEL.get(name, name),
-            "value": f.get("value"),
+            "value": _shown(name, f.get("value")),
             "certainty": f.get("certainty"),
             "certainty_label": CERTAINTY_LABEL.get(f.get("certainty"), f.get("certainty")),
             "decides": usable(f, get_settings().source_max_age_days),
@@ -207,7 +227,9 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
     # ״מעולם לא נשאל״ ו״אין לו מקור פתוח״ הופיעו שניהם על אותו שדה, וזה
     # קורא כמו רשלנות: שער שאין לו מקור לא ״לא נשאל״ — הוא נשאל ואין
     # ממי לקבל תשובה. כל שדה מופיע בקטגוריה אחת בלבד.
-    never_asked = sorted(set(rights.THRESHOLD_IDS) - set(fields) - set(rights.UNOBTAINABLE))
+    never_asked = sorted(g for g in rights.THRESHOLD_IDS
+                         if g not in rights.UNOBTAINABLE
+                         and rights.GATE_FIELD.get(g, g) not in fields)
     return {
         "unknown_gates": unknown,
         # שער שאין לו מקור פתוח — גבול הנתונים, לא עבודה חסרה.

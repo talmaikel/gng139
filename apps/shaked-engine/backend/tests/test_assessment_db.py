@@ -44,6 +44,7 @@ async def _opportunity(session, block, **fields):
 
 ANSWERED = dict(residential_zoning=True, permit_date="1978-01-01", strengthened=False,
                 occupied=False, floors=4, units=28, scope_buildings=1,
+                renewal_status={"status": "none", "reasons": [], "manual": False},
                 street_width=12.0, renewal_policy_category="התחדשות מגרשית מוטת מגורים",
                 in_tama70=True, registration_area='שז"ר')
 

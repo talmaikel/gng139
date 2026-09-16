@@ -121,7 +121,7 @@ def test_the_permit_date_cites_the_archive_it_came_from():
                     permit="1", permit_date="23/07/1978")]
     rows = {r["field"]: r for r in
             _rows("6537/222", SURV, {"width": 15.5}, {}, sources, archive)}
-    for field in ("permit_date", "strengthened", "occupied"):
+    for field in ("permit_date", "post_2005_permit", "tama38_event", "representative_event"):
         assert "complot" in rows[field]["source_url"], field
         assert "govmap" not in rows[field]["source_url"], field
 

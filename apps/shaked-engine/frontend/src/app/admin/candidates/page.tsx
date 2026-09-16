@@ -11,11 +11,13 @@ import {
   getMyDeliveries,
   getPackages,
   searchCandidates,
+  setRenewal,
   type AccountBalance,
   type Assessment,
   type Candidate,
   type CreditPackage,
   type DeliveredOpportunity,
+  type RenewalStatus,
   type SearchOptions,
 } from "@/lib/api";
 import Link from "next/link";
@@ -29,7 +31,8 @@ import SearchControls from "@/components/SearchControls";
 import { MAX_AREA_SQM } from "@/lib/searchArea";
 import { dunam } from "@/lib/format";
 import { AppShell } from "@/components/brand/AppShell";
-import { assessmentBadge } from "@/components/brand/ui";
+import { StatusBadge, assessmentBadge } from "@/components/brand/ui";
+import { RENEWAL_STATUS } from "@/lib/labels";
 import { IconPencil } from "@/components/brand/icons";
 
 /** Gate ids come from the rules engine in English. A developer reading the screen
@@ -45,6 +48,7 @@ const GATE_LABEL: Record<string, string> = {
   scope_buildings: "מספר מבנים",
   renewal_policy_category: "קטגוריה במפת המדיניות",
   street_width: "רוחב רחוב",
+  not_renewed: "בדיקת חידוש הבניין",
 };
 
 const gateText = (ids: string[]) => ids.map((id) => GATE_LABEL[id] ?? id).join(", ");
@@ -167,6 +171,35 @@ export default function LegacyCandidatesPage() {
       }
     } finally {
       setDelivering(null);
+    }
+  }
+
+  /** ‏W5 · הצוות מאשר שהבניין חודש, או פוסל את החשד. הקישור הוא הראיה. */
+  async function decideRenewal(candidate: Candidate, status: RenewalStatus) {
+    const evidence = window.prompt(
+      status === "verified_renewed"
+        ? "קישור שמראה שהבניין חודש או בפרויקט חתום (Street View, מודעה, היתר):"
+        : "קישור שמראה שהבניין לא חודש (למשל Street View עדכני):"
+    );
+    if (!evidence) return;
+    const source = window.prompt("מקור קצר (למשל: Street View 09/2026):", "Street View");
+    if (!source) return;
+    const note = window.prompt("הערה לצוות (לא נמסרת ללקוח) — אפשר להשאיר ריק:") ?? undefined;
+    setError(null);
+    try {
+      const out = await setRenewal(DEFAULT_CITY, candidate.id, {
+        status, source, evidence_url: evidence, note: note || undefined,
+      });
+      setNotice(`${candidate.address}: ${
+        status === "verified_renewed" ? "סומן כמחודש ויצא מהסריקה" : "החשד נפסל — חוזר למסלול"}.`);
+      setCandidates((prev) => prev
+        .filter((c) => !(c.id === candidate.id && out.assessment.status === "ineligible"))
+        .map((c) => (c.id === candidate.id
+          ? { ...c, assessment: out.assessment, renewal_status: out.renewal_status,
+              renewal_reasons: out.renewal_reasons }
+          : c)));
+    } catch (e) {
+      setError(e instanceof ApiError ? e.detail : "השמירה נכשלה.");
     }
   }
 
@@ -374,6 +407,30 @@ export default function LegacyCandidatesPage() {
                           ממתין ל{gateText(candidate.assessment.blocking)}
                         </span>
                       )}
+                      {candidate.renewal_status && RENEWAL_STATUS[candidate.renewal_status] && (
+                        <>
+                          <StatusBadge tone={RENEWAL_STATUS[candidate.renewal_status].tone}>
+                            {RENEWAL_STATUS[candidate.renewal_status].label}
+                          </StatusBadge>
+                          {(candidate.renewal_reasons ?? []).length > 0 && (
+                            <span className="text-muted" style={{ fontSize: ".74rem", maxWidth: "22rem" }}>
+                              {(candidate.renewal_reasons ?? []).join(" · ")}
+                            </span>
+                          )}
+                          {candidate.renewal_status === "suspected" && (
+                            <span style={{ display: "inline-flex", gap: ".3rem" }}>
+                              <button className="btn-sm" onClick={(e) => { e.stopPropagation();
+                                decideRenewal(candidate, "verified_renewed"); }}>
+                                אשר חידוש
+                              </button>
+                              <button className="btn-sm btn-secondary" onClick={(e) => { e.stopPropagation();
+                                decideRenewal(candidate, "none"); }}>
+                                פסול חשד
+                              </button>
+                            </span>
+                          )}
+                        </>
+                      )}
                     </span>
                   ) : (
                     "—"
@@ -388,6 +445,9 @@ export default function LegacyCandidatesPage() {
                     // בדרך שולחת בקשה לתיק הבניין לחינם. הארכיון הוא המשאב
                     // הרגיש ביותר שיש לנו — לחיצה שידוע שתיכשל לא תיגע בו.
                     const blocked = candidate.assessment?.screenable === false;
+                    // ‏W5 · חשד לחידוש: לא נמסר ולא מחויב עד הכרעת הצוות
+                    const held = candidate.assessment?.under_review === true
+                      || candidate.renewal_status === "suspected";
                     const owned = deliveredIds.has(candidate.id);
                     // ‏684 מ-699 יגררו שליפת תיק חיה, שלוקחת עד 20 שניות.
                     // כפתור שכתוב עליו ״מוסר…״ ואינו זז נראה תקוע; כאן
@@ -404,7 +464,7 @@ export default function LegacyCandidatesPage() {
                     // באזור ההדגמה שלוש השורות הראשונות אינן מוכנות, ו״מסור לי״
                     // נראה אצלן בדיוק כמו אצל חלקה שהתיק שלה כבר שמור — לחיצה
                     // בטעות הייתה שולפת תיק מהארכיון באמצע ההדגמה.
-                    const readiness = blocked ? null
+                    const readiness = blocked || held ? null
                       : willFetch
                         ? { text: "ישלוף תיק בניין · עד 20 שניות", cls: "text-warn" }
                         : { text: "מוכן למסירה מיידית", cls: "text-ok" };
@@ -413,13 +473,15 @@ export default function LegacyCandidatesPage() {
                                     alignItems: "flex-end", gap: ".2rem" }}>
                         <button
                           onClick={(e) => { e.stopPropagation(); deliver(candidate); }}
-                          disabled={delivering !== null || owned || blocked}
-                          title={blocked ? "אינו במסלול המגרשי — אינו נמסר"
+                          disabled={delivering !== null || owned || blocked || held}
+                          title={held ? "חשד שהבניין כבר חודש — ממתין להכרעת הצוות"
+                            : blocked ? "אינו במסלול המגרשי — אינו נמסר"
                             : willFetch ? "תיק הבניין ייושלף מהארכיון — עד 20 שניות"
                             : undefined}
                           className="btn-sm"
                         >
-                          {blocked ? "לא במסלול"
+                          {held ? "ממתין לבדיקת חידוש"
+                            : blocked ? "לא במסלול"
                             : delivering === candidate.id
                               ? (willFetch ? "שולף תיק בניין…" : "מוסר…")
                               : "מסור לי"}

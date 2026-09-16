@@ -1,0 +1,112 @@
+[
+ {
+  "block": "6527",
+  "parcel": "192",
+  "address": "הנדיב 45",
+  "status": "suspected",
+  "source": "issue #101 research",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/101",
+  "checked_by": null,
+  "checked_at": "2026-09-15",
+  "note": "נבנה מחדש, דירות חדשות נמכרו ב-2024–2026"
+ },
+ {
+  "block": "6527",
+  "parcel": "402",
+  "address": "אבן שפרוט 14",
+  "status": "suspected",
+  "source": "issue #101 research",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/101",
+  "checked_by": null,
+  "checked_at": "2026-09-15",
+  "note": "היתר ניתן, דירות נמכרות על הנייר מ-12/2023"
+ },
+ {
+  "block": "6527",
+  "parcel": "403",
+  "address": "אבן שפרוט 12",
+  "status": "suspected",
+  "source": "issue #101 research",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/101",
+  "checked_by": null,
+  "checked_at": "2026-09-15",
+  "note": "היתר ניתן, דירות נמכרות על הנייר מ-12/2023"
+ },
+ {
+  "block": "6528",
+  "parcel": "28",
+  "address": "בני בנימין 16",
+  "status": "suspected",
+  "source": "issue #101 research",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/101",
+  "checked_by": null,
+  "checked_at": "2026-09-15",
+  "note": "הבנייה התחילה ב-23.12.2025"
+ },
+ {
+  "block": "6529",
+  "parcel": "264",
+  "address": "הניצנים 6",
+  "status": "suspected",
+  "source": "issue #101 research",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/101",
+  "checked_by": null,
+  "checked_at": "2026-09-15",
+  "note": "נבנה מחדש, 9 קומות; בשכבה 2"
+ },
+ {
+  "block": "6530",
+  "parcel": "101",
+  "address": "כ\"ט בנובמבר 7",
+  "status": "suspected",
+  "source": "issue #101 research",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/101",
+  "checked_by": null,
+  "checked_at": "2026-09-15",
+  "note": "נבנה מחדש, בערך ב-2020"
+ },
+ {
+  "block": "6532",
+  "parcel": "371",
+  "address": "העצמאות 77",
+  "status": "suspected",
+  "source": "issue #101 research",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/101",
+  "checked_by": null,
+  "checked_at": "2026-09-15",
+  "note": "פרויקט גמור; בשכבה 3 קומות"
+ },
+ {
+  "block": "6533",
+  "parcel": "255",
+  "address": "השרון 24",
+  "status": "suspected",
+  "source": "issue #101 research",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/101",
+  "checked_by": null,
+  "checked_at": "2026-09-15",
+  "note": "רוב חתימות ליזם"
+ },
+ {
+  "block": "6531",
+  "parcel": "156",
+  "address": "אלוף יגאל אלון 6",
+  "status": "suspected",
+  "source": "manual review 16.09 — partners",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/110",
+  "checked_by": null,
+  "checked_at": "2026-09-16",
+  "note": "השותפים: הבניינים שם כבר עברו שקד/תמ״א 38 · היתר נמסר ב-2017, 7 קומות"
+ },
+ {
+  "block": "6531",
+  "parcel": "152",
+  "address": "אלוף יגאל אלון 2",
+  "status": "suspected",
+  "source": "issue #110 review list",
+  "evidence_url": "https://github.com/talmaikel/gng139/issues/110",
+  "checked_by": null,
+  "checked_at": null,
+  "note": "היתרים ב-2007, 2017 ו-2019 · 7 קומות"
+ }
+]

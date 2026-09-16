@@ -35,6 +35,9 @@ async def _store(opp, a) -> None:
     """כותב את תוצאת ההערכה על ההזדמנות. משותף לעיר כולה ולהזדמנות אחת."""
     f = a["floors"]
     opens = _threshold_open(a["checks"])
+    renewal = a.get("renewal") or {}
+    # ‏W5 · חשד לחידוש: נשאר במסך הצוות, ואינו נמסר ואינו מחויב עד שיוכרע
+    review = any(c["status"] == "needs_review" for c in a["checks"])
     opp.metadata_json = {
         **(opp.metadata_json or {}),
         "assessment": {
@@ -49,6 +52,9 @@ async def _store(opp, a) -> None:
             "blocking": sorted({c["id"] for c in a["checks"]
                                 if c["status"] in ("failed", "unknown", "routed")}),
             "threshold_open": opens,
+            "renewal_status": renewal.get("status"),
+            "renewal_reasons": list(renewal.get("reasons") or []),
+            "under_review": review,
             # שני דגלים, כי שתי שאלות שונות נשאלו כאן כאחת:
             #
             # ‏`screenable` — נשאר במסלול? יש קומות, לא נפסל, לא נותב.
@@ -60,7 +66,7 @@ async def _store(opp, a) -> None:
             #   מקור פתוח (`UNOBTAINABLE`) אינו חוסם: הוא שאלה פתוחה
             #   בתיק, והסטטוס ממילא needs_verification.
             "screenable": (screenable := a["status"] in DELIVERABLE and f["low"] is not None),
-            "deliverable": (screenable
+            "deliverable": (screenable and not review
                             and not [i for i in opens if i not in rights.UNOBTAINABLE]),
         },
     }
