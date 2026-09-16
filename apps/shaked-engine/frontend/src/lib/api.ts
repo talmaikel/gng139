@@ -41,6 +41,7 @@ export class ApiError extends Error {
 const FALLBACK: Record<number, string> = {
   401: "נדרשת התחברות מחדש.",
   402: "לא נותרה זכאות לחברה.",
+  403: "אין הרשאה לפעולה הזו.",
   404: "לא נמצא.",
   409: "המועמד אינו מוכן למסירה.",
   422: "הבקשה אינה תקינה.",
@@ -98,6 +99,22 @@ export async function login(email: string, password: string): Promise<LoginRespo
     throw new Error("Login failed");
   }
   return response.json() as Promise<LoginResponse>;
+}
+
+export interface SignupInput {
+  company_name: string;
+  full_name: string;
+  email: string;
+  password: string;
+}
+
+/** לקוח חדש: חברה חדשה והנרשם כ-owner שלה. מחזיר טוקן — הנרשם כבר מחובר.
+ *  ‏409 = המייל תפוס, ‏422 = סיסמה או שדה שנדחו, עם משפט בעברית. */
+export function signup(input: SignupInput): Promise<LoginResponse> {
+  return request<LoginResponse>("/api/v1/auth/signup", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export interface MultiPolygonGeometry {
@@ -236,6 +253,54 @@ export interface DeliveredOpportunity {
   data_version: string;
   why_selected: Record<string, unknown> | null;
   assessment: Assessment | null;
+  /** ‏S1 · המפה של הלקוח מציגה רק את מה שנמסר לו */
+  geometry?: MultiPolygonGeometry | null;
+  centroid?: { lat: number; lng: number } | null;
+}
+
+// ── S1/S2 · סריקה: פוליגון → עד שלושה תיקים, בלי לחשוף מועמדים ──
+
+/** מספרים בלבד, לפני החיוב. */
+export interface ScanPreview {
+  found: number;
+  offer: number;
+  ready: number;
+  needs_fetch: number;
+  credits_remaining: number;
+}
+
+export interface ScanResult {
+  delivered: DeliveredOpportunity[];
+  requested: number;
+  skipped: number;
+  retryable: boolean;
+  message: string | null;
+  credits_remaining: number;
+}
+
+function scanBody(polygon: object, options: SearchOptions): string {
+  return JSON.stringify({
+    polygon,
+    min_area_sqm: options.minAreaSqm,
+    min_units: options.minUnits,
+    min_floors: options.minFloors,
+    min_cap_400_sqm: options.minCap400Sqm,
+    certain_floors_only: options.certainFloorsOnly ?? false,
+    preferences: options.preferences ?? [],
+  });
+}
+
+export function previewScan(cityCode: string, polygon: object, options: SearchOptions = {}): Promise<ScanPreview> {
+  return request<ScanPreview>(`/api/v1/candidates/${cityCode}/scan/preview`, {
+    method: "POST", body: scanBody(polygon, options),
+  });
+}
+
+/** מוסר עד שלושה תיקים מהאזור. עשוי לקחת עד כדקה כשצריך לשלוף תיקי בניין. */
+export function runScan(cityCode: string, polygon: object, options: SearchOptions = {}): Promise<ScanResult> {
+  return request<ScanResult>(`/api/v1/candidates/${cityCode}/scan/deliver`, {
+    method: "POST", body: scanBody(polygon, options),
+  });
 }
 
 /** מה שכבר נמסר לחברה — SEL-02: "מוצג במאגר החברה בלבד". */
@@ -279,12 +344,56 @@ export function getPackages(): Promise<CreditPackage[]> {
   return request<CreditPackage[]>("/api/v1/account/packages");
 }
 
-export function purchasePackage(packageId: string): Promise<{
-  package: string;
-  credits_added: number;
+// ‏אין `purchasePackage`: הרכישה המדומה הוסרה. זכאות נוספת רק על ידי אדמין.
+
+
+// ── אדמין: זכאות ידנית בפיילוט ──
+
+export interface Me {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  company_id: string;
+  is_superuser: boolean;
+}
+
+export function getMe(): Promise<Me> {
+  return request<Me>("/api/v1/auth/users/me");
+}
+
+export interface AdminCompany {
+  id: string;
+  name: string;
+  emails: string[];
   credits_remaining: number;
-}> {
-  return request(`/api/v1/account/packages/${packageId}/purchase`, { method: "POST" });
+  created_at: string | null;
+}
+
+export interface CreditGrantRow {
+  credits: number;
+  note: string;
+  granted_by: string | null;
+  created_at: string | null;
+}
+
+export function adminFindCompanies(q: string): Promise<AdminCompany[]> {
+  return request<AdminCompany[]>(`/api/v1/admin/companies?q=${encodeURIComponent(q)}`);
+}
+
+/** ‏`note` הוא האסמכתה — מספר חשבונית או תשלום. השרת מסרב בלעדיה. */
+export function adminGrantCredits(
+  companyId: string,
+  grant: { package_id?: string; credits?: number; note: string },
+): Promise<{ company: string; credits_added: number; credits_remaining: number }> {
+  return request(`/api/v1/admin/companies/${companyId}/credits`, {
+    method: "POST",
+    body: JSON.stringify(grant),
+  });
+}
+
+export function adminGrantHistory(companyId: string): Promise<CreditGrantRow[]> {
+  return request<CreditGrantRow[]>(`/api/v1/admin/companies/${companyId}/credits`);
 }
 
 
@@ -355,6 +464,20 @@ export interface Dossier {
     not_delivered_reason: string | null;
     is_deliverable: boolean;
     disclaimer: string;
+    /** על מה הרווח נשען ואינו ודאי, בסדר ההשפעה. משפטים מוכנים מהשרת (B8). */
+    caveats: { id: string; text: string }[];
+    /** ‏E1 · מעל או מתחת לרווח היזמי המזערי (16%). משפט מהשרת. */
+    profit_verdict?: string;
+    /** ‏B15 · התמהיל שהיזם חישב. מוצג ואינו משנה את הרווח. המשפט מהשרת. */
+    unit_mix?: {
+      rows: { rooms: number; area_sqm: number; units: number }[];
+      summary: string | null;
+      developer_units?: number;
+      tenant_units?: number | null;
+      compensation_sqm_per_existing_unit?: number | null;
+    };
+    /** רק כשיש תרחיש. ההשבחה אינה ידועה — מוצג עד כמה הפרויקט סופג אותה. */
+    betterment?: Betterment;
     buildable_basis?: string | null;
     buildable_certainty?: string | null;
     why?: string;
@@ -373,7 +496,42 @@ export interface Dossier {
   stale_fields: string[];
 }
 
+/** ‏B11 · סף ההשבחה. ‏`viable_up_to_ils` — ההיטל הגבוה ביותר שהרווח עוד סופג. */
+export interface Betterment {
+  rate: number;
+  levy: {
+    rate: number;
+    viable_up_to_ils: number | null;
+    estimate_ils: number | null;
+    low_ils: number | null;
+    high_ils: number | null;
+    within_range: boolean | null;
+  };
+  estimate: {
+    betterment_ils: number; before_ils: number; after_ils: number;
+    land_value_per_right_ils: number; notes: string[];
+  } | null;
+  estimate_withheld_because: string | null;
+  breakeven_ils: number | null;
+  breakeven_per_added_sqm_ils: number | null;
+  breakeven_land_value_per_right_ils: number | null;
+  /** ‏`unrated` — אין מחיר דירה קיימת או שטח בנוי קיים, ולכן אין עם מה להשוות את הסף. */
+  category: "no_threshold" | "resilient" | "marginal" | "unrated";
+  category_label: string;
+  /** שורת ההיטל המוכנה (B13) — אותו משפט במסך, ב-PDF ובאקסל. */
+  summary: string;
+  note: string;
+  rests_on_unresolved_inputs: string[];
+}
+
 /** התיק המלא. ‏404 גם למי שאינו רשאי וגם למזהה שאינו קיים — ACC-08. */
+/** ‏C15 · כמה שורות מלוח הדירות שבהיתר עוד ממתינות לאישור אדם (B3). */
+export async function getUnitReviewCounts(opportunityId: string): Promise<{ total: number; pending: number }> {
+  const state = await request<{ units: { requires_human_review: boolean }[] }>(
+    `/api/v1/dossiers/${opportunityId}/dwelling-units`);
+  return { total: state.units.length, pending: state.units.filter((u) => u.requires_human_review).length };
+}
+
 export function getDossier(cityCode: string, opportunityId: string): Promise<Dossier> {
   return request<Dossier>(`/api/v1/candidates/${cityCode}/${opportunityId}/dossier`);
 }

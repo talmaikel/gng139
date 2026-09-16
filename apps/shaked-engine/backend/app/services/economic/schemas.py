@@ -17,6 +17,16 @@ class FeasibilityInput(BaseModel):
     sale_price_per_sqm: float = Field(gt=0, description="Expected sale price per sqm of new MAIN area (ILS)")
     construction_cost_per_sqm: float = Field(gt=0, description="Hard construction cost per sqm above ground (ILS)")
 
+    # B15 may know the exact revenue of the enumerated developer apartments
+    # (room-sensitive price x apartment area x count). When supplied, Report 0
+    # uses it instead of pretending every residual sqm sells at one blended
+    # price. The amount follows sale_price_includes_vat.
+    developer_sale_revenue_ils: float | None = Field(
+        default=None,
+        ge=0,
+        description="Exact market value of developer-sale apartments; optional B15 override",
+    )
+
     # ── שטח נמכר מול שטח בנוי ──
     # תקרת ה-400% של §70ב(א)(1) כוללת במפורש שטחי שירות וממ״דים. אלה נבנים
     # ואינם נמכרים במחיר דירה, ולכן ההכנסה נגזרת מהשטח העיקרי בלבד.

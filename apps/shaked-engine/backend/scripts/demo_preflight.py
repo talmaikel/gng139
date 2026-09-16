@@ -20,6 +20,8 @@
 """
 import asyncio
 import datetime as dt
+import os
+import shutil
 import subprocess
 import sys
 import urllib.error
@@ -66,7 +68,15 @@ def check_code() -> None:
         report(WARN, "יש שינויים שלא נשמרו בקוד המוצר", dirty.splitlines()[0])
 
 
+# ‏E8 · טל הריץ את הסקריפט ב-Windows וקיבל שלושה ✗ שגויים: אין שם `lsof`,
+# ‏`ps` ו-`pgrep`, והנתיב ל-alembic שונה. בלי הכלים אי אפשר לדעת מאיזו תיקייה
+# השרת רץ — וזה נאמר כאזהרה, לא כחוסם שקרי. ‏`/health` עדיין בודק שהוא עונה.
+POSIX_TOOLS = all(shutil.which(tool) for tool in ("lsof", "ps"))
+
+
 def _listener(port: int) -> tuple[str, Path | None, dt.datetime | None]:
+    if not POSIX_TOOLS:
+        return "", None, None
     pid = sh("lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t").split("\n")[0]
     if not pid:
         return "", None, None
@@ -86,6 +96,10 @@ def _last_commit(path: Path) -> dt.datetime | None:
 
 
 def check_processes() -> None:
+    if not POSIX_TOOLS:
+        report(WARN, "אין lsof/ps במחשב הזה — לא נבדק מאיזו תיקייה השרתים רצים ומתי עלו",
+               "לוודא ביד: השרת הופעל מחדש אחרי git pull, מתוך apps/shaked-engine/backend")
+        return
     for port, where, name, reloads in ((8000, BACKEND, "השרת", False), (3000, FRONTEND, "שרת המסכים", True)):
         pid, cwd, started = _listener(port)
         if not pid:
@@ -125,7 +139,8 @@ def check_http() -> None:
 
 
 def check_migrations() -> None:
-    alembic = str(BACKEND / ".venv" / "bin" / "alembic")
+    venv_bin = BACKEND / ".venv" / ("Scripts" if os.name == "nt" else "bin")
+    alembic = str(venv_bin / ("alembic.exe" if os.name == "nt" else "alembic"))
     current = sh(alembic, "current", cwd=BACKEND).split()
     heads = sh(alembic, "heads", cwd=BACKEND).split()
     if current and heads and current[0] == heads[0]:
@@ -149,7 +164,13 @@ def check_auth() -> None:
 
 
 def check_tunnel() -> None:
-    running = sh("pgrep", "-fl", "cloudflared")
+    if shutil.which("pgrep"):
+        running = sh("pgrep", "-fl", "cloudflared")
+    elif os.name == "nt":
+        running = "cloudflared" in sh("tasklist", "/FI", "IMAGENAME eq cloudflared.exe").lower()
+    else:
+        report(WARN, "לא נבדק אם מנהרה פתוחה — אין pgrep במחשב הזה")
+        return
     if running:
         report(WARN, "מנהרת cloudflared פתוחה",
                "הכתובת ציבורית — להשאיר רק בזמן ההדגמה, ולסגור מיד אחריה")
@@ -163,7 +184,6 @@ async def check_data() -> None:
     from sqlalchemy import select
 
     from app.cities.herzliya import exports
-    from app.cities.herzliya.candidates import screen_herzliya_candidates
     from app.cities.herzliya.dossier import assemble
     from app.cities.herzliya.rules import HerzliyaCityRules
     from app.cities.herzliya.surfaces import compare
@@ -172,6 +192,7 @@ async def check_data() -> None:
     from app.models.package import Balance
     from app.models.tenant import Company
     from app.services.deliveries import delivered_ids
+    from app.services.unit_mix.service import UnitMixUnavailable, prepare_unit_mix
 
     rules = HerzliyaCityRules()
     wanted = demo.DELIVERED + [demo.FOURTH]
@@ -203,12 +224,22 @@ async def check_data() -> None:
         else:
             report(OK, f"חברת ההדגמה ביתרה {credits}, אף חלקת הדגמה לא נמסרה")
 
-        # המסך שהמציג יראה: אותו אזור, אותם תנאים, בלי מה שכבר נמסר
-        rows = await screen_herzliya_candidates(s, {
-            "polygon": demo.area_polygon(), "limit": 100, "min_units": demo.MIN_UNITS,
-            "preferences": [{"field": demo.SORT_FIELD, "direction": "desc"}],
-            "exclude_delivered_ids": owned})
-        listed = {(r["block"], r["parcel"]): i + 1 for i, r in enumerate(rows)}
+        # ‏S2 · הסריקה שהמציג יריץ: אותו אזור, אותם תנאים, ואותו סדר שהשרת
+        # מוסר בו — מוכנים קודם. היא חייבת למסור בדיוק את שלוש חלקות ההדגמה.
+        from app.api.v1.candidates import SCAN_SIZE, ScanArea, _scan_queue
+        queue = await _scan_queue(s, rules, ScanArea(
+            polygon=demo.area_polygon(), min_units=demo.MIN_UNITS,
+            preferences=[{"field": demo.SORT_FIELD, "direction": "desc"}]), company.id)
+        would = [r["address"] for r in queue[:min(SCAN_SIZE, demo.STARTING_CREDITS)]]
+        expected = [a for _, _, a in demo.DELIVERED]
+        if would == expected:
+            report(OK, "הסריקה באזור ההדגמה תמסור את שלוש חלקות ההדגמה",
+                   f"{len(queue)} מועמדים · " + " · ".join(would))
+        else:
+            report(BLOCK, "הסריקה באזור ההדגמה תמסור חלקות אחרות",
+                   "תמסור: " + " · ".join(would) + " — צפוי: " + " · ".join(expected)
+                   + " (אלוף יגאל אלון 2 אמורה להיות כבר נמסרת לחברת ההדגמה, ראו #87)")
+        listed = {(r["block"], r["parcel"]): i + 1 for i, r in enumerate(queue)}
         for block, parcel, address in wanted:
             if (block, parcel) not in opps:
                 continue
@@ -219,7 +250,7 @@ async def check_data() -> None:
                 report(BLOCK, f"{address} אינה מוכנה למסירה",
                        "המסירה תשלוף תיק מהארכיון בזמן ההדגמה")
             elif where is None and o.id not in owned:
-                report(BLOCK, f"{address} אינה ברשימה שהמסך יציג", "האזור או התנאים השתנו")
+                report(BLOCK, f"{address} אינה בסריקה של אזור ההדגמה", "האזור או התנאים השתנו")
             else:
                 d = await assemble(s, rules, o, None)
                 problems = compare(d, exports.excel(d), exports.pdf(d))
@@ -229,8 +260,22 @@ async def check_data() -> None:
                 elif stale:
                     report(BLOCK, f"{address}: יש מקורות שהתיישנו", ", ".join(stale))
                 else:
-                    report(OK, f"{address} מוכנה · שורה {where} ברשימה · מסך = PDF = אקסל",
+                    report(OK, f"{address} מוכנה · מקום {where} בסריקה · מסך = PDF = אקסל",
                            f"{len(d['economics'].get('caveats') or [])} סייגים בתיק")
+                # ‏B15 · מסך התמהיל עונה לחלקה, בלי לשמור דבר
+                try:
+                    mix = await prepare_unit_mix(s, o, compensation_sqm_per_existing_unit=None,
+                                                 persist=False)
+                    best = mix.result.candidates[0]
+                    report(OK, f"{address}: מסך התמהיל מחשב",
+                           f"{best.developer_units} דירות ליזם · "
+                           f"{best.profit_margin_on_cost_ratio:.1%} על העלות לפי התמהיל · "
+                           f"{best.unused_developer_sqm:,.0f} מ״ר לא נכנסים")
+                except UnitMixUnavailable as e:
+                    report(BLOCK, f"{address}: מסך התמהיל מסרב", str(e))
+                if (d["economics"].get("unit_mix") or {}).get("summary"):
+                    report(BLOCK, f"{address}: כבר נשמר תמהיל מהחזרה",
+                           ".venv/bin/python scripts/demo_reset.py --apply")
         await s.rollback()
 
 

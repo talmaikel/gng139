@@ -21,12 +21,13 @@
 הבדיקה כאן היא על רישום מסירה, ו-404 ולא 403 — ‏403 מאשר שהמזהה קיים.
 """
 import re
+import statistics
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 
-from app.cities.herzliya import rights
+from app.cities.herzliya import new_build_prices, rights
 from app.core.config import get_settings
 from app.evidence import DECIDING, Certainty
 from app.models.opportunity import Opportunity
@@ -57,6 +58,8 @@ FIELD_LABEL = {
     "floors": "מספר קומות קיים",
     "existing_area": "שטח בנוי קיים",
     "street_width": "רוחב הרחוב",
+    "street_width_verified": "רוחב הרחוב נמדד בשיטה המאומתת",
+    "street_narrow_frontages": "חזיתות צרות מ-8 מ׳",
     "pilotis": "קומת עמודים",
     "registration_area": "אזור רישום",
     "in_tama70": 'בתחום תמ"א 70',
@@ -64,6 +67,7 @@ FIELD_LABEL = {
     "renewal_policy_category": "קטגוריה במפת המדיניות",
     "category_ceiling": "תקרת הקטגוריה",
     "residential_zoning": "ייעוד למגורים",
+    "zoning_names": "שמות הייעוד בתכנית",
     "residential_share": "שיעור השימוש למגורים",
     "permit_date": "מועד ההיתר",
     "strengthened": "בוצע חיזוק בהיתר",
@@ -82,7 +86,7 @@ ASSUMPTION_LABEL = {
     "construction_cost_per_sqm_ils": "עלות בנייה למ״ר",
     "demolition_cost_per_unit_ils": "הריסה ליחידת דיור",
     "soft_cost_ratio": "עלויות רכות",
-    "developer_profit_target_ratio": "יעד רווח ליזם",
+    "developer_profit_target_ratio": "רווח יזמי מזערי",
     "main_area_ratio": "שיעור השטח העיקרי",
     "underground_ratio": "שיעור חניון תת-קרקעי",
     "underground_cost_per_sqm_ils": "עלות חניון למ״ר",
@@ -218,7 +222,8 @@ def _gaps(assessment: dict, fields: dict[str, dict], economics: dict) -> dict[st
     }
 
 
-def _scenario_caveats(assessment: dict, fields: dict, live: dict) -> list[dict[str, str]]:
+def _scenario_caveats(assessment: dict, fields: dict, live: dict,
+                      existing_units: int | None = None) -> list[dict[str, str]]:
     """על מה הרווח נשען ואינו ודאי — **משפטים מוכנים, נכתבים פעם אחת בשרת.** (B8)
 
     במעבר של B8 על 6537/120: פרק הזכויות כותב שהתקרה ״מנופחת״, והתרחיש
@@ -248,12 +253,44 @@ def _scenario_caveats(assessment: dict, fields: dict, live: dict) -> list[dict[s
         out.append({"id": "existing_area_estimate",
                     "text": f"השטח הבנוי הקיים, שעליו נשענת התקרה, הוא אומדן{how} ולא מדידה."})
 
+    # ‏**R1 · 15.09 · האם התקרה נכנסת בגובה המותר.** הדר 19: ‏9,776 מ״ר על
+    # מגרש של 1,108 מ״ר ב-7–8 קומות — כל קומה צריכה 110%–126% מהמגרש. אין
+    # במנוע בדיקת תכסית, והרווח מחושב על כל התקרה. זה חשבון בלבד (תקרה ÷
+    # קומות ÷ מגרש) ולא כלל מהמדיניות; הבדיקה מול התכסית המותרת היא #78.
+    cap, floors = assessment.get("cap_400_sqm"), assessment.get("floors") or {}
+    lot = _numeric(fields.get("parcel_area"))
+    high, low = floors.get("high"), floors.get("low")
+    if cap and lot and high:
+        plate_high = cap / high / lot
+        plate_low = cap / low / lot if low else plate_high
+        span = f"{low}–{high}" if low and low != high else f"{high}"
+        share = (f"{plate_high:.0%}" if abs(plate_low - plate_high) < 0.005
+                 else f"{plate_high:.0%}–{plate_low:.0%}")
+        if plate_high > 1:
+            out.append({"id": "floor_plate_exceeds_lot", "text": (
+                f"התקרה אינה נכנסת בגובה המותר: {cap:,.0f} מ״ר ב-{span} קומות הם {share} "
+                f"משטח המגרש ({lot:,.0f} מ״ר) בכל קומה. הזכויות בפועל נמוכות מהתקרה, "
+                "והרווח מחושב על שטח שכנראה לא ייבנה.")})
+        elif plate_high > 0.6:
+            out.append({"id": "floor_plate_tight", "text": (
+                f"כדי שהתקרה תיכנס ב-{span} קומות, כל קומה צריכה {share} משטח המגרש "
+                f"({cap / high:,.0f} מ״ר ומעלה). עם קווי בניין ותכסית מותרת ייתכן שהתקרה "
+                "אינה נכנסת, והרווח מחושב על כולה.")})
+
+    # ‏**הסייג אומר שהנתון אינו מוכרע, ולא רק מאיפה הוא בא.** הנוסח הקודם
+    # צירף את תווית המקור, ובחלקה עם דירה אחת מאומתת מתוך 28 יצא
+    # ״שטח דירה קיימת ממוצע: לוח דירות מהיתר, אומת ידנית.״ — משפט שנקרא
+    # כאישור, ברשימה שכותרתה ״על מה הרווח נשען ואינו ודאי״.
     for key, name in (("sale_price", "sale_price_per_sqm_ils"),
                       ("unit_area", "average_existing_unit_sqm")):
         item = live.get(key) or {}
-        if not item.get("resolved"):
-            out.append({"id": f"{name}_unresolved",
-                        "text": f"{ASSUMPTION_LABEL[name]}: {item.get('label')}."})
+        if item.get("resolved"):
+            continue
+        text = f"{ASSUMPTION_LABEL[name]} אינו מוכרע לחלקה: {item.get('label')}"
+        covered = item.get("unit_count")
+        if key == "unit_area" and covered and existing_units and covered < existing_units:
+            text += f" — הלוח מכסה {covered} מתוך {existing_units} הדירות"
+        out.append({"id": f"{name}_unresolved", "text": text + "."})
     return out
 
 
@@ -298,8 +335,16 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
     # מייבא הנחה בשקט ומציג אותה כנתון מעסקאות. הגרסה הראשונה שלי
     # השתמשה בכל הערכה שנמצאה, וכך החלישה כלל שהוא בנה ב-B1. כשהתמהיל
     # אינו מפורש ומלא — נשארים על הנחת העיר, וההערכה עדיין נחשפת בתיק.
+    #
+    # ‏**15.09 · וגם תמהיל מלא אינו מספיק: המחיר צריך להיות של דירה חדשה.**
+    # ‏B15 שומר תמהיל, ו-B1 משקלל לפיו את עסקאות GovMap — שהן דירות יד
+    # שנייה. בסימולציה המחיר ירד מ-42,000 ל-31,768, סומן ״נתון״, והרווח
+    # באלוף יגאל אלון 40 עבר מ-11% להפסד. מחיר יד שנייה הוא הצד ״לפני״
+    # של ההשבחה (`existing_price`), ולא ההכנסות. רק הערכה של דירות חדשות
+    # (B12) מכריעה כאן.
     if (valuation and valuation.blended_price_per_sqm_ils
-            and valuation.is_unit_mix_adjusted):
+            and valuation.is_unit_mix_adjusted
+            and valuation.price_basis == "new_build"):
         out["sale_price"] = {
             "value": valuation.blended_price_per_sqm_ils,
             "resolved": True,
@@ -312,14 +357,22 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
             "warnings": list(valuation.warnings),
         }
     else:
+        # ‏**P1 · 15.09 · מחיר לפי גוש לפני האומדן האחיד לעיר.** טבלת מחירי
+        # דירות חדשות לפי גוש (בועז). גוש שאינו בטבלה נשאר על 42,000. שניהם
+        # אומדן — לא עסקאות של החלקה — ולכן `resolved=False` בשניהם.
+        price, block_label = new_build_prices.sale_price(opp.block, a.sale_price_per_sqm_ils.value)
+        city_label = f"אומדן אחיד לעיר, {a.sale_price_per_sqm_ils.value:,.0f} ₪ — {_CITY_PRICE_BASIS}"
         out["sale_price"] = {
-            "value": a.sale_price_per_sqm_ils.value, "resolved": False,
+            "value": price, "resolved": False,
             "certainty": Certainty.ESTIMATE.value,
+            "basis": "block_table" if block_label else "city_estimate",
             # המספר נקרא מהספרייה ולא נכתב כאן, כדי שהתווית לא תשקר כשהערך ישתנה.
-            "label": (f"אומדן אחיד לעיר, {a.sale_price_per_sqm_ils.value:,.0f} ₪ — {_CITY_PRICE_BASIS}. "
-                      + ("יש הערכת שווי לחלקה, אך תמהיל הדירות אינו מפורש ומלא, "
-                         "ולכן המחיר המשוקלל אינו מכריע"
-                         if valuation else "לא נמצאה הערכת שווי עדכנית לחלקה")),
+            "label": ((block_label or city_label) + ". "
+                      + ("לא נמצאה הערכת שווי עדכנית לחלקה" if not valuation
+                         else "העסקאות ליד החלקה הן של דירות יד שנייה, ולכן אינן קובעות "
+                              "מחיר לבניין חדש" if valuation.price_basis != "new_build"
+                         else "יש הערכת שווי לחלקה, אך תמהיל הדירות אינו מפורש ומלא, "
+                              "ולכן המחיר המשוקלל אינו מכריע")),
             # ההערכה נחשפת גם כשאינה מכריעה: היזם רואה את העסקאות.
             "valuation_present": valuation is not None,
             "comparable_count": valuation.comparable_count if valuation else None,
@@ -334,20 +387,16 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
     # ‏**מחיר דירה חדשה ומחיר דירה קיימת אינם אותו מספר, ובלבלתי ביניהם.**
     # ההכנסות מחושבות לפי מחיר דירה **חדשה**. שווי המצב הקיים — הצד
     # ה״לפני״ של ההשבחה — הוא מחיר דירה **קיימת** באזור, והוא נמוך
-    # משמעותית. השוואת השניים באותו מספר הראתה שווי קיים גבוה משווי
-    # הזכויות החדשות, כלומר ״אין השבחה״ בכל תשע החלקות.
+    # משמעותית.
     #
-    # עסקאות ההשוואה של B1 הן עסקאות בדירות **קיימות**, ולכן הן המקור
-    # הנכון לצד ה״לפני״. **בלי אותן עסקאות אין אומדן** — יש רק סף.
-    # לא ממציאים כאן יחס בין ישן לחדש.
-    out["existing_price"] = (
-        {"value": valuation.blended_price_per_sqm_ils, "resolved": True,
-         "certainty": Certainty.DERIVED.value,
-         "label": f"‏{valuation.comparable_count} עסקאות בדירות קיימות ברדיוס "
-                  f"{valuation.radius_m} מ׳"}
-        if valuation and valuation.blended_price_per_sqm_ils
-        else {"value": None, "resolved": False, "certainty": Certainty.MISSING.value,
-              "label": "אין עסקאות השוואה בדירות קיימות — אין אומדן להשבחה, רק סף"})
+    # ‏**15.09 · החציון של עסקאות ההשוואה, ולא המחיר המשוקלל.** הגרסה
+    # הקודמת לקחה את `blended_price_per_sqm_ils`, שקיים רק כשיש תמהיל
+    # **לבניין החדש** (B15) — כלומר משקלל עסקאות קיימות לפי תמהיל של
+    # פרויקט שעוד לא נבנה, ובפועל לא היה קיים באף תיק. הצד ה״לפני״ הוא
+    # הבניין הקיים, ולכן החציון של עסקאות היד השנייה סביבו (B16: ‏28–40
+    # עסקאות לחלקה, כמעט כולן יד שנייה) הוא המספר הנכון, והוא אינו תלוי
+    # בתמהיל. זה החיבור שחסר כדי שאומדן ההיטל ״בשיטת היזם״ יוצג.
+    out["existing_price"] = _existing_price(valuation)
 
     out["unit_area"] = {
         # ‏`may_decide` הוא של B3 ולא שלנו: ודאות מכריעה, לוח שלם, ובלי
@@ -363,6 +412,73 @@ async def _resolve_live_inputs(session, opp: Opportunity, fields: dict, a) -> di
     return out
 
 
+def _unit_mix(opp: Opportunity, a) -> dict[str, Any]:
+    """‏B15 · התמהיל שהיזם חישב במסך ״תמהיל ורווחיות״, כפי שנשמר לחלקה.
+
+    ‏**התמהיל מוצג ואינו משנה את הרווח** (בועז, 15.09): ההדגמה ביום רביעי
+    נשענת על המספרים שבתיק, והתמהיל נכנס אליהם רק אחרי שייבדק. המשפט
+    נכתב כאן ולא במסך, כדי שהמסך, ה-PDF והאקסל יאמרו אותו דבר.
+    """
+    meta = opp.metadata_json or {}
+    rows = [r for r in (meta.get("planned_unit_mix") or [])
+            if isinstance(r, dict) and r.get("units")]
+    info = meta.get("planned_unit_mix_meta") or {}
+    if not rows or info.get("source") != "b15_profit_optimizer":
+        return {"rows": [], "summary": None}
+
+    rows = sorted(rows, key=lambda r: r["rooms"])
+    developer_units = sum(int(r["units"]) for r in rows)
+    parts = " · ".join(f'{int(r["units"])} × {r["rooms"]:g} חד׳ ({r["area_sqm"]:,.0f} מ״ר)'
+                       for r in rows)
+    comp = info.get("compensation_sqm_per_existing_unit")
+    summary = f"תמהיל דירות ליזם (אומדן): {parts} — {developer_units} דירות ליזם"
+    if info.get("tenant_units"):
+        summary += f' ו-{info["tenant_units"]} לבעלי הדירות'
+    if comp is not None:
+        summary += f" · לפי תוספת של {comp:g} מ״ר לכל דירה קיימת"
+    if info.get("existing_units_basis") == "building_average":
+        summary += " · שטח הדירות הקיימות לפי ממוצע הבניין"
+    # ‏באלוף יגאל אלון 6 מכפיל הדירות מתיר 30 דירות ליזם, ו-1,261 מ״ר מתוך
+    # 4,461 לא נכנסים לאף תמהיל. הרווח בתיק מוכר את כל השטח, ולכן זה נאמר.
+    unused, available = info.get("unused_developer_sqm"), info.get("developer_available_sqm")
+    if unused and available and unused > 0.05 * available:
+        summary += (f" · {unused:,.0f} מ״ר מתוך {available:,.0f} ליזם לא נכנסים לתמהיל "
+                    "(מגבלת מספר הדירות), והרווח בתיק מניח שהם נמכרים")
+    library_comp = a.tenant_compensation_sqm_per_existing_unit.value
+    if comp is not None and abs(comp - library_comp) > 1e-9:
+        summary += f" · הרווח בתיק עדיין מחושב לפי {library_comp:g} מ״ר"
+    return {
+        "rows": rows,
+        "developer_units": developer_units,
+        "tenant_units": info.get("tenant_units"),
+        "compensation_sqm_per_existing_unit": comp,
+        "existing_units_basis": info.get("existing_units_basis"),
+        "status": info.get("status", "estimate"),
+        "generated_at": info.get("generated_at"),
+        "summary": summary,
+    }
+
+
+# פחות מזה חציון אינו מייצג; עדיף סף בלבד מאשר אומדן על שלוש עסקאות.
+MIN_EXISTING_COMPARABLES = 5
+
+
+def _existing_price(valuation) -> dict[str, Any]:
+    """מחיר מ״ר של דירה **קיימת** ליד החלקה — הצד ה״לפני״ של ההשבחה."""
+    sales = {c.source_deal_id: c for c in (valuation.comparable_sales if valuation else [])}
+    if len(sales) < MIN_EXISTING_COMPARABLES:
+        return {"value": None, "resolved": False, "certainty": Certainty.MISSING.value,
+                "label": ("אין מספיק עסקאות השוואה בדירות קיימות"
+                          + (f" ({len(sales)} עסקאות)" if sales else "")
+                          + " — אין אומדן להשבחה, רק סף")}
+    median = statistics.median(c.price_per_sqm_ils for c in sales.values())
+    return {"value": round(median), "resolved": True,
+            "certainty": Certainty.DERIVED.value,
+            "comparable_count": len(sales),
+            "label": (f"חציון {len(sales)} עסקאות בדירות קיימות ברדיוס {valuation.radius_m} מ׳, "
+                      f"{valuation.lookback_months} חודשים (GovMap), נכון ל-{valuation.as_of_date}")}
+
+
 def _numeric(field: dict | None) -> float | None:
     try:
         return float((field or {}).get("value"))
@@ -370,13 +486,20 @@ def _numeric(field: dict | None) -> float | None:
         return None
 
 
-# שלוש הקטגוריות שהסף מפצל אליהן. הן אינן ניסוח אלא שדה מדורג, כי
+# ארבע הקטגוריות שהסף מפצל אליהן. הן אינן ניסוח אלא שדה מדורג, כי
 # המשמעות שלהן שונה לחלוטין: ״אין סף״ אינו ״גבולי מאוד״.
-NO_THRESHOLD, RESILIENT, MARGINAL = "no_threshold", "resilient", "marginal"
+#
+# ‏**״לא דורג״ אינו ״עמיד״.** הדירוג משווה את הסף בשווי מ״ר זכויות לסף
+# ‏`MARGINAL_LAND_VALUE_ILS`, והתרגום דורש מחיר דירה קיימת ושטח בנוי קיים.
+# כשאחד מהם חסר, הקוד נפל ל״עמיד״: ‏9661 הוצגה ״עמיד״ בירוק עם 9% רווח
+# על העלות — רק כי לא היה עם מה להשוות.
+NO_THRESHOLD, RESILIENT, MARGINAL, UNRATED = "no_threshold", "resilient", "marginal", "unrated"
 BETTERMENT_CATEGORY_LABEL = {
-    NO_THRESHOLD: "לא כדאי בשום שיעור השבחה — הבעיה אינה ההיטל",
-    RESILIENT: "עמיד — ההשבחה צריכה להיות גבוהה במיוחד כדי לאיין את הכדאיות",
+    NO_THRESHOLD: "לא עומד ברווח היזמי המזערי גם בלי היטל — הבעיה אינה ההיטל",
+    RESILIENT: "עמיד — ההשבחה צריכה להיות גבוהה במיוחד כדי להוריד את הרווח מתחת למזערי",
     MARGINAL: "גבולי — ההשבחה היא שתכריע",
+    UNRATED: ("לא דורג — חסר מחיר דירה קיימת או שטח בנוי קיים, ולכן אי אפשר "
+              "לתרגם את הסף לשווי מ״ר זכויות ולומר אם הוא גבוה או נמוך"),
 }
 # מתחת לזה הסף נמוך מכדי לספוג שווי קרקע סביר באזור מרכזי. אומדן גס
 # ומכוון ככזה: הוא מדרג בין מועמדים ואינו קובע כדאיות.
@@ -396,11 +519,17 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     ‏״229 מיליון״ אינו מספר שיזם שופט; ״33,705 ₪ למ״ר זכויות״ כן.
     """
     rate = a.betterment_levy_rate.value
-    threshold = breakeven_betterment(
-        lambda x: calculate_feasibility(
-            inputs.model_copy(update={"betterment_base_ils": x}),
-            missing_inputs=[]).projected_profit_ils,
-        rate=rate)
+    target = a.developer_profit_target_ratio.value
+
+    # ‏**E1 · 15.09 (בועז): הסף הוא ההיטל שמשאיר רווח יזמי של 16%, לא רווח
+    # אפס.** יזם אינו עובד ברווח אפס. הגרסה הקודמת קראה ״עמיד״ לפרויקט
+    # שכבר היה מתחת ליעד לפני כל היטל, ואומדן ההיטל חושב ביעד אחר מהסף.
+    def above_target(x: float) -> float:
+        r = calculate_feasibility(inputs.model_copy(update={"betterment_base_ils": x}),
+                                  missing_inputs=[])
+        return r.projected_profit_ils - target * r.total_cost_ils
+
+    threshold = breakeven_betterment(above_target, rate=rate)
 
     added = cap - cap / 4 if cap else None          # התקרה היא 400% מהקיים
     existing_price = live["existing_price"]["value"]
@@ -447,7 +576,9 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
 
     if threshold is None:
         category = NO_THRESHOLD
-    elif per_right is None or per_right >= MARGINAL_LAND_VALUE_ILS:
+    elif per_right is None:
+        category = UNRATED
+    elif per_right >= MARGINAL_LAND_VALUE_ILS:
         category = RESILIENT
     else:
         category = MARGINAL
@@ -458,7 +589,8 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
         # ‏B13 · המשפט שמחליף את ״היטל השבחה: 0 ₪״ — **נכתב פעם אחת, בשרת.**
         # ה-PDF, האקסל והמסך מדפיסים אותו כמו שהוא, כמו `not_delivered_reason`,
         # ולכן הניסוח אינו יכול להיות שונה בין המשטחים.
-        "summary": _levy_summary(category, band, estimate),
+        "summary": _levy_summary(category, band, estimate, target),
+        "profit_target_ratio": target,
         "estimate": None if estimate is None else {
             "betterment_ils": estimate.betterment_ils,
             "before_ils": estimate.before_ils,
@@ -472,16 +604,21 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
              if existing_price is None else
              "מחיר דירה חדשה ומחיר דירה קיימת מגיעים מאותן עסקאות ואינם "
              "מופרדים. בלי הפרדה, אומדן ההשבחה יוצא אפס בכל חלקה — "
-             "והסף שלמטה אינו תלוי בכך")),
+             "והסף אינו תלוי בכך")),
         "breakeven_ils": threshold,
         "breakeven_per_added_sqm_ils": threshold / added if threshold and added else None,
         # המספר שיזם שופט בשנייה.
         "breakeven_land_value_per_right_ils": per_right,
         "category": category,
         "category_label": BETTERMENT_CATEGORY_LABEL[category],
-        "note": ("הסף אינו שומה ואינו אומדן של ההשבחה. הוא אומר עד היכן "
-                 "הפרויקט סופג אותה. שיעור ההיטל — רבע ההשבחה לפי "
-                 "§19(ב)(10א) — ודאי; הבסיס אינו, ולכן מוצג סף ולא מספר."),
+        # ‏15.09 · מאז שהאומדן בשיטת היזם מוצג (#64), ״מוצג סף ולא מספר״
+        # נכתב מתחת למספר. הנוסח נגזר ממה שבאמת מוצג.
+        "note": (f"הסף אינו שומה. הוא אומר עד איזה היטל הפרויקט עוד משאיר רווח יזמי של {target:.0%}. "
+                 "שיעור ההיטל — רבע ההשבחה לפי §19(ב)(10א) — ודאי; הבסיס "
+                 + ("דורש שומה. האומדן מחושב בשיטת היזם — שווי הזכויות פחות "
+                    "שווי הדירות הקיימות — ואינו שומה."
+                    if estimate is not None else
+                    "אינו ידוע, ולכן מוצג סף ולא מספר.")),
         # **הסף יורש את כל הקלטים של המחשבון.** כשאחד מהם עדיין אינו
         # מוכרע — שטח דירה ממוצע, למשל — הסף זז איתו. שתיקה על כך
         # הייתה הופכת מספר תלוי-הנחה למספר שנראה נחרץ.
@@ -492,26 +629,46 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     }
 
 
-_CATEGORY_SHORT = {NO_THRESHOLD: "לא כדאי", RESILIENT: "עמיד", MARGINAL: "גבולי"}
+def _profit_verdict(result, target: float) -> str:
+    """‏*״הרווח היזמי חייב להיות מעל 16% כדי שיהיה כדאי״* (בועז, 15.09).
+
+    הרווח הוצג במספר גדול ובצבע, והמשפט ״מתחת ליעד״ לא נאמר במילים —
+    יזם שקרא 31 מיליון ₪ לא ראה שהפרויקט אינו עומד בסף שלו.
+    """
+    margin = result.profit_margin_on_cost_ratio
+    if result.meets_developer_target:
+        return f"מעל הרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, לפני היטל השבחה"
+    return (f"מתחת לרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, "
+            "עוד לפני היטל השבחה")
+
+
+_CATEGORY_SHORT = {NO_THRESHOLD: "לא כדאי", RESILIENT: "עמיד", MARGINAL: "גבולי",
+                   UNRATED: "לא דורג"}
 
 
 def _millions(ils: float) -> str:
     return f"{ils / 1e6:,.1f} מיליון ₪"
 
 
-def _levy_summary(category: str, band: dict, estimate) -> str:
+def _levy_summary(category: str, band: dict, estimate, target: float) -> str:
     """שורת ההיטל בתיק: **לא ידוע**, ומה כן ידוע — עד כמה הפרויקט סופג אותו.
 
     ‏״0 ₪״ נקרא כמו ״אין היטל״, והוא שקר: ההיטל הוא רבע מההשבחה, והבסיס
     דורש שומה. מה שכן אפשר לומר הוא התקרה — ההיטל שמעליו הרווח מתאפס.
     """
     if category == NO_THRESHOLD or not band.get("viable_up_to_ils"):
-        return ("היטל השבחה: לא ידוע · הפרויקט אינו כדאי בשום שיעור השבחה — "
-                "הבעיה אינה ההיטל")
-    text = (f"היטל השבחה: לא ידוע · כדאי כל עוד ההיטל מתחת ל-"
-            f"{_millions(band['viable_up_to_ils'])} ({_CATEGORY_SHORT[category]})")
+        # ‏E1 · מתחת ל-16% עוד לפני היטל. האומדן עדיין נאמר: הוא אומר בכמה
+        # עוד יירד הרווח, וזה מה שיזם ישאל מיד אחרי ״לא כדאי״.
+        text = (f"היטל השבחה: לא ידוע · הפרויקט אינו מגיע לרווח יזמי של {target:.0%} "
+                "גם בלי היטל — הבעיה אינה ההיטל")
+    else:
+        text = (f"היטל השבחה: לא ידוע · רווח של {target:.0%} נשמר כל עוד ההיטל מתחת ל-"
+                f"{_millions(band['viable_up_to_ils'])} ({_CATEGORY_SHORT[category]})")
     if estimate is not None and band.get("low_ils") is not None:
-        text += f" · אומדן: {_millions(band['low_ils'])}–{_millions(band['high_ils'])}"
+        # שיטת היזם: שווי המצב החדש פחות הקיים, כפול רבע. הטווח הוא ±10%
+        # בשווי מ״ר הזכויות, ולכן רחב — ההיטל הוא הפרש, והוא רגיש.
+        text += (f" · אומדן: כ-{band['estimate_ils'] / 1e6:,.1f} מיליון ₪ "
+                 f"(טווח {band['low_ils'] / 1e6:,.1f}–{band['high_ils'] / 1e6:,.1f})")
     return text
 
 
@@ -642,7 +799,8 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             a, live, construction_cost, construction_cost_per_sqm,
             underground_cost, underground_cost_per_sqm),
         "live_inputs": live,
-        "caveats": _scenario_caveats(assessment, fields, live),
+        "caveats": _scenario_caveats(assessment, fields, live, opp.existing_units),
+        "unit_mix": _unit_mix(opp, a),
         "disclaimer": "בדיקת כדאיות ראשונית להשוואה. אינה דוח שמאי חתום "
                       "ואינה קובעת זכויות או היתכנות מאושרת.",
     }
@@ -691,6 +849,8 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             "inputs_missing": result.inputs_missing,
             "not_delivered_reason": _not_delivered(result.inputs_missing),
             "is_deliverable": result.is_deliverable,
+            # ‏E1 · המשפט ליד הרווח, בשרת — אותו נוסח במסך, ב-PDF ובאקסל.
+            "profit_verdict": _profit_verdict(result, a.developer_profit_target_ratio.value),
             # תקרת ה-400% נשענת על אומדן שטח קיים, וזה נכתב ולא נבלע.
             "buildable_basis": assessment.get("cap_400_basis"),
             "buildable_certainty": assessment.get("cap_400_certainty")}

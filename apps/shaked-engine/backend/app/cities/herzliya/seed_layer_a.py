@@ -53,6 +53,11 @@ UNITS_SENTINEL = 999
 # הוא 94 ואחוזון 90 הוא 166; 200 הוא פי שניים מהחציון, והוא חוסם רק את מה
 # שבאמת שבור — 38 חלקות.
 MAX_SQM_PER_UNIT = 200.0
+# ‏#90 · הכיוון ההפוך: ספירה **מנופחת**. גורדון א ד 7 רשום כ-99 דירות בבניין בן
+# 3 קומות ו-553 מ״ר בנויים — 5.6 מ״ר לדירה; הדר 42 — 60 דירות, 12 מ״ר. כנראה
+# נקודות כתובת של מתחם שלם שנספרו לחלקה אחת. דירת חדר קטנה בשיכון היא ~35 מ״ר
+# נספרים; מתחת ל-30 הספירה אינה שמישה, כמו בסף העליון.
+MIN_SQM_PER_UNIT = 30.0
 
 # מארח הארכיון העירוני. ראיות שמקורן בו נשלפות לפי דרישת לקוח, אחת-אחת,
 # ונשמרות לתמיד — הזריעה אינה נוגעת בהן.
@@ -66,6 +71,13 @@ FETCHED_FILE = "archive_fetched.json"
 
 def _load(name: str):
     return json.loads((LAYER_A / name).read_text(encoding="utf-8"))
+
+
+# ‏#95 · נבנה ב-POC/layer_a/scripts/build_zoning_names.py. חסר — אין שורה, ולא ״ריק״.
+try:
+    ZONING_NAMES: dict[str, list[str]] = _load("zoning_names.json")
+except FileNotFoundError:
+    ZONING_NAMES = {}
 
 
 def _fetched_rows(key: str, entry: dict | None) -> list[dict]:
@@ -93,6 +105,9 @@ def usable_units(surv: dict) -> int | None:
     ‏1 · `apt = 999` הוא ערך זקיף בשכבת הכתובות — ספירה שלא נעשתה, לא
         בניין בן 999 דירות. כערך אמיתי הוא מייצר 2,797 יחידות בתמהיל.
 
+    ‏3 · **ולפעמים סופרת יותר מדי** (#90): 99 דירות על 553 מ״ר בנויים. אותה
+        פסילה, מהכיוון השני — ‏`MIN_SQM_PER_UNIT`.
+
     ‏2 · **שכבת נקודות הכתובת מחמיצה כניסות.** אלרואי דוד 32 הוא בניין
         בן 15 קומות על 840 מ״ר טביעת רגל, והוא רשום כארבע דירות; סביר
         שיש בו כ-84. השטח הבנוי נמדד מהגאומטריה ומהימן; מספר הדירות
@@ -109,7 +124,23 @@ def usable_units(surv: dict) -> int | None:
         return None
     if gross and (gross * K) / units > MAX_SQM_PER_UNIT:
         return None
+    if gross and (gross * K) / units < MIN_SQM_PER_UNIT:
+        return None
     return units
+
+
+def width_verified(front) -> bool:
+    """הרוחב נמדד ב-frontages_v2. רשומה בפורמט הישן (בלי width_v1) אינה מאומתת."""
+    return "width_v1" in front and front.get("width") is not None
+
+
+def street_width(front):
+    """רוחב v2, ואם הוא לא מצא חזית — רוחב v1, כדי שהחלקה לא תיעלם מהסינון.
+
+    בלי הנפילה חזרה 84 חלקות היו מאבדות מספר קומות, ו-44 מהן רק כי יש להן
+    חזית צרה שעוד לא ברור אם היא רחוב.
+    """
+    return front.get("width") if front.get("width") is not None else front.get("width_v1")
 
 
 def _rows(key, surv, front, geo, sources, archive):
@@ -167,9 +198,11 @@ def _rows(key, surv, front, geo, sources, archive):
            f"{at} · עמ׳ 8", Certainty.DERIVED,
            "דגימת דיסק 15 מ׳ במפה שגאו-רפרנסה, התאמת צבע קרובה, הכרעת רוב"),
         ev("category_ceiling", CEILING.get(cat), "strategic_plan", f"{at} · עמ׳ 8", Certainty.DERIVED),
-        ev("street_width", front.get("width"), "govmap_parcels",
+        ev("street_width", street_width(front), "govmap_parcels",
            f'{at} · {front.get("why", "")}'[:400], Certainty.DERIVED,
-           "פער קדסטרלי, החזית הצרה קובעת; אמין עד 15 מ׳"),
+           "פער קדסטרלי עד החלקה הבנויה שממול, החזית הצרה קובעת; 27 מ-29 חזיתות "
+           "שנמדדו ביד בתוך ±1 מ׳; אמין עד 12 מ׳" if width_verified(front) else
+           "האלגוריתם החדש לא מצא חזית — רוחב האלגוריתם הקודם, שהגזים עקבית; לא מאומת"),
         ev("pilotis", surv.get("pilotis"), "agol_addresses", f"{at} · amudim"),
         ev("registration_area", geo.get("registration_area"), "strategic_plan",
            f"{at} · אזורי רישום", Certainty.DERIVED, "אזור הרישום שמכיל את מרכז החלקה"),
@@ -177,7 +210,12 @@ def _rows(key, surv, front, geo, sources, archive):
         # נגזר מפוליגוני ייעוד הקרקע בתכניות המקומיות (504-*) ב-XPlan.
         ev("residential_zoning", geo.get("residential_zoning"), "iplan_xplan",
            f"{at} · ייעוד קרקע בתכנית מקומית", Certainty.DERIVED,
-           "חפיפה של מעל 30% עם פוליגון ייעוד שבשמו 'מגורים'"),
+           "מרכז החלקה בתוך פוליגון ייעוד מאושר שבשמו 'מגורים'"),
+        # ‏#95 · שם הייעוד, ולא רק ״יש מגורים״: ״מגורים מסחר ותעסוקה״ ו״מגורים ב׳״
+        # עוברים את השער הראשון באותה מידה, אבל רק הראשון הוא סיכון לשער ה-70%.
+        ev("zoning_names", ZONING_NAMES.get(key), "iplan_xplan_zoning_names",
+           f"{at} · ייעוד קרקע בתכנית מקומית", Certainty.DERIVED,
+           "שמות הייעוד המאושרים שמכילים את מרכז החלקה"),
         ev("in_tama70", geo.get("in_tama70"), "iplan_xplan", at, Certainty.DERIVED,
            'חפיפה של מעל 50% משטח החלקה עם מרחב תמ"א 70'),
         ev("scope_buildings", geo.get("buildings"), "agol_buildings", at, Certainty.DERIVED,
@@ -189,6 +227,16 @@ def _rows(key, surv, front, geo, sources, archive):
            "agol_buildings", f'{at} · ברוטו {gross} מ"ר', Certainty.ESTIMATE,
            f"טביעת רגל × קומות × k={K} · k כויל על היתר 19780028, נקודת אמת אחת"),
     ]
+
+    if street_width(front) is not None:
+        out.append(ev("street_width_verified", width_verified(front), "govmap_parcels",
+                      f"{at} · רוחב רחוב", Certainty.DERIVED,
+                      "נמדד באלגוריתם החדש" if width_verified(front) else "רוחב האלגוריתם הקודם"))
+    if front.get("narrow"):
+        out.append(ev("street_narrow_frontages",
+                      " · ".join(f'{n["width"]:g} מ׳ ({n["name"] or n["tag"]})' for n in front["narrow"]),
+                      "govmap_parcels", f"{at} · חזית מתויגת-רחוב צרה מ-8 מ׳", Certainty.DERIVED,
+                      "באימות 3 מ-6 היו רחוב ו-3 דרך שירות או חניון — נדרשת בדיקה"))
 
     if archive:
         years = [int(str(r["req"])[:4]) for r in archive if str(r.get("req", ""))[:4].isdigit()]
@@ -231,7 +279,9 @@ def _post_2005(requests) -> bool:
 
 async def seed(limit=None):
     surv = {x["key"]: x for x in _load("survivors_apt.json")}
-    front = {x["key"]: x for x in _load("frontages.json")}
+    # ‏v2: הקרן נעצרת בחלקה הבנויה שממול. נבנה ב-POC/layer_a/scripts/build_frontages.py --v2,
+    # ונבדק מול המדידות הידניות ב-POC/layer_a/validation/evaluate_widths.py.
+    front = {x["key"]: x for x in _load("frontages_v2.json")}
     geo = _load("parcels_700.geojson.json")
     sources = _load("source_fetched.json")
     facts = {f["tik"]: f for f in _load("archive_facts.json")}
@@ -340,7 +390,7 @@ def _metadata(key, surv, front):
     נמדד יכול להפיק מספר קומות ולכן `primary_candidate`; מי שלא —
     `needs_verification`, וזה מדויק ולא הנחה.
     """
-    measured = front.get("width") is not None
+    measured = street_width(front) is not None
     return {
         "source": "layer_a",
         "category": "primary_candidate" if measured else "needs_verification",

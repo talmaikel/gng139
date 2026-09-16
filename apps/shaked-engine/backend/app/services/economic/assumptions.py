@@ -73,14 +73,6 @@ class EconomicAssumptionSet:
     betterment_levy_rate: Assumption
     betterment_base_ils: Assumption
     vat_rate: Assumption
-    # The single largest deduction from the developer's share, and until now
-    # it was a bare `70.0` default inside FeasibilityInput that the worker
-    # never passed and the dossier never reported. Between a 55 sqm and a
-    # 95 sqm average the projected profit moves by ~12.6M ILS on a typical
-    # candidate. It is MISSING rather than ESTIMATE because it is knowable:
-    # it is in the gramushka and the building permit, and guessing it is
-    # exactly what the PRD forbids.
-    average_existing_unit_sqm: Assumption
 
     def blocking(self) -> list[str]:
         """Assumptions that are genuinely unknown.
@@ -110,7 +102,7 @@ class EconomicAssumptionSet:
 
 HERZLIYA_2026_V1 = EconomicAssumptionSet(
     city_code="herzliya",
-    version="2026-v4",
+    version="2026-v5",
     effective_date=date(2026, 1, 1),
     # ‏v4 (15.09.2026): 45,000 → 42,000, ועם מקור. 45,000 היה ניחוש אחיד לעיר.
     # ‏42,000 מוצלב משני מקורות, ועדיין אומדן ולא נתון:
@@ -141,9 +133,14 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
     soft_cost_ratio=Assumption(
         0.15, AssumptionStatus.ESTIMATE, "ratio",
         source="הנחת עבודה, כשיעור מעלות הבנייה — לא נשלפה ממקור"),
+    # ‏v5 · 15.09 (בועז): *״הרווח היזמי חייב להיות מעל 16% כדי שיהיה כדאי״*.
+    # מספר אחד לכל התיק — הסימון ליד הרווח, תקרת ההיטל (ההיטל שמשאיר 16%)
+    # ושווי הקרקע השיורי שממנו נגזר אומדן ההיטל. היה 20%, והמשפט כאן אמר
+    # שהוא ״קובע את סף ההשבחה״ בזמן שהסף חושב עד רווח אפס.
     developer_profit_target_ratio=Assumption(
-        0.20, AssumptionStatus.ESTIMATE, "ratio",
-        source="הנחת עבודה — קובע אם התרחיש ״עומד ביעד״ ואת סף ההשבחה; אינו משנה את הרווח"),
+        0.16, AssumptionStatus.ESTIMATE, "ratio",
+        source="רווח יזמי מזערי לכדאיות, על העלות (בועז, 15.09) — קובע את הסימון ליד הרווח, "
+               "את תקרת ההיטל ואת אומדן ההיטל; אינו משנה את הרווח"),
 
     main_area_ratio=Assumption(
         0.78, AssumptionStatus.ESTIMATE, "ratio",
@@ -175,13 +172,13 @@ HERZLIYA_2026_V1 = EconomicAssumptionSet(
 
     marketing_ratio=Assumption(
         0.025, AssumptionStatus.ESTIMATE, "ratio",
-        source="שיווק ותיווך, טווח מקובל 2%-3% מההכנסות"),
+        source="שיווק ותיווך, טווח מקובל 2%-3% מהכנסות הדירות שהיזם מוכר"),
     guarantees_ratio=Assumption(
         0.0125, AssumptionStatus.ESTIMATE, "ratio",
         source="ערבויות חוק המכר וביטוח, 1%-1.5% מההכנסות"),
     finance_ratio=Assumption(
         0.06, AssumptionStatus.ESTIMATE, "ratio",
-        source="ליווי בנקאי וריבית, טווח מקובל 5%-7% מהעלויות"),
+        source="ליווי בנקאי וריבית, טווח מקובל 5%-7% מהעלויות — בלי שווי דירות הבעלים"),
     # ── היטל השבחה: השיעור ידוע בוודאות, הבסיס לא ──
     #
     # תיקון 139 הוסיף את סעיף 19(ב)(10א) לתוספת השלישית, וקבע שיעור

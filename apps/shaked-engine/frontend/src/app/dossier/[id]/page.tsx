@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { use } from "react";
-import { ApiError, downloadDossier, getDossier,
-         type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
+import { ApiError, downloadDossier, getDossier, getUnitReviewCounts,
+         type Betterment, type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
 import {
   ASSUMPTION_STATUS, GATE_STATUS,
 } from "@/lib/labels";
@@ -16,6 +16,13 @@ const CITY = "herzliya";
 // שייך לסכום ולא לעיצוב.
 const ils = (n: number) =>
   Math.round(n) === 0 ? "0 ₪" : `${Math.round(n).toLocaleString("he-IL")} ₪`;
+/** ‏#81 · סכומים גדולים במסך במיליונים. ‏31,126,961 ₪ עד השקל, על בסיס של
+ *  שמונה-עשר אומדנים, נקרא כמו חשבון מדויק. ה-PDF והאקסל נשארים מדויקים —
+ *  בדיקת המשטחים משווה אותם, והאקסל הוא המקום שהיזם מחשב בו. */
+const ilsApprox = (n: number) =>
+  Math.abs(n) >= 1_000_000
+    ? `${n < 0 ? "‎-" : ""}${(Math.abs(n) / 1e6).toLocaleString("he-IL", { maximumFractionDigits: 1 })} מיליון ₪`
+    : ils(n);
 const sqm = (n: number) => `${Math.round(n).toLocaleString("he-IL")} מ״ר`;
 const date = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -99,6 +106,66 @@ function EvidenceTable({ rows }: { rows: EvidenceRow[] }) {
   );
 }
 
+const BETTERMENT_COLOUR: Record<Betterment["category"], string> = {
+  resilient: "#1f5f55", marginal: "#8a6100", no_threshold: "#a8321e",
+  // ״לא דורג״ אינו ״עמיד״ — בלי צבע שאומר משהו.
+  unrated: "#5c5750",
+};
+
+/** ‏C14 · ההיטל כתקרה ולא כ-0 ₪.
+ *
+ *  ההשבחה אינה ידועה, והתרחיש מחושב בלעדיה. ״היטל השבחה 0 ₪״ אמר ליזם
+ *  שאין היטל; מה שאנחנו באמת יודעים הוא עד כמה הרווח סופג אותו. */
+function BettermentBlock({ b }: { b: Betterment }) {
+  const { levy } = b;
+  return (
+    <div style={{ marginTop: "1rem", paddingTop: ".9rem", borderTop: "1px solid #eee" }}>
+      <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: ".5rem" }}>
+        <div>
+          <div style={{ color: "#6b655c", fontSize: ".8rem" }}>
+            תקרת היטל ההשבחה · {Math.round(levy.rate * 100)}% מההשבחה
+          </div>
+          <strong style={{ fontSize: "1.3rem", color: BETTERMENT_COLOUR[b.category] }}>
+            {levy.viable_up_to_ils != null ? `עד ${ilsApprox(levy.viable_up_to_ils)}` : "אין תקרה"}
+          </strong>
+        </div>
+        {b.breakeven_land_value_per_right_ils != null && (
+          <div>
+            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שווי מ״ר זכויות שבו הרווח יורד למזערי</div>
+            <strong style={{ fontSize: "1.3rem" }}>{ils(b.breakeven_land_value_per_right_ils)}</strong>
+          </div>
+        )}
+        {levy.low_ils != null && levy.high_ils != null && (
+          <div>
+            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>אומדן ההיטל</div>
+            <strong style={{ fontSize: "1.3rem" }}>{ilsApprox(levy.low_ils)}–{ilsApprox(levy.high_ils)}</strong>
+          </div>
+        )}
+      </div>
+      <p style={{ margin: ".2rem 0", fontWeight: 600, color: BETTERMENT_COLOUR[b.category], fontSize: ".88rem" }}>
+        {b.category_label}
+      </p>
+      {levy.within_range === false && (
+        <p style={{ margin: ".2rem 0", fontWeight: 600, color: "#a8321e", fontSize: ".88rem" }}>
+          הקצה העליון של אומדן ההיטל גבוה מהתקרה.
+        </p>
+      )}
+      <p style={{ margin: ".2rem 0", color: "#6b655c", fontSize: ".82rem" }}>{b.note}</p>
+      {b.estimate_withheld_because && (
+        <p style={{ margin: ".2rem 0", color: "#6b655c", fontSize: ".82rem" }}>
+          אין אומדן להיטל: {b.estimate_withheld_because}
+        </p>
+      )}
+      {b.rests_on_unresolved_inputs.length > 0 && (
+        <p style={{ margin: ".2rem 0", color: "#8a6100", fontSize: ".82rem" }}>
+          התקרה זזה עם {b.rests_on_unresolved_inputs.join(" ועם ")}
+          {b.rests_on_unresolved_inputs.length === 1 ? ", שעדיין אינו מוכרע." : ", שעדיין אינם מוכרעים."}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function DossierPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -118,6 +185,12 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
       setDownloading(null);
     }
   }
+
+  // ‏C15 · מסך האישור (PR #17) קיים, ועד היום לא היה מקושר מהתיק עם מה שמחכה בו.
+  const [unitReview, setUnitReview] = useState<{ total: number; pending: number } | null>(null);
+  useEffect(() => {
+    getUnitReviewCounts(id).then(setUnitReview).catch(() => setUnitReview(null));
+  }, [id]);
 
   useEffect(() => {
     getDossier(CITY, id)
@@ -246,20 +319,77 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
           <>
             <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
               <div>
-                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>רווח צפוי</div>
-                <strong style={{ fontSize: "1.3rem" }}>{ils(s.projected_profit_ils)}</strong>
+                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>
+                  רווח צפוי{d.economics.betterment ? " · לפני היטל השבחה" : ""}
+                </div>
+                <strong style={{ fontSize: "1.3rem" }}>{ilsApprox(s.projected_profit_ils)}</strong>
               </div>
               <div>
                 <div style={{ color: "#6b655c", fontSize: ".8rem" }}>רווח על העלות</div>
                 <strong style={{ fontSize: "1.3rem",
-                                 color: s.profit_margin_on_cost_ratio >= 0.2 ? "#1f5f55" : "#8a6100" }}>
+                                 color: s.meets_developer_target ? "#1f5f55" : "#8a6100" }}>
                   {Math.round(s.profit_margin_on_cost_ratio * 100)}%
                 </strong>
               </div>
               <div>
-                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שטח נמכר</div>
+                {/* ‏C14 · היה ״שטח נמכר״, והמספר הוא השטח שנשאר ליזם אחרי הדיירים.
+                    באקסל ״שטח נמכר (עיקרי)״ הוא כל השטח העיקרי — שם אחד, שני
+                    מספרים, בדיוק ברגע שהיזם פותח את האקסל מול המסך. */}
+                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שטח ליזם</div>
                 <strong style={{ fontSize: "1.3rem" }}>{sqm(s.developer_allocation_sqm)}</strong>
               </div>
+            </div>
+
+            {/* ‏E1 · מעל או מתחת ל-16%, במילים ולא רק בצבע. המשפט מהשרת, כמו ב-PDF ובאקסל. */}
+            {d.economics.profit_verdict && (
+              <p style={{ margin: "-.4rem 0 1rem", fontWeight: 600, fontSize: ".9rem",
+                          color: s.meets_developer_target ? "#1f5f55" : "#8a6100" }}>
+                {d.economics.profit_verdict}
+              </p>
+            )}
+
+            {/* ‏C14 · הסייג צמוד למספר שהוא מסייג. הנוסח מהשרת, כמו
+                ‏`not_delivered_reason` — אותו משפט במסך, ב-PDF ובאקסל. */}
+            {d.economics.caveats.length > 0 && (
+              <div style={{ marginBottom: "1rem", padding: ".7rem .9rem", borderRadius: 8,
+                            background: "#fbf4e4", color: "#6b4c00", fontSize: ".86rem" }}>
+                <strong style={{ display: "block", marginBottom: ".3rem", color: "#8a6100" }}>
+                  על מה הרווח נשען
+                </strong>
+                <ul style={{ margin: 0, paddingInlineStart: "1.1rem" }}>
+                  {d.economics.caveats.map((c) => (
+                    <li key={c.id} style={{ marginBottom: ".2rem" }}>{c.text}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {unitReview && unitReview.total > 0 && (
+              <p style={{ margin: "-.4rem 0 1rem", fontSize: ".86rem", color: "#6b655c" }}>
+                {unitReview.pending > 0
+                  ? `${unitReview.pending} מתוך ${unitReview.total} הדירות שנקראו מההיתר ממתינות לאישור. `
+                  : `כל ${unitReview.total} הדירות שנקראו מההיתר אושרו. `}
+                <Link href={`/dossier/${id}/units`}>
+                  {unitReview.pending > 0 ? "אשר דירות ←" : "לוח הדירות ←"}
+                </Link>
+              </p>
+            )}
+
+            {/* ‏B15 · התמהיל שהיזם חישב. המשפט מהשרת, כמו ב-PDF ובאקסל,
+                והרווח שמעליו אינו זז בגללו (בועז, 15.09). */}
+            <div style={{ marginBottom: "1rem", padding: ".7rem .9rem", borderRadius: 8,
+                          background: "#eef3f8", color: "#1d3f66", fontSize: ".86rem" }}>
+              {d.economics.unit_mix?.summary ? (
+                <>
+                  {d.economics.unit_mix.summary}{" "}
+                  <Link href={`/dossier/${id}/mix`}>שנה את התמורה ←</Link>
+                </>
+              ) : (
+                <>
+                  תמהיל הדירות עוד לא חושב.{" "}
+                  <Link href={`/dossier/${id}/mix`}>חשב תמהיל ורווחיות ←</Link>
+                </>
+              )}
             </div>
 
             <table>
@@ -275,18 +405,30 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                   ["שיווק ותיווך", -s.total_marketing_ils],
                   ["ערבויות וביטוח", -s.total_guarantees_ils],
                   ["מימון", -s.total_finance_ils],
-                  ["היטל השבחה", -s.betterment_levy_ils],
+                  // ‏0 ₪ כאן אינו ״אין היטל״ אלא ״ההשבחה אינה ידועה״. התקרה מתחת.
+                  ...(d.economics.betterment ? [] : [["היטל השבחה", -s.betterment_levy_ils]]),
                 ] as [string, number][]).map(([name, value]) => (
                   <tr key={name}>
                     <td>{name}</td>
                     <td style={{ textAlign: "end", fontVariantNumeric: "tabular-nums",
                                  color: value < 0 ? "#a8321e" : "#1f5f55" }}>
-                      {ils(value)}
+                      {ilsApprox(value)}
                     </td>
                   </tr>
                 ))}
+                {/* ‏B13 · שורת ההיטל נכתבת פעם אחת בשרת, וה-PDF והאקסל מדפיסים
+                    אותה כמו שהיא. נוסח מקומי כאן היה נפרד מהם בשקט. */}
+                {d.economics.betterment && (
+                  <tr>
+                    <td colSpan={2} style={{ color: "#8a6100", fontWeight: 600 }}>
+                      {d.economics.betterment.summary}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
+
+            {d.economics.betterment && <BettermentBlock b={d.economics.betterment} />}
           </>
         ) : (
           <p style={{ color: "#8a6100" }}>{d.economics.why ?? "לא חושב תרחיש."}</p>

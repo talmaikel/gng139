@@ -7,14 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cities import get_city_rules as _get_city_rules
 from app.core.database import get_async_session
-from app.core.security import current_active_user
+from app.core.security import current_active_user, current_superuser
 from app.models.tenant import User
 from app.cities.herzliya.archive_facts import (ArchiveUnavailable, NoBuildingFile,
                                                fetch_for_delivery)
 from app.cities.herzliya import exports
 from app.cities.herzliya.dossier import NotEntitled, build as build_dossier
-from app.services.deliveries import (NoCredits, NotDeliverable, deliver, delivered_ids,
-                                     for_company, provenance)
+from app.services.deliveries import (NoCredits, NotDeliverable, _credits, deliver,
+                                     delivered_ids, for_company, provenance)
 
 router = APIRouter(prefix="/candidates", tags=["candidates"])
 
@@ -54,14 +54,18 @@ class SearchArea(BaseModel):
     limit: int = Field(default=100, le=500)
 
 
+# ‏#89 · **הרשימה המלאה היא לצוות בלבד.** הלקוח מקבל תיקים דרך הסריקה
+# (`scan/preview`, `scan/deliver`) ואינו רואה מועמדים (בועז, 15.09): רשימה
+# עם כתובות ממוינות היא המוצר עצמו בחינם. שני הנתיבים האלה משרתים את מסך
+# הצוות ‏/admin/candidates, ולכן superuser בלבד.
 @router.post("/{city_code}/search")
 async def search_candidates(
     city_code: str,
     body: SearchArea,
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(current_superuser),
 ) -> list[dict[str, Any]]:
-    """מועמדים בתוך אזור מצויר. פוליגון שאינו תקין או חורג מהעיר נדחה ב-422."""
+    """מועמדים בתוך אזור מצויר — מסך הצוות. פוליגון שאינו תקין או חורג מהעיר נדחה ב-422."""
     rules = get_city_rules(city_code)
     filters = body.model_dump()
     # מה שכבר נמסר לחברה אינו מוצע שוב כהזדמנות חדשה — הוא נשאר במאגר שלה.
@@ -70,6 +74,144 @@ async def search_candidates(
         return await rules.screen_candidates(session, filters)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
+
+
+# ── S1 · סריקה: פוליגון → עד שלושה תיקים, בלי לחשוף מועמדים ──
+#
+# ‏**הלקוח אינו רואה מועמדים** (בועז, 15.09). רשימה מלאה עם כתובות היא
+# המוצר עצמו בחינם: מי שרואה 23 כתובות ממוינות לפי תקרת 400% אינו צריך
+# לקנות את שלוש הראשונות. הסריקה מחזירה מספר לפני החיוב, ותיקים אחריו.
+
+SCAN_SIZE = 3
+# שליפה מהארכיון היא 10–20 שניות, והארכיון מוגבל בקצב. יותר משתיים
+# בבקשה אחת עוברות את זמן ההמתנה של הדפדפן; השאר מושלמות בקריאה נוספת.
+MAX_FETCHES_PER_SCAN = 2
+
+
+class ScanArea(BaseModel):
+    """אותו אזור ואותם תנאים כמו `SearchArea`, בלי `limit`: הסריקה קובעת
+    כמה, לפי היתרה."""
+    polygon: dict[str, Any]
+    min_area_sqm: float | None = Field(default=None, ge=0)
+    min_units: int | None = Field(default=None, ge=0)
+    min_floors: float | None = Field(default=None, ge=0)
+    min_cap_400_sqm: float | None = Field(default=None, ge=0)
+    certain_floors_only: bool = False
+    preferences: list[Preference] = Field(default_factory=list, max_length=3)
+
+
+def _ready(row: dict[str, Any]) -> bool:
+    return bool((row.get("assessment") or {}).get("deliverable"))
+
+
+async def _scan_queue(session, rules, body: ScanArea, company_id) -> list[dict[str, Any]]:
+    """המועמדים שהסריקה תמסור, בסדר שבו תמסור אותם.
+
+    **מוכנים קודם** (בועז, 15.09): תיק שכבר נשלף נמסר מיד ובוודאות. אחריהם
+    מי שבמסלול המגרשי אבל דורש שליפה מהארכיון. בתוך כל קבוצה — לפי
+    ההעדפות של הלקוח, כי `screen_candidates` כבר מיין כך והמיון יציב.
+    """
+    filters = body.model_dump() | {
+        "limit": 500,
+        "exclude_delivered_ids": await delivered_ids(session, company_id),
+    }
+    try:
+        rows = await rules.screen_candidates(session, filters)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    in_track = [r for r in rows
+                if _ready(r) or (r.get("assessment") or {}).get("screenable")]
+    return [r for r in in_track if _ready(r)] + [r for r in in_track if not _ready(r)]
+
+
+@router.post("/{city_code}/scan/preview")
+async def scan_preview(
+    city_code: str,
+    body: ScanArea,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> dict[str, Any]:
+    """כמה יימסרו, לפני החיוב. **מספרים בלבד** — בלי כתובת, מזהה או גאומטריה."""
+    rules = get_city_rules(city_code)
+    queue = await _scan_queue(session, rules, body, user.company_id)
+    credits = await _credits(session, user.company_id)
+    offer = min(SCAN_SIZE, credits, len(queue))
+    ready = sum(1 for r in queue[:offer] if _ready(r))
+    return {"found": len(queue), "offer": offer, "ready": ready,
+            "needs_fetch": offer - ready, "credits_remaining": credits}
+
+
+@router.post("/{city_code}/scan/deliver")
+async def scan_deliver(
+    city_code: str,
+    body: ScanArea,
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+) -> dict[str, Any]:
+    """מוסר עד שלושה מגרשים מהאזור, לפי סדר `_scan_queue`.
+
+    מגרש שאין לו תיק בניין או שהשליפה לא ענתה על השער — מדלגים לבא אחריו,
+    ואינו מחויב (ACC-05). ארכיון שסירב — עוצרים ומחזירים `retryable`:
+    קריאה חוזרת משלימה, כי מה שכבר נמסר אינו מוצע שוב. כל מסירה נשמרת
+    מיד, כך שבקשה שנקטעה באמצע אינה מאבדת את מה שכבר נמסר.
+    """
+    rules = get_city_rules(city_code)
+    # ‏rollback על מגרש שדולג מפקיע את כל האובייקטים בסשן, כולל המשתמש;
+    # קריאה של `user.company_id` אחריו הייתה פונה למסד מחוץ להקשר האסינכרוני.
+    company_id, user_id = user.company_id, user.id
+    credits = await _credits(session, company_id)
+    if credits < 1:
+        raise HTTPException(status_code=402, detail="לא נותרה זכאות לחברה. יש לרכוש חבילה כדי להמשיך.")
+    queue = await _scan_queue(session, rules, body, company_id)
+    target = min(SCAN_SIZE, credits)
+
+    async def prepare(s, oid):
+        return await fetch_for_delivery(s, oid)
+
+    delivered: list[str] = []
+    skipped, fetches, retryable, message = 0, 0, False, None
+    for candidate in queue:
+        if len(delivered) >= target:
+            break
+        if not _ready(candidate):
+            if fetches >= MAX_FETCHES_PER_SCAN:
+                retryable = True
+                message = "חלק מהתיקים עוד נשלפים מהארכיון. לחיצה נוספת תשלים אותם."
+                break
+            fetches += 1
+        oid = UUID(candidate["id"])
+        try:
+            row, charged = await deliver(session, oid, company_id, user_id,
+                                         on_unready=prepare)
+            if charged:
+                p = await provenance(session, oid)
+                row.rules_version, row.data_version, row.why_selected = (
+                    p["rules_version"], p["data_version"], p["why"])
+                await session.flush()
+            await session.commit()
+            if charged:
+                delivered.append(str(oid))
+        except (NoBuildingFile, NotDeliverable):
+            await session.rollback()
+            skipped += 1
+        except ArchiveUnavailable:
+            await session.rollback()
+            retryable = True
+            message = "ארכיון העירייה לא ענה כרגע. אפשר לנסות שוב בעוד כמה דקות — לא חויבת על מה שלא נמסר."
+            break
+        except NoCredits:
+            await session.rollback()
+            break
+
+    mine = {m["opportunity_id"]: m for m in await for_company(session, company_id)}
+    return {
+        "delivered": [mine[i] for i in delivered if i in mine],
+        "requested": target,
+        "skipped": skipped,
+        "retryable": retryable,
+        "message": message,
+        "credits_remaining": await _credits(session, company_id),
+    }
 
 
 @router.get("/{city_code}/mine")
@@ -195,9 +337,9 @@ async def list_candidates(
         description="רק מועמדים שההערכה שלהם ניתנת למסירה — לא מנותבים למתחמים ולא ללא קביעת קומות"),
     limit: int = Query(default=100, le=500),
     session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(current_superuser),
 ) -> list[dict[str, Any]]:
-    """Pre-filtered candidate opportunities for a given city, applying the city's own strategy."""
+    """Pre-filtered candidate opportunities for a given city — team screen only (#89)."""
     rules = get_city_rules(city_code)
     filters = {
         "exclude_delivered_ids": await delivered_ids(session, user.company_id),

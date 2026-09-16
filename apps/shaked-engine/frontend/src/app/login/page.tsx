@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { login, setToken } from "@/lib/api";
@@ -113,6 +114,9 @@ export default function LoginPage() {
             {submitting ? "מתחבר…" : "כניסה"}
           </button>
         </form>
+        <p style={{ marginTop: "1.2rem", fontSize: ".88rem" }}>
+          לקוח חדש? <Link href="/signup">הרשמה</Link>
+        </p>
       </div>
     </main>
   );

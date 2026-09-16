@@ -13,7 +13,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from app.core.database import get_async_session
-from app.core.security import current_active_user
+from app.core.security import current_active_user, current_superuser
 from app.main import app
 from app.models.opportunity import Opportunity, VerificationLevel
 from app.models.tenant import Company, User
@@ -51,6 +51,8 @@ async def client(session):
     user = await _user(session)
     app.dependency_overrides[get_async_session] = lambda: session
     app.dependency_overrides[current_active_user] = lambda: user
+    # הבדיקות כאן על התנהגות החיפוש, לא על ההרשאה — שנבדקת בנפרד למטה (#89)
+    app.dependency_overrides[current_superuser] = lambda: user
     async with AsyncClient(transport=ASGITransport(app=app),
                            base_url="http://test") as c:
         c.user = user
@@ -121,7 +123,13 @@ async def test_an_unknown_city_does_not_fall_back_to_herzliya(client):
 @pytest.mark.asyncio
 async def test_a_dossier_of_another_company_is_not_found_rather_than_forbidden(client, session):
     """‏404 ולא 403: ‏403 מאשר שהמזהה קיים, וזו דליפה בפני עצמה."""
-    r = await client.post(f"/api/v1/dossiers/{uuid.uuid4()}/generate")
+    from app.models.package import Balance
+    opp = await _deliverable_parcel(session, "9405")
+    session.add(Balance(company_id=client.user.company_id, credits_remaining=1))
+    await session.flush()
+    assert (await client.post(f"/api/v1/candidates/herzliya/{opp.id}/deliver")).status_code == 200
+
+    r = await client.post(f"/api/v1/dossiers/{opp.id}/generate")
     assert r.status_code == 200
     task_id = r.json()["task_id"]
 
@@ -280,8 +288,9 @@ async def test_balance_starts_at_zero_rather_than_erroring(client):
 
 
 @pytest.mark.asyncio
-async def test_buying_a_package_adds_entitlement_to_the_company(client, session):
-    """*״הזכאות לשלוש הזדמנויות שייכת לחברה ומשותפת לצוותה״*."""
+async def test_a_customer_sees_packages_but_cannot_add_credits_to_itself(client, session):
+    """הרכישה המדומה הוסרה: עם הרשמה פתוחה היא נתנה תיקים בחינם לכל נרשם.
+    זכאות נוספת רק על ידי אדמין — `test_admin_credits.py`."""
     from app.models.package import Package
     pkg = Package(name="שלוש הזדמנויות", credits=3, price_ils=30_000)
     session.add(pkg)
@@ -291,20 +300,7 @@ async def test_buying_a_package_adds_entitlement_to_the_company(client, session)
     assert any(p["id"] == str(pkg.id) for p in listed)
 
     r = await client.post(f"/api/v1/account/packages/{pkg.id}/purchase")
-    assert r.status_code == 200 and r.json()["credits_remaining"] == 3
-
-    # משתמש אחר באותה חברה רואה את אותה יתרה
-    other = await _user(session)
-    other.company_id = client.user.company_id
-    await session.flush()
-    app.dependency_overrides[current_active_user] = lambda: other
-    assert (await client.get("/api/v1/account/balance")).json()["credits_remaining"] == 3
-
-
-@pytest.mark.asyncio
-async def test_an_unknown_package_is_404_and_changes_no_balance(client):
-    r = await client.post(f"/api/v1/account/packages/{uuid.uuid4()}/purchase")
-    assert r.status_code == 404
+    assert r.status_code in (404, 405)
     assert (await client.get("/api/v1/account/balance")).json()["credits_remaining"] == 0
 
 
@@ -439,3 +435,41 @@ async def test_certain_floors_only_keeps_the_figure_that_does_not_move(client, s
                           json={"polygon": INSIDE, "certain_floors_only": True})
     ids = [x["id"] for x in r.json()]
     assert str(firm.id) in ids and str(soft.id) not in ids
+
+
+@pytest.mark.asyncio
+async def test_a_dossier_that_was_not_delivered_cannot_be_generated(client, session):
+    """‏#89 · ‏`/generate` קיבל כל מזהה, ו-`/status` החזיר את התיק — כתובת
+    וכלכלה — בלי מסירה. ‏404, גם כשהמגרש קיים."""
+    opp = await _deliverable_parcel(session, "9406")
+    assert (await client.post(f"/api/v1/dossiers/{opp.id}/generate")).status_code == 404
+    r = await client.post("/api/v1/dossiers/generate-batch", json={"opportunity_ids": [str(opp.id)]})
+    assert r.status_code == 404
+    assert (await client.post(f"/api/v1/dossiers/{uuid.uuid4()}/generate")).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_a_customer_cannot_list_candidates_only_the_team_can(session):
+    """‏#89 · הלקוח מקבל תיקים דרך הסריקה ואינו רואה מועמדים. הרשימה המלאה —
+    ‏GET וחיפוש — היא למסך הצוות, ולקוח מחובר מקבל 403."""
+    from app.core.security import get_jwt_strategy
+
+    customer = await _user(session, "לקוח")
+    team = await _user(session, "צוות")
+    team.is_superuser = True
+    await session.flush()
+
+    app.dependency_overrides[get_async_session] = lambda: session
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            for who, expected in ((customer, 403), (team, 200)):
+                token = await get_jwt_strategy().write_token(who)
+                h = {"Authorization": f"Bearer {token}"}
+                assert (await c.get("/api/v1/candidates/herzliya", headers=h)).status_code == expected
+                r = await c.post("/api/v1/candidates/herzliya/search", headers=h, json={"polygon": INSIDE})
+                assert r.status_code == expected
+                # הסריקה פתוחה לכל לקוח
+                r = await c.post("/api/v1/candidates/herzliya/scan/preview", headers=h, json={"polygon": INSIDE})
+                assert r.status_code == 200
+    finally:
+        app.dependency_overrides.clear()

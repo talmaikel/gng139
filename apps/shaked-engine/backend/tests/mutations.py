@@ -40,6 +40,26 @@ MUTS = [
   ("cities/herzliya/exports.py", "ה-PDF מדפיס רווח שאינו הרווח",
    '''line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪''',
    '''line(f'רווח: {s["projected_profit_ils"] * 1.02:,.0f} ₪'''),
+  # ‏P1 · מחיר דירה חדשה לפי גוש
+  ("cities/herzliya/dossier.py", "התיק מתעלם מטבלת הגושים",
+   "price, block_label = new_build_prices.sale_price(opp.block, a.sale_price_per_sqm_ils.value)",
+   "price, block_label = a.sale_price_per_sqm_ils.value, None"),
+  # ‏E1 · רווח מזערי 16%, ושיווק ומימון לא על דירות הבעלים
+  ("services/economic/calculator.py", "שיווק מחושב שוב על דירות הבעלים",
+   "total_marketing_ils = developer_revenue_ils * inputs.marketing_ratio",
+   "total_marketing_ils = total_revenue_ils * inputs.marketing_ratio"),
+  ("services/economic/calculator.py", "מימון מחושב שוב על שווי דירות הבעלים",
+   "total_finance_ils = (cost_before_finance - land_cost_ils) * inputs.finance_ratio",
+   "total_finance_ils = cost_before_finance * inputs.finance_ratio"),
+  ("cities/herzliya/dossier.py", "תקרת ההיטל חוזרת לרווח אפס",
+   "return r.projected_profit_ils - target * r.total_cost_ils", "return r.projected_profit_ils"),
+  # ‏B15 · מחיר יד שנייה אינו מחיר מכירה, והתמהיל נכתב בכל משטח
+  ("cities/herzliya/dossier.py", "מחיר יד שנייה משוקלל נכנס להכנסות",
+   'and valuation.price_basis == "new_build"):', '):'),
+  ("cities/herzliya/exports.py", "התמהיל לא נכנס לאקסל",
+   'sc.merge_range(tail + 1, 0, tail + 1, 4, econ["unit_mix"]["summary"], note)', 'pass'),
+  ("services/unit_mix/service.py", "מסך התמהיל מתמחר לפי מחיר אחר מהתיק",
+   "price_per_sqm_ils=sale_price_per_sqm_ils,", "price_per_sqm_ils=sale_price_per_sqm_ils * 0.76,"),
   # ‏A24 · קצב לשרתי הגרמושקות, ומשותף לכל התהליך
   ("sources/client.py", "הגרמושקות יורדות בלי קצב",
    '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),

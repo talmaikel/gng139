@@ -34,6 +34,33 @@ class Balance(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class CreditGrant(Base):
+    """זכאות שאדמין הוסיף לחברה, אחרי תשלום שהתקבל מחוץ למערכת.
+
+    בפיילוט אין סליקה: הלקוח משלם בקישור (Bit / PayPal), מקבל חשבונית
+    (Morning), ואדמין מוסיף זכאות. **זו השורה שעונה ללקוח על מה חויב** —
+    בלי רישום, יתרה שגדלה ידנית אינה ניתנת לשחזור מול החשבונית.
+    שורה אינה נמחקת; תיקון הוא הענקה נוספת עם הערה.
+    """
+
+    __tablename__ = "credit_grants"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    credits: Mapped[int] = mapped_column(Integer, nullable=False)
+    package_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("packages.id", ondelete="SET NULL"), nullable=True
+    )
+    # מספר חשבונית / אסמכתת תשלום. חובה — הענקה בלי אסמכתה היא בדיוק מה שאי אפשר לבדוק.
+    note: Mapped[str] = mapped_column(String(500), nullable=False)
+    granted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ReservationStatus(str, enum.Enum):
     ACTIVE = "active"      # lock currently held, opportunity hidden from other tenants
     RELEASED = "released"  # lock voluntarily released or expired

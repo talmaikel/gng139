@@ -170,7 +170,7 @@ async def test_the_pdf_prints_the_ceiling_and_not_a_zero_levy(session):
     levy_lines = [ln for ln in lines if {"היטל", "השבחה"} <= _words(ln)]
     assert levy_lines, "אין שורת היטל ב-PDF"
     assert not any(ln.replace("₪", "").strip().startswith("0 ") or " 0 " in f" {ln} " for ln in levy_lines), levy_lines
-    assert any("ידוע" in _words(ln) and "כדאי" in _words(ln) for ln in levy_lines), levy_lines
+    assert any("ידוע" in _words(ln) and "נשמר" in _words(ln) for ln in levy_lines), levy_lines
 
     text = " ".join(lines)
     assert "נשען" in text                                   # כותרת הסייגים

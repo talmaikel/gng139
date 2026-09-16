@@ -33,7 +33,9 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+import json
+
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.models.opportunity import Opportunity
@@ -137,8 +139,10 @@ async def for_company(session, company_id: UUID) -> list[dict[str, Any]]:
     ואת זה לא: *״מגרש שכבר נמסר **מוצג במאגר החברה בלבד**״*. בלי הנתיב
     הזה לקוח משלם ואינו רואה את מה שקנה.
     """
+    centroid = func.ST_Centroid(Opportunity.geom)
     rows = (await session.execute(
-        select(Delivery, Opportunity)
+        select(Delivery, Opportunity, func.ST_AsGeoJSON(Opportunity.geom),
+               func.ST_Y(centroid), func.ST_X(centroid))
         .join(Opportunity, Opportunity.id == Delivery.opportunity_id)
         .where(Delivery.company_id == company_id)
         .order_by(Delivery.delivered_at.desc())
@@ -155,7 +159,10 @@ async def for_company(session, company_id: UUID) -> list[dict[str, Any]]:
         "data_version": d.data_version,
         "why_selected": d.why_selected,
         "assessment": (o.metadata_json or {}).get("assessment"),
-    } for d, o in rows]
+        # ‏S1 · המפה של הלקוח מציגה רק את מה שנמסר לו, ולכן הגאומטריה כאן.
+        "geometry": json.loads(geojson) if geojson else None,
+        "centroid": {"lat": lat, "lng": lng} if lat is not None else None,
+    } for d, o, geojson, lat, lng in rows]
 
 
 async def deliver(session, opportunity_id: UUID, company_id: UUID,
@@ -202,8 +209,11 @@ async def deliver(session, opportunity_id: UUID, company_id: UUID,
             f"המועמד אינו מוכן למסירה ולכן אינו צורך יתרה (ACC-05). {_why_not(opp)}"
         )
 
+    # ‏`FOR UPDATE`: סריקה מוסרת כמה מגרשים ברצף, ושני משתמשים באותה חברה
+    # יכולים לסרוק במקביל. בלי נעילה שתי מסירות קוראות אותה יתרה, ושתיהן
+    # מורידות ממנה אחד — ואחת מהן לא נספרת.
     balance = (await session.execute(
-        select(Balance).where(Balance.company_id == company_id)
+        select(Balance).where(Balance.company_id == company_id).with_for_update()
     )).scalar_one_or_none()
     if balance is None or balance.credits_remaining < 1:
         raise NoCredits("לא נותרה זכאות לחברה")
@@ -212,14 +222,18 @@ async def deliver(session, opportunity_id: UUID, company_id: UUID,
                    delivered_to_user_id=user_id, credits_charged=1,
                    rules_version=rules_version, data_version=data_version,
                    why_selected=why)
-    session.add(row)
     try:
         # ‏flush ולא commit: הטרנזקציה שייכת לקורא. האילוץ הייחודי הוא
         # ההגנה האמיתית מפני שתי סריקות במקביל — לא הבדיקה שלמעלה, שיכולה
         # להפסיד מרוץ בין שני משתמשים באותה חברה.
-        await session.flush()
+        #
+        # ‏savepoint ולא `session.rollback()`: סריקה (S1) מוסרת כמה מגרשים
+        # באותה טרנזקציה, ו-rollback מלא על התנגשות אחת היה מוחק גם את
+        # המסירות שלפניה.
+        async with session.begin_nested():
+            session.add(row)
+            await session.flush()
     except IntegrityError:
-        await session.rollback()
         again = (await session.execute(
             select(Delivery).where(Delivery.opportunity_id == opportunity_id,
                                    Delivery.company_id == company_id)
