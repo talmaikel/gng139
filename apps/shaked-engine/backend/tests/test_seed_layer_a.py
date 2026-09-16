@@ -225,6 +225,10 @@ def test_the_rejected_count_does_not_survive_in_the_opportunity_column():
     assert usable_units({"apt": 28, "gross": 4000}) == 28
     assert usable_units({"apt": 999, "gross": 2910}) is None
     assert usable_units({"apt": 7, "gross": 11447}) is None      # 1,094 מ"ר לדירה
+    # ‏#90 · מנופחת: גורדון א ד 7, ‏99 דירות על 827 מ"ר ברוטו — 5.6 מ"ר לדירה
+    assert usable_units({"apt": 99, "gross": 827}) is None
+    assert usable_units({"apt": 60, "gross": 1095}) is None      # הדר 42, 12 מ"ר
+    assert usable_units({"apt": 29, "gross": 4223}) == 29        # אלוף יגאל אלון 40, 97 מ"ר
 
 
 # ── שחזור תיקי הארכיון ──
