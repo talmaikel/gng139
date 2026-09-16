@@ -1,0 +1,15 @@
+# Only the backend and POC/layer_a/data are copied into the image; keep the
+# context small and never ship local secrets.
+**/.venv
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.cache
+**/.env
+**/*.key
+.git
+.claude
+POC/data
+POC/test-output
+POC/*.mp4
+apps/shaked-engine/frontend

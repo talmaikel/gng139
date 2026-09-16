@@ -1,0 +1,57 @@
+# Render Blueprint: Dashboard -> New -> Blueprint -> this repo.
+# Deployment steps (Neon, secrets, seeding, gng139.online DNS): apps/shaked-engine/DEPLOY.md
+services:
+  - type: web
+    name: shaked-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./apps/shaked-engine/backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - apps/shaked-engine/backend/**
+        - POC/layer_a/data/**
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL          # postgresql+asyncpg://...?ssl=require (Neon)
+        sync: false
+      - key: DATABASE_URL_SYNC     # postgresql://...?sslmode=require (Neon)
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RESEND_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        value: https://gng139.online
+      - key: CORS_ORIGINS
+        value: https://gng139.online,https://www.gng139.online
+      - key: PAYMENTS_MOCK         # production must not hand out free dossiers
+        value: "false"
+      - key: RUN_WORKER_IN_PROCESS # free plan has no background workers
+        value: "true"
+
+  - type: web
+    name: shaked-web
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: apps/shaked-engine/frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start -- -p $PORT
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Browser calls /api/* on this origin; next.config.js proxies to the API.
+      # Leave NEXT_PUBLIC_API_BASE_URL unset.
+      # Public URL of shaked-api. If Render gives the service a suffixed name
+      # (shaked-api-xxxx.onrender.com), update this and redeploy: the rewrite is
+      # baked in at build time.
+      - key: API_ORIGIN
+        value: https://shaked-api.onrender.com
