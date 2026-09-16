@@ -281,7 +281,7 @@ async def check_data() -> None:
 
 def check_rendering() -> None:
     """השרת שולח סייגים ותקרת היטל; השאלה אם מישהו מציג אותם (C14, B13)."""
-    page = (FRONTEND / "src" / "app" / "dossier" / "[id]" / "page.tsx").read_text(encoding="utf-8")
+    page = (FRONTEND / "src" / "app" / "app" / "dossier" / "[id]" / "page.tsx").read_text(encoding="utf-8")
     export = (BACKEND / "app" / "cities" / "herzliya" / "exports.py").read_text(encoding="utf-8")
     import re
     # ‏`betterment` ולא `betterment_levy_ils`: השני הוא בדיוק שורת ״0 ₪״
