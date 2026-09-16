@@ -16,6 +16,13 @@ const CITY = "herzliya";
 // שייך לסכום ולא לעיצוב.
 const ils = (n: number) =>
   Math.round(n) === 0 ? "0 ₪" : `${Math.round(n).toLocaleString("he-IL")} ₪`;
+/** ‏#81 · סכומים גדולים במסך במיליונים. ‏31,126,961 ₪ עד השקל, על בסיס של
+ *  שמונה-עשר אומדנים, נקרא כמו חשבון מדויק. ה-PDF והאקסל נשארים מדויקים —
+ *  בדיקת המשטחים משווה אותם, והאקסל הוא המקום שהיזם מחשב בו. */
+const ilsApprox = (n: number) =>
+  Math.abs(n) >= 1_000_000
+    ? `${n < 0 ? "‎-" : ""}${(Math.abs(n) / 1e6).toLocaleString("he-IL", { maximumFractionDigits: 1 })} מיליון ₪`
+    : ils(n);
 const sqm = (n: number) => `${Math.round(n).toLocaleString("he-IL")} מ״ר`;
 const date = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "numeric" }) : "—";
@@ -119,7 +126,7 @@ function BettermentBlock({ b }: { b: Betterment }) {
             תקרת היטל ההשבחה · {Math.round(levy.rate * 100)}% מההשבחה
           </div>
           <strong style={{ fontSize: "1.3rem", color: BETTERMENT_COLOUR[b.category] }}>
-            {levy.viable_up_to_ils != null ? `עד ${ils(levy.viable_up_to_ils)}` : "אין תקרה"}
+            {levy.viable_up_to_ils != null ? `עד ${ilsApprox(levy.viable_up_to_ils)}` : "אין תקרה"}
           </strong>
         </div>
         {b.breakeven_land_value_per_right_ils != null && (
@@ -131,7 +138,7 @@ function BettermentBlock({ b }: { b: Betterment }) {
         {levy.low_ils != null && levy.high_ils != null && (
           <div>
             <div style={{ color: "#6b655c", fontSize: ".8rem" }}>אומדן ההיטל</div>
-            <strong style={{ fontSize: "1.3rem" }}>{ils(levy.low_ils)}–{ils(levy.high_ils)}</strong>
+            <strong style={{ fontSize: "1.3rem" }}>{ilsApprox(levy.low_ils)}–{ilsApprox(levy.high_ils)}</strong>
           </div>
         )}
       </div>
@@ -315,7 +322,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                 <div style={{ color: "#6b655c", fontSize: ".8rem" }}>
                   רווח צפוי{d.economics.betterment ? " · לפני היטל השבחה" : ""}
                 </div>
-                <strong style={{ fontSize: "1.3rem" }}>{ils(s.projected_profit_ils)}</strong>
+                <strong style={{ fontSize: "1.3rem" }}>{ilsApprox(s.projected_profit_ils)}</strong>
               </div>
               <div>
                 <div style={{ color: "#6b655c", fontSize: ".8rem" }}>רווח על העלות</div>
@@ -405,7 +412,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                     <td>{name}</td>
                     <td style={{ textAlign: "end", fontVariantNumeric: "tabular-nums",
                                  color: value < 0 ? "#a8321e" : "#1f5f55" }}>
-                      {ils(value)}
+                      {ilsApprox(value)}
                     </td>
                   </tr>
                 ))}
