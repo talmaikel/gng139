@@ -8,19 +8,50 @@
  *
  *  מה שנשאר כאן הוא מה שנושא **צבע** ולא רק טקסט: הצבע הוא החלטת עיצוב
  *  ואין לו מקום בשרת. הקבוצות עצמן סגורות וקטנות, ושינוי בהן הוא שינוי
- *  בסכמה שיישבר גם בטיפוסים. */
+ *  בסכמה שיישבר גם בטיפוסים.
+ *
+ *  הצבע הוא **טון**: ‏ok (ירוק) עבר / נתון, ‏warn (כתום השקד) דורש אימות /
+ *  אומדן, ‏bad (אדום) נכשל / חסר, ‏neutral (אפור) אינו אומר דבר. הערכים
+ *  ההקסדצימליים כאן זהים ל-`--ok-*` וחבריהם ב-`globals.css`. */
 
-export const GATE_STATUS: Record<string, { label: string; colour: string; background: string }> = {
-  passed: { label: "עבר", colour: "#1f5f55", background: "#eaf4f0" },
-  failed: { label: "נכשל", colour: "#a8321e", background: "#fbeeea" },
-  unknown: { label: "לא ידוע", colour: "#8a6100", background: "#fbf4e4" },
-  routed: { label: "נותב למתחמים", colour: "#1d4e89", background: "#eaf0f9" },
-  undefined: { label: "המדיניות שותקת", colour: "#5c5750", background: "#f0efec" },
-  needs_measurement: { label: "דורש מדידה", colour: "#8a6100", background: "#fbf4e4" },
+export type Tone = "ok" | "warn" | "bad" | "neutral";
+
+export const TONE_COLOUR: Record<Tone, { colour: string; background: string }> = {
+  ok: { colour: "#1f5a3c", background: "#dcefe3" },
+  warn: { colour: "#c96f33", background: "#fdeee3" },
+  bad: { colour: "#a2402e", background: "#f5e4e0" },
+  neutral: { colour: "#5b6068", background: "#ebedf1" },
 };
 
-export const ASSUMPTION_STATUS: Record<string, { label: string; colour: string }> = {
-  data: { label: "נתון", colour: "#1f5f55" },
-  estimate: { label: "אומדן", colour: "#8a6100" },
-  missing: { label: "חסר", colour: "#a8321e" },
+type Status = { label: string; tone: Tone; colour: string; background: string };
+const status = (label: string, tone: Tone): Status => ({ label, tone, ...TONE_COLOUR[tone] });
+
+export const GATE_STATUS: Record<string, Status> = {
+  passed: status("עבר", "ok"),
+  failed: status("נכשל", "bad"),
+  unknown: status("לא ידוע", "warn"),
+  routed: status("נותב למתחמים", "neutral"),
+  undefined: status("המדיניות שותקת", "neutral"),
+  needs_measurement: status("דורש מדידה", "warn"),
+};
+
+export const ASSUMPTION_STATUS: Record<string, Status> = {
+  data: status("נתון", "ok"),
+  estimate: status("אומדן", "warn"),
+  missing: status("חסר", "bad"),
+};
+
+export const ASSESSMENT_STATUS: Record<string, Status> = {
+  eligible: status("כשיר", "ok"),
+  needs_verification: status("דורש אימות", "warn"),
+  urban_renewal_compound: status("מסלול מתחמים", "neutral"),
+  ineligible: status("אינו כשיר", "bad"),
+};
+
+/** ‏Leaflet מצייר בקנבס וצריך צבע ממשי, לא משתנה CSS. */
+export const MAP_COLOUR = {
+  candidate: "#E8894A",
+  selected: "#13161E",
+  area: "#13161E",
+  tooLarge: "#A2402E",
 };

@@ -27,11 +27,13 @@ import SearchControls from "@/components/SearchControls";
 // מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
 // לחבילת ה-SSR, שם אין `window`, והדף מחזיר 500 בטעינה נקייה.
 import { MAX_AREA_SQM } from "@/lib/searchArea";
+import { dunam } from "@/lib/format";
+import { AppShell } from "@/components/brand/AppShell";
+import { IconPencil, IconSearch } from "@/components/brand/icons";
 
 const OpportunityMap = dynamic(() => import("@/components/Map"), { ssr: false });
 
 const CITY = "herzliya";
-const dunam = (sqm: number) => `${(sqm / 1000).toFixed(1)} דונם`;
 
 /** המפה מקבלת מועמדים; הלקוח רואה עליה רק את מה שכבר נמסר לו. */
 function asMapRows(mine: DeliveredOpportunity[]): Candidate[] {
@@ -54,6 +56,13 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const [tab, setTab] = useState<"search" | "mine">("search");
+  // הקישור ״המאגר שלי״ בכותרת מגיע לכאן עם #mine.
+  useEffect(() => {
+    const pick = () => setTab(window.location.hash === "#mine" ? "mine" : "search");
+    pick();
+    window.addEventListener("hashchange", pick);
+    return () => window.removeEventListener("hashchange", pick);
+  }, []);
   const [balance, setBalance] = useState<AccountBalance | null>(null);
   const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [mine, setMine] = useState<DeliveredOpportunity[]>([]);
@@ -148,8 +157,9 @@ export default function DashboardPage() {
   const overLimit = liveArea !== null && liveArea.points >= 3 && liveArea.sqm > MAX_AREA_SQM;
 
   return (
-    <main className="page" style={{ maxWidth: 1100 }}>
-      <h1 style={{ marginBottom: "1rem" }}>חלופת שקד · הרצליה</h1>
+    <AppShell>
+      <p className="eyebrow">חלופת שקד · הרצליה</p>
+      <h1 style={{ margin: ".15rem 0 1rem" }}>סריקה</h1>
 
       <VerifyEmailNotice />
 
@@ -157,18 +167,11 @@ export default function DashboardPage() {
         <Balance balance={balance} packages={packages} onChanged={loadAccount} />
       </div>
 
-      <div style={{ display: "flex", gap: ".4rem", marginBottom: "1rem" }}>
+      <div className="tabs" role="tablist">
         {([["search", "סריקה"], ["mine", `המאגר שלי${mine.length ? ` · ${mine.length}` : ""}`]] as const).map(
           ([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              style={{
-                background: tab === key ? "#1f6f4f" : "transparent",
-                color: tab === key ? "#fff" : "#1a1a1a",
-                border: tab === key ? "none" : "1px solid #d8d8d3",
-              }}
-            >
+            <button key={key} type="button" role="tab" aria-selected={tab === key} data-active={tab === key || undefined}
+                    onClick={() => setTab(key)}>
               {label}
             </button>
           )
@@ -184,35 +187,30 @@ export default function DashboardPage() {
       <div className="card" style={{ marginBottom: "1rem", padding: "0.9rem 1.1rem" }}>
         <div style={{ display: "flex", gap: ".6rem", alignItems: "center", flexWrap: "wrap" }}>
           {!drawing ? (
-            <button onClick={() => { setDrawing(true); setLiveArea(null); resetScan(); }}
-                    style={searchArea ? { background: "transparent", color: "#1a1a1a", border: "1px solid #d8d8d3" } : undefined}>
-              ✏️ {searchArea ? "צייר אזור אחר" : "צייר אזור חיפוש"}
+            <button className={searchArea ? "btn-secondary" : "btn-dark"} onClick={() => { setDrawing(true); setLiveArea(null); resetScan(); }}>
+              <IconPencil size={14} /> {searchArea ? "צייר אזור אחר" : "צייר אזור חיפוש"}
             </button>
           ) : (
-            <button onClick={() => { setDrawing(false); setLiveArea(null); }} style={{ background: "#6b655c" }}>
+            <button className="btn-secondary" onClick={() => { setDrawing(false); setLiveArea(null); }}>
               בטל ציור
             </button>
           )}
 
-          <button
-            onClick={() => setShowControls((v) => !v)}
-            style={{ background: "transparent", color: "#1a1a1a", border: "1px solid #d8d8d3" }}
-          >
+          <button className="btn-secondary" onClick={() => setShowControls((v) => !v)}>
             תנאים והעדפות
             {conditionsCount > 0 && (
-              <span style={{ color: "#1f6f4f", fontWeight: 700 }}> · {conditionsCount}</span>
+              <span className="text-warn"> · {conditionsCount}</span>
             )}
           </button>
 
           <button
             onClick={search}
             disabled={!searchArea || drawing || busy !== null || credits < 1}
-            style={{ background: "#1d4e89", fontWeight: 700 }}
           >
-            {busy === "preview" ? "מחפש…" : "🔍 חפש"}
+            {busy === "preview" ? "מחפש…" : <><IconSearch size={14} /> חפש</>}
           </button>
 
-          <span style={{ color: "#6b655c", fontSize: ".88rem" }}>
+          <span className="text-muted" style={{ fontSize: ".88rem" }}>
             {drawing
               ? liveArea === null
                 ? "לחיצה מוסיפה קודקוד · לחיצה כפולה או Enter לסיום · Escape לביטול"
@@ -225,7 +223,7 @@ export default function DashboardPage() {
           </span>
 
           {overLimit && (
-            <span style={{ color: "#a8321e", fontWeight: 600, fontSize: ".88rem" }}>
+            <span className="text-bad" style={{ fontWeight: 600, fontSize: ".88rem" }}>
               מעל מגבלת {MAX_AREA_SQM / 1000} הדונם — השרת ידחה
             </span>
           )}
@@ -239,34 +237,33 @@ export default function DashboardPage() {
       )}
 
       {preview && (
-        <div className="card" style={{ marginBottom: "1rem", borderColor: "#bcd0e6", background: "#f3f7fc" }}>
+        <div className="card tone-info" style={{ marginBottom: "1rem" }}>
           {preview.offer > 0 ? (
             <>
-              <strong style={{ fontSize: "1.05rem", color: "#1d4e89" }}>
+              <strong style={{ fontSize: "1.05rem" }}>
                 נמצאו {preview.found} מועמדים באזור · תקבל {preview.offer === 1 ? "תיק אחד" : `${preview.offer} תיקים`}
               </strong>
-              <p style={{ margin: ".35rem 0 .8rem", color: "#3d4a5c", fontSize: ".9rem" }}>
+              <p className="text-muted" style={{ margin: ".35rem 0 .8rem", fontSize: ".9rem" }}>
                 {preview.ready > 0 && `${preview.ready} מוכנים מיד`}
                 {preview.ready > 0 && preview.needs_fetch > 0 && " · "}
                 {preview.needs_fetch > 0 && `${preview.needs_fetch} ישלפו תיק בניין מהארכיון (עד 20 שניות לכל אחד)`}
                 {" · "}ינוכו עד {preview.offer} זכאויות, ורק על תיק שנמסר.
               </p>
               <div style={{ display: "flex", gap: ".6rem" }}>
-                <button onClick={accept} disabled={busy !== null} style={{ background: "#1f6f4f", fontWeight: 700 }}>
+                <button onClick={accept} disabled={busy !== null}>
                   {busy === "deliver"
                     ? (preview.needs_fetch > 0 ? "שולף תיקי בניין…" : "מוסר…")
                     : `קבל ${preview.offer === 1 ? "תיק אחד" : `${preview.offer} תיקים`}`}
                 </button>
-                <button onClick={resetScan} disabled={busy !== null}
-                        style={{ background: "transparent", color: "#6b655c", border: "1px solid #d8d8d3" }}>
+                <button className="btn-ghost" onClick={resetScan} disabled={busy !== null}>
                   ביטול
                 </button>
               </div>
             </>
           ) : preview.credits_remaining < 1 ? (
-            <strong style={{ color: "#8a6100" }}>לא נותרה זכאות לחברה. יש לרכוש חבילה כדי להמשיך.</strong>
+            <strong className="text-warn">לא נותרה זכאות לחברה. יש לרכוש חבילה כדי להמשיך.</strong>
           ) : (
-            <strong style={{ color: "#8a6100" }}>
+            <strong className="text-warn">
               לא נמצאו מועמדים באזור שעומדים בתנאים — לא חויבת. אפשר לצייר אזור אחר או לשנות את התנאים.
             </strong>
           )}
@@ -274,8 +271,8 @@ export default function DashboardPage() {
       )}
 
       {result && (
-        <div className="card" style={{ marginBottom: "1rem", borderColor: "#c8ddd2", background: "#f3f9f6" }}>
-          <strong style={{ fontSize: "1.05rem", color: "#1f5f55" }}>
+        <div className="card tone-ok" style={{ marginBottom: "1rem" }}>
+          <strong className="text-ok" style={{ fontSize: "1.05rem" }}>
             {result.delivered.length === 0
               ? "לא נמסר תיק מהאזור הזה — לא חויבת."
               : `נמסרו ${result.delivered.length === 1 ? "תיק אחד" : `${result.delivered.length} תיקים`} · נוכו ${result.delivered.length} זכאויות`}
@@ -284,21 +281,21 @@ export default function DashboardPage() {
             <ul style={{ margin: ".5rem 0", paddingInlineStart: "1.1rem" }}>
               {result.delivered.map((d) => (
                 <li key={d.opportunity_id} style={{ marginBottom: ".2rem" }}>
-                  <Link href={`/dossier/${d.opportunity_id}`} style={{ fontWeight: 600 }}>
+                  <Link href={`/dossier/${d.opportunity_id}`} className="text-link">
                     {d.address} ←
                   </Link>
-                  <span style={{ color: "#6b655c", fontSize: ".85rem" }}> · גוש {d.block} חלקה {d.parcel}</span>
+                  <span className="text-muted" style={{ fontSize: ".85rem" }}> · גוש {d.block} חלקה {d.parcel}</span>
                 </li>
               ))}
             </ul>
           )}
           {result.skipped > 0 && (
-            <p style={{ margin: ".3rem 0", color: "#6b655c", fontSize: ".88rem" }}>
+            <p className="text-muted" style={{ margin: ".3rem 0", fontSize: ".88rem" }}>
               {result.skipped === 1 ? "מועמד אחד דולג" : `${result.skipped} מועמדים דולגו`}: תיק הבניין לא השלים את תנאי הסף. לא חויבת עליהם.
             </p>
           )}
           {result.message && (
-            <p style={{ margin: ".3rem 0", color: "#8a6100", fontSize: ".88rem", fontWeight: 600 }}>{result.message}</p>
+            <p className="text-warn" style={{ margin: ".3rem 0", fontSize: ".88rem", fontWeight: 600 }}>{result.message}</p>
           )}
           <div style={{ display: "flex", gap: ".6rem", alignItems: "center", flexWrap: "wrap", marginTop: ".4rem" }}>
             {result.retryable && result.credits_remaining > 0 && (
@@ -307,7 +304,7 @@ export default function DashboardPage() {
               </button>
             )}
             {!result.retryable && result.delivered.length < result.requested && result.credits_remaining > 0 && (
-              <span style={{ color: "#1f5f55", fontSize: ".88rem" }}>
+              <span className="text-ok" style={{ fontSize: ".88rem" }}>
                 נותרו {result.credits_remaining} זכאויות — אפשר לצייר אזור נוסף.
               </span>
             )}
@@ -316,8 +313,8 @@ export default function DashboardPage() {
       )}
 
       {error && (
-        <div className="card" style={{ marginBottom: "1rem", borderColor: "#e6c9c2", background: "#fdf6f4" }}>
-          <strong style={{ color: "#a8321e" }}>{error}</strong>
+        <div className="card tone-bad" style={{ marginBottom: "1rem" }}>
+          <strong className="text-bad">{error}</strong>
         </div>
       )}
 
@@ -332,12 +329,12 @@ export default function DashboardPage() {
         />
       </div>
       {mine.length > 0 && (
-        <p style={{ color: "#6b655c", fontSize: ".82rem", marginTop: "-.6rem" }}>
+        <p className="text-muted" style={{ fontSize: ".82rem", marginTop: "-.6rem" }}>
           על המפה מסומנים רק התיקים שכבר קיבלת.
         </p>
       )}
       </>
       )}
-    </main>
+    </AppShell>
   );
 }

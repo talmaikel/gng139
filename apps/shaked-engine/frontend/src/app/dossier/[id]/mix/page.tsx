@@ -1,7 +1,10 @@
 "use client";
 
+import { Alert, Button, Group, List, NumberInput, Paper, Table, Text } from "@mantine/core";
 import Link from "next/link";
 import { use, useState } from "react";
+import { ils, sqm } from "@/lib/format";
+import { PageHeader, Section, Stat, StatStrip } from "@/components/brand/ui";
 
 interface Candidate {
   counts: Record<string, number>;
@@ -45,12 +48,9 @@ interface OptimizationResponse {
   };
 }
 
-const ils = (value: number) => `${Math.round(value).toLocaleString("he-IL")} ₪`;
-const sqm = (value: number) => `${Math.round(value).toLocaleString("he-IL")} מ״ר`;
-
 export default function UnitMixPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [compensation, setCompensation] = useState("");
+  const [compensation, setCompensation] = useState<string | number>("");
   const [result, setResult] = useState<OptimizationResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export default function UnitMixPage({ params }: { params: Promise<{ id: string }
     setError(null);
     try {
       const token = window.localStorage.getItem("shaked_token");
-      const parsed = compensation.trim() === "" ? null : Number(compensation);
+      const parsed = String(compensation).trim() === "" ? null : Number(compensation);
       if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) {
         setError("יש להזין תוספת שטח תקינה, או להשאיר ריק לברירת המחדל.");
         return;
@@ -95,121 +95,102 @@ export default function UnitMixPage({ params }: { params: Promise<{ id: string }
   const best = result?.optimization.candidates[0];
 
   return (
-    <main className="page" style={{ maxWidth: 1000 }}>
-      <p style={{ margin: "0 0 .6rem" }}>
-        <Link href={`/dossier/${id}`} style={{ color: "#6b655c", fontSize: ".85rem" }}>
-          ← חזרה לתיק
-        </Link>
-      </p>
+    <>
+      <PageHeader
+        back={{ href: `/dossier/${id}`, label: "חזרה לתיק" }}
+        eyebrow="תיק הזדמנות · הרצליה"
+        title="תמהיל דירות ורווחיות"
+        meta="הזן את התמורה לבעלי הדירות. שינוי התמורה מחשב מחדש את השטח ליזם, התמהיל והרווח. אם השדה נשאר ריק, המערכת משתמשת בתמורת ברירת המחדל המסומנת כאומדן."
+      />
 
-      <h1 style={{ marginBottom: ".25rem" }}>תמהיל דירות ורווחיות</h1>
-      <p style={{ marginTop: 0, color: "#6b655c" }}>
-        הזן את התמורה לבעלי הדירות. שינוי התמורה מחשב מחדש את השטח ליזם, התמהיל והרווח.
-        אם השדה נשאר ריק, המערכת משתמשת בתמורת ברירת המחדל המסומנת כאומדן.
-      </p>
-
-      <section className="card" style={{ marginBottom: "1rem" }}>
-        <label htmlFor="compensation" style={{ display: "block", fontWeight: 700, marginBottom: ".35rem" }}>
-          תוספת מ״ר לכל דירה קיימת
-        </label>
-        <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap", alignItems: "center" }}>
-          <input
+      <Paper p="lg" mb="md">
+        <Group align="flex-end" gap="sm" wrap="wrap">
+          <NumberInput
             id="compensation"
-            type="number"
-            min="0"
-            max="100"
-            step="1"
+            label="תוספת מ״ר לכל דירה קיימת"
+            min={0} max={100} step={1}
             value={compensation}
-            onChange={(e) => setCompensation(e.target.value)}
+            onChange={setCompensation}
             placeholder="ברירת מחדל מהשוק"
-            style={{ maxWidth: 220 }}
+            w={220}
           />
-          <button onClick={optimize} disabled={busy} style={{ background: "#1d4e89" }}>
-            {busy ? "מחשב…" : "חשב תמהיל מיטבי"}
-          </button>
-        </div>
-        <p style={{ color: "#6b655c", fontSize: ".82rem", marginBottom: 0 }}>
+          <Button onClick={optimize} loading={busy}>חשב תמהיל מיטבי</Button>
+        </Group>
+        <Text size="sm" c="dimmed" mt="sm">
           החישוב משתמש בזכויות, במחיר המכירה ובמודל של התיק. הדירות הקיימות לפי לוח מאושר, ואם אין — לפי ממוצע הבניין שבתיק.
-        </p>
-      </section>
+        </Text>
+      </Paper>
 
       {error && (
-        <section className="card" style={{ marginBottom: "1rem", background: "#fdf6f4", borderColor: "#e6c9c2" }}>
-          <strong style={{ color: "#a8321e" }}>{error}</strong>
+        <Alert color="brick" mb="md" title={error}>
           {error.includes("לוח דירות") && (
-            <p style={{ marginBottom: 0 }}>
-              <Link href={`/dossier/${id}/units`}>פתח את מסך אישור הדירות הקיימות ←</Link>
-            </p>
+            <Link href={`/dossier/${id}/units`} className="text-link">פתח את מסך אישור הדירות הקיימות ←</Link>
           )}
-        </section>
+        </Alert>
       )}
 
       {result && best && (
         <>
-          <section className="card" style={{ marginBottom: "1rem" }}>
-            <h2 style={{ marginTop: 0 }}>התמהיל המומלץ</h2>
-            <p style={{ marginTop: 0, color: "#6b655c" }}>{result.address}</p>
-            <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-              <div><small>תמורה שנלקחה בחשבון</small><br/><strong>{sqm(result.optimization.compensation_sqm_per_existing_unit)}</strong></div>
-              <div><small>שטח דירות בעלים</small><br/><strong>{sqm(result.optimization.tenant_allocation_sqm)}</strong></div>
-              <div><small>שטח זמין ליזם</small><br/><strong>{sqm(result.optimization.developer_available_sqm)}</strong></div>
-              <div><small>רווח לפי התמהיל</small><br/><strong>{ils(best.projected_profit_ils)}</strong></div>
-              <div><small>רווח על העלות</small><br/><strong>{(best.profit_margin_on_cost_ratio * 100).toFixed(1)}%</strong></div>
-              <div><small>שטח ליזם שלא נכנס לתמהיל</small><br/><strong>{sqm(best.unused_developer_sqm)}</strong></div>
-            </div>
+          <Section title="התמהיל המומלץ" note={result.address}>
+            <StatStrip cols={{ base: 2, sm: 3 }}>
+              <Stat label="תמורה שנלקחה בחשבון" value={sqm(result.optimization.compensation_sqm_per_existing_unit)} />
+              <Stat label="שטח דירות בעלים" value={sqm(result.optimization.tenant_allocation_sqm)} />
+              <Stat label="שטח זמין ליזם" value={sqm(result.optimization.developer_available_sqm)} />
+              <Stat label="רווח לפי התמהיל" value={ils(best.projected_profit_ils)} />
+              <Stat label="רווח על העלות" value={`${(best.profit_margin_on_cost_ratio * 100).toFixed(1)}%`} tone={best.meets_developer_target ? "ok" : "warn"} />
+              <Stat label="שטח ליזם שלא נכנס לתמהיל" value={sqm(best.unused_developer_sqm)} />
+            </StatStrip>
 
-            <table>
-              <thead><tr><th>חדרים</th><th>שטח לדירה</th><th>מספר דירות יזם</th></tr></thead>
-              <tbody>
+            <Table mt="md">
+              <Table.Thead><Table.Tr><Table.Th>חדרים</Table.Th><Table.Th>שטח לדירה</Table.Th><Table.Th>מספר דירות יזם</Table.Th></Table.Tr></Table.Thead>
+              <Table.Tbody>
                 {result.planned_unit_mix.map((row) => (
-                  <tr key={`${row.rooms}-${row.area_sqm}`}>
-                    <td>{row.rooms}</td><td>{sqm(row.area_sqm)}</td><td>{row.units}</td>
-                  </tr>
+                  <Table.Tr key={`${row.rooms}-${row.area_sqm}`}>
+                    <Table.Td className="num">{row.rooms}</Table.Td><Table.Td className="num">{sqm(row.area_sqm)}</Table.Td><Table.Td className="num">{row.units}</Table.Td>
+                  </Table.Tr>
                 ))}
-              </tbody>
-            </table>
-            <p style={{ color: "#6b655c", fontSize: ".82rem" }}>
+              </Table.Tbody>
+            </Table>
+            <Text size="sm" c="dimmed" mt="sm">
               כל הדירות לפי {ils(result.planned_unit_mix_meta.sale_price_per_sqm_ils)} למ״ר, מחיר המכירה שבתיק ·{" "}
               {result.planned_unit_mix_meta.existing_units_basis === "building_average"
                 ? `דירה קיימת ממוצעת ${sqm(result.planned_unit_mix_meta.average_existing_unit_sqm)} (ממוצע הבניין, אומדן)`
                 : "דירות קיימות לפי לוח מאושר"} ·
               התמהיל נשמר כאומדן ומוצג בתיק. הרווח בתיק אינו משתנה: הוא מוכר את כל השטח ליזם ומחושב בתמורת ברירת המחדל.
-            </p>
-          </section>
+            </Text>
+          </Section>
 
           {result.optimization.candidates.length > 1 && (
-            <section className="card" style={{ marginBottom: "1rem" }}>
-              <h2 style={{ marginTop: 0 }}>חלופות מובילות</h2>
-              <div style={{ overflowX: "auto" }}>
-                <table>
-                  <thead><tr><th>#</th><th>תמהיל</th><th>דירות יזם</th><th>רווח</th><th>רווח על העלות</th><th>שטח לא מנוצל</th></tr></thead>
-                  <tbody>
+            <Section title="חלופות מובילות">
+              <Table.ScrollContainer minWidth={640}>
+                <Table>
+                  <Table.Thead><Table.Tr><Table.Th>#</Table.Th><Table.Th>תמהיל</Table.Th><Table.Th>דירות יזם</Table.Th><Table.Th>רווח</Table.Th><Table.Th>רווח על העלות</Table.Th><Table.Th>שטח לא מנוצל</Table.Th></Table.Tr></Table.Thead>
+                  <Table.Tbody>
                     {result.optimization.candidates.slice(0, 5).map((candidate, index) => (
-                      <tr key={index}>
-                        <td>{index + 1}</td>
-                        <td>{Object.entries(candidate.counts).map(([k, v]) => `${v} × ${k.replace("r", "")} חד׳`).join(" · ")}</td>
-                        <td>{candidate.developer_units}</td>
-                        <td>{ils(candidate.projected_profit_ils)}</td>
-                        <td>{(candidate.profit_margin_on_cost_ratio * 100).toFixed(1)}%</td>
-                        <td>{sqm(candidate.unused_developer_sqm)}</td>
-                      </tr>
+                      <Table.Tr key={index} className={index === 0 ? "is-selected" : undefined}>
+                        <Table.Td className="num">{index + 1}</Table.Td>
+                        <Table.Td>{Object.entries(candidate.counts).map(([k, v]) => `${v} × ${k.replace("r", "")} חד׳`).join(" · ")}</Table.Td>
+                        <Table.Td className="num">{candidate.developer_units}</Table.Td>
+                        <Table.Td className="num">{ils(candidate.projected_profit_ils)}</Table.Td>
+                        <Table.Td className={`num ${candidate.meets_developer_target ? "text-ok" : "text-warn"}`}>{(candidate.profit_margin_on_cost_ratio * 100).toFixed(1)}%</Table.Td>
+                        <Table.Td className="num">{sqm(candidate.unused_developer_sqm)}</Table.Td>
+                      </Table.Tr>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
+            </Section>
           )}
 
-          <section className="card">
-            <h2 style={{ marginTop: 0 }}>מה חשוב לדעת</h2>
-            <ul style={{ marginBottom: 0 }}>
-              <li>ברירת המחדל לתמורה: {result.planned_unit_mix_meta.default_compensation_source ?? "אומדן גרסה"}.</li>
-              <li>שטחי 3/4/5 חדרים הם הנחות מודל מסומנות, לא הוראה של עיריית הרצליה.</li>
-              {result.optimization.warnings.map((warning, i) => <li key={i}>{warning}</li>)}
-            </ul>
-          </section>
+          <Section title="מה חשוב לדעת">
+            <List size="sm" spacing={4}>
+              <List.Item>ברירת המחדל לתמורה: {result.planned_unit_mix_meta.default_compensation_source ?? "אומדן גרסה"}.</List.Item>
+              <List.Item>שטחי 3/4/5 חדרים הם הנחות מודל מסומנות, לא הוראה של עיריית הרצליה.</List.Item>
+              {result.optimization.warnings.map((warning, i) => <List.Item key={i}>{warning}</List.Item>)}
+            </List>
+          </Section>
         </>
       )}
-    </main>
+    </>
   );
 }

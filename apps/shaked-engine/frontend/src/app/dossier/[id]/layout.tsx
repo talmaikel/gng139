@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { AppHeader } from "@/components/brand/AppShell";
+import { DossierSubNav } from "./subnav";
 
 export default async function DossierLayout({
   children,
@@ -10,21 +11,11 @@ export default async function DossierLayout({
   const { id } = await params;
   return (
     <>
-      <nav
-        style={{
-          maxWidth: 1000,
-          margin: ".75rem auto 0",
-          padding: "0 1rem",
-          display: "flex",
-          gap: ".9rem",
-          fontSize: ".85rem",
-        }}
-      >
-        <Link href={`/dossier/${id}`}>תיק הזדמנות</Link>
-        <Link href={`/dossier/${id}/mix`}>תמהיל ורווחיות</Link>
-        <Link href={`/dossier/${id}/units`}>אישור דירות קיימות</Link>
-      </nav>
-      {children}
+      <AppHeader />
+      <div className="page" style={{ maxWidth: 1000 }}>
+        <DossierSubNav id={id} />
+        {children}
+      </div>
     </>
   );
 }

@@ -14,8 +14,8 @@ const PHONE = process.env.NEXT_PUBLIC_SALES_PHONE ?? "";
 const EMAIL = process.env.NEXT_PUBLIC_SALES_EMAIL ?? "";
 
 const CONTACT_LINK: React.CSSProperties = {
-  display: "block", padding: ".55rem .8rem", borderRadius: 6, border: "1px solid #d9d3c7",
-  textDecoration: "none", color: "#1d4e89", background: "#fbfaf7",
+  display: "block", padding: ".55rem .8rem", borderRadius: 5, border: "1px solid var(--rule)",
+  textDecoration: "none", color: "var(--ink)", background: "var(--ground)", fontWeight: 600,
 };
 
 type Method = "card" | "bit" | "paypal";
@@ -63,7 +63,7 @@ export default function PurchaseDialog({ pkg, companyId, onClose }: Props) {
       role="presentation"
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, background: "rgba(20, 35, 31, .45)", zIndex: 2000,
+        position: "fixed", inset: 0, background: "rgba(19, 22, 30, .5)", zIndex: 2000,
         display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
       }}
     >
@@ -81,10 +81,10 @@ export default function PurchaseDialog({ pkg, companyId, onClose }: Props) {
 
         {!method ? (
           <>
-            <p style={{ margin: "0 0 .8rem", color: "#6b655c", fontSize: ".92rem" }}>בחרו אמצעי תשלום</p>
+            <p className="text-muted" style={{ margin: "0 0 .8rem", fontSize: ".92rem" }}>בחרו אמצעי תשלום</p>
             <div style={{ display: "grid", gap: ".5rem" }}>
               {METHODS.map((m) => (
-                <button key={m.id} type="button" onClick={() => setMethod(m.id)}>
+                <button key={m.id} type="button" className="btn-secondary" onClick={() => setMethod(m.id)}>
                   {m.label}
                 </button>
               ))}
@@ -119,15 +119,14 @@ export default function PurchaseDialog({ pkg, companyId, onClose }: Props) {
             ) : (
               <p>צרו קשר עם צוות שקדן.</p>
             )}
-            <button type="button" onClick={() => setMethod(null)}
-                    style={{ marginTop: ".8rem", background: "transparent", color: "#1d4e89", padding: 0 }}>
+            <button type="button" className="btn-link" onClick={() => setMethod(null)} style={{ marginTop: ".8rem" }}>
               ← אמצעי תשלום אחר
             </button>
           </>
         )}
 
         <div style={{ textAlign: "end", marginTop: ".8rem" }}>
-          <button type="button" onClick={onClose} style={{ background: "#6b655c" }}>סגירה</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>סגירה</button>
         </div>
       </div>
     </div>

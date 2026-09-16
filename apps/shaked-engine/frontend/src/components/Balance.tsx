@@ -30,31 +30,23 @@ export default function Balance({ balance, packages }: Props) {
 
   return (
     <div
-      className="card"
-      style={{
-        padding: "0.85rem 1.1rem",
-        display: "flex",
-        gap: "1rem",
-        alignItems: "center",
-        flexWrap: "wrap",
-        borderColor: empty ? "#e6d8b8" : undefined,
-        background: empty ? "#fdfaf1" : undefined,
-      }}
+      className={`card${empty ? " tone-warn" : ""}`}
+      style={{ padding: "0.85rem 1.1rem", display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}
     >
-      <strong style={{ fontSize: "1.05rem", color: empty ? "#8a6100" : "#1f5f55" }}>
+      <strong className={empty ? "text-warn" : "text-ok"} style={{ fontSize: "1.05rem" }}>
         {empty ? "לא נותרה זכאות לחברה"
           : remaining === 1 ? "נותרה הזדמנות אחת לחברה"
           : `נותרו ${remaining} הזדמנויות לחברה`}
       </strong>
 
-      <span style={{ color: "#6b655c", fontSize: ".88rem" }}>
+      <span className="text-muted" style={{ fontSize: ".88rem" }}>
         {delivered === 0 ? "טרם נמסר דבר" : `${delivered} כבר נמסרו · הגישה משותפת לכל הצוות`}
       </span>
 
       <span style={{ flex: 1 }} />
 
       {packages.map((p) => (
-        <button key={p.id} type="button" onClick={() => setChosen(p)} style={{ background: "#1d4e89" }}>
+        <button key={p.id} type="button" className="btn-secondary btn-sm" onClick={() => setChosen(p)}>
           {p.name} · {formatPrice(p)}
         </button>
       ))}

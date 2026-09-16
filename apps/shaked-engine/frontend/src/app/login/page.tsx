@@ -68,11 +68,9 @@ export default function LoginPage() {
   if (autoLoggingIn) {
     return (
       <main className="page">
-        <div className="card" style={{ maxWidth: 380, margin: "3.5rem auto" }}>
-          <p style={{ margin: 0, color: "#6b655c", fontSize: ".82rem", letterSpacing: ".08em" }}>
-            חלופת שקד · הרצליה
-          </p>
-          <h1 style={{ margin: ".15rem 0 1.2rem" }}>מתחבר…</h1>
+        <div className="card auth-card">
+          <p className="eyebrow">חלופת שקד · הרצליה</p>
+          <h1>מתחבר…</h1>
         </div>
       </main>
     );
@@ -80,11 +78,9 @@ export default function LoginPage() {
 
   return (
     <main className="page">
-      <div className="card" style={{ maxWidth: 380, margin: "3.5rem auto" }}>
-        <p style={{ margin: 0, color: "#6b655c", fontSize: ".82rem", letterSpacing: ".08em" }}>
-          חלופת שקד · הרצליה
-        </p>
-        <h1 style={{ margin: ".15rem 0 1.2rem" }}>כניסה</h1>
+      <div className="card auth-card">
+        <p className="eyebrow">חלופת שקד · הרצליה</p>
+        <h1>כניסה</h1>
         <form onSubmit={handleSubmit}>
           <div className="form-field">
             <label htmlFor="email">דואר אלקטרוני</label>
@@ -110,15 +106,15 @@ export default function LoginPage() {
               style={{ textAlign: "start" }}
             />
           </div>
-          {error && <p style={{ color: "#a8321e", fontSize: ".88rem" }}>{error}</p>}
+          {error && <p className="text-bad" style={{ fontSize: ".88rem" }}>{error}</p>}
           <button type="submit" disabled={submitting}>
             {submitting ? "מתחבר…" : "כניסה"}
           </button>
         </form>
         <p style={{ marginTop: "1.2rem", fontSize: ".88rem" }}>
-          לקוח חדש? <Link href="/signup">הרשמה</Link>
+          לקוח חדש? <Link href="/signup" className="text-link">הרשמה</Link>
           {" · "}
-          <Link href="/forgot-password">שכחתי סיסמה</Link>
+          <Link href="/forgot-password" className="text-link">שכחתי סיסמה</Link>
         </p>
       </div>
     </main>

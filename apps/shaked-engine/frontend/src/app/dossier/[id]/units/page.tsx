@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { Alert, Anchor, Button, Group, NumberInput, Paper, Table, Text, TextInput } from "@mantine/core";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import { PageHeader, Section, Stat, StatStrip, StatusBadge } from "@/components/brand/ui";
 
 type UnitRow = {
   id: string;
@@ -117,80 +118,99 @@ export default function DwellingUnitReviewPage({ params }: { params: Promise<{ i
   }
 
   if (!state) {
-    return <main className="page"><p>{error ?? "טוען…"}</p></main>;
+    return error ? <Alert color="brick" title={error} /> : <Text c="dimmed">טוען…</Text>;
   }
 
   const r = state.resolution;
+  const setDraft = (unitId: string, d: Draft, patch: Partial<Draft>) =>
+    setDrafts((x) => ({ ...x, [unitId]: { ...d, ...patch } }));
 
   return (
-    <main className="page" style={{ maxWidth: 1050 }} dir="rtl">
-      <p style={{ margin: "0 0 .8rem" }}>
-        <Link href={`/dossier/${id}`} style={{ color: "#6b655c" }}>← חזרה לתיק</Link>
-      </p>
-      <h1 style={{ marginBottom: ".2rem" }}>אימות שטחי הדירות</h1>
-      <p style={{ marginTop: 0, color: "#6b655c" }}>
-        {state.address} · ספירה עירונית: {state.municipal_unit_count ?? "—"} דירות
-      </p>
+    <>
+      <PageHeader
+        back={{ href: `/dossier/${id}`, label: "חזרה לתיק" }}
+        eyebrow="תיק הזדמנות · הרצליה"
+        title="אימות שטחי הדירות"
+        meta={<>{state.address} · ספירה עירונית: {state.municipal_unit_count ?? "—"} דירות</>}
+      />
 
-      <section className="card" style={{ marginBottom: "1rem" }}>
-        <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>מצב הלוח</h2>
-        <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-          <div><small>שורות עם שטח</small><br /><strong>{r.unit_count ?? 0}</strong></div>
-          <div><small>ממוצע מאומת</small><br /><strong>{r.average_existing_unit_sqm == null ? "—" : `${r.average_existing_unit_sqm} מ״ר`}</strong></div>
-          <div><small>לוח שלם</small><br /><strong>{r.schedule_complete ? "כן" : "לא"}</strong></div>
-          <div><small>רשאי להכריע תרחיש</small><br />
-            <strong style={{ color: r.may_decide ? "#1f5f55" : "#8a6100" }}>{r.may_decide ? "כן" : "לא"}</strong>
-          </div>
-        </div>
+      <Section title="מצב הלוח">
+        <StatStrip>
+          <Stat label="שורות עם שטח" value={r.unit_count ?? 0} />
+          <Stat label="ממוצע מאומת" value={r.average_existing_unit_sqm == null ? "—" : `${r.average_existing_unit_sqm} מ״ר`} />
+          <Stat label="לוח שלם" value={r.schedule_complete ? "כן" : "לא"} tone={r.schedule_complete ? "ok" : undefined} />
+          <Stat label="רשאי להכריע תרחיש" value={r.may_decide ? "כן" : "לא"} tone={r.may_decide ? "ok" : "warn"} />
+        </StatStrip>
         {r.has_unit_count_conflict && (
-          <p style={{ color: "#a8321e", fontWeight: 600 }}>יש סתירה בין מספר הדירות בלוח לבין הספירה העירונית.</p>
+          <Alert color="brick" mt="md">יש סתירה בין מספר הדירות בלוח לבין הספירה העירונית.</Alert>
         )}
-        {r.notes.map((note) => <p key={note} style={{ color: "#6b655c", fontSize: ".84rem" }}>{note}</p>)}
-      </section>
+        {r.notes.map((note) => <Text key={note} size="sm" c="dimmed" mt="sm">{note}</Text>)}
+      </Section>
 
-      {error && <div className="card" style={{ marginBottom: "1rem", color: "#a8321e" }}>{error}</div>}
+      {error && <Alert color="brick" mb="md">{error}</Alert>}
 
       {state.units.length === 0 ? (
-        <section className="card">
-          <strong>עדיין אין שורות דירה לחוות עליהן דעה.</strong>
-          <p>יש להריץ קודם את יצירת התיק כדי שמנוע B3 יחלץ את לוח הדירות מהגרמושקה.</p>
-        </section>
+        <Paper p="lg">
+          <Text fw={700}>עדיין אין שורות דירה לחוות עליהן דעה.</Text>
+          <Text size="sm" c="dimmed" mt={4}>יש להריץ קודם את יצירת התיק כדי שמנוע B3 יחלץ את לוח הדירות מהגרמושקה.</Text>
+        </Paper>
       ) : (
-        <section className="card" style={{ overflowX: "auto" }}>
-          <table>
-            <thead>
-              <tr><th>דירה</th><th>קומה</th><th>שטח</th><th>מצב</th><th>מקור</th><th>פעולה</th></tr>
-            </thead>
-            <tbody>
-              {state.units.map((unit) => {
-                const d = drafts[unit.id] ?? draftFor(unit);
-                const verified = !unit.requires_human_review && unit.certainty === "manually_verified";
-                return (
-                  <tr key={unit.id}>
-                    <td><input value={d.unit_label} onChange={(e) => setDrafts((x) => ({ ...x, [unit.id]: { ...d, unit_label: e.target.value } }))} style={{ width: 80 }} /></td>
-                    <td><input value={d.floor} onChange={(e) => setDrafts((x) => ({ ...x, [unit.id]: { ...d, floor: e.target.value } }))} style={{ width: 80 }} /></td>
-                    <td><input type="number" min="15" max="400" step="0.01" value={d.area_sqm} onChange={(e) => setDrafts((x) => ({ ...x, [unit.id]: { ...d, area_sqm: e.target.value } }))} style={{ width: 100 }} /> מ״ר</td>
-                    <td style={{ fontWeight: 600, color: verified ? "#1f5f55" : "#8a6100" }}>
-                      {verified ? "אומת ידנית" : unit.method === "manual_rejected" ? "נדחה — חילוץ מחדש" : "דורש בדיקה"}
-                    </td>
-                    <td>
-                      {unit.source_url ? <a href={unit.source_url} target="_blank" rel="noreferrer" style={{ color: "#1d4e89" }}>פתח מסמך</a> : "אין מקור"}
-                      {unit.location && <div style={{ color: "#6b655c", fontSize: ".78rem", maxWidth: 260 }}>{unit.location}</div>}
-                      {unit.raw_text && <div style={{ color: "#6b655c", fontSize: ".75rem", maxWidth: 260 }}>OCR: {unit.raw_text}</div>}
-                    </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      <button disabled={saving === unit.id} onClick={() => review(unit, "confirm")} style={{ marginInlineEnd: ".4rem" }}>
-                        {saving === unit.id ? "שומר…" : verified ? "שמור תיקון" : "אשר"}
-                      </button>
-                      <button disabled={saving === unit.id} onClick={() => review(unit, "reject")} style={{ background: "#7a342b" }}>דחה</button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </section>
+        <Paper p="lg">
+          <Table.ScrollContainer minWidth={820}>
+            <Table verticalSpacing="xs">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>דירה</Table.Th><Table.Th>קומה</Table.Th><Table.Th>שטח</Table.Th>
+                  <Table.Th>מצב</Table.Th><Table.Th>מקור</Table.Th><Table.Th>פעולה</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {state.units.map((unit) => {
+                  const d = drafts[unit.id] ?? draftFor(unit);
+                  const verified = !unit.requires_human_review && unit.certainty === "manually_verified";
+                  const rejected = unit.method === "manual_rejected";
+                  return (
+                    <Table.Tr key={unit.id}>
+                      <Table.Td><TextInput size="xs" w={90} value={d.unit_label} onChange={(e) => setDraft(unit.id, d, { unit_label: e.currentTarget.value })} /></Table.Td>
+                      <Table.Td><TextInput size="xs" w={80} value={d.floor} onChange={(e) => setDraft(unit.id, d, { floor: e.currentTarget.value })} /></Table.Td>
+                      <Table.Td>
+                        <Group gap={6} wrap="nowrap">
+                          <NumberInput size="xs" w={110} min={15} max={400} step={0.01} hideControls
+                                       value={d.area_sqm === "" ? "" : Number(d.area_sqm)}
+                                       onChange={(v) => setDraft(unit.id, d, { area_sqm: v === "" ? "" : String(v) })} />
+                          <Text size="sm" c="dimmed">מ״ר</Text>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td>
+                        <StatusBadge tone={verified ? "ok" : rejected ? "bad" : "warn"}>
+                          {verified ? "אומת ידנית" : rejected ? "נדחה — חילוץ מחדש" : "דורש בדיקה"}
+                        </StatusBadge>
+                      </Table.Td>
+                      <Table.Td>
+                        {unit.source_url ? <Anchor href={unit.source_url} target="_blank" rel="noreferrer" size="sm" c="almond.7">פתח מסמך</Anchor> : <Text size="sm" c="dimmed">אין מקור</Text>}
+                        {unit.location && <Text size="xs" c="dimmed" maw={260}>{unit.location}</Text>}
+                        {unit.raw_text && <Text size="xs" c="dimmed" maw={260}>OCR: {unit.raw_text}</Text>}
+                      </Table.Td>
+                      <Table.Td style={{ whiteSpace: "nowrap" }}>
+                        <Group gap={6} wrap="nowrap">
+                          <Button size="xs" loading={saving === unit.id} disabled={saving !== null && saving !== unit.id}
+                                  onClick={() => review(unit, "confirm")}>
+                            {verified ? "שמור תיקון" : "אשר"}
+                          </Button>
+                          <Button size="xs" variant="default" c="brick.7" disabled={saving !== null}
+                                  onClick={() => review(unit, "reject")}>
+                            דחה
+                          </Button>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  );
+                })}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        </Paper>
       )}
-    </main>
+    </>
   );
 }

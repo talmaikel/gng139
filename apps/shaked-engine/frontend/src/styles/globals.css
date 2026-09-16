@@ -1,73 +1,240 @@
+/* shakdan design language · one token sheet for every screen.
+   Font: IBM Plex Sans Hebrew (next/font sets --font-plex on :root).
+   Colour: almond on a cool light ground; green / almond / red only carry meaning. */
+
 :root {
   color-scheme: light;
+
+  --almond: #e8894a;
+  --almond-deep: #c96f33;
+  --almond-soft: #fdeee3;
+  --ink: #13161e;
+  --ink-2: #2a2e39;
+  --muted: #5b6068;
+  --faint: #8b9099;
+  --ground: #f5f6f8;
+  --ground-2: #ebedf1;
+  --paper: #ffffff;
+  --rule: #dde0e6;
+  --rule-2: #eceef2;
+
+  --ok-fg: #1f5a3c;
+  --ok-bg: #dcefe3;
+  --warn-fg: #c96f33;
+  --warn-bg: #fdeee3;
+  --bad-fg: #a2402e;
+  --bad-bg: #f5e4e0;
+  --neutral-fg: #5b6068;
+  --neutral-bg: #ebedf1;
+  --info-fg: #2a2e39;
+  --info-bg: #ebedf1;
+
+  --r: 5px;
+  --sans: var(--font-plex), "Segoe UI", Arial, sans-serif;
+  --mono: var(--font-plex-mono), ui-monospace, Consolas, monospace;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: #f7f7f5;
-  color: #1a1a1a;
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  background: var(--ground);
+  color: var(--ink);
 }
 
-a {
-  color: inherit;
-}
+h1, h2, h3, h4 { font-weight: 700; line-height: 1.2; }
+h1 { font-size: 1.7rem; }
+h2 { font-size: 1.15rem; }
+h3 { font-size: 1rem; }
+a { color: inherit; }
+small { color: var(--muted); }
 
+/* ── layout ── */
 .page {
-  max-width: 960px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem clamp(16px, 4vw, 40px) 3rem;
 }
+.page-narrow { max-width: 420px; }
 
 .card {
-  background: #fff;
-  border: 1px solid #e2e2df;
-  border-radius: 10px;
-  padding: 1.5rem;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 1.25rem;
+}
+.card.tone-ok { background: #f2faf5; border-color: #bfe0cc; }
+.card.tone-warn { background: #fef7f1; border-color: #f2cfb3; }
+.card.tone-bad { background: #fcf3f1; border-color: #ecc6bd; }
+.card.tone-info { background: #f7f8fa; border-color: var(--rule); }
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--almond-deep);
 }
 
+/* ── forms ── */
 .form-field {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   margin-bottom: 1rem;
 }
+.form-field label { font-size: 0.88rem; font-weight: 600; color: var(--ink-2); }
 
-input {
-  padding: 0.55rem 0.7rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+input, select, textarea {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  padding: 0.5rem 0.65rem;
   font-size: 0.95rem;
 }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--almond);
+  box-shadow: 0 0 0 3px var(--almond-soft);
+}
+input[type="checkbox"], input[type="radio"] { width: auto; accent-color: var(--almond); }
+input::placeholder { color: var(--faint); }
 
+/* ── buttons ── */
 button {
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.92rem;
+  line-height: 1.2;
   cursor: pointer;
-  border: none;
-  border-radius: 6px;
-  padding: 0.6rem 1.1rem;
-  background: #1f6f4f;
-  color: #fff;
-  font-size: 0.95rem;
+  border-radius: var(--r);
+  padding: 0.55rem 1rem;
+  background: var(--almond);
+  color: var(--ink);
+  border: 1.5px solid var(--almond);
+  transition: background 0.12s, border-color 0.12s;
 }
+button:hover { background: var(--almond-deep); border-color: var(--almond-deep); }
+button:disabled { opacity: 0.55; cursor: default; }
+button:disabled:hover { background: var(--almond); border-color: var(--almond); }
+button:focus-visible { outline: 2px solid var(--almond); outline-offset: 2px; }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: default;
+.btn-secondary, .btn-secondary:hover { background: var(--paper); color: var(--ink); border-color: var(--rule); }
+.btn-secondary:hover { background: var(--ground); }
+.btn-ghost, .btn-ghost:hover { background: transparent; color: var(--muted); border-color: transparent; }
+.btn-ghost:hover { color: var(--ink); }
+.btn-dark, .btn-dark:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn-dark:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.btn-danger, .btn-danger:hover { background: var(--paper); color: var(--bad-fg); border-color: var(--bad-fg); }
+.btn-danger:hover { background: var(--bad-bg); }
+.btn-link, .btn-link:hover { background: transparent; color: var(--almond-deep); border-color: transparent; padding: 0; }
+.btn-sm { padding: 0.35rem 0.7rem; font-size: 0.82rem; }
+
+/* ── tables ── */
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th {
+  text-align: start;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule);
 }
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
 td {
   text-align: start;
-  padding: 0.5rem 0.6rem;
-  border-bottom: 1px solid #eee;
-  font-size: 0.9rem;
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid var(--rule-2);
+  vertical-align: top;
 }
+tbody tr:hover { background: var(--ground); }
+tr.is-selected { background: var(--almond-soft); }
+tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--almond); }
+
+/* ── small semantics ── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--r);
+  white-space: nowrap;
+  background: var(--neutral-bg);
+  color: var(--neutral-fg);
+}
+.pill.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.pill.warn { background: var(--warn-bg); color: var(--warn-fg); }
+.pill.bad { background: var(--bad-bg); color: var(--bad-fg); }
+
+.text-ok { color: var(--ok-fg); }
+.text-warn { color: var(--warn-fg); }
+.text-bad { color: var(--bad-fg); }
+.text-muted { color: var(--muted); }
+.text-link { color: var(--almond-deep); font-weight: 600; text-decoration: none; }
+.text-link:hover { text-decoration: underline; }
+
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.num { font-variant-numeric: tabular-nums; }
+
+.stat-label { font-size: 0.78rem; color: var(--muted); }
+.stat-value { font-size: 1.3rem; font-weight: 700; line-height: 1.2; }
+
+/* ── auth screens ── */
+.auth-card {
+  max-width: 400px;
+  margin: 3.5rem auto;
+}
+.auth-card::before {
+  content: "";
+  display: block;
+  height: 26px;
+  width: 106px;
+  margin-bottom: 1.1rem;
+  background: url("/brand/shakdan-lockup.svg") no-repeat 0 0 / contain;
+}
+.auth-card h1 { margin: 0.15rem 0 1.2rem; }
+
+/* ── Leaflet in the brand ── */
+.leaflet-container { font-family: var(--sans); border-radius: var(--r); }
+.leaflet-tile-pane { filter: saturate(0.7); }
+.leaflet-popup-content-wrapper { border-radius: var(--r); border: 1px solid var(--rule); box-shadow: 0 12px 30px -12px rgba(19, 22, 30, 0.4); }
+.leaflet-popup-content { font-family: var(--sans); font-size: 0.86rem; margin: 0.6rem 0.8rem; }
+
+/* ── product header ── */
+.app-header { background: var(--paper); border-bottom: 1px solid var(--rule); position: sticky; top: 0; z-index: 30; }
+.app-header-inner { max-width: 1100px; margin: 0 auto; padding: 0.55rem clamp(16px, 4vw, 40px); display: flex; align-items: center; gap: 1.4rem; }
+.app-brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+.app-brand img { height: 28px; width: auto; display: block; }
+.app-brand span { font-size: 0.8rem; font-weight: 600; color: var(--muted); border-inline-start: 1px solid var(--rule); padding-inline-start: 0.6rem; direction: ltr; }
+.app-nav { display: none; gap: 1.2rem; font-size: 0.92rem; font-weight: 600; }
+.app-nav a { text-decoration: none; color: var(--muted); padding: 0.35rem 0; border-bottom: 2px solid transparent; }
+.app-nav a[data-active] { color: var(--ink); border-bottom-color: var(--almond); }
+.app-user { margin-inline-start: auto; display: flex; align-items: center; gap: 0.6rem; }
+.app-avatar { width: 28px; height: 28px; border-radius: var(--r); background: var(--almond-soft); color: var(--almond-deep); font-weight: 700; font-size: 0.82rem; display: grid; place-items: center; }
+.app-user-name { display: none; font-size: 0.88rem; color: var(--ink-2); }
+.app-logout { display: none; align-items: center; gap: 0.35rem; }
+.app-menu { display: inline-flex; padding: 0.35rem 0.5rem; }
+@media (min-width: 760px) {
+  .app-nav { display: flex; }
+  .app-user-name, .app-logout { display: inline-flex; }
+  .app-menu { display: none; }
+}
+
+/* ── tabs (product) and dossier sub-navigation ── */
+.tabs { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--rule); margin-bottom: 1rem; }
+.tabs button, .tabs button:hover { background: transparent; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--muted); padding: 0.55rem 0.9rem; margin-bottom: -1px; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[data-active] { color: var(--ink); border-bottom-color: var(--almond); }
+.subnav { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--rule); margin: 0 0 1.4rem; font-size: 0.9rem; font-weight: 600; overflow-x: auto; }
+.subnav a { text-decoration: none; color: var(--muted); padding: 0.55rem 0.9rem; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.subnav a[data-active] { color: var(--ink); border-bottom-color: var(--almond); }

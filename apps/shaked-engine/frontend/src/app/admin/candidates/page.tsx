@@ -27,20 +27,10 @@ import SearchControls from "@/components/SearchControls";
 // מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
 // לחבילת ה-SSR, שם אין `window`, והדף מחזיר 500 בטעינה נקייה.
 import { MAX_AREA_SQM } from "@/lib/searchArea";
-
-const STATUS_LABEL: Record<Assessment["status"], string> = {
-  eligible: "כשיר",
-  needs_verification: "דורש אימות",
-  urban_renewal_compound: "מסלול מתחמים",
-  ineligible: "אינו כשיר",
-};
-
-const STATUS_COLOUR: Record<Assessment["status"], string> = {
-  eligible: "#1f5f55",
-  needs_verification: "#8a6100",
-  urban_renewal_compound: "#1d4e89",
-  ineligible: "#a8321e",
-};
+import { dunam } from "@/lib/format";
+import { AppShell } from "@/components/brand/AppShell";
+import { assessmentBadge } from "@/components/brand/ui";
+import { IconPencil } from "@/components/brand/icons";
 
 /** Gate ids come from the rules engine in English. A developer reading the screen
  *  should see what is missing, not a field name. */
@@ -78,8 +68,6 @@ function floorsText(a: Assessment | null): string {
   if (a.case_by_case) return `${base} · נקודתית`;
   return a.floors_certain ? base : `${base} · דורש מדידה`;
 }
-
-const dunam = (sqm: number) => `${(sqm / 1000).toFixed(1)} דונם`;
 
 const OpportunityMap = dynamic(() => import("@/components/Map"), { ssr: false });
 
@@ -221,11 +209,12 @@ export default function LegacyCandidatesPage() {
   const overLimit = liveArea !== null && liveArea.points >= 3 && liveArea.sqm > MAX_AREA_SQM;
 
   return (
-    <main className="page" style={{ maxWidth: 1100 }}>
-      <h1 style={{ marginBottom: ".4rem" }}>חלופת שקד · הרצליה</h1>
+    <AppShell>
+      <p className="eyebrow">חלופת שקד · ניהול</p>
+      <h1 style={{ margin: ".15rem 0 .4rem" }}>כל המועמדים</h1>
       {/* ‏S2 · הרשימה המלאה הוחלפה אצל הלקוח בסריקה (/dashboard). הדף הזה
           נשאר לצוות כגיבוי להדגמה של 16.09, ואינו מקושר מהמסך של הלקוח. */}
-      <p style={{ margin: "0 0 1rem", color: "#8a6100", fontSize: ".85rem" }}>
+      <p className="text-warn" style={{ margin: "0 0 1rem", fontSize: ".85rem" }}>
         מסך צוות · רשימת כל המועמדים (גיבוי). הלקוח רואה את הסריקה ב-<Link href="/dashboard">/dashboard</Link>.
       </p>
 
@@ -233,18 +222,11 @@ export default function LegacyCandidatesPage() {
         <Balance balance={balance} packages={packages} onChanged={loadAccount} />
       </div>
 
-      <div style={{ display: "flex", gap: ".4rem", marginBottom: "1rem" }}>
+      <div className="tabs" role="tablist">
         {([["search", "חיפוש"], ["mine", `המאגר שלי${mine.length ? ` · ${mine.length}` : ""}`]] as const).map(
           ([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              style={{
-                background: tab === key ? "#1f6f4f" : "transparent",
-                color: tab === key ? "#fff" : "#1a1a1a",
-                border: tab === key ? "none" : "1px solid #d8d8d3",
-              }}
-            >
+            <button key={key} type="button" role="tab" aria-selected={tab === key} data-active={tab === key || undefined}
+                    onClick={() => setTab(key)}>
               {label}
             </button>
           )
@@ -252,8 +234,8 @@ export default function LegacyCandidatesPage() {
       </div>
 
       {notice && (
-        <div className="card" style={{ marginBottom: "1rem", borderColor: "#c8ddd2", background: "#f3f9f6" }}>
-          <strong style={{ color: "#1f5f55" }}>{notice}</strong>
+        <div className="card tone-ok" style={{ marginBottom: "1rem" }}>
+          <strong className="text-ok">{notice}</strong>
         </div>
       )}
 
@@ -266,34 +248,31 @@ export default function LegacyCandidatesPage() {
       <div className="card" style={{ marginBottom: "1rem", padding: "0.9rem 1.1rem" }}>
         <div style={{ display: "flex", gap: ".6rem", alignItems: "center", flexWrap: "wrap" }}>
           {!drawing ? (
-            <button onClick={() => { setDrawing(true); setLiveArea(null); }}>
-              ✏️ צייר אזור חיפוש
+            <button className="btn-dark" onClick={() => { setDrawing(true); setLiveArea(null); }}>
+              <IconPencil size={14} /> צייר אזור חיפוש
             </button>
           ) : (
-            <button onClick={() => { setDrawing(false); setLiveArea(null); }} style={{ background: "#6b655c" }}>
+            <button className="btn-secondary" onClick={() => { setDrawing(false); setLiveArea(null); }}>
               בטל ציור
             </button>
           )}
 
           {searchArea && !drawing && (
-            <button onClick={clearArea} style={{ background: "#6b655c" }}>
+            <button className="btn-secondary" onClick={clearArea}>
               נקה אזור · הצג הכל
             </button>
           )}
 
-          <button
-            onClick={() => setShowControls((v) => !v)}
-            style={{ background: "transparent", color: "#1a1a1a", border: "1px solid #d8d8d3" }}
-          >
+          <button className="btn-secondary" onClick={() => setShowControls((v) => !v)}>
             תנאים והעדפות
             {(activeConditions.length > 0 || (options.preferences?.length ?? 0) > 0) && (
-              <span style={{ color: "#1f6f4f", fontWeight: 700 }}>
+              <span className="text-warn">
                 {" "}· {activeConditions.length + (options.preferences?.length ?? 0)}
               </span>
             )}
           </button>
 
-          <span style={{ color: "#6b655c", fontSize: ".88rem" }}>
+          <span className="text-muted" style={{ fontSize: ".88rem" }}>
             {drawing
               ? liveArea === null
                 ? "לחיצה מוסיפה קודקוד · לחיצה כפולה או Enter לסיום · Escape לביטול"
@@ -304,7 +283,7 @@ export default function LegacyCandidatesPage() {
           </span>
 
           {overLimit && (
-            <span style={{ color: "#a8321e", fontWeight: 600, fontSize: ".88rem" }}>
+            <span className="text-bad" style={{ fontWeight: 600, fontSize: ".88rem" }}>
               מעל מגבלת {MAX_AREA_SQM / 1000} הדונם — השרת ידחה
             </span>
           )}
@@ -320,7 +299,7 @@ export default function LegacyCandidatesPage() {
             disabled={!searchArea || loading}
           />
           {!searchArea && (
-            <p style={{ color: "#8a6100", fontSize: ".84rem", margin: ".5rem 0 0" }}>
+            <p className="text-warn" style={{ fontSize: ".84rem", margin: ".5rem 0 0" }}>
               יש לצייר אזור חיפוש כדי להחיל את התנאים.
             </p>
           )}
@@ -341,13 +320,11 @@ export default function LegacyCandidatesPage() {
       </div>
 
       {error && (
-        <div className="card" style={{ marginBottom: "1rem", borderColor: "#e6c9c2",
-                                       background: "#fdf6f4", display: "flex", gap: ".8rem",
+        <div className="card tone-bad" style={{ marginBottom: "1rem", display: "flex", gap: ".8rem",
                                        alignItems: "center", flexWrap: "wrap" }}>
-          <strong style={{ color: "#a8321e" }}>{error}</strong>
+          <strong className="text-bad">{error}</strong>
           {retryable && (
-            <button onClick={() => deliver(retryable)} disabled={delivering !== null}
-                    style={{ padding: ".35rem .8rem", fontSize: ".82rem" }}>
+            <button className="btn-sm" onClick={() => deliver(retryable)} disabled={delivering !== null}>
               נסה שוב · {retryable.address}
             </button>
           )}
@@ -355,12 +332,13 @@ export default function LegacyCandidatesPage() {
       )}
 
       <div className="card">
-        <p style={{ margin: "0 0 .8rem", color: "#6b655c", fontSize: ".9rem" }}>
+        <p className="text-muted" style={{ margin: "0 0 .8rem", fontSize: ".9rem" }}>
           {loading ? "טוען…" : `${candidates.length} מועמדים`}
           {activeConditions.length > 0 && (
             <span> · תנאי חובה: {activeConditions.join(" · ")}</span>
           )}
         </p>
+        <div style={{ overflowX: "auto" }}>
         <table>
           <thead>
             <tr>
@@ -378,24 +356,22 @@ export default function LegacyCandidatesPage() {
               <tr
                 key={candidate.id}
                 onClick={() => setSelectedId(candidate.id)}
-                style={{
-                  cursor: "pointer",
-                  background: candidate.id === selectedId ? "#fdf3e8" : undefined,
-                }}
+                className={candidate.id === selectedId ? "is-selected" : undefined}
+                style={{ cursor: "pointer" }}
               >
-                <td>{candidate.address}</td>
-                <td>
+                <td style={{ fontWeight: 600 }}>{candidate.address}</td>
+                <td className="mono" style={{ textAlign: "start" }}>
                   {candidate.block ?? "—"} / {candidate.parcel ?? "—"}
                 </td>
-                <td>{candidate.area_sqm ?? "—"}</td>
+                <td className="num">{candidate.area_sqm ?? "—"}</td>
                 <td>{floorsText(candidate.assessment)}</td>
                 <td>
                   {candidate.assessment ? (
-                    <span style={{ color: STATUS_COLOUR[candidate.assessment.status], fontWeight: 600 }}>
-                      {STATUS_LABEL[candidate.assessment.status]}
+                    <span style={{ display: "inline-flex", flexDirection: "column", gap: ".2rem", alignItems: "flex-start" }}>
+                      {assessmentBadge(candidate.assessment.status)}
                       {candidate.assessment.blocking.length > 0 && (
-                        <span style={{ color: "#6b655c", fontWeight: 400 }}>
-                          {" "}· ממתין ל{gateText(candidate.assessment.blocking)}
+                        <span className="text-muted" style={{ fontSize: ".78rem" }}>
+                          ממתין ל{gateText(candidate.assessment.blocking)}
                         </span>
                       )}
                     </span>
@@ -403,7 +379,7 @@ export default function LegacyCandidatesPage() {
                     "—"
                   )}
                 </td>
-                <td style={{ color: "#6b655c", fontSize: ".82rem" }}>
+                <td className="text-muted" style={{ fontSize: ".82rem" }}>
                   {candidate.why_selected ?? "—"}
                 </td>
                 <td style={{ textAlign: "end" }}>
@@ -419,8 +395,7 @@ export default function LegacyCandidatesPage() {
                     const willFetch = candidate.assessment?.deliverable === false;
                     if (owned) {
                       return (
-                        <Link href={`/dossier/${candidate.id}`}
-                              style={{ color: "#1f6f4f", fontWeight: 600, fontSize: ".82rem" }}>
+                        <Link href={`/dossier/${candidate.id}`} className="text-link" style={{ fontSize: ".82rem" }}>
                           פתח תיק ←
                         </Link>
                       );
@@ -431,8 +406,8 @@ export default function LegacyCandidatesPage() {
                     // בטעות הייתה שולפת תיק מהארכיון באמצע ההדגמה.
                     const readiness = blocked ? null
                       : willFetch
-                        ? { text: "ישלוף תיק בניין · עד 20 שניות", colour: "#8a6100" }
-                        : { text: "מוכן למסירה מיידית", colour: "#1f6f4f" };
+                        ? { text: "ישלוף תיק בניין · עד 20 שניות", cls: "text-warn" }
+                        : { text: "מוכן למסירה מיידית", cls: "text-ok" };
                     return (
                       <div style={{ display: "inline-flex", flexDirection: "column",
                                     alignItems: "flex-end", gap: ".2rem" }}>
@@ -442,7 +417,7 @@ export default function LegacyCandidatesPage() {
                           title={blocked ? "אינו במסלול המגרשי — אינו נמסר"
                             : willFetch ? "תיק הבניין ייושלף מהארכיון — עד 20 שניות"
                             : undefined}
-                          style={{ padding: ".35rem .7rem", fontSize: ".82rem" }}
+                          className="btn-sm"
                         >
                           {blocked ? "לא במסלול"
                             : delivering === candidate.id
@@ -450,7 +425,7 @@ export default function LegacyCandidatesPage() {
                               : "מסור לי"}
                         </button>
                         {readiness && (
-                          <span style={{ color: readiness.colour, fontSize: ".72rem",
+                          <span className={readiness.cls} style={{ fontSize: ".72rem",
                                          fontWeight: 600, whiteSpace: "nowrap" }}>
                             {readiness.text}
                           </span>
@@ -463,16 +438,17 @@ export default function LegacyCandidatesPage() {
             ))}
             {!loading && candidates.length === 0 && !error && (
               <tr>
-                <td colSpan={7} style={{ color: "#6b655c" }}>
+                <td colSpan={7} className="text-muted">
                   אין מועמדים באזור שסומן.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        </div>
       </div>
       </>
       )}
-    </main>
+    </AppShell>
   );
 }

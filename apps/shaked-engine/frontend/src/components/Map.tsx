@@ -6,6 +6,7 @@ import { MapContainer, Polygon, Popup, TileLayer, useMap } from "react-leaflet";
 import type { Candidate, MultiPolygonGeometry } from "@/lib/api";
 import DrawPolygon from "@/components/DrawPolygon";
 import type { LatLngTuple } from "@/lib/searchArea";
+import { MAP_COLOUR } from "@/lib/labels";
 
 const HERZLIYA_CENTER: [number, number] = [32.1624, 34.8447];
 
@@ -68,7 +69,7 @@ export default function OpportunityMap({
   const areaRings = ringsOf(searchArea);
 
   return (
-    <MapContainer center={HERZLIYA_CENTER} zoom={13} style={{ height: 460, width: "100%", borderRadius: 10 }}>
+    <MapContainer center={HERZLIYA_CENTER} zoom={13} style={{ height: 460, width: "100%", borderRadius: 5 }}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -77,7 +78,7 @@ export default function OpportunityMap({
       {areaRings && !drawing && (
         <Polygon
           positions={areaRings}
-          pathOptions={{ color: "#1d4e89", weight: 2, dashArray: "6 4", fill: false }}
+          pathOptions={{ color: MAP_COLOUR.area, weight: 2, dashArray: "6 4", fill: false }}
         />
       )}
 
@@ -91,9 +92,9 @@ export default function OpportunityMap({
               positions={toLeafletRings(candidate.geometry as MultiPolygonGeometry)}
               eventHandlers={!drawing && onSelect ? { click: () => onSelect(candidate.id) } : undefined}
               pathOptions={{
-                color: selected ? "#8a3f00" : "#1f6f4f",
+                color: selected ? MAP_COLOUR.selected : MAP_COLOUR.candidate,
                 weight: selected ? 3 : 2,
-                fillOpacity: selected ? 0.45 : 0.25,
+                fillOpacity: selected ? 0.35 : 0.22,
                 // בזמן ציור החלקות אינן ניתנות ללחיצה, אחרת קודקוד שנופל
                 // על מועמד נבלע בו ולא מגיע למפה — והמשתמש רואה לחיצה
                 // שלא עשתה כלום, בדיוק מעל האזור שהוא הכי רוצה לסמן.

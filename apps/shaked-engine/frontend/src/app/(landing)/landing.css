@@ -1,23 +1,8 @@
 /* Landing page · shakdan design language (IBM Plex Sans Hebrew, almond, 5px).
-   Everything is scoped under .sk so the product screens keep globals.css. */
+   Tokens live in globals.css; .sk only adds what the landing needs. */
 
 .sk {
-  --almond: #e8894a;
-  --almond-deep: #c96f33;
-  --almond-soft: #fdeee3;
   --blush: #f59a8c;
-  --ink: #13161e;
-  --ink-2: #2a2e39;
-  --muted: #5b6068;
-  --faint: #8b9099;
-  --ground: #f5f6f8;
-  --ground-2: #ebedf1;
-  --paper: #ffffff;
-  --rule: #dde0e6;
-  --rule-2: #eceef2;
-  --r: 5px;
-  --sans: var(--font-plex), "Segoe UI", Arial, sans-serif;
-  --mono: var(--font-plex-mono), ui-monospace, Consolas, monospace;
 
   background: var(--ground);
   color: var(--ink);
@@ -131,9 +116,9 @@
 .sk-card .g { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); grid-row: 2; direction: ltr; text-align: right; }
 .sk-card .f { grid-column: 1; grid-row: 3; color: var(--muted); font-size: 0.72rem; }
 .sk-pill { grid-column: 2; grid-row: 1 / 4; align-self: start; font-size: 0.66rem; font-weight: 700; padding: 0.18rem 0.5rem; border-radius: var(--r); white-space: nowrap; }
-.sk-pill.ok { background: #dcefe3; color: #1f5a3c; }
-.sk-pill.chk { background: var(--almond-soft); color: var(--almond-deep); }
-.sk-pill.no { background: var(--ground-2); color: var(--faint); }
+.sk-pill.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.sk-pill.chk { background: var(--warn-bg); color: var(--warn-fg); }
+.sk-pill.no { background: var(--neutral-bg); color: var(--faint); }
 .sk-map { position: relative; overflow: hidden; background: #e9e2d4; }
 .sk-map > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 52% 45%; transform: scale(1.08); }
 .sk-draw { position: absolute; top: 0.7rem; right: 0.7rem; background: var(--ink); color: #fff; font-weight: 700; padding: 0.4rem 0.8rem; border-radius: var(--r); font-size: 0.75rem; }

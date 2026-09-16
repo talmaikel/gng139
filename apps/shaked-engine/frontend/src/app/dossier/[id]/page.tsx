@@ -1,115 +1,81 @@
 "use client";
 
+import { Accordion, Alert, Anchor, Button, Group, List, Paper, Table, Text } from "@mantine/core";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { use } from "react";
 import { ApiError, downloadDossier, getDossier, getUnitReviewCounts,
          type Betterment, type Dossier, type EvidenceRow, type Gate } from "@/lib/api";
-import {
-  ASSUMPTION_STATUS, GATE_STATUS,
-} from "@/lib/labels";
+import { fmtDate as date, ils, ilsApprox, sqm } from "@/lib/format";
+import type { Tone } from "@/lib/labels";
+import { IconFile, IconSheet } from "@/components/brand/icons";
+import { assumptionBadge, gateBadge, PageHeader, Section, Stat, StatStrip, StatusBadge } from "@/components/brand/ui";
 
 const CITY = "herzliya";
 
-// ‏`-0 ₪` על שורה שהיא אפס נראה כמו באג. אפס הוא אפס, וסימן המינוס
-// שייך לסכום ולא לעיצוב.
-const ils = (n: number) =>
-  Math.round(n) === 0 ? "0 ₪" : `${Math.round(n).toLocaleString("he-IL")} ₪`;
-/** ‏#81 · סכומים גדולים במסך במיליונים. ‏31,126,961 ₪ עד השקל, על בסיס של
- *  שמונה-עשר אומדנים, נקרא כמו חשבון מדויק. ה-PDF והאקסל נשארים מדויקים —
- *  בדיקת המשטחים משווה אותם, והאקסל הוא המקום שהיזם מחשב בו. */
-const ilsApprox = (n: number) =>
-  Math.abs(n) >= 1_000_000
-    ? `${n < 0 ? "‎-" : ""}${(Math.abs(n) / 1e6).toLocaleString("he-IL", { maximumFractionDigits: 1 })} מיליון ₪`
-    : ils(n);
-const sqm = (n: number) => `${Math.round(n).toLocaleString("he-IL")} מ״ר`;
-const date = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "numeric" }) : "—";
-
-function Pill({ text, colour, background }: { text: string; colour: string; background: string }) {
-  return (
-    <span style={{ background, color: colour, fontWeight: 600, fontSize: ".78rem",
-                   padding: ".15rem .5rem", borderRadius: 999, whiteSpace: "nowrap" }}>
-      {text}
-    </span>
-  );
-}
-
-function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
-  return (
-    <section className="card" style={{ marginBottom: "1.1rem" }}>
-      <h2 style={{ margin: "0 0 .15rem", fontSize: "1.05rem" }}>{title}</h2>
-      {note && <p style={{ margin: "0 0 .8rem", color: "#6b655c", fontSize: ".84rem" }}>{note}</p>}
-      {children}
-    </section>
-  );
-}
-
 /** שער אחד בשרשרת, עם הסעיף שאפשר לפתוח ולבדוק אותנו לפיו. */
 function GateRow({ gate }: { gate: Gate }) {
-  const s = GATE_STATUS[gate.status] ?? { label: gate.status, colour: "#5c5750", background: "#f0efec" };
   return (
-    <tr>
-      <td style={{ width: "6.5rem" }}><Pill text={s.label} {...s} /></td>
-      <td style={{ fontWeight: 600 }}>{gate.label}</td>
-      <td style={{ color: "#4a4741" }}>{gate.detail || "—"}</td>
-      <td style={{ width: "5rem", whiteSpace: "nowrap" }}>
+    <Table.Tr>
+      <Table.Td w="7rem">{gateBadge(gate.status)}</Table.Td>
+      <Table.Td fw={600}>{gate.label}</Table.Td>
+      <Table.Td c="var(--ink-2)">{gate.detail || "—"}</Table.Td>
+      <Table.Td w="5rem" style={{ whiteSpace: "nowrap" }}>
         {gate.source_url ? (
-          <a href={gate.source_url} target="_blank" rel="noreferrer"
-             style={{ color: "#1d4e89", fontSize: ".8rem" }}>
+          <Anchor href={gate.source_url} target="_blank" rel="noreferrer" size="sm" c="almond.7">
             {gate.page ? `עמ׳ ${gate.page}` : "מקור"}
-          </a>
+          </Anchor>
         ) : "—"}
-      </td>
-    </tr>
+      </Table.Td>
+    </Table.Tr>
   );
 }
 
 function EvidenceTable({ rows }: { rows: EvidenceRow[] }) {
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>שדה</th><th>ערך</th><th>ודאות</th><th>מכריע?</th><th>נשלף</th><th>מקור</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.field}>
-            {/* התווית מגיעה מהשרת — מקור אמת אחד ל-PDF, ל-Excel ולמסך.
-                המפה המקומית הוסרה: ״גיבוי״ שאיש אינו רואה כשהוא נכנס
-                לפעולה אינו גיבוי אלא באג שקט. אם השרת לא שלח תווית,
-                בדיקת `test_labels.py` כבר נפלה. */}
-            <td style={{ fontWeight: 600 }}>{r.label}</td>
-            <td>{r.value === null || r.value === undefined ? "—"
-              : typeof r.value === "boolean" ? (r.value ? "כן" : "לא")
-              : typeof r.value === "number" ? r.value.toLocaleString("he-IL")
-              : String(r.value)}</td>
-            <td>{r.certainty_label}</td>
-            <td style={{ color: r.decides ? "#1f5f55" : "#8a6100", fontWeight: 600 }}>
-              {r.decides ? "כן" : "לא"}
-            </td>
-            <td style={{ whiteSpace: "nowrap" }}>{date(r.retrieved_at)}</td>
-            <td>
-              {r.source_url ? (
-                <a href={r.source_url} target="_blank" rel="noreferrer"
-                   style={{ color: "#1d4e89", fontSize: ".8rem" }} title={r.location ?? undefined}>
-                  {r.location ? r.location.slice(0, 34) : "מקור"}
-                </a>
-              ) : "—"}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <Table.ScrollContainer minWidth={720}>
+      <Table>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>שדה</Table.Th><Table.Th>ערך</Table.Th><Table.Th>ודאות</Table.Th>
+            <Table.Th>מכריע?</Table.Th><Table.Th>נשלף</Table.Th><Table.Th>מקור</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {rows.map((r) => (
+            <Table.Tr key={r.field}>
+              {/* התווית מגיעה מהשרת — מקור אמת אחד ל-PDF, ל-Excel ולמסך.
+                  המפה המקומית הוסרה: ״גיבוי״ שאיש אינו רואה כשהוא נכנס
+                  לפעולה אינו גיבוי אלא באג שקט. אם השרת לא שלח תווית,
+                  בדיקת `test_labels.py` כבר נפלה. */}
+              <Table.Td fw={600}>{r.label}</Table.Td>
+              <Table.Td className="num">{r.value === null || r.value === undefined ? "—"
+                : typeof r.value === "boolean" ? (r.value ? "כן" : "לא")
+                : typeof r.value === "number" ? r.value.toLocaleString("he-IL")
+                : String(r.value)}</Table.Td>
+              <Table.Td>{r.certainty_label}</Table.Td>
+              <Table.Td><StatusBadge tone={r.decides ? "ok" : "warn"} size="xs">{r.decides ? "כן" : "לא"}</StatusBadge></Table.Td>
+              <Table.Td style={{ whiteSpace: "nowrap" }}>{date(r.retrieved_at)}</Table.Td>
+              <Table.Td>
+                {r.source_url ? (
+                  <Anchor href={r.source_url} target="_blank" rel="noreferrer" size="sm" c="almond.7" title={r.location ?? undefined}>
+                    {r.location ? r.location.slice(0, 34) : "מקור"}
+                  </Anchor>
+                ) : "—"}
+              </Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    </Table.ScrollContainer>
   );
 }
 
-const BETTERMENT_COLOUR: Record<Betterment["category"], string> = {
-  resilient: "#1f5f55", marginal: "#8a6100", no_threshold: "#a8321e",
+const BETTERMENT_TONE: Record<Betterment["category"], Tone> = {
+  resilient: "ok", marginal: "warn", no_threshold: "bad",
   // ״לא דורג״ אינו ״עמיד״ — בלי צבע שאומר משהו.
-  unrated: "#5c5750",
+  unrated: "neutral",
 };
 
 /** ‏C14 · ההיטל כתקרה ולא כ-0 ₪.
@@ -118,49 +84,37 @@ const BETTERMENT_COLOUR: Record<Betterment["category"], string> = {
  *  שאין היטל; מה שאנחנו באמת יודעים הוא עד כמה הרווח סופג אותו. */
 function BettermentBlock({ b }: { b: Betterment }) {
   const { levy } = b;
+  const tone = BETTERMENT_TONE[b.category];
   return (
-    <div style={{ marginTop: "1rem", paddingTop: ".9rem", borderTop: "1px solid #eee" }}>
-      <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: ".5rem" }}>
-        <div>
-          <div style={{ color: "#6b655c", fontSize: ".8rem" }}>
-            תקרת היטל ההשבחה · {Math.round(levy.rate * 100)}% מההשבחה
-          </div>
-          <strong style={{ fontSize: "1.3rem", color: BETTERMENT_COLOUR[b.category] }}>
-            {levy.viable_up_to_ils != null ? `עד ${ilsApprox(levy.viable_up_to_ils)}` : "אין תקרה"}
-          </strong>
-        </div>
+    <div style={{ marginTop: "1rem", paddingTop: ".9rem", borderTop: "1px solid var(--rule-2)" }}>
+      <StatStrip cols={{ base: 1, sm: 3 }}>
+        <Stat
+          label={`תקרת היטל ההשבחה · ${Math.round(levy.rate * 100)}% מההשבחה`}
+          value={levy.viable_up_to_ils != null ? `עד ${ilsApprox(levy.viable_up_to_ils)}` : "אין תקרה"}
+          tone={tone}
+        />
         {b.breakeven_land_value_per_right_ils != null && (
-          <div>
-            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שווי מ״ר זכויות שבו הרווח יורד למזערי</div>
-            <strong style={{ fontSize: "1.3rem" }}>{ils(b.breakeven_land_value_per_right_ils)}</strong>
-          </div>
+          <Stat label="שווי מ״ר זכויות שבו הרווח יורד למזערי" value={ils(b.breakeven_land_value_per_right_ils)} />
         )}
         {levy.low_ils != null && levy.high_ils != null && (
-          <div>
-            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>אומדן ההיטל</div>
-            <strong style={{ fontSize: "1.3rem" }}>{ilsApprox(levy.low_ils)}–{ilsApprox(levy.high_ils)}</strong>
-          </div>
+          <Stat label="אומדן ההיטל" value={`${ilsApprox(levy.low_ils)}–${ilsApprox(levy.high_ils)}`} />
         )}
-      </div>
-      <p style={{ margin: ".2rem 0", fontWeight: 600, color: BETTERMENT_COLOUR[b.category], fontSize: ".88rem" }}>
-        {b.category_label}
-      </p>
-      {levy.within_range === false && (
-        <p style={{ margin: ".2rem 0", fontWeight: 600, color: "#a8321e", fontSize: ".88rem" }}>
-          הקצה העליון של אומדן ההיטל גבוה מהתקרה.
-        </p>
-      )}
-      <p style={{ margin: ".2rem 0", color: "#6b655c", fontSize: ".82rem" }}>{b.note}</p>
+      </StatStrip>
+      <Group gap="xs" mt="sm">
+        <StatusBadge tone={tone}>{b.category_label}</StatusBadge>
+        {levy.within_range === false && (
+          <Text size="sm" fw={600} className="text-bad">הקצה העליון של אומדן ההיטל גבוה מהתקרה.</Text>
+        )}
+      </Group>
+      <Text size="sm" c="dimmed" mt={6}>{b.note}</Text>
       {b.estimate_withheld_because && (
-        <p style={{ margin: ".2rem 0", color: "#6b655c", fontSize: ".82rem" }}>
-          אין אומדן להיטל: {b.estimate_withheld_because}
-        </p>
+        <Text size="sm" c="dimmed" mt={4}>אין אומדן להיטל: {b.estimate_withheld_because}</Text>
       )}
       {b.rests_on_unresolved_inputs.length > 0 && (
-        <p style={{ margin: ".2rem 0", color: "#8a6100", fontSize: ".82rem" }}>
+        <Text size="sm" className="text-warn" mt={4}>
           התקרה זזה עם {b.rests_on_unresolved_inputs.join(" ועם ")}
           {b.rests_on_unresolved_inputs.length === 1 ? ", שעדיין אינו מוכרע." : ", שעדיין אינם מוכרעים."}
-        </p>
+        </Text>
       )}
     </div>
   );
@@ -206,13 +160,13 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
 
   if (error) {
     return (
-      <main className="page">
-        <div className="card"><strong style={{ color: "#a8321e" }}>{error}</strong></div>
-        <p style={{ marginTop: "1rem" }}><Link href="/dashboard">← חזרה למסך החיפוש</Link></p>
-      </main>
+      <>
+        <Alert color="brick" title={error} />
+        <p style={{ marginTop: "1rem" }}><Link href="/dashboard" className="text-link">← חזרה למסך החיפוש</Link></p>
+      </>
     );
   }
-  if (!d) return <main className="page"><p>טוען…</p></main>;
+  if (!d) return <Text c="dimmed">טוען…</Text>;
 
   const f = d.rights.floors;
   const floorsText = f.low === null ? "—"
@@ -220,180 +174,146 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
   const s = d.economics.scenario as Record<string, number> | null;
 
   return (
-    <main className="page" style={{ maxWidth: 1000 }}>
-      <p style={{ margin: "0 0 .6rem" }}>
-        <Link href="/dashboard" style={{ color: "#6b655c", fontSize: ".85rem" }}>← חזרה</Link>
-      </p>
+    <>
+      <PageHeader
+        back={{ href: "/dashboard", label: "חזרה" }}
+        eyebrow="תיק הזדמנות · הרצליה"
+        title={d.identity.address}
+        meta={
+          <>
+            גוש <span className="mono">{d.identity.block ?? "—"}</span> · חלקה <span className="mono">{d.identity.parcel ?? "—"}</span>
+            {d.identity.area_sqm ? ` · ${sqm(d.identity.area_sqm)}` : ""}
+            {d.identity.existing_units ? ` · ${d.identity.existing_units} דירות קיימות` : ""}
+            {" · נמסר ב-"}{date(d.delivery.delivered_at)}
+          </>
+        }
+        actions={
+          <>
+            <Button variant="default" leftSection={<IconFile size={15} />} loading={downloading === "pdf"}
+                    disabled={downloading !== null} onClick={() => download("pdf")}>
+              PDF
+            </Button>
+            <Button leftSection={<IconSheet size={15} />} loading={downloading === "xlsx"}
+                    disabled={downloading !== null} onClick={() => download("xlsx")}>
+              Excel
+            </Button>
+          </>
+        }
+      />
 
-      <header style={{ marginBottom: "1.1rem", display: "flex", gap: "1rem",
-                       alignItems: "flex-start", flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: "16rem" }}>
-        <h1 style={{ margin: 0 }}>{d.identity.address}</h1>
-        <p style={{ margin: ".2rem 0 0", color: "#6b655c" }}>
-          גוש {d.identity.block ?? "—"} · חלקה {d.identity.parcel ?? "—"}
-          {d.identity.area_sqm ? ` · ${sqm(d.identity.area_sqm)}` : ""}
-          {d.identity.existing_units ? ` · ${d.identity.existing_units} דירות קיימות` : ""}
-          {" · נמסר ב-"}{date(d.delivery.delivered_at)}
-        </p>
-        </div>
-        <div style={{ display: "flex", gap: ".45rem", flexWrap: "wrap" }}>
-          <button onClick={() => download("pdf")} disabled={downloading !== null}
-                  style={{ padding: ".45rem .9rem", fontSize: ".85rem" }}>
-            {downloading === "pdf" ? "מפיק…" : "הורד PDF"}
-          </button>
-          <button onClick={() => download("xlsx")} disabled={downloading !== null}
-                  style={{ padding: ".45rem .9rem", fontSize: ".85rem", background: "#1d4e89" }}>
-            {downloading === "xlsx" ? "מפיק…" : "הורד Excel"}
-          </button>
-        </div>
-      </header>
-
-      {downloadError && (
-        <div className="card" style={{ marginBottom: "1rem", borderColor: "#e6c9c2",
-                                       background: "#fdf6f4" }}>
-          <strong style={{ color: "#a8321e" }}>{downloadError}</strong>
-        </div>
-      )}
+      {downloadError && <Alert color="brick" mb="md">{downloadError}</Alert>}
 
       <Section
+        id="rights"
         title="שרשרת הזכויות"
         note="כל שער עם הסעיף שאפשר לפתוח ולבדוק אותנו לפיו. ״לא ידוע״ אינו ״עבר״."
       >
-        <div style={{ overflowX: "auto" }}>
-          <table><tbody>{d.rights.checks.map((g) => <GateRow key={g.id} gate={g} />)}</tbody></table>
-        </div>
+        <Table.ScrollContainer minWidth={560}>
+          <Table>
+            <Table.Tbody>{d.rights.checks.map((g) => <GateRow key={g.id} gate={g} />)}</Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
 
-        <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginTop: "1rem",
-                      paddingTop: ".9rem", borderTop: "1px solid #eee" }}>
-          <div>
-            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>קומות מותרות</div>
-            <strong style={{ fontSize: "1.3rem" }}>{floorsText}</strong>
-            <span style={{ color: "#8a6100", fontSize: ".8rem" }}>
-              {f.case_by_case ? " · בחינה נקודתית" : f.certain ? "" : " · דורש מדידה"}
-            </span>
-          </div>
-          <div>
-            <div style={{ color: "#6b655c", fontSize: ".8rem" }}>תקרת 400%</div>
-            <strong style={{ fontSize: "1.3rem" }}>
-              {d.rights.cap_400_sqm ? sqm(d.rights.cap_400_sqm) : "—"}
-            </strong>
-            {d.rights.cap_400_certainty === "estimate" && (
-              <span style={{ color: "#8a6100", fontSize: ".8rem" }}> · על אומדן</span>
+        <div style={{ paddingTop: ".4rem", borderTop: "1px solid var(--rule-2)" }}>
+          <StatStrip>
+            <Stat
+              label="קומות מותרות"
+              value={floorsText}
+              hint={f.case_by_case ? "בחינה נקודתית" : f.certain ? undefined : "דורש מדידה"}
+            />
+            <Stat
+              label="תקרת 400%"
+              value={d.rights.cap_400_sqm ? sqm(d.rights.cap_400_sqm) : "—"}
+              hint={d.rights.cap_400_certainty === "estimate" ? "על אומדן" : undefined}
+            />
+            {d.rights.unit_mix && (
+              <Stat label="יחידות אחרי" value={`${d.rights.unit_mix.units_min}–${d.rights.unit_mix.units_max}`} />
             )}
-          </div>
-          {d.rights.unit_mix && (
-            <div>
-              <div style={{ color: "#6b655c", fontSize: ".8rem" }}>יחידות אחרי</div>
-              <strong style={{ fontSize: "1.3rem" }}>
-                {d.rights.unit_mix.units_min}–{d.rights.unit_mix.units_max}
-              </strong>
-            </div>
-          )}
-          {d.rights.parking?.spaces != null && (
-            <div>
-              <div style={{ color: "#6b655c", fontSize: ".8rem" }}>חניות</div>
-              <strong style={{ fontSize: "1.3rem" }}>{String(d.rights.parking.spaces)}</strong>
-            </div>
-          )}
+            {d.rights.parking?.spaces != null && (
+              <Stat label="חניות" value={String(d.rights.parking.spaces)} />
+            )}
+          </StatStrip>
         </div>
 
-        {d.rights.cap_400_basis && (
-          <p style={{ margin: ".8rem 0 0", color: "#6b655c", fontSize: ".82rem" }}>
-            {d.rights.cap_400_basis}
-          </p>
-        )}
-        {d.rights.notes.map((n) => (
-          <p key={n} style={{ margin: ".3rem 0 0", color: "#6b655c", fontSize: ".82rem" }}>{n}</p>
-        ))}
+        {d.rights.cap_400_basis && <Text size="sm" c="dimmed" mt="md">{d.rights.cap_400_basis}</Text>}
+        {d.rights.notes.map((n) => <Text key={n} size="sm" c="dimmed" mt={4}>{n}</Text>)}
       </Section>
 
       <Section
+        id="evidence"
         title="מאיפה הגיע כל מספר"
         note="מקור, מועד וודאות לכל שדה מהותי. ״מכריע״ פירושו שהתצפית רשאית להכריע שער — ודאות, מקור, מיקום וגיל, כולם יחד."
       >
-        <div style={{ overflowX: "auto" }}><EvidenceTable rows={d.evidence} /></div>
+        <EvidenceTable rows={d.evidence} />
       </Section>
 
-      <Section title="תרחיש כלכלי" note={d.economics.disclaimer}>
+      <Section id="economics" title="תרחיש כלכלי" note={d.economics.disclaimer}>
         {s ? (
           <>
-            <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-              <div>
-                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>
-                  רווח צפוי{d.economics.betterment ? " · לפני היטל השבחה" : ""}
-                </div>
-                <strong style={{ fontSize: "1.3rem" }}>{ilsApprox(s.projected_profit_ils)}</strong>
-              </div>
-              <div>
-                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>רווח על העלות</div>
-                <strong style={{ fontSize: "1.3rem",
-                                 color: s.meets_developer_target ? "#1f5f55" : "#8a6100" }}>
-                  {Math.round(s.profit_margin_on_cost_ratio * 100)}%
-                </strong>
-              </div>
-              <div>
-                {/* ‏C14 · היה ״שטח נמכר״, והמספר הוא השטח שנשאר ליזם אחרי הדיירים.
-                    באקסל ״שטח נמכר (עיקרי)״ הוא כל השטח העיקרי — שם אחד, שני
-                    מספרים, בדיוק ברגע שהיזם פותח את האקסל מול המסך. */}
-                <div style={{ color: "#6b655c", fontSize: ".8rem" }}>שטח ליזם</div>
-                <strong style={{ fontSize: "1.3rem" }}>{sqm(s.developer_allocation_sqm)}</strong>
-              </div>
-            </div>
+            <StatStrip cols={{ base: 1, sm: 3 }}>
+              <Stat
+                label={`רווח צפוי${d.economics.betterment ? " · לפני היטל השבחה" : ""}`}
+                value={ilsApprox(s.projected_profit_ils)}
+              />
+              <Stat
+                label="רווח על העלות"
+                value={`${Math.round(s.profit_margin_on_cost_ratio * 100)}%`}
+                tone={s.meets_developer_target ? "ok" : "warn"}
+              />
+              {/* ‏C14 · היה ״שטח נמכר״, והמספר הוא השטח שנשאר ליזם אחרי הדיירים.
+                  באקסל ״שטח נמכר (עיקרי)״ הוא כל השטח העיקרי — שם אחד, שני
+                  מספרים, בדיוק ברגע שהיזם פותח את האקסל מול המסך. */}
+              <Stat label="שטח ליזם" value={sqm(s.developer_allocation_sqm)} />
+            </StatStrip>
 
             {/* ‏E1 · מעל או מתחת ל-16%, במילים ולא רק בצבע. המשפט מהשרת, כמו ב-PDF ובאקסל. */}
             {d.economics.profit_verdict && (
-              <p style={{ margin: "-.4rem 0 1rem", fontWeight: 600, fontSize: ".9rem",
-                          color: s.meets_developer_target ? "#1f5f55" : "#8a6100" }}>
+              <Text size="sm" fw={600} mt="sm" className={s.meets_developer_target ? "text-ok" : "text-warn"}>
                 {d.economics.profit_verdict}
-              </p>
+              </Text>
             )}
 
             {/* ‏C14 · הסייג צמוד למספר שהוא מסייג. הנוסח מהשרת, כמו
                 ‏`not_delivered_reason` — אותו משפט במסך, ב-PDF ובאקסל. */}
             {d.economics.caveats.length > 0 && (
-              <div style={{ marginBottom: "1rem", padding: ".7rem .9rem", borderRadius: 8,
-                            background: "#fbf4e4", color: "#6b4c00", fontSize: ".86rem" }}>
-                <strong style={{ display: "block", marginBottom: ".3rem", color: "#8a6100" }}>
-                  על מה הרווח נשען
-                </strong>
-                <ul style={{ margin: 0, paddingInlineStart: "1.1rem" }}>
-                  {d.economics.caveats.map((c) => (
-                    <li key={c.id} style={{ marginBottom: ".2rem" }}>{c.text}</li>
-                  ))}
-                </ul>
-              </div>
+              <Alert color="almond" title="על מה הרווח נשען" mt="md">
+                <List size="sm" spacing={4}>
+                  {d.economics.caveats.map((c) => <List.Item key={c.id}>{c.text}</List.Item>)}
+                </List>
+              </Alert>
             )}
 
             {unitReview && unitReview.total > 0 && (
-              <p style={{ margin: "-.4rem 0 1rem", fontSize: ".86rem", color: "#6b655c" }}>
+              <Text size="sm" c="dimmed" mt="md">
                 {unitReview.pending > 0
                   ? `${unitReview.pending} מתוך ${unitReview.total} הדירות שנקראו מההיתר ממתינות לאישור. `
                   : `כל ${unitReview.total} הדירות שנקראו מההיתר אושרו. `}
-                <Link href={`/dossier/${id}/units`}>
+                <Link href={`/dossier/${id}/units`} className="text-link">
                   {unitReview.pending > 0 ? "אשר דירות ←" : "לוח הדירות ←"}
                 </Link>
-              </p>
+              </Text>
             )}
 
             {/* ‏B15 · התמהיל שהיזם חישב. המשפט מהשרת, כמו ב-PDF ובאקסל,
                 והרווח שמעליו אינו זז בגללו (בועז, 15.09). */}
-            <div style={{ marginBottom: "1rem", padding: ".7rem .9rem", borderRadius: 8,
-                          background: "#eef3f8", color: "#1d3f66", fontSize: ".86rem" }}>
-              {d.economics.unit_mix?.summary ? (
-                <>
-                  {d.economics.unit_mix.summary}{" "}
-                  <Link href={`/dossier/${id}/mix`}>שנה את התמורה ←</Link>
-                </>
-              ) : (
-                <>
-                  תמהיל הדירות עוד לא חושב.{" "}
-                  <Link href={`/dossier/${id}/mix`}>חשב תמהיל ורווחיות ←</Link>
-                </>
-              )}
-            </div>
+            <Paper withBorder={false} bg="var(--ground-2)" p="sm" mt="md" mb="md">
+              <Text size="sm">
+                {d.economics.unit_mix?.summary ? (
+                  <>
+                    {d.economics.unit_mix.summary}{" "}
+                    <Link href={`/dossier/${id}/mix`} className="text-link">שנה את התמורה ←</Link>
+                  </>
+                ) : (
+                  <>
+                    תמהיל הדירות עוד לא חושב.{" "}
+                    <Link href={`/dossier/${id}/mix`} className="text-link">חשב תמהיל ורווחיות ←</Link>
+                  </>
+                )}
+              </Text>
+            </Paper>
 
-            <table>
-              <tbody>
+            <Table>
+              <Table.Tbody>
                 {([
                   ["הכנסות (נטו ממע״מ)", s.total_revenue_ils],
                   ["קרקע — פיצוי הדיירים", -s.land_cost_ils],
@@ -408,66 +328,63 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                   // ‏0 ₪ כאן אינו ״אין היטל״ אלא ״ההשבחה אינה ידועה״. התקרה מתחת.
                   ...(d.economics.betterment ? [] : [["היטל השבחה", -s.betterment_levy_ils]]),
                 ] as [string, number][]).map(([name, value]) => (
-                  <tr key={name}>
-                    <td>{name}</td>
-                    <td style={{ textAlign: "end", fontVariantNumeric: "tabular-nums",
-                                 color: value < 0 ? "#a8321e" : "#1f5f55" }}>
+                  <Table.Tr key={name}>
+                    <Table.Td>{name}</Table.Td>
+                    <Table.Td ta="end" className={`num ${value < 0 ? "text-bad" : "text-ok"}`} fw={600}>
                       {ilsApprox(value)}
-                    </td>
-                  </tr>
+                    </Table.Td>
+                  </Table.Tr>
                 ))}
                 {/* ‏B13 · שורת ההיטל נכתבת פעם אחת בשרת, וה-PDF והאקסל מדפיסים
                     אותה כמו שהיא. נוסח מקומי כאן היה נפרד מהם בשקט. */}
                 {d.economics.betterment && (
-                  <tr>
-                    <td colSpan={2} style={{ color: "#8a6100", fontWeight: 600 }}>
+                  <Table.Tr>
+                    <Table.Td colSpan={2} className="text-warn" fw={600}>
                       {d.economics.betterment.summary}
-                    </td>
-                  </tr>
+                    </Table.Td>
+                  </Table.Tr>
                 )}
-              </tbody>
-            </table>
+              </Table.Tbody>
+            </Table>
 
             {d.economics.betterment && <BettermentBlock b={d.economics.betterment} />}
           </>
         ) : (
-          <p style={{ color: "#8a6100" }}>{d.economics.why ?? "לא חושב תרחיש."}</p>
+          <Text className="text-warn">{d.economics.why ?? "לא חושב תרחיש."}</Text>
         )}
 
         {/* המשפט נכתב בשרת ולא כאן. הוא הופיע קודם בשלושה נוסחים —
             במסך, ב-PDF וב-Excel — וכל שלושתם צירפו מזהי קוד. */}
         {!d.economics.is_deliverable && d.economics.not_delivered_reason && (
-          <div style={{ marginTop: "1rem", padding: ".7rem .9rem", borderRadius: 8,
-                        background: "#fbf4e4", color: "#8a6100" }}>
-            {d.economics.not_delivered_reason}
-          </div>
+          <Alert color="almond" mt="md">{d.economics.not_delivered_reason}</Alert>
         )}
 
-        <details style={{ marginTop: "1rem" }}>
-          <summary style={{ cursor: "pointer", color: "#1d4e89", fontSize: ".88rem" }}>
-            כל ההנחות · גרסה {d.economics.assumptions_version}
-          </summary>
-          <table style={{ marginTop: ".6rem" }}>
-            <tbody>
-              {Object.entries(d.economics.assumptions).map(([k, a]) => {
-                const st = ASSUMPTION_STATUS[a.status] ?? { label: a.status, colour: "#5c5750" };
-                return (
-                  <tr key={k}>
-                    <td>{a.label}</td>
-                    <td style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {a.value.toLocaleString("he-IL")} <span style={{ color: "#6b655c" }}>{a.unit}</span>
-                    </td>
-                    <td style={{ color: st.colour, fontWeight: 600 }}>{st.label}</td>
-                    <td style={{ color: "#6b655c", fontSize: ".8rem" }}>{a.source ?? "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </details>
+        <Accordion variant="contained" mt="md" radius="sm">
+          <Accordion.Item value="assumptions">
+            <Accordion.Control><Text size="sm" fw={600}>כל ההנחות · גרסה {d.economics.assumptions_version}</Text></Accordion.Control>
+            <Accordion.Panel>
+              <Table.ScrollContainer minWidth={520}>
+                <Table>
+                  <Table.Tbody>
+                    {Object.entries(d.economics.assumptions).map(([k, a]) => (
+                      <Table.Tr key={k}>
+                        <Table.Td>{a.label}</Table.Td>
+                        <Table.Td className="num">
+                          {a.value.toLocaleString("he-IL")} <Text span c="dimmed" size="sm">{a.unit}</Text>
+                        </Table.Td>
+                        <Table.Td>{assumptionBadge(a.status)}</Table.Td>
+                        <Table.Td c="dimmed" fz="sm">{a.source ?? "—"}</Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+              </Table.ScrollContainer>
+            </Accordion.Panel>
+          </Accordion.Item>
+        </Accordion>
       </Section>
 
-      <Section title="פערים" note={d.gaps.note}>
+      <Section id="gaps" title="פערים" note={d.gaps.note}>
         {[
           ["שערים שלא נענו", d.gaps.unknown_gates.map((g) => g.label)],
           ["אין להם מקור פתוח", d.gaps.unobtainable.map((x) => x.label)],
@@ -475,19 +392,19 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
           ["מעולם לא נשאל", d.gaps.never_asked.map((x) => x.label)],
           ["מקורות שהתיישנו", d.gaps.stale_sources.map((x) => x.label)],
         ].map(([title, items]) => (
-          <div key={title as string} style={{ marginBottom: ".55rem" }}>
-            <strong style={{ fontSize: ".87rem" }}>{title}: </strong>
-            <span style={{ color: (items as string[]).length ? "#4a4741" : "#6b655c", fontSize: ".87rem" }}>
+          <Text key={title as string} size="sm" mb={6}>
+            <strong>{title}: </strong>
+            <span className={(items as string[]).length ? undefined : "text-muted"}>
               {(items as string[]).length ? (items as string[]).join(" · ") : "אין"}
             </span>
-          </div>
+          </Text>
         ))}
       </Section>
 
-      <footer style={{ color: "#6b655c", fontSize: ".8rem", paddingBottom: "2rem" }}>
+      <Text size="xs" c="dimmed" pb="xl">
         כללים {d.versions.rules_version} · נתונים {d.versions.data_version || "—"} ·
         תבנית {d.versions.template_version}
-      </footer>
-    </main>
+      </Text>
+    </>
   );
 }
