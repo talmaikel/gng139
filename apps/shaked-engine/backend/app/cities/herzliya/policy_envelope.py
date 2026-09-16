@@ -12,9 +12,11 @@
 * **איזו צלע היא החזית אינו ידוע.** אין בנתונים גאומטריה של הרחוב, רק כמה
   חזיתות יש (`frontages_v2`). לכן החלקה מסובבת אל המלבן החוסם הקטן ביותר,
   ונבדקים כל הכיוונים: נמוך = הכיוון הגרוע, גבוה = הטוב.
-* **קו בניין קדמי 5 מ׳ הוא הנחה.** המדיניות קובעת אותו ״בהתאם לקווי הבנייה
-  הקיימים ברחוב״ (§7), והדוגמה של הדר 40 (עמ׳ 7) שומרת 5 מ׳.
-* **‏η = 0.9** — איזה חלק מהמעטפת נבנה בפועל (פינות, פירים, חזיתות). הנחה.
+* **קו בניין קדמי 5 מ׳ הוא ברירת מחדל שמרנית, לא כלל מדיניות.** המדיניות
+  קובעת אותו ״בהתאם לקווי הבנייה הקיימים ברחוב״ (§7), ומציגה קווים של 4
+  ו-5 מ׳. כשאין מדידה, 5 מ׳ הוא הבסיס והנמוך ו-4 מ׳ הוא גבול עליון בלבד.
+* **‏η = 0.9 הוא אומדן תכנוני, לא שטח סטטוטורי.** לכן הפלט מפריד בין
+  המעטפת הגאומטרית המלאה לבין האומדן השמרני שעליו רץ התרחיש הכלכלי.
 * **אין קומת גג מעל המקסימום.** מספר הקומות בטבלה כולל קומת קרקע (הערה 1),
   וגובה הבניין בטבלת קווי הבניין הוא ברוטו כולל קומת הגג (§6 הערה 1).
 * **מרפסות אינן כאן.** הן בנוסף לשטח (§2ו) ובולטות מעבר לקווים.
@@ -32,7 +34,8 @@ from shapely.geometry.base import BaseGeometry
 from app.cities.herzliya.rights import POLICY_URL
 
 ETA = 0.9
-FRONT_LINE_M = 5.0
+FRONT_LINE_FALLBACK_M = 5.0
+FRONT_LINE_UPPER_M = 4.0
 SETBACK_M = 3.0
 SMALL_LOT_SQM = 750.0
 
@@ -72,9 +75,9 @@ def setbacks(floors: float) -> list[tuple[float, float, float]] | None:
 
 @dataclass
 class Layout:
-    """איזו צלע של המלבן החוסם היא חזית, ואיזו אחורית."""
+    """אילו צלעות של המלבן החוסם הן חזיתות ואילו מקבלות קו אחורי."""
     fronts: tuple[str, ...]
-    rear: str
+    rears: tuple[str, ...]
 
 
 SIDES = ("x0", "x1", "y0", "y1")
@@ -82,16 +85,26 @@ OPPOSITE = {"x0": "x1", "x1": "x0", "y0": "y1", "y1": "y0"}
 
 
 def layouts(frontages: int | None) -> dict[str, list[Layout]]:
-    """מצבי החזית לבדיקה. חזית אחת: 4 כיוונים. פינתי: 4 זוגות צלעות סמוכות.
+    """מצבי החזית לבדיקה. חזית אחת: 4 כיוונים. פינתי: זוגות צלעות סמוכות.
+
+    במגרש פינתי המסמך אינו קובע איזו משתי הצלעות הפנימיות היא אחורית.
+    הבסיס והגבוה בודקים את שתי הפרשנויות. הנמוך מיישם את החיתוך השמרני
+    שלהן: שתי הצלעות הפנימיות מקבלות את הקו האחורי הגדול יותר.
 
     כשמספר החזיתות אינו ידוע, הנמוך נבדק גם כפינתי והגבוה גם כחזית אחת.
     """
-    single = [Layout((f,), OPPOSITE[f]) for f in SIDES]
-    corner = [Layout((a, b), OPPOSITE[a]) for a in ("x0", "x1") for b in ("y0", "y1")]
+    single = [Layout((f,), (OPPOSITE[f],)) for f in SIDES]
+    pairs = [(a, b) for a in ("x0", "x1") for b in ("y0", "y1")]
+    corner_safe = [Layout((a, b), (OPPOSITE[a], OPPOSITE[b])) for a, b in pairs]
+    corner_options = [layout for a, b in pairs for layout in (
+        Layout((a, b), (OPPOSITE[a],)),
+        Layout((a, b), (OPPOSITE[b],)),
+    )]
     if frontages is None:
-        return {"low": single + corner, "base": single, "high": single + corner}
-    chosen = corner if frontages >= 2 else single
-    return {"low": chosen, "base": chosen, "high": chosen}
+        return {"low": single + corner_safe, "base": single, "high": single + corner_options}
+    if frontages >= 2:
+        return {"low": corner_safe, "base": corner_options, "high": corner_options}
+    return {"low": single, "base": single, "high": single}
 
 
 def _frame(parcel: BaseGeometry) -> BaseGeometry:
@@ -110,14 +123,16 @@ def _plate(frame: BaseGeometry, core: BaseGeometry, layout: Layout,
     margin = {s: side for s in SIDES}
     for s in layout.fronts:
         margin[s] = front + f_back
-    margin[layout.rear] = rear + r_back
+    for s in layout.rears:
+        margin[s] = max(margin[s], rear + r_back)
     clip = (minx + margin["x0"], miny + margin["y0"], maxx - margin["x1"], maxy - margin["y1"])
     if clip[0] >= clip[2] or clip[1] >= clip[3]:
         return 0.0
     return core.intersection(box(*clip)).area
 
 
-def _total(frame, lot_sqm, floors, layout, side_choice: str) -> tuple[float, float]:
+def _total(frame, lot_sqm, floors, layout, side_choice: str,
+           front_line_m: float) -> tuple[float, float]:
     """(סך שטח הקומות, שטח הקומה הטיפוסית) לכיוון אחד."""
     side_low, side_high, rear = _lines(floors, lot_sqm)
     side = side_low if side_choice == "low" else side_high
@@ -128,7 +143,7 @@ def _total(frame, lot_sqm, floors, layout, side_choice: str) -> tuple[float, flo
     steps = setbacks(floors)
     total, typical = 0.0, None
     for weight, f_back, r_back in steps:
-        area = _plate(frame, core, layout, FRONT_LINE_M, side, rear, f_back, r_back)
+        area = _plate(frame, core, layout, front_line_m, side, rear, f_back, r_back)
         typical = area if typical is None else typical
         total += weight * area
     return total, typical or 0.0
@@ -142,6 +157,10 @@ class PolicyArea:
     low_sqm: float
     base_sqm: float
     high_sqm: float
+    geometric_low_sqm: float
+    geometric_base_sqm: float
+    geometric_high_sqm: float
+    front_lines_m: dict[str, float]
     floors_low: float
     floors_high: float
     corner: bool | None
@@ -158,6 +177,18 @@ class PolicyArea:
         לכן התקרה מוצגת גם במ״ר וגם כאחוזי בנייה מהמגרש, והפער נמדד בשניהם."""
         cap = self.cap_400_sqm
         cap_far = self.far(cap)
+
+        def area_case(sqm: float) -> dict:
+            far = self.far(sqm)
+            return {
+                "sqm": round(sqm, 1),
+                "far_pct": round(far, 1) if far is not None else None,
+                "share_of_cap": round(sqm / cap, 3) if cap else None,
+                "gap_sqm": round(cap - sqm, 1) if cap else None,
+                "gap_far_pct": round(cap_far - far, 1) if cap_far and far is not None else None,
+                "unrealizable_share": round(1 - sqm / cap, 3) if cap else None,
+            }
+
         out = {
             "plot_sqm": round(self.plot_sqm, 1),
             "envelope_sqm": round(self.envelope_sqm, 1),
@@ -169,27 +200,28 @@ class PolicyArea:
             "binding": self.binding,
             "certainty": "estimate",
             "eta": ETA,
+            "front_lines_m": self.front_lines_m,
             "limits": self.limits,
             "assumptions": self.assumptions,
             "sources": [{"label": "מדיניות חלופת שקד הרצליה, אפריל 2026 · §5 עמ׳ 8 · §6 עמ׳ 10 · §7 עמ׳ 12",
                          "url": POLICY_URL}],
         }
         for name, sqm in (("low", self.low_sqm), ("base", self.base_sqm), ("high", self.high_sqm)):
-            far = self.far(sqm)
-            out[name] = {
-                "sqm": round(sqm, 1),
-                "far_pct": round(far, 1) if far is not None else None,
-                "share_of_cap": round(sqm / cap, 3) if cap else None,
-                "gap_sqm": round(cap - sqm, 1) if cap else None,
-                "gap_far_pct": round(cap_far - far, 1) if cap_far and far is not None else None,
-                "unrealizable_share": round(1 - sqm / cap, 3) if cap else None,
-            }
+            out[name] = area_case(sqm)
+        out["geometric"] = {
+            name: area_case(sqm) for name, sqm in (
+                ("low", self.geometric_low_sqm),
+                ("base", self.geometric_base_sqm),
+                ("high", self.geometric_high_sqm),
+            )
+        }
         return out
 
 
 def compute(parcel_itm: BaseGeometry | None, *, plot_sqm: float | None,
             floors_low: float | None, floors_high: float | None,
-            cap_400_sqm: float | None, frontages: int | None) -> tuple[PolicyArea | None, str | None]:
+            cap_400_sqm: float | None, frontages: int | None,
+            front_line_m: float | None = None) -> tuple[PolicyArea | None, str | None]:
     """השטח שמותר לבנות לפי המדיניות. מחזיר (תוצאה, None) או (None, למה לא)."""
     if parcel_itm is None or parcel_itm.is_empty:
         return None, "אין פוליגון לחלקה"
@@ -201,9 +233,14 @@ def compute(parcel_itm: BaseGeometry | None, *, plot_sqm: float | None,
     plot = plot_sqm or parcel_itm.area
     frame = _frame(parcel_itm)
     options = layouts(frontages)
+    front_lines = ({"low": front_line_m, "base": front_line_m, "high": front_line_m}
+                   if front_line_m is not None else
+                   {"low": FRONT_LINE_FALLBACK_M, "base": FRONT_LINE_FALLBACK_M,
+                    "high": FRONT_LINE_UPPER_M})
 
     def totals(floors, which, side_choice):
-        return [_total(frame, plot, floors, lay, side_choice) for lay in options[which]]
+        return [_total(frame, plot, floors, lay, side_choice, front_lines[which])
+                for lay in options[which]]
 
     low_runs = totals(floors_low, "low", "low")
     base_runs = totals(floors_low, "base", "low")
@@ -213,36 +250,42 @@ def compute(parcel_itm: BaseGeometry | None, *, plot_sqm: float | None,
     high = max(t for t, _ in high_runs)
     envelope = sum(p for _, p in base_runs) / len(base_runs)
 
-    def capped(sqm):
-        v = ETA * sqm
+    def capped(sqm, factor=1.0):
+        v = factor * sqm
         return min(v, cap_400_sqm) if cap_400_sqm else v
 
-    low_s, base_s, high_s = capped(low), capped(base), capped(high)
+    geometric_low, geometric_base, geometric_high = capped(low), capped(base), capped(high)
+    low_s, base_s, high_s = capped(low, ETA), capped(base, ETA), capped(high, ETA)
     binding = "cap" if cap_400_sqm and ETA * base >= cap_400_sqm else "envelope"
 
     side_low, side_high, rear = _lines(floors_low, plot)
     corner = None if frontages is None else frontages >= 2
     span = f"{floors_low:g}" if floors_low == floors_high else f"{floors_low:g}–{floors_high:g}"
     limits = [f"{span} קומות לפי רוחב הרחוב וקטגוריית המדיניות (§5, עמ׳ 8), כולל קומת קרקע, בלי קומת גג",
-              f"קווי בניין: קדמי {FRONT_LINE_M:g} מ׳, צד {side_low:g} מ׳, אחורי {rear:g} מ׳ (§6, עמ׳ 10)"]
+              f"קווי בניין: קדמי {front_lines['base']:g} מ׳ כברירת מחדל, צד {side_low:g} מ׳, אחורי {rear:g} מ׳ (§6–7, עמ׳ 10–12)"]
     if max(floors_low, floors_high) > 6:
         limits.append("נסיגה של 3 מ׳ בקומות העליונות לחזית הקדמית, ובקומה העליונה גם לאחורית (§5)")
     if corner:
-        limits.append("מגרש פינתי: שתי חזיתות, ובשתיהן קו קדמי ונסיגות")
+        limits.append("מגרש פינתי: שתי חזיתות; בנמוך שתי הצלעות הפנימיות מקבלות קו אחורי שמרני")
     limits.append(f"קומה טיפוסית בתוך הקווים: כ-{envelope:,.0f} מ״ר, {envelope / plot:.0%} מהמגרש")
     if binding == "cap":
         limits.append("המעטפת גדולה מתקרת ה-400%, ולכן התקרה היא המגבלה")
 
     assumptions = [
-        f"קו בניין קדמי {FRONT_LINE_M:g} מ׳ — המדיניות קובעת אותו לפי קווי הבנייה ברחוב (§7); לא נמדד",
+        (f"קו בניין קדמי {front_line_m:g} מ׳ — התקבל כקלט"
+         if front_line_m is not None else
+         "קו בניין קדמי לא נמדד — 5 מ׳ הוא בסיס שמרני; 4 מ׳ מופיע רק בגבול העליון; המדיניות קובעת לפי קווי הבנייה ברחוב (§7)"),
         "צלע החזית אינה ידועה — נבדקו כל הכיוונים של המלבן החוסם: נמוך = הגרוע, גבוה = הטוב",
-        f"η = {ETA:g}: חלק המעטפת שנבנה בפועל",
+        f"η = {ETA:g}: אומדן תכנוני שמרני; המעטפת הגאומטרית ללא המקדם מוצגת בנפרד",
         "מרפסות אינן בשטח (§2ו) · שטח ציבורי בנוי (§2ז) לא נוכה · הוועדה רשאית לקבוע פחות (§2ה)",
     ]
+    if corner:
+        assumptions.append("זהות הקו האחורי במגרש פינתי אינה מפורשת במדיניות — הטווח כולל את שתי הפרשנויות")
     if corner is None:
         assumptions.append("מספר החזיתות אינו ידוע — הנמוך נבדק גם כמגרש פינתי")
     return PolicyArea(plot_sqm=plot, cap_400_sqm=cap_400_sqm, envelope_sqm=envelope,
                       low_sqm=low_s, base_sqm=base_s, high_sqm=high_s,
+                      geometric_low_sqm=geometric_low, geometric_base_sqm=geometric_base,
+                      geometric_high_sqm=geometric_high, front_lines_m=front_lines,
                       floors_low=floors_low, floors_high=floors_high, corner=corner,
                       binding=binding, limits=limits, assumptions=assumptions), None
-
