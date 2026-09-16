@@ -245,6 +245,7 @@ def resolve_with_archive(combined,archive_files,archive_designation):
         if verdict["residential"] is None:continue
         evidence.append({"file_number":payload.get("file_number"),"address":payload.get("address"),"residential":verdict["residential"],"designations":verdict["designations"],
                          "basis":verdict["basis"],"mixed":verdict["mixed"],"source_url":(verdict["source"] or {}).get("url"),
+                         "retrieved_at":(verdict["source"] or {}).get("retrieved_at") or payload.get("retrieved_at"),
                          "evidence_location":"טבלת גוש וחלקה בדף הבקשה" if verdict["basis"]=="permit_page" else "רשימת התכניות בדף תיק הבניין",
                          "certainty":"official","extraction_method":"structured public-page extraction"})
     if not evidence:return combined

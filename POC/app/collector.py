@@ -3,7 +3,8 @@ from shapely.geometry import shape,mapping
 from .sources import PublicClient,GovMap,ArcGIS,public_buildings,SourceError,GIS_PAGE,GIS_CONFIG,utcnow
 from .config import MAX_AREA_M2,MAX_RADIUS_M,MAX_BUILDINGS,MAX_PARCELS,RULE_VERSION,TEMPLATE_VERSION,POLICY_URL
 from .geo import validate_polygon,circle_polygon,match_parcels,wgs,center_selected
-from .rules import evidence,evaluate,resolve_evidence,eligibility_status
+from .rules import evidence,evaluate,resolve_evidence,core_eligibility,usable
+from . import bridge
 from .documents import archive_tables
 from .xplan import XPlanCatalog,XPlanScreen,combine_screenings,resolve_with_archive,snapshot_is_fresh
 from .archive_catalog import archive_designation
@@ -14,6 +15,34 @@ def randomized_order(buildings,seed):
     ordered=sorted(buildings,key=lambda x:str(x['id']))
     random.Random(seed).shuffle(ordered)
     return ordered
+
+# bridge.py derives permit_date from the earliest *request* year and labels it with the parcel
+# layer as source; strengthened is a keyword miss over those requests. Neither may decide a gate.
+LAYER_A_SKIP={'permit_date','strengthened'}
+
+def layer_a_fields(fields,parcel):
+    """Fill still-missing fields from the precomputed citywide layer_a evidence for this parcel."""
+    props=parcel['properties'];extra=bridge.to_fields(f"{props['GUSH_NUM']}/{props['PARCEL']}") or {}
+    for key,field in extra.items():
+        if key in LAYER_A_SKIP or not usable(field) or usable(fields.get(key)):continue
+        fields[key]=field
+
+def xplan_zoning(xplan):
+    """Residential zoning from the parcel's XPlan land-use screening, when it is decisive."""
+    screenings=(xplan or {}).get('parcels') or []
+    if len(screenings)!=1:return evidence(None)
+    row=screenings[0];category=row.get('landuse_category')
+    resolved=[x for x in (xplan.get('archive_resolution') or []) if x.get('residential')]
+    if 'archive_resolved_995' in xplan.get('tags',[]) and resolved:
+        r=resolved[0]
+        return evidence(True,{'url':r.get('source_url'),'retrieved_at':r.get('retrieved_at')},'official',
+                        f"תיק בניין {r.get('file_number')}: {r.get('evidence_location')}",r.get('extraction_method'))
+    if category not in ('primary_candidate','filtered_landuse'):return evidence(None)
+    approved=sorted((m for m in row.get('matches',[]) if m.get('approved')),key=lambda m:-m.get('overlap',0))
+    if not approved:return evidence(None)
+    m=approved[0]
+    return evidence(category=='primary_candidate',{'url':m['source_url'],'retrieved_at':xplan.get('snapshot_created_at')},'official',
+                    f"{m['evidence_location']} · {m.get('mavat_name') or ''} · כיסוי {round(m['overlap']*100,1)}%",m.get('extraction_method'))
 
 def make_dossier(building,parcels,archive,filters,issues,documents=None,xplan_screening=None):
     geom=shape(building['geometry']);matches=match_parcels(geom,parcels)
@@ -45,8 +74,12 @@ def make_dossier(building,parcels,archive,filters,issues,documents=None,xplan_sc
             addresses.append(evidence(candidate,record['source'],'official','building file header: כתובת (parcel-linked file; building identity unverified)','HTML label extraction'))
     if addresses:fields['address']=resolve_evidence(addresses)
     if fields['address']['certainty']=='conflict':gaps.append('כתובות שונות בתיקי הארכיון; שיוך המבנה דורש אימות')
+    # Parcel-level evidence applies to the building only when it sits on a single parcel.
+    if len(matches)==1 and matches[0][0]>=.95:
+        layer_a_fields(fields,matches[0][1])
+        if not usable(fields['residential_zoning']):fields['residential_zoning']=xplan_zoning(xplan_screening)
     checks=evaluate(fields,filters)
-    eligibility=eligibility_status(checks)
+    eligibility,core_summary=core_eligibility(checks)
     gaps+= [c['label'] for c in checks if c['status']=='unknown']
     gaps+=['מספר דירות קיים ושטחים חוקיים לא אומתו מתוך היתר','טרם הוגדרו הנחות כלכליות מאושרות ושלמות']
     if building.get('authority')=='community':gaps.append('גבול המבנה ממקור קהילתי; נדרש אימות מול מקור עירוני')
@@ -54,7 +87,7 @@ def make_dossier(building,parcels,archive,filters,issues,documents=None,xplan_sc
         status='screened_out';eligibility=xplan_screening['category']
     else:status='rejected' if eligibility=='ineligible' else 'needs_verification'
     d={'building_id':building['id'],'entity_keys':keys,'status':status,'eligibility_status':eligibility,'fields':fields,'geometry':wgs(geom),'parcels':parcel_rows,
-       'checks':checks,'gaps':list(dict.fromkeys(gaps)),'source_issues':issues,'archive_records':archive_records,
+       'checks':checks,'eligibility':dict(core_summary,status=eligibility),'gaps':list(dict.fromkeys(gaps)),'source_issues':issues,'archive_records':archive_records,
        'documents':documents or [],'scenario':None,'rule_version':RULE_VERSION,'template_version':TEMPLATE_VERSION,
        'xplan_screening':xplan_screening or {'category':'needs_verification','tags':['needs_verification'],'queue_eligible':True,'warnings':['XPlan טרם נבדק']},
        'policy_source':POLICY_URL,'created_at':utcnow(),'building_source':building['_source'],
@@ -120,6 +153,7 @@ class Collector:
                 pairs=[(p['properties']['GUSH_NUM'],p['properties']['PARCEL']) for _,p in matches]
                 archive_payloads=self.store.archive_files_for_parcels(pairs) if pairs else []
                 xplan=resolve_with_archive(xplan,archive_payloads,archive_designation)
+                if screener:xplan['snapshot_created_at']=screener.snapshot.get('created_at')
                 if 'archive_resolved_995' in xplan['tags']:result['archive_resolved_995']=result.get('archive_resolved_995',0)+1
                 result.setdefault('xplan_categories',{})[xplan['category']]=result.setdefault('xplan_categories',{}).get(xplan['category'],0)+1
                 if not xplan['queue_eligible']:

@@ -98,7 +98,10 @@ def to_fields(key):
     # מסלול מגרשים: חלקה אחת. מספר המבנים נספר בשכבה העירונית.
     f['scope_parcels'] = _ev(1, 'govmap_parcels', at, certainty='derived',
                              method='סריקת חלקה בודדת; צמדים אינם בהיקף הבטא')
-    f['scope_buildings'] = _ev(surv.get('buildings'), 'agol_buildings', at)
+    # survivors_apt.json has no building count; build_layer_a.py writes it to survivors.json as nb.
+    nb = {x['key']: x for x in _load('survivors.json')}.get(key, {}).get('nb')
+    f['scope_buildings'] = _ev(nb, 'agol_buildings', at,
+                               method='מבנים מהשכבה העירונית בתוך החלקה')
 
     # ── שערי הארכיון. 84 תיקים מול 700 — היעדר נתון אינו "עבר" ──
     reqs = _archive(key)

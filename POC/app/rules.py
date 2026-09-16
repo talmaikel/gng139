@@ -69,6 +69,21 @@ def evaluate(fields,filters):
         checks.append({'id':'filter_'+key,'label':'תנאי חובה: '+key,'status':status})
     return checks
 
+# Six building-level threshold conditions, as in the Hashoshanim dossier. Planning checks
+# (planning lot, basis, overriding plans) stay visible as gaps but no longer gate "eligible".
+CORE_CHECK_IDS=('residential_zoning','residential_share','permit_date','strengthened','floors','units')
+
+def core_eligibility(checks):
+    """Eligibility from the six core conditions plus the user's own mandatory filters."""
+    gating=[x for x in checks if x['id'] in CORE_CHECK_IDS or x['id'].startswith('filter_')]
+    core=[x for x in checks if x['id'] in CORE_CHECK_IDS]
+    passed=sum(x['status']=='passed' for x in core)
+    # Scope is not a threshold condition, but 3+ parcels/buildings still means the compound track.
+    status=eligibility_status(gating)
+    if status!='ineligible' and any(x['id'].startswith('scope_') and x['status']=='routed' for x in checks):status='urban_renewal_compound'
+    return status,{'passed_count':passed,'total_core_checks':len(CORE_CHECK_IDS),
+        'core_passed':passed==len(CORE_CHECK_IDS)}
+
 def eligibility_status(checks):
     if any(x['status']=='failed' for x in checks):return 'ineligible'
     if any(x['status']=='routed' for x in checks):return 'urban_renewal_compound'

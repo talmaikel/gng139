@@ -89,3 +89,28 @@ def test_feature_batches_are_complete_and_bounded():
     client=Stub();rows,_=XPlanCatalog(client)._features(4,list(range(1001)))
     # Batches stay small so the encoded query URL remains under the ~2100-char limit the XPlan front end enforces.
     assert len(rows)==1001 and client.sizes==[150]*6+[101]
+
+def test_core_eligibility_ignores_planning_checks_but_keeps_user_filters():
+    from app.rules import core_eligibility
+    src={'url':'https://example.org','retrieved_at':utcnow()}
+    ok=lambda v:evidence(v,src,'official','page 3','test')
+    fields={'residential_zoning':ok(True),'residential_share':ok(.9),'permit_date':ok('1970-01-01'),
+            'strengthened':ok(False),'floors':ok(3),'units':ok(6)}
+    status,summary=core_eligibility(evaluate(fields,{}))
+    assert status=='eligible' and summary['passed_count']==6 and summary['core_passed']
+    assert core_eligibility(evaluate(fields,{'max_units':4}))[0]=='ineligible'
+    fields['scope_buildings']=ok(3)
+    assert core_eligibility(evaluate(fields,{}))[0]=='urban_renewal_compound'
+    del fields['scope_buildings']
+    del fields['units']
+    assert core_eligibility(evaluate(fields,{}))==('needs_verification',{'passed_count':5,'total_core_checks':6,'core_passed':False})
+
+def test_xplan_zoning_evidence_is_usable_only_when_decisive():
+    from app.collector import xplan_zoning
+    from app.rules import usable
+    snap=snapshot([land(10)])
+    residential=combine_screenings([XPlanScreen(snap).screen(parcel())],1,1);residential['snapshot_created_at']=snap['created_at']
+    field=xplan_zoning(residential)
+    assert field['value'] is True and usable(field)
+    partial=combine_screenings([XPlanScreen(snapshot([land(10,geometry=box(0,0,5,10))])).screen(parcel())],1,1)
+    assert xplan_zoning(partial)['value'] is None
