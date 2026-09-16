@@ -175,6 +175,11 @@ def pdf(d: dict[str, Any]) -> bytes:
                  else (0.12, 0.37, 0.33), gap=4)
         # ‏W2 · הזכויות לפי המדיניות מול 400%, ומה נדרש כדי להיות כלכלי.
         _pdf_rights_comparison(econ, d["rights"], line)
+        # ‏W3 · איך מחושבים ההיטל, האומדן, הטווח והתקרה — אותן פסקאות כמו במסך ובאקסל.
+        if (econ.get("betterment") or {}).get("explain"):
+            line("איך מחושב היטל ההשבחה", 10, (0.06, 0.15, 0.12), gap=3)
+            for para in econ["betterment"]["explain"]:
+                line(f'{para["title"]}: {para["text"]}', 8.5, (0.25, 0.24, 0.22), gap=3, indent=6)
         # ‏B8 · הסייגים נוסעים עם הרווח. פרק הזכויות כתב ״התקרה מנופחת״,
         # והתרחיש מתחתיו הציג רווח בלי מילה.
         if econ.get("caveats"):
@@ -495,6 +500,14 @@ def excel(d: dict[str, Any]) -> bytes:
             sc.merge_range(tail + n, 0, tail + n, 4, text, note)
             sc.set_row(tail + n, 30)
         tail += len(lines) + 2
+
+    # ‏W3 · איך מחושב היטל ההשבחה, אותן פסקאות כמו במסך וב-PDF.
+    if (econ.get("betterment") or {}).get("explain"):
+        sc.merge_range(tail, 0, tail, 4, "איך מחושב היטל ההשבחה", head)
+        for n, para in enumerate(econ["betterment"]["explain"], 1):
+            sc.merge_range(tail + n, 0, tail + n, 4, f'{para["title"]}: {para["text"]}', note)
+            sc.set_row(tail + n, 60)
+        tail += len(econ["betterment"]["explain"]) + 2
 
     # ‏B15 · התמהיל שהיזם חישב, אותו משפט כמו במסך וב-PDF.
     if (econ.get("unit_mix") or {}).get("summary"):

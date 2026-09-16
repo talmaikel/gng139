@@ -1184,3 +1184,34 @@ async def test_profit_after_levy_meets_16_exactly_when_the_estimate_is_under_the
     cells = _cells(exports.excel(d))
     from tests.test_exports import _evaluate_sheet
     assert _evaluate_sheet(d)["profit"] == pytest.approx(after["profit_ils"], abs=5)
+
+
+# ── W3 · הסבר היטל ההשבחה ──
+
+@pytest.mark.asyncio
+async def test_the_dossier_explains_the_levy_with_its_own_numbers(session):
+    """נקודות 9 ו-13: הסבר מובן איך מחושבים ההיטל, האומדן, הטווח והתקרה."""
+    from app.cities.herzliya import exports
+    from app.cities.herzliya.surfaces import _cells
+
+    c, opp = await _with_resolved_inputs(session, "9697")
+    opp.existing_units = 10
+    await session.flush()
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    b = d["economics"]["betterment"]
+    ids = [p["id"] for p in b["explain"]]
+    assert ids == ["what", "estimate", "range", "ceiling", "category"]
+    text = {p["id"]: p["text"] for p in b["explain"]}
+    assert "25%" in text["what"] and "שומה" in text["what"]
+    # המספרים של החלקה, לא נוסח כללי
+    assert f"{b['levy']['estimate_ils'] / 1e6:,.1f} מיליון" in text["estimate"]
+    assert f"{b['levy']['low_ils'] / 1e6:,.1f} מיליון" in text["range"]
+    assert f"{b['levy']['viable_up_to_ils'] / 1e6:,.1f} מיליון" in text["ceiling"]
+    strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
+    assert any(text["ceiling"] in s_ for s_ in strings)
+
+    # בלי מחירי יד שנייה — אומרים למה אין אומדן, ולא ממציאים
+    c2, _, opp2 = await _delivered(session, block="9698")
+    b2 = (await build(session, HerzliyaCityRules(), opp2.id, c2.id))["economics"]["betterment"]
+    assert [p["id"] for p in b2["explain"]][:2] == ["what", "estimate"]
+    assert b2["explain"][1]["title"] == "למה אין אומדן"

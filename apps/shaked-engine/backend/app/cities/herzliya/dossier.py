@@ -594,9 +594,14 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     else:
         category = MARGINAL
 
+    explain = _levy_explanation(rate, target, band, estimate, threshold, per_right, category,
+                                existing_area, existing_price, live, result, cap)
     return {
         "rate": rate,
         "levy": band,
+        # ‏W3 · נקודות 9 ו-13: איך מחושבים ההיטל, האומדן, הטווח והתקרה — במילים
+        # ועם המספרים של החלקה. נכתב פעם אחת בשרת, כמו `summary`.
+        "explain": explain,
         # ‏B13 · המשפט שמחליף את ״היטל השבחה: 0 ₪״ — **נכתב פעם אחת, בשרת.**
         # ה-PDF, האקסל והמסך מדפיסים אותו כמו שהוא, כמו `not_delivered_reason`,
         # ולכן הניסוח אינו יכול להיות שונה בין המשטחים.
@@ -638,6 +643,62 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
                            "מחיר מכירה למ״ר": live["sale_price"]["resolved"]}.items()
             if not v),
     }
+
+
+def _levy_explanation(rate, target, band, estimate, threshold, per_right, category,
+                      existing_area, existing_price, live, result, area) -> list[dict[str, str]]:
+    """חמש פסקאות: מה ההיטל, איך האומדן, למה טווח, מה התקרה, מה הקטגוריה."""
+    m = _millions
+    out = [{"id": "what", "title": "מה זה היטל השבחה",
+            "text": (f"היטל השבחה הוא {rate:.0%} מההשבחה — עליית שווי הקרקע בזכות התכנית — בחלופת "
+                     "שקד (סעיף 19(ב)(10א) לתוספת השלישית; ברירת המחדל בחוק היא מחצית). הוא משולם "
+                     "במימוש, כלומר בהיתר, ואת הסכום הסופי קובעת שומה של הוועדה המקומית. מה שבתיק הוא "
+                     "אומדן ולא שומה.")}]
+    if estimate is not None and result is not None:
+        after, before = estimate.after_ils, estimate.before_ils
+        non_land = result.total_cost_ils - result.land_cost_ils
+        count = live["existing_price"].get("comparable_count")
+        out.append({"id": "estimate", "title": "איך מחושב האומדן",
+                    "text": (f"שיטת היזם: השבחה = שווי הזכויות החדשות פחות שווי המצב הקיים. "
+                             f"שווי הזכויות הוא שווי הקרקע השיורי — מה שנשאר מההכנסות ({m(result.total_revenue_ils)}) "
+                             f"אחרי רווח יזמי של {target:.0%} ואחרי כל העלויות שאינן קרקע ({m(non_land)}): "
+                             f"{m(after)}, כ-{after / area:,.0f} ₪ למ״ר זכויות על {area:,.0f} מ״ר. "
+                             f"שווי המצב הקיים הוא השטח הבנוי הקיים ({existing_area:,.0f} מ״ר, אומדן) כפול "
+                             f"חציון מחיר מ״ר של דירות יד שנייה ליד החלקה ({existing_price:,.0f} ₪"
+                             + (f", {count} עסקאות" if count else "") + f"): {m(before)}. "
+                             f"ההשבחה {m(max(estimate.betterment_ils, 0))}, וההיטל {rate:.0%} ממנה: "
+                             f"כ-{m(band['estimate_ils'])}.")})
+        out.append({"id": "range", "title": "למה יש טווח",
+                    "text": (f"שווי הקרקע השיורי רגיש: שינוי של 10% בו מזיז את ההיטל בין {m(band['low_ils'])} "
+                             f"ל-{m(band['high_ils'])}. ההיטל הוא הפרש בין שני מספרים גדולים, ולכן הוא זז "
+                             "הרבה יותר מהשווי שהזיז אותו. הרווח שבכותרת מחושב על האמצע, והטווח שלו מוצג לידו.")})
+    else:
+        out.append({"id": "estimate", "title": "למה אין אומדן",
+                    "text": ("אין מספיק עסקאות יד שנייה ליד החלקה כדי לאמוד את שווי המצב הקיים, ובלעדיו "
+                             "אי אפשר לחשב השבחה בלי להמציא מספר. לכן מוצגת רק התקרה — והרווח בכותרת "
+                             "הוא לפני היטל.")})
+    if threshold:
+        out.append({"id": "ceiling", "title": "מה התקרה",
+                    "text": (f"התקרה היא ההיטל הגבוה ביותר שעדיין משאיר רווח יזמי של {target:.0%}: "
+                             f"{m(band['viable_up_to_ils'])}. כל שקל היטל מוסיף לעלות גם את המימון עליו, "
+                             f"ולכן מעל התקרה הרווח יורד מתחת ל-{target:.0%}"
+                             + (" — והאומדן " + ("מתחת לה." if band.get("estimate_ils") is not None
+                                                 and band["estimate_ils"] <= band["viable_up_to_ils"]
+                                                 else "מעליה.")
+                                if band.get("estimate_ils") is not None else ".")
+                             + " התקרה אינה תלויה באומדן, ולכן היא נכונה גם כשהאומדן טועה.")})
+    else:
+        out.append({"id": "ceiling", "title": "למה אין תקרה",
+                    "text": (f"הפרויקט אינו מגיע לרווח יזמי של {target:.0%} גם בלי היטל, ולכן אין היטל "
+                             "שעדיין משאיר אותו כדאי. הבעיה אינה ההיטל.")})
+    out.append({"id": "category", "title": "מה אומרת הקטגוריה",
+                "text": (("התקרה מתורגמת לשווי מ״ר זכויות — המספר שיזם מכיר מהשוק: "
+                          f"{per_right:,.0f} ₪ למ״ר. " if per_right else "")
+                         + f"מעל {MARGINAL_LAND_VALUE_ILS:,.0f} ₪ למ״ר זכויות הפרויקט ״עמיד״ — ההשבחה צריכה "
+                         "להיות גבוהה במיוחד כדי להוריד אותו מתחת למזערי; מתחת לזה הוא ״גבולי״ — ההשבחה "
+                         "תכריע. בלי מחיר דירה קיימת או שטח קיים הוא ״לא דורג״. "
+                         f"כאן: {_CATEGORY_SHORT[category]}.")})
+    return out
 
 
 def _profit_verdict(result, target: float, after_levy: bool = False) -> str:

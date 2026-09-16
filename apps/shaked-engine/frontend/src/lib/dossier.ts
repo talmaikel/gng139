@@ -83,3 +83,6 @@ export type PolicyDossier = Dossier & {
     rights_verdict?: RightsVerdict;
   };
 };
+
+/** ‏W3 · פסקה אחת בהסבר ההיטל: מה ההיטל, האומדן, הטווח, התקרה, הקטגוריה. */
+export interface LevyExplainParagraph { id: string; title: string; text: string }

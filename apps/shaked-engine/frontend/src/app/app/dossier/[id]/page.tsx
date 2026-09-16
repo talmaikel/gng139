@@ -12,7 +12,7 @@ import type { Tone } from "@/lib/labels";
 import { IconFile, IconSheet } from "@/components/brand/icons";
 import { assumptionBadge, gateBadge, PageHeader, Section, Stat, StatStrip, StatusBadge } from "@/components/brand/ui";
 import { GlossaryContext, Term, WithTerm } from "@/components/Term";
-import type { PolicyArea, PolicyDossier, RightsVerdict, ScenarioCard } from "@/lib/dossier";
+import type { LevyExplainParagraph, PolicyArea, PolicyDossier, RightsVerdict, ScenarioCard } from "@/lib/dossier";
 
 const CITY = "herzliya";
 
@@ -123,6 +123,23 @@ function BettermentBlock({ b }: { b: Betterment }) {
         )}
       </Group>
       <Text size="sm" c="dimmed" mt={6}>{b.note}</Text>
+      {/* ‏W3 · נקודות 9 ו-13: איך מחושבים ההיטל, האומדן, הטווח והתקרה. הפסקאות מהשרת,
+          עם המספרים של החלקה — אותו נוסח ב-PDF ובאקסל. */}
+      {!!(b as Betterment & { explain?: LevyExplainParagraph[] }).explain?.length && (
+        <Accordion variant="contained" mt="sm" radius="sm">
+          <Accordion.Item value="levy-explain">
+            <Accordion.Control><Text size="sm" fw={600}>איך מחושב היטל ההשבחה</Text></Accordion.Control>
+            <Accordion.Panel>
+              {(b as Betterment & { explain: LevyExplainParagraph[] }).explain.map((p) => (
+                <div key={p.id} style={{ marginBottom: ".6rem" }}>
+                  <Text size="sm" fw={600}>{p.title}</Text>
+                  <Text size="sm">{p.text}</Text>
+                </div>
+              ))}
+            </Accordion.Panel>
+          </Accordion.Item>
+        </Accordion>
+      )}
       {b.estimate_withheld_because && (
         <Text size="sm" c="dimmed" mt={4}>אין אומדן להיטל: {b.estimate_withheld_because}</Text>
       )}
