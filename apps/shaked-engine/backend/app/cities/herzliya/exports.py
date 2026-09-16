@@ -168,6 +168,10 @@ def pdf(d: dict[str, Any]) -> bytes:
             if key == "betterment_levy_ils" and (econ.get("betterment") or {}).get("summary"):
                 # ‏W2 · האומדן בתוך הרווח, והמשפט אומר שזה אומדן ומה התקרה.
                 line(econ["betterment"]["summary"], 8.5, (0.54, 0.38, 0.00), gap=2, indent=10)
+                # ‏W3 · התרגיל מוצג מיד מתחת לשורת ההיטל, לא רק בפרק ההסבר.
+                if econ["betterment"].get("calculation"):
+                    line(econ["betterment"]["calculation"], 8.5, (0.25, 0.24, 0.22),
+                         gap=3, indent=10)
         line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪  ·  '
              f'{s["profit_margin_on_cost_ratio"]:.0%} על העלות', 11, (0.06, 0.15, 0.12), gap=5)
         if econ.get("profit_verdict"):
@@ -493,6 +497,7 @@ def excel(d: dict[str, Any]) -> bytes:
     lines = ([econ["profit_verdict"]] if econ.get("profit_verdict") else []) + \
             ([econ["rights_verdict"]["text"]] if (econ.get("rights_verdict") or {}).get("text") else []) + \
             ([econ["betterment"]["summary"]] if (econ.get("betterment") or {}).get("summary") else []) + \
+            ([econ["betterment"]["calculation"]] if (econ.get("betterment") or {}).get("calculation") else []) + \
             [cav["text"] for cav in econ.get("caveats") or []]
     if lines:
         sc.merge_range(tail, 0, tail, 4, "על מה הרווח נשען", head)
