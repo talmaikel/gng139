@@ -184,7 +184,9 @@ async def prepare_unit_mix(
         raise UnitMixUnavailable("חסרים מספר דירות קיים או שטח מגרש.")
 
     assessment = _assessment(opportunity)
-    buildable = assessment.get("cap_400_sqm")
+    # W2: the same area the dossier runs on -- the policy-allowed area, and the
+    # 400% cap only where no policy area could be computed.
+    buildable = assessment.get("policy_area_sqm") or assessment.get("cap_400_sqm")
     if not buildable or buildable <= 0:
         raise UnitMixUnavailable("אין תקרת זכויות מבוססת לחלקה.")
 

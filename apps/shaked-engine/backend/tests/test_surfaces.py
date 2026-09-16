@@ -82,7 +82,7 @@ async def test_a_pdf_that_prints_a_different_profit_is_caught(session):
 async def test_a_betterment_base_that_differs_is_caught_and_a_blank_one_is_not(session):
     """‏B13 הופך את התא לריק. ריק אינו סתירה — אקסל מחשב אותו כ-0, כמו
     השרת. מספר אחר כן סתירה."""
-    d = await _dossier(session, "9664")
+    d = await _dossier(session, "9664", resolved=False)
     assert not d["economics"]["assumptions"]["betterment_base_ils"]["value"]
 
     claimed = copy.deepcopy(d)
@@ -139,7 +139,13 @@ async def test_the_spreadsheet_says_where_each_input_came_from(session):
     unit = _row(cells, "שטח דירה קיימת ממוצע")
     assert unit["D"] == ("s", "אומדן")                     # לוח חלקי — מוצג, לא מכריע
 
-    # ובסיס ההשבחה שאינו ידוע — תא ריק, וסטטוס שאומר את זה
+    # ‏W2 · בסיס ההשבחה הוא אומדן ההשבחה שנכנס לרווח, ומסומן ״אומדן״
+    base = _row(cells, "ההשבחה (שומה)")
+    assert base["B"] == ("n", pytest.approx(d["economics"]["after_levy"]["betterment_ils"]))
+    assert base["D"] == ("s", "אומדן")
+
+    # ובלי אומדן — תא ריק, וסטטוס שאומר את זה
+    cells = _cells(exports.excel(await _dossier(session, "9669", resolved=False)))
     base = _row(cells, "ההשבחה (שומה)")
     assert base["B"][0] == "blank"
     assert base["D"] == ("s", "חסר")
@@ -170,7 +176,16 @@ async def test_the_pdf_prints_the_ceiling_and_not_a_zero_levy(session):
     levy_lines = [ln for ln in lines if {"היטל", "השבחה"} <= _words(ln)]
     assert levy_lines, "אין שורת היטל ב-PDF"
     assert not any(ln.replace("₪", "").strip().startswith("0 ") or " 0 " in f" {ln} " for ln in levy_lines), levy_lines
-    assert any("ידוע" in _words(ln) and "נשמר" in _words(ln) for ln in levy_lines), levy_lines
+    # ‏W2 · עם אומדן — ההיטל בתוך הרווח, והמשפט אומר שהוא אומדן ומה התקרה
+    assert any("אומדן" in _words(ln) and "נשמר" in _words(ln) for ln in levy_lines), levy_lines
+
+    # ‏ובלי אומדן — בסיס לא ידוע: המשפט במקום ״0 ₪״, לא שורת אפס
+    unknown = await _dossier(session, "9670", resolved=False)
+    assert unknown["economics"]["after_levy"] is None
+    doc2 = pymupdf.open(stream=exports.pdf(unknown), filetype="pdf")
+    levy2 = [ln for page in doc2 for ln in page.get_text().splitlines() if {"היטל", "השבחה"} <= _words(ln)]
+    assert not any(" 0 " in f" {ln.replace('₪', ' ')} " for ln in levy2), levy2
+    assert any("ידוע" in _words(ln) for ln in levy2), levy2
 
     text = " ".join(lines)
     assert "נשען" in text                                   # כותרת הסייגים

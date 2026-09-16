@@ -18,8 +18,13 @@ from app.models.package import Balance
 from app.models.tenant import Company, User
 from app.services.deliveries import deliver
 
-SQUARE = ("MULTIPOLYGON(((34.8460000 32.1660000,34.8464000 32.1660000,"
-          "34.8464000 32.1663000,34.8460000 32.1663000,34.8460000 32.1660000)))")
+# ‏W2 · כ-66×55 מ׳: מעטפת שמכילה את תקרת ה-400% של החלקות כאן (8,000 מ״ר), כך
+# שבדיקות הרווח, הסף והאומדן רצות על אותו שטח כמו לפני שהתרחיש עבר למדיניות.
+SQUARE = ("MULTIPOLYGON(((34.8460000 32.1660000,34.8467000 32.1660000,"
+          "34.8467000 32.1665000,34.8460000 32.1665000,34.8460000 32.1660000)))")
+# כ-38×33 מ׳: המעטפת כמחצית מהתקרה — המדיניות היא המגבלה.
+SMALL_SQUARE = ("MULTIPOLYGON(((34.8460000 32.1660000,34.8464000 32.1660000,"
+                "34.8464000 32.1663000,34.8460000 32.1663000,34.8460000 32.1660000)))")
 
 READY = dict(residential_zoning=True, permit_date="1978-01-01", strengthened=False,
              occupied=False, post_2005_permit=False, floors=4, units=28,
@@ -458,6 +463,7 @@ async def test_running_b15_on_a_dossier_leaves_its_price_and_profit_alone(sessio
     rights_ = before["rights"]
     opp.metadata_json = {**(opp.metadata_json or {}), "assessment": {
         "cap_400_sqm": rights_["cap_400_sqm"],
+        "policy_area_sqm": rights_["policy_area"]["base"]["sqm"],
         "floors_low": (rights_.get("floors") or {}).get("low")}}
     await session.flush()
 
@@ -803,6 +809,20 @@ async def test_every_assumption_row_names_where_it_came_from(session):
     assert empty == []
 
 
+async def _small(session, block, **override):
+    """חלקה שהמעטפת שלה לפי המדיניות קטנה מתקרת ה-400%."""
+    from sqlalchemy import update
+    c, u = await _company(session)
+    opp = await _opportunity(session, block, **{**READY, **override})
+    await session.execute(update(Opportunity).where(Opportunity.id == opp.id)
+                          .values(geom=f"SRID=4326;{SMALL_SQUARE}"))
+    from app.cities.herzliya.assessments import refresh_one
+    await refresh_one(session, HerzliyaCityRules(), opp.id)
+    await deliver(session, opp.id, c.id, u.id,
+                  rules_version="herzliya-policy-2026-02", data_version="2026-09-13")
+    return c, opp
+
+
 async def _delivered_with(session, block, **override):
     c, u = await _company(session)
     opp = await _opportunity(session, block, **{**READY, **override})
@@ -1029,7 +1049,7 @@ async def test_the_dossier_says_how_much_of_the_cap_the_policy_allows(session):
     from app.cities.herzliya import exports
     from app.cities.herzliya.surfaces import _cells
 
-    c, opp = await _delivered_with(session, "9681", street_frontages=1)
+    c, opp = await _small(session, "9681", street_frontages=1)
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
     policy = d["rights"]["policy_area"]
     assert policy["certainty"] == "estimate" and policy["binding"] == "envelope"
@@ -1044,7 +1064,7 @@ async def test_the_dossier_says_how_much_of_the_cap_the_policy_allows(session):
     assert cav["policy_area_below_cap"] in strings
 
     # תקרה קטנה מהמעטפת: התקרה היא המגבלה, ואין סייג
-    c2, small = await _delivered_with(session, "9682", street_frontages=1)
+    c2, small = await _small(session, "9682", street_frontages=1)
     await session.execute(update(FieldEvidence)
                           .where(FieldEvidence.opportunity_id == small.id,
                                  FieldEvidence.field == "existing_area")
@@ -1064,3 +1084,153 @@ async def test_the_initiative_gate_says_what_was_not_checked(session):
     assert gate["status"] == "passed"                      # הארכיון נבדק, והמסירה לא נחסמת
     assert "בארכיון" in gate["label"]
     assert "החתמת דיירים" in gate["detail"] and "לא נבדקה" in gate["detail"]
+
+
+# ── W2 · הדוח הכלכלי על שטח המדיניות, רווח אחרי היטל, ותוספת הזכויות הנדרשת ──
+
+@pytest.mark.asyncio
+async def test_the_scenario_runs_on_the_policy_area_and_400_is_only_a_comparison(session):
+    """בועז, 16.09: *״אין להציג 400% כזכויות הניתנות למימוש בפועל, אלא כתקרה
+    תיאורטית בלבד. התוצאה הקובעת לדוח הכלכלי תהיה הקיבולת לפי המדיניות.״*"""
+    import pymupdf
+    from app.cities.herzliya import exports
+    from app.cities.herzliya.surfaces import _cells, compare
+
+    c, opp = await _small(session, "9690", street_frontages=1)
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    econ, policy = d["economics"], d["rights"]["policy_area"]
+    assert econ["area_basis"] == "policy"
+    assert econ["buildable_area_sqm"] == pytest.approx(policy["base"]["sqm"])
+    assert econ["scenarios"]["policy"]["area_sqm"] == pytest.approx(policy["base"]["sqm"])
+    assert econ["scenarios"]["cap_400"]["area_sqm"] == pytest.approx(d["rights"]["cap_400_sqm"])
+    # פחות שטח — פחות רווח; 400% הוא ״מה היה אילו״
+    assert (econ["scenarios"]["policy"]["profit_before_levy_ils"]
+            < econ["scenarios"]["cap_400"]["profit_before_levy_ils"])
+    assert econ["rights_verdict"]["case"] in {"A", "B", "C"}
+
+    xlsx, pdf = exports.excel(d), exports.pdf(d)
+    from tests.test_exports import _evaluate_sheet
+    assert _evaluate_sheet(d)["buildable"] == pytest.approx(policy["base"]["sqm"])
+    assert compare(d, xlsx, pdf) == []
+    import zipfile, io
+    assert "מדיניות מול 400%" in zipfile.ZipFile(io.BytesIO(xlsx)).read("xl/workbook.xml").decode()
+    from app.cities.herzliya.surfaces import _words
+    lines = [_words(ln) for page in pymupdf.open(stream=pdf, filetype="pdf") for ln in page.get_text().splitlines()]
+    assert any({"זכויות", "מדיניות", "הרצליה", "תקרת"} <= w for w in lines)
+    assert any({"בחוק", "זכות"} <= w for w in lines)
+    assert any({"השוואה", "המדיניות"} <= w for w in lines)
+
+
+@pytest.mark.asyncio
+async def test_rights_verdict_says_whether_more_rights_would_make_it_economic(session):
+    """‏A — כלכלי לפי המדיניות. ‏B — רק עם הגדלת זכויות, וכמה. ‏C — גם 400% לא מספיק."""
+    # A: המעטפת מכילה את התקרה, ו-10 דירות קיימות מעל 16%
+    ca, a_opp = await _delivered_with(session, "9691", street_frontages=1)
+    a_opp.existing_units = 10
+    await session.flush()
+    a = (await build(session, HerzliyaCityRules(), a_opp.id, ca.id))["economics"]["rights_verdict"]
+    assert a["case"] == "A" and "כלכלי לפי מדיניות הרצליה" in a["text"]
+
+    # B: אותה חלקה על מגרש קטן — המדיניות מתירה כמחצית מהתקרה
+    cb, b_opp = await _small(session, "9692", street_frontages=1)
+    b_opp.existing_units = 10
+    await session.flush()
+    d = await build(session, HerzliyaCityRules(), b_opp.id, cb.id)
+    b, econ = d["economics"]["rights_verdict"], d["economics"]
+    assert b["case"] == "B", b
+    policy_sqm, cap = d["rights"]["policy_area"]["base"]["sqm"], d["rights"]["cap_400_sqm"]
+    assert policy_sqm < b["required_area_sqm"] < cap * 0.99      # נפתר, לא ״כל התקרה״
+    assert b["required_addition_sqm"] == pytest.approx(b["required_area_sqm"] - policy_sqm)
+    assert "הגדלת זכויות" in b["text"]
+    assert not econ["scenario"]["meets_developer_target"]
+    assert econ["scenarios"]["cap_400"]["meets_target"]
+
+    # C: ‏28 דירות — מתחת ל-16% גם בתקרה
+    cc, c_opp = await _small(session, "9693", street_frontages=1)
+    cverdict = (await build(session, HerzliyaCityRules(), c_opp.id, cc.id))["economics"]["rights_verdict"]
+    assert cverdict["case"] == "C" and "הגדלת זכויות אינה פותרת" in cverdict["text"]
+
+    # D: בלי מספר קומות אין מעטפת. חלקה כזו אינה נמסרת, ולכן נבנית בלי מסירה.
+    from app.cities.herzliya.dossier import assemble
+    d_opp = await _opportunity(session, "9694", **{**READY, "street_width": None})
+    dverdict = (await assemble(session, HerzliyaCityRules(), d_opp, None))["economics"]["rights_verdict"]
+    assert dverdict["case"] == "D" and "לא חושב שטח לפי מדיניות הרצליה" in dverdict["text"]
+
+
+@pytest.mark.asyncio
+async def test_profit_after_levy_meets_16_exactly_when_the_estimate_is_under_the_ceiling(session):
+    """נקודה 7: ״רווח על העלות״ הוא אחרי היטל. האומדן נכנס לעלות כמו היטל
+    אמיתי, ולכן הרווח ≥16% בדיוק כשהאומדן מתחת לתקרה."""
+    from app.cities.herzliya import exports
+    from app.cities.herzliya.surfaces import _cells
+
+    c, opp = await _with_resolved_inputs(session, "9695")
+    opp.existing_units = 10
+    await session.flush()
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    econ = d["economics"]
+    after, levy = econ["after_levy"], econ["betterment"]["levy"]
+    assert after is not None and levy["estimate_ils"] is not None
+    assert econ["scenario"]["projected_profit_ils"] == pytest.approx(after["profit_ils"])
+    assert econ["scenario"]["betterment_levy_ils"] == pytest.approx(levy["estimate_ils"])
+    assert econ["before_levy"]["profit_ils"] > after["profit_ils"]
+    assert after["margin_low"] <= after["margin"] <= after["margin_high"]
+    if levy["viable_up_to_ils"]:
+        assert after["meets_target"] == (levy["estimate_ils"] <= levy["viable_up_to_ils"])
+    assert econ["profit_verdict"].endswith("אחרי אומדן היטל השבחה")
+
+    base = econ["assumptions"]["betterment_base_ils"]
+    assert base["status"] == "estimate" and base["value"] == pytest.approx(after["betterment_ils"])
+    cells = _cells(exports.excel(d))
+    from tests.test_exports import _evaluate_sheet
+    assert _evaluate_sheet(d)["profit"] == pytest.approx(after["profit_ils"], abs=5)
+
+
+# ── W3 · הסבר היטל ההשבחה ──
+
+@pytest.mark.asyncio
+async def test_the_dossier_explains_the_levy_with_its_own_numbers(session):
+    """נקודות 9 ו-13: הסבר מובן איך מחושבים ההיטל, האומדן, הטווח והתקרה."""
+    from app.cities.herzliya import exports
+    from app.cities.herzliya.surfaces import _cells
+
+    c, opp = await _with_resolved_inputs(session, "9697")
+    opp.existing_units = 10
+    await session.flush()
+    d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    b = d["economics"]["betterment"]
+    ids = [p["id"] for p in b["explain"]]
+    assert ids == ["what", "estimate", "range", "ceiling", "category"]
+    text = {p["id"]: p["text"] for p in b["explain"]}
+    assert "25%" in text["what"] and "שומה" in text["what"]
+    # המספרים של החלקה, לא נוסח כללי
+    assert f"{b['levy']['estimate_ils'] / 1e6:,.1f} מיליון" in text["estimate"]
+    assert f"{b['levy']['low_ils'] / 1e6:,.1f} מיליון" in text["range"]
+    assert f"{b['levy']['viable_up_to_ils'] / 1e6:,.1f} מיליון" in text["ceiling"]
+    strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
+    assert any(text["ceiling"] in s_ for s_ in strings)
+
+    # בלי מחירי יד שנייה — אומרים למה אין אומדן, ולא ממציאים
+    c2, _, opp2 = await _delivered(session, block="9698")
+    b2 = (await build(session, HerzliyaCityRules(), opp2.id, c2.id))["economics"]["betterment"]
+    assert [p["id"] for p in b2["explain"]][:2] == ["what", "estimate"]
+    assert b2["explain"][1]["title"] == "למה אין אומדן"
+
+
+@pytest.mark.asyncio
+async def test_every_cost_row_says_how_it_was_computed_and_where_its_input_came_from(session):
+    """נקודה 6: מאיפה הגיע כל מספר, ומה המשמעות של כל שורה."""
+    c, opp = await _with_resolved_inputs(session, "9699")
+    opp.existing_units = 10
+    await session.flush()
+    econ = (await build(session, HerzliyaCityRules(), opp.id, c.id))["economics"]
+    rows = {r["id"]: r for r in econ["cost_rows"]}
+    s = econ["scenario"]
+    assert rows["revenue"]["value_ils"] == pytest.approx(s["total_revenue_ils"])
+    assert rows["construction"]["value_ils"] == pytest.approx(-s["total_construction_cost_ils"])
+    assert rows["levy"]["value_ils"] == pytest.approx(-s["betterment_levy_ils"])
+    # סכום השורות הוא הרווח שבכותרת — הטבלה והמספר אינם יכולים להיפרד
+    assert sum(r["value_ils"] for r in econ["cost_rows"]) == pytest.approx(s["projected_profit_ils"], abs=2)
+    assert all(r["formula"] and r["explain"] and r["source"] for r in econ["cost_rows"])
+    assert "17 עסקאות" in rows["revenue"]["source"]
+    assert econ["assumptions"]["sale_price_per_sqm_ils"]["unit_label"] == "₪ למ״ר"

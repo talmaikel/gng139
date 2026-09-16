@@ -73,6 +73,13 @@ MUTS = [
   ("cities/herzliya/rules.py", "התיק אינו מחשב שטח לפי מדיניות",
    'out["policy_area"] = policy.as_dict() if policy else {"why": policy_why}',
    'out["policy_area"] = {"why": policy_why}'),
+  # ‏W2 · הדוח הכלכלי על שטח המדיניות, ורווח אחרי היטל
+  ("cities/herzliya/dossier.py", "התרחיש חוזר לתקרת ה-400%",
+   "head = policy_run or cap_run", "head = cap_run"),
+  ("cities/herzliya/dossier.py", "אומדן ההיטל אינו נכנס לרווח",
+   "        result = mid\n", "        result = before\n"),
+  ("cities/herzliya/dossier.py", "תוספת הזכויות הנדרשת אינה נפתרת",
+   "    required = hi\n", "    required = cap\n"),
   # ‏A24 · קצב לשרתי הגרמושקות, ומשותף לכל התהליך
   ("sources/client.py", "הגרמושקות יורדות בלי קצב",
    '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),
