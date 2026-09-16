@@ -60,6 +60,7 @@ FIELD_LABEL = {
     "street_width": "רוחב הרחוב",
     "street_width_verified": "רוחב הרחוב נמדד בשיטה המאומתת",
     "street_narrow_frontages": "חזיתות צרות מ-8 מ׳",
+    "street_frontages": "מספר חזיתות לרחוב",
     "pilotis": "קומת עמודים",
     "registration_area": "אזור רישום",
     "in_tama70": 'בתחום תמ"א 70',
@@ -261,29 +262,25 @@ def _scenario_caveats(assessment: dict, fields: dict, live: dict,
         out.append({"id": "existing_area_estimate",
                     "text": f"השטח הבנוי הקיים, שעליו נשענת התקרה, הוא אומדן{how} ולא מדידה."})
 
-    # ‏**R1 · 15.09 · האם התקרה נכנסת בגובה המותר.** הדר 19: ‏9,776 מ״ר על
-    # מגרש של 1,108 מ״ר ב-7–8 קומות — כל קומה צריכה 110%–126% מהמגרש. אין
-    # במנוע בדיקת תכסית, והרווח מחושב על כל התקרה. זה חשבון בלבד (תקרה ÷
-    # קומות ÷ מגרש) ולא כלל מהמדיניות; הבדיקה מול התכסית המותרת היא #78.
-    cap, floors = assessment.get("cap_400_sqm"), assessment.get("floors") or {}
-    lot = _numeric(fields.get("parcel_area"))
-    high, low = floors.get("high"), floors.get("low")
-    if cap and lot and high:
-        plate_high = cap / high / lot
-        plate_low = cap / low / lot if low else plate_high
-        span = f"{low}–{high}" if low and low != high else f"{high}"
-        share = (f"{plate_high:.0%}" if abs(plate_low - plate_high) < 0.005
-                 else f"{plate_high:.0%}–{plate_low:.0%}")
-        if plate_high > 1:
-            out.append({"id": "floor_plate_exceeds_lot", "text": (
-                f"התקרה אינה נכנסת בגובה המותר: {cap:,.0f} מ״ר ב-{span} קומות הם {share} "
-                f"משטח המגרש ({lot:,.0f} מ״ר) בכל קומה. הזכויות בפועל נמוכות מהתקרה, "
-                "והרווח מחושב על שטח שכנראה לא ייבנה.")})
-        elif plate_high > 0.6:
-            out.append({"id": "floor_plate_tight", "text": (
-                f"כדי שהתקרה תיכנס ב-{span} קומות, כל קומה צריכה {share} משטח המגרש "
-                f"({cap / high:,.0f} מ״ר ומעלה). עם קווי בניין ותכסית מותרת ייתכן שהתקרה "
-                "אינה נכנסת, והרווח מחושב על כולה.")})
+    # ‏**W1 · 16.09 · כמה מהתקרה נכנס לפי המדיניות.** מחליף את סייג R1, שהיה חשבון
+    # בלבד (תקרה ÷ קומות ÷ מגרש) והשווה שטח קומה ל-100% מהמגרש — אבל קומה בתוך
+    # קווי הבניין היא כמחצית מהמגרש. ‏400% הוא תקרה בחוק ולא זכות (§70ב, מדיניות §2ה).
+    cap = assessment.get("cap_400_sqm")
+    policy = assessment.get("policy_area") or {}
+    low, high = policy.get("low"), policy.get("high")
+    if cap and low and high and (low.get("share_of_cap") or 1) < 0.995:
+        span = (f"{low['sqm']:,.0f}" if abs(high["sqm"] - low["sqm"]) < 50
+                else f"{low['sqm']:,.0f}–{high['sqm']:,.0f}")
+        share = (f"{low['share_of_cap']:.0%}" if abs(high["share_of_cap"] - low["share_of_cap"]) < 0.005
+                 else f"{low['share_of_cap']:.0%}–{high['share_of_cap']:.0%}")
+        out.append({"id": "policy_area_below_cap", "text": (
+            f"לפי מדיניות הרצליה נכנסים בתוך קווי הבניין והנסיגות רק כ-{span} מ״ר, {share} "
+            f"מתקרת ה-400% ({cap:,.0f} מ״ר). ‏400% הוא תקרה בחוק ולא זכות, והרווח כאן "
+            "מחושב על כל התקרה — ולכן הוא גבוה ממה שייבנה לפי המדיניות.")})
+    elif cap and policy.get("why"):
+        out.append({"id": "policy_area_unknown", "text": (
+            f"לא חושב כמה מתקרת ה-400% נכנס לפי מדיניות הרצליה: {policy['why']}. "
+            "הרווח מחושב על כל התקרה, שהיא תקרה בחוק ולא זכות.")})
 
     # ‏**הסייג אומר שהנתון אינו מוכרע, ולא רק מאיפה הוא בא.** הנוסח הקודם
     # צירף את תווית המקור, ובחלקה עם דירה אחת מאומתת מתוך 28 יצא

@@ -63,6 +63,16 @@ MUTS = [
   # ‏W4 · ״מכריע״ בתיק הוא אותו כלל שמכריע את השערים
   ("cities/herzliya/dossier.py", "״מכריע״ בתיק חוזר לבדוק ודאות בלבד",
    '"decides": usable(f, get_settings().source_max_age_days),', '"decides": f.get("certainty") in DECIDING,'),
+  # ‏W1 · השטח לפי מדיניות הרצליה, בתוך קווי הבניין
+  ("cities/herzliya/policy_envelope.py", "הנסיגות אינן מצטברות מהקומה שמתחת",
+   "[(1.0, s, 0.0), (1.0, 2 * s, s)]", "[(1.0, s, 0.0), (1.0, s, s)]"),
+  ("cities/herzliya/policy_envelope.py", "כל המעטפת נחשבת בנויה (בלי η)",
+   "v = ETA * sqm", "v = sqm"),
+  ("cities/herzliya/policy_envelope.py", "מגרש פינתי נבדק כחזית אחת",
+   "chosen = corner if frontages >= 2 else single", "chosen = single"),
+  ("cities/herzliya/rules.py", "התיק אינו מחשב שטח לפי מדיניות",
+   'out["policy_area"] = policy.as_dict() if policy else {"why": policy_why}',
+   'out["policy_area"] = {"why": policy_why}'),
   # ‏A24 · קצב לשרתי הגרמושקות, ומשותף לכל התהליך
   ("sources/client.py", "הגרמושקות יורדות בלי קצב",
    '"archive.gis-net.co.il": HostPolicy(min_interval_seconds=10.0),', ''),

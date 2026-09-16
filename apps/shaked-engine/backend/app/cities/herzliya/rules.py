@@ -1,12 +1,16 @@
+import json
 from typing import Any
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cities.base import BaseCityRules, UnificationResult
 from app.cities.herzliya.candidates import screen_herzliya_candidates
 from app.cities.herzliya.unification import check_unification
-from app.cities.herzliya import rights
+from app.cities.herzliya import policy_envelope, rights
 from app.cities.herzliya.xplan_schema import is_eligible_residential_code
+from app.geo import itm
+from app.models.opportunity import Opportunity
 from app.services.evidence_store import deciding, fields_for, stale_fields
 
 # Herzliya's minimum combined plot area for a "Shaked Alternative" urban-renewal lot.
@@ -69,6 +73,17 @@ class HerzliyaCityRules(BaseCityRules):
             "notes": list(r.notes),
             "stale_fields": stale_fields(f),
         }
+
+        # ‏W1 · כמה מהתקרה נכנס בפועל לפי המדיניות. 400% הוא תקרה בחוק ולא זכות,
+        # ובלי זה התיק חישב רווח על שטח שלא ייבנה.
+        geo = (await session.execute(select(func.ST_AsGeoJSON(Opportunity.geom))
+                                     .where(Opportunity.id == opportunity_id))).scalar_one_or_none()
+        policy, policy_why = policy_envelope.compute(
+            itm(json.loads(geo)) if geo else None,
+            plot_sqm=(f.get("parcel_area") or {}).get("value"),
+            floors_low=r.floors_low, floors_high=r.floors_high, cap_400_sqm=cap,
+            frontages=(f.get("street_frontages") or {}).get("value"))
+        out["policy_area"] = policy.as_dict() if policy else {"why": policy_why}
 
         units = d.get("units")
         if units:

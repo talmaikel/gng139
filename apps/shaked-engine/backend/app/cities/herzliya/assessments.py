@@ -43,6 +43,9 @@ async def _store(opp, a) -> None:
             "floors_certain": f["certain"], "case_by_case": f["case_by_case"],
             "cap_400_sqm": a["cap_400_sqm"],
             "cap_400_certainty": a["cap_400_certainty"],
+            # ‏W1 · השטח לפי המדיניות, לסינון ולמיון בלי לחשב מעטפת לכל בקשה.
+            "policy_area_sqm": ((a.get("policy_area") or {}).get("base") or {}).get("sqm"),
+            "policy_share_of_cap": ((a.get("policy_area") or {}).get("base") or {}).get("share_of_cap"),
             "blocking": sorted({c["id"] for c in a["checks"]
                                 if c["status"] in ("failed", "unknown", "routed")}),
             "threshold_open": opens,
