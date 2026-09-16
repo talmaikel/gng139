@@ -617,6 +617,8 @@ export interface Betterment {
     land_value_per_right_ils: number; notes: string[];
   } | null;
   estimate_withheld_because: string | null;
+  /** ‏W3 · תרגיל ההיטל עם המספרים של החלקה, להצגה מתחת לשורת ההיטל. */
+  calculation: string | null;
   breakeven_ils: number | null;
   breakeven_per_added_sqm_ils: number | null;
   breakeven_land_value_per_right_ils: number | null;
