@@ -621,6 +621,14 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     return {
         "rate": rate,
         "levy": band,
+        # ‏W3 · התרגיל שהיזם ביקש לראות מתחת לשורת ההיטל, עם מספרי החלקה.
+        "calculation": (
+            None if estimate is None else
+            f"שווי מצב חדש {estimate.after_ils:,.0f} ₪ − "
+            f"שווי מצב קיים {estimate.before_ils:,.0f} ₪ = "
+            f"השבחה {max(estimate.betterment_ils, 0):,.0f} ₪ × {rate:.0%} = "
+            f"היטל {band['estimate_ils']:,.0f} ₪ (אומדן)"
+        ),
         # ‏W3 · נקודות 9 ו-13: איך מחושבים ההיטל, האומדן, הטווח והתקרה — במילים
         # ועם המספרים של החלקה. נכתב פעם אחת בשרת, כמו `summary`.
         "explain": explain,
