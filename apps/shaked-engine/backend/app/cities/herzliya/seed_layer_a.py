@@ -134,6 +134,13 @@ def width_verified(front) -> bool:
     return "width_v1" in front and front.get("width") is not None
 
 
+def street_frontages(front):
+    """מספר החזיתות לרחוב. ‏None כשלא נמצאה חזית — ״לא ידוע״, לא ״אפס״."""
+    if not front.get("has_street"):
+        return None
+    return len(front.get("frontages") or []) or None
+
+
 def street_width(front):
     """רוחב v2, ואם הוא לא מצא חזית — רוחב v1, כדי שהחלקה לא תיעלם מהסינון.
 
@@ -203,6 +210,10 @@ def _rows(key, surv, front, geo, sources, archive):
            "פער קדסטרלי עד החלקה הבנויה שממול, החזית הצרה קובעת; 27 מ-29 חזיתות "
            "שנמדדו ביד בתוך ±1 מ׳; אמין עד 12 מ׳" if width_verified(front) else
            "האלגוריתם החדש לא מצא חזית — רוחב האלגוריתם הקודם, שהגזים עקבית; לא מאומת"),
+        # ‏W1 · שתי חזיתות ומעלה = מגרש פינתי: שתי חזיתות עם קו קדמי ונסיגות.
+        ev("street_frontages", street_frontages(front), "govmap_parcels",
+           f"{at} · חזיתות לרחוב", Certainty.DERIVED,
+           "מספר החזיתות לרחוב ב-frontages_v2; שתיים ומעלה = מגרש פינתי"),
         ev("pilotis", surv.get("pilotis"), "agol_addresses", f"{at} · amudim"),
         ev("registration_area", geo.get("registration_area"), "strategic_plan",
            f"{at} · אזורי רישום", Certainty.DERIVED, "אזור הרישום שמכיל את מרכז החלקה"),

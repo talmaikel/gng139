@@ -1022,24 +1022,36 @@ async def test_a_parcel_in_a_priced_block_uses_the_block_price_on_every_surface(
 # ── R1 · מה שהביקורת על אלוף יגאל אלון 40 והדר 19 מצאה ──
 
 @pytest.mark.asyncio
-async def test_a_ceiling_that_cannot_fit_in_the_allowed_floors_is_said(session):
-    """הדר 19: ‏9,776 מ״ר ב-7–8 קומות על מגרש של 1,108 מ״ר — ‏110%–126%
-    מהמגרש בכל קומה. הרווח חושב על כל התקרה, ואף משטח לא אמר את זה."""
+async def test_the_dossier_says_how_much_of_the_cap_the_policy_allows(session):
+    """‏W1 · מחליף את סייג R1. ‏400% הוא תקרה בחוק ולא זכות: בתוך קווי הבניין
+    והנסיגות של המדיניות נכנס רק חלק ממנה, והתיק אומר כמה — בכל משטח."""
+    from sqlalchemy import update
     from app.cities.herzliya import exports
     from app.cities.herzliya.surfaces import _cells
 
-    c, opp = await _delivered_with(session, "9681", parcel_area=700.0)
+    c, opp = await _delivered_with(session, "9681", street_frontages=1)
     d = await build(session, HerzliyaCityRules(), opp.id, c.id)
+    policy = d["rights"]["policy_area"]
+    assert policy["certainty"] == "estimate" and policy["binding"] == "envelope"
+    assert policy["cap_400_sqm"] == d["rights"]["cap_400_sqm"]
+    assert 0 < policy["low"]["sqm"] <= policy["base"]["sqm"] <= policy["high"]["sqm"] < policy["cap_400_sqm"]
+    assert policy["base"]["gap_sqm"] == pytest.approx(policy["cap_400_sqm"] - policy["base"]["sqm"], abs=0.2)
+    assert any("קווי בניין" in x for x in policy["limits"])
     cav = {x["id"]: x["text"] for x in d["economics"]["caveats"]}
-    assert "floor_plate_exceeds_lot" in cav
-    assert "אינה נכנסת בגובה המותר" in cav["floor_plate_exceeds_lot"]
-    assert "700 מ״ר" in cav["floor_plate_exceeds_lot"]
+    assert "policy_area_below_cap" in cav
+    assert "תקרה בחוק ולא זכות" in cav["policy_area_below_cap"]
     strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
-    assert cav["floor_plate_exceeds_lot"] in strings
+    assert cav["policy_area_below_cap"] in strings
 
-    c2, roomy = await _delivered_with(session, "9682", parcel_area=5000.0)
-    ids = [x["id"] for x in (await build(session, HerzliyaCityRules(), roomy.id, c2.id))["economics"]["caveats"]]
-    assert not any(i.startswith("floor_plate") for i in ids)
+    # תקרה קטנה מהמעטפת: התקרה היא המגבלה, ואין סייג
+    c2, small = await _delivered_with(session, "9682", street_frontages=1)
+    await session.execute(update(FieldEvidence)
+                          .where(FieldEvidence.opportunity_id == small.id,
+                                 FieldEvidence.field == "existing_area")
+                          .values(value=300.0))
+    d2 = await build(session, HerzliyaCityRules(), small.id, c2.id)
+    assert d2["rights"]["policy_area"]["binding"] == "cap"
+    assert not any(x["id"].startswith("policy_area") for x in d2["economics"]["caveats"])
 
 
 @pytest.mark.asyncio
