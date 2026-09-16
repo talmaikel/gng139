@@ -87,11 +87,12 @@ def _fetched_rows(key: str, entry: dict | None) -> list[dict]:
     if not entry:
         return []
     at = datetime.fromisoformat(entry["retrieved_at"]) if entry.get("retrieved_at") else None
-    from app.cities.herzliya.archive_facts import ARCHIVE_FIELDS
+    from app.cities.herzliya.archive_facts import ARCHIVE_FIELDS, REQUEST_FIELDS, REQUEST_METHOD
     return [dict(field=field, value=value, certainty=Certainty.DERIVED.value,
                  source_url=entry["source_url"], retrieved_at=at,
                  source_updated_at=None, location=entry.get("location"),
-                 method=entry.get("method"))
+                 # שדה מדף הבקשה נושא את שיטתו; אחרת הזריעה הבאה תקרא אותו כעיוור
+                 method=REQUEST_METHOD if field in REQUEST_FIELDS else entry.get("method"))
             for field, value in (entry.get("fields") or {}).items()
             # שדה שפרש (W5) אינו חוזר דרך הקובץ
             if field in ARCHIVE_FIELDS
@@ -373,15 +374,20 @@ async def seed(limit=None):
             rows = _rows(key, surv[key], front.get(key, {}), g, sources, archive)
             rows += _fetched_rows(key, fetched.get(key))
 
-            from app.cities.herzliya.archive_facts import RETIRED_FIELDS
+            from app.cities.herzliya.archive_facts import REQUEST_FIELDS, REQUEST_METHOD
             from app.cities.herzliya.renewal import FIELD as RENEWAL_FIELD
             conditions = [FieldEvidence.source_url.not_like(f"%{ARCHIVE_HOST}%")]
-            # שדות שפרשו (W5) נמחקים גם כשמקורם בארכיון — אחרת ״עבר״ עיוור נשאר לתמיד
             rewriting = {r["field"] for r in rows
-                         if ARCHIVE_HOST in (r.get("source_url") or "")} | set(RETIRED_FIELDS)
+                         if ARCHIVE_HOST in (r.get("source_url") or "")}
             conditions.append(sa.and_(
                 FieldEvidence.source_url.like(f"%{ARCHIVE_HOST}%"),
                 FieldEvidence.field.in_(rewriting)))
+            # שורות עיוורות (W5): ‏`strengthened`/`occupied` שנגזרו מ״ארוע אחרון
+            # להצגה״ ולא מדף הבקשה — נמחקות, אחרת ״עבר״ עיוור נשאר לתמיד
+            conditions.append(sa.and_(
+                FieldEvidence.source_url.like(f"%{ARCHIVE_HOST}%"),
+                FieldEvidence.field.in_(REQUEST_FIELDS),
+                sa.or_(FieldEvidence.method.is_(None), FieldEvidence.method != REQUEST_METHOD)))
             await session.execute(
                 delete(FieldEvidence).where(
                     FieldEvidence.opportunity_id == opp_id, sa.or_(*conditions),

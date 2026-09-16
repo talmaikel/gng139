@@ -15,9 +15,19 @@
 הגשה · **ארוע אחרון להצגה** · שם המבקש · היתר · תאריך היתר · מסמכים. העמודה
 השלישית נקראה כאן ״תיאור הבקשה״, ו״תמ״א 38״ חופש בה — אבל היא הארוע
 **האחרון** (״מסירת היתר למבקש״), ולא מה הבקשה. לכן `strengthened` ו-`occupied`
-היו עיוורים: False כמעט תמיד, ועברו כ״לא נמצא״. הם אינם נגזרים מכאן עוד.
+היו עיוורים: False כמעט תמיד, ועברו כ״לא נמצא״. הם אינם נגזרים מעמוד התיק.
 ארוע שכן מזכיר תמ״א 38 או מייצג הוא סימן חיובי אמיתי, ונשמר כבוליאני
 (`tama38_event`, `representative_event`) — שם, לעולם לא.
+
+‏**16.09 · דף הבקשה עונה.** לכל בקשה יש דף משלה (`GetBakashaFile`), ובו
+״סוג הבקשה״ (״בקשה להיתר לתמ״א 38״), ״תיאור הבקשה״ (״תמ״א 38 - תוספת
+וחיזוק״), ״תאריך הפקת היתר״ ו״מהות הבקשה״. אלוף יגאל אלון 6: שתי בקשות
+תמ״א 38 עם היתרים מ-2013 ומ-2017 — מה שעמוד התיק הראה כ״מסירת היתר
+למבקש״. מכאן `strengthened` (בקשת תמ״א 38 שהופק לה היתר) ו-`occupied`
+(בקשת תמ״א 38 שלא הבשילה להיתר) חוזרים, הפעם על מקור שאומר את זה.
+נקראים רק דפי הבקשות מ-2005 ואילך — חיזוק מכוח היתר הוא מושג של תמ״א 38
+(אושרה 18.5.2005) — ורק עד תקרה; קריאה חלקית אומרת ״כן״ כשמצאה, ולעולם
+לא ״לא נמצא״. הדף נחתך לפני ״בעלי עניין״: השמות אינם נקראים.
 """
 import argparse
 import asyncio
@@ -27,7 +37,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 
 from app.cities.herzliya import renewal
 from app.cities.herzliya.archive_client import ArchiveBlocked, HerzliyaArchiveClient
@@ -47,6 +57,16 @@ MAX_SHORTLIST = 25          # לא סריקה. מעבר לזה — לעצור ו
 # כל תיקי החלקה נקראים (היה: הראשון בלבד — הרצוג 3 הוא 1546 **ו**-7351).
 # ‏700 המועמדים הם עד שלושה תיקים לחלקה; חלקה אחת בעיר יש לה 23.
 MAX_TIKS = 4
+
+# ── דף הבקשה ──
+DETAIL_FROM_YEAR = 2005        # תמ״א 38 אושרה ב-18.5.2005; בקשה ישנה יותר אינה חיזוק מכוחה
+MAX_REQUEST_PAGES = 15         # דף לבקשה, בקצב של 10 שניות — עד 2.5 דקות לחלקה
+TAMA_TYPE = re.compile(r'תמ["״]?א\s*38')
+INFO_ROW = re.compile(r'<td class="title"[^>]*>(.*?)</td>\s*<td[^>]*>(.*?)</td>', re.S)
+ESSENCE_START = 'id="mahut"'
+INTERESTED_PARTIES = 'id="baaley-inyan"'      # מכאן והלאה — שמות. לא נקרא.
+REQUEST_FIELDS = ("strengthened", "occupied")
+REQUEST_METHOD = "דף הבקשה: סוג הבקשה, תיאורה ותאריך הפקת ההיתר; בעלי העניין אינם נקראים"
 
 
 class ArchiveUnavailable(Exception):
@@ -107,6 +127,60 @@ def facts(requests: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def parse_request_page(page_html: str) -> dict[str, Any]:
+    """סוג, תיאור, היתר ומהות מדף בקשה. הדף נחתך לפני ״בעלי עניין״.
+
+    ‏`tama38` — הסיווג העירוני: סוג הבקשה או תיאורה. ‏`mentions` רחב יותר
+    (גם המהות) ומזין רק את סימן החידוש, כי תיקון תשריט ״בהתאם לתמ״א 38״
+    מעיד על בניין שחודש ולא על בקשת חיזוק.
+    """
+    head = page_html.split(INTERESTED_PARTIES, 1)[0]
+    info = {_text(k): _text(v) for k, v in INFO_ROW.findall(head)}
+    essence_html = head.split(ESSENCE_START, 1)[1] if ESSENCE_START in head else ""
+    essence = " ".join(_text(c) for c in CELL.findall(essence_html))
+    kind, desc = info.get("סוג הבקשה") or "", info.get("תיאור הבקשה") or ""
+    return {
+        "type": kind,
+        "description": desc,
+        "permit_date": info.get("תאריך הפקת היתר") or None,
+        "tama38": bool(TAMA_TYPE.search(kind) or STRENGTHENING.search(desc)),
+        "mentions": bool(STRENGTHENING.search(" ".join((kind, desc, essence)))),
+    }
+
+
+def request_facts(details: list[dict[str, Any]], complete: bool = True) -> dict[str, Any]:
+    """‏§70א(2) ו״יזם אחר בתמונה״ מדפי הבקשות שנקראו.
+
+    ‏`complete` — האם כל בקשות החלקה מ-2005 ואילך נקראו. אמת מקריאה חלקית
+    היא אמת; ״לא נמצא״ נאמר רק כשנקרא הכול.
+    """
+    tama = [d for d in details if d.get("tama38")]
+    permitted = [d for d in tama if d.get("permit_date")]
+    open_ = [d for d in tama if not d.get("permit_date")]
+
+    def verdict(found: bool) -> bool | None:
+        return True if found else (False if complete else None)
+
+    return {
+        "strengthened": verdict(bool(permitted)),
+        "occupied": verdict(bool(open_)),
+        "tama38_mention": any(d.get("mentions") for d in details),
+        "strengthening_permits": [(d.get("req"), d["permit_date"]) for d in permitted],
+        "open_tama_requests": [d.get("req") for d in open_],
+    }
+
+
+async def _request_details(client, reqs: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], bool]:
+    """דפי הבקשות מ-2005 ואילך, עד התקרה. מחזיר גם האם נקראו כולם."""
+    recent = sorted({int(r["req"]) for r in reqs
+                     if int(str(r["req"])[:4]) >= DETAIL_FROM_YEAR}, reverse=True)
+    details = []
+    for n in recent[:MAX_REQUEST_PAGES]:
+        page = await client.request(str(n))
+        details.append({**parse_request_page(page["html"]), "req": n})
+    return details, len(recent) <= MAX_REQUEST_PAGES
+
+
 def _post_2005(requests) -> bool:
     for r in requests:
         try:
@@ -153,6 +227,13 @@ async def enrich(session, opportunity_ids: list[UUID], client: HerzliyaArchiveCl
                 if len(tik_ids) > MAX_TIKS:
                     # לא נקרא הכול — ״אין היתר אחרי 2005״ אינו ידוע
                     f["post_2005_permit"] = f["post_2005_permit"] or None
+                details, all_read = await _request_details(client, reqs)
+                rf = request_facts(details, complete=all_read and len(tik_ids) <= MAX_TIKS)
+                f.update(strengthened=rf["strengthened"], occupied=rf["occupied"],
+                         tama38_event=f["tama38_event"] or rf["tama38_mention"],
+                         request_pages=len(details),
+                         strengthening_permits=rf["strengthening_permits"],
+                         open_tama_requests=rf["open_tama_requests"])
                 await _write(session, oid, f, pages[0], tik_ids[:MAX_TIKS], len(tik_ids))
                 await renewal.apply(session, opp)
                 result["fetched"] += 1
@@ -189,11 +270,18 @@ async def _write(session, oid: UUID, f: dict, page: dict, tik_ids: list[str],
     tiks = ", ".join(tik_ids)
     read = f" (נקראו {len(tik_ids)} מתוך {total})" if total and total > len(tik_ids) else ""
     loc = f'{"תיקים" if len(tik_ids) > 1 else "תיק"} {tiks}{read} · {f["n_requests"]} בקשות'
+    # מה שדף הבקשה קבע — מספרי בקשה ותאריכי היתר, לא שמות
+    found = [f"בקשת תמ״א 38 {n} · היתר {d}" for n, d in f.get("strengthening_permits") or []]
+    found += [f"בקשת תמ״א 38 {n} ללא היתר" for n in f.get("open_tama_requests") or []]
+    pages = f.get("request_pages")
+    req_loc = (loc + (f" · {pages} דפי בקשה" if pages is not None else "")
+               + (" · " + " · ".join(found) if found else ""))
 
-    # שורות עיוורות מהקריאה הקודמת — לא נכתבות עוד, ולכן גם לא נשארות
-    await session.execute(
-        delete(FieldEvidence).where(FieldEvidence.opportunity_id == oid,
-                                    FieldEvidence.field.in_(RETIRED_FIELDS)))
+    # שורות עיוורות (W5): ‏`strengthened`/`occupied` שנגזרו מ״ארוע אחרון להצגה״
+    # ולא מדף הבקשה. נמחקות תמיד — גם כשהקריאה הזו לא הכריעה.
+    await session.execute(delete(FieldEvidence).where(
+        FieldEvidence.opportunity_id == oid, FieldEvidence.field.in_(REQUEST_FIELDS),
+        or_(FieldEvidence.method.is_(None), FieldEvidence.method != REQUEST_METHOD)))
     for field in ARCHIVE_FIELDS:
         value = f.get(field)
         if value is None:
@@ -201,16 +289,20 @@ async def _write(session, oid: UUID, f: dict, page: dict, tik_ids: list[str],
         await session.execute(
             delete(FieldEvidence).where(FieldEvidence.opportunity_id == oid,
                                         FieldEvidence.field == field))
+        from_request = field in REQUEST_FIELDS
         session.add(FieldEvidence(
             opportunity_id=oid, field=field, value=value,
             certainty=Certainty.DERIVED.value, source_url=url, retrieved_at=when,
-            location=loc, method="שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא"))
+            location=req_loc if from_request else loc,
+            method=REQUEST_METHOD if from_request else
+            "שורות הבקשות בתיק הבניין; שם המבקש אינו נקרא"))
 
 
 # השערים שתיק הבניין יכול לענות עליהם. שער פתוח שאינו כאן — אין טעם
 # לפנות לארכיון בשבילו, וכל פנייה מיותרת היא בדיוק מה שהפעיל את ההגנה
-# ב-12.09. ‏`strengthened`/`occupied` יצאו (W5): העמוד אינו מציג תיאור בקשה.
-ARCHIVE_ANSWERS = frozenset({"permit_date", "post_2005_permit", "not_renewed"})
+# ב-12.09. ‏`strengthened`/`occupied` יצאו (W5) וחזרו ב-16.09 — מדף הבקשה.
+ARCHIVE_ANSWERS = frozenset({"permit_date", "post_2005_permit", "not_renewed",
+                             "strengthened", "occupied"})
 
 
 async def fetch_for_delivery(session, opportunity_id: UUID, client=None) -> bool:
@@ -268,9 +360,8 @@ FETCHED_FILE = "archive_fetched.json"
 # השדות שמקורם בתיק הבניין, וששווה לשמור בגיט. כולם **עובדות נגזרות** —
 # מותר לשמור אותן ללא הגבלה לפי `DATA_LAW.md`. ‏HTML גולמי, שמות מבקשים
 # וחתימות אינם כאן ולא יהיו.
-ARCHIVE_FIELDS = ("permit_date", "post_2005_permit", "tama38_event", "representative_event")
-# נגזרו מהארוע האחרון כאילו היה תיאור הבקשה (W5). נמחקים, לא נכתבים.
-RETIRED_FIELDS = ("strengthened", "occupied")
+ARCHIVE_FIELDS = ("permit_date", "post_2005_permit", "tama38_event", "representative_event",
+                  *REQUEST_FIELDS)
 
 
 async def export_fetched(session, city_code: str = "herzliya") -> dict:
@@ -297,7 +388,8 @@ async def export_fetched(session, city_code: str = "herzliya") -> dict:
         entry["fields"][ev.field] = ev.value
         entry.setdefault("source_url", ev.source_url)
         entry.setdefault("location", ev.location)
-        entry.setdefault("method", ev.method)
+        if ev.field not in REQUEST_FIELDS:      # לשדות דף הבקשה שיטה משלהם, והזורע יודע
+            entry.setdefault("method", ev.method)
         stamp = ev.retrieved_at.isoformat() if ev.retrieved_at else None
         if stamp and stamp > entry.get("retrieved_at", ""):
             entry["retrieved_at"] = stamp

@@ -72,6 +72,22 @@ async def test_streets_keep_herzliya_only_and_drop_duplicates(tmp_path):
     assert result["streets"] == [{"code": "10", "name": "הרצל"}] and result["source"]["method"] == "POST"
 
 
+async def test_a_request_page_is_fetched_by_its_number_and_a_refusal_is_a_refusal(tmp_path):
+    seen = []
+
+    def handler(request):
+        seen.append(dict(request.url.params))
+        return httpx.Response(200, text='<td class="title">סוג הבקשה</td><td>בקשה להיתר לתמ"א 38</td>')
+
+    result = await archive(tmp_path, handler).request("20140655")
+    assert seen[0]["prgname"] == "GetBakashaFile" and seen[0]["b"] == "20140655"
+    assert 'תמ"א 38' in result["html"] and result["id"] == "20140655"
+
+    from app.cities.herzliya.archive_client import ArchiveBlocked
+    with pytest.raises(ArchiveBlocked):
+        await archive(tmp_path / "blocked", page("<div class='g-recaptcha'></div>")).request(1)
+
+
 async def test_find_documents_keeps_pdf_links_and_resolves_relative_ones(tmp_path):
     links = '<a href="/files/a.pdf">a</a><a href="x.html">x</a><a href="https://archive.gis-net.co.il/b.PDF">b</a>'
     documents = await archive(tmp_path, page(links)).find_documents("1652")
@@ -100,3 +116,34 @@ async def test_a_refusal_page_raises_and_is_not_kept_in_the_cache(tmp_path):
             await client.file("8817")
     assert "20170371" in (await client.file("8817"))["html"]
     assert len(calls) == 3
+
+
+async def test_an_archive_page_read_two_days_ago_is_not_fetched_again(tmp_path):
+    """‏16.09 · המטמון של הארכיון חי 90 יום, לא יממה — המסירה והפקת התיק
+    פונות לאותם עמודים, וכל פנייה חוזרת עולה 10 שניות של קצב."""
+    import json
+    import time
+
+    calls = []
+
+    def handler(request):
+        calls.append(request.url)
+        return httpx.Response(200, text=FOUND)
+
+    client = archive(tmp_path, handler)
+    await client.find_tik_ids("6424", "83")
+    # מזיזים את שעת השליפה יומיים אחורה — מעבר ליממה של ברירת המחדל
+    for meta_path in tmp_path.glob("*.json"):
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta["epoch"] = time.time() - 2 * 86_400
+        meta_path.write_text(json.dumps(meta), encoding="utf-8")
+    await client.find_tik_ids("6424", "83")
+    assert len(calls) == 1
+
+    # ואחרי 90 יום — כן נשאל שוב
+    for meta_path in tmp_path.glob("*.json"):
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta["epoch"] = time.time() - 91 * 86_400
+        meta_path.write_text(json.dumps(meta), encoding="utf-8")
+    await client.find_tik_ids("6424", "83")
+    assert len(calls) == 2

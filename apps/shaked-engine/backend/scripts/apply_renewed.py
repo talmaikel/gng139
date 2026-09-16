@@ -23,10 +23,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import demo_parcels as demo  # noqa: E402
-from sqlalchemy import delete, select, text  # noqa: E402
+from sqlalchemy import delete, or_, select, text  # noqa: E402
 
 from app.cities.herzliya import renewal  # noqa: E402
-from app.cities.herzliya.archive_facts import RETIRED_FIELDS  # noqa: E402
+from app.cities.herzliya.archive_facts import REQUEST_FIELDS, REQUEST_METHOD  # noqa: E402
 from app.cities.herzliya.assessments import refresh  # noqa: E402
 from app.cities.herzliya.rules import HerzliyaCityRules  # noqa: E402
 from app.core.database import AsyncSessionLocal  # noqa: E402
@@ -41,9 +41,11 @@ LABEL = {"verified_renewed": "אומת כמחודש", "suspected": "חשוד", "
 
 async def retire_blind_rows(session, write: bool) -> dict:
     """‏`strengthened`/`occupied` מהתיק → ‏`tama38_event`. מחזיר גם מה הרצה יבשה מניחה."""
+    # רק העיוורות: שורה שנכתבה מדף הבקשה (16.09) אינה עיוורת ואינה נוגעת כאן
     rows = (await session.execute(select(FieldEvidence).where(
-        FieldEvidence.field.in_(RETIRED_FIELDS),
-        FieldEvidence.source_url.like(f"%{ARCHIVE_HOST}%")))).scalars().all()
+        FieldEvidence.field.in_(REQUEST_FIELDS),
+        FieldEvidence.source_url.like(f"%{ARCHIVE_HOST}%"),
+        or_(FieldEvidence.method.is_(None), FieldEvidence.method != REQUEST_METHOD)))).scalars().all()
     by_opp = defaultdict(list)
     for r in rows:
         by_opp[r.opportunity_id].append(r)

@@ -121,6 +121,7 @@ def never_reach_the_archive(request, monkeypatch):
 
     monkeypatch.setattr(HerzliyaArchiveClient, "find_tik_ids", refuse)
     monkeypatch.setattr(HerzliyaArchiveClient, "file", refuse)
+    monkeypatch.setattr(HerzliyaArchiveClient, "request", refuse)
 
 
 @pytest.fixture

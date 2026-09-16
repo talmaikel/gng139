@@ -75,12 +75,12 @@ def signals(*, post_2005_permit: bool | None, floors: float | None,
             tama38_event: bool | None = None) -> dict[str, Any]:
     """חשד מתוך מה שכבר נקרא. היתר אחרי 18.5.2005 **וגם** אחד מהשלושה.
 
-    ‏`tama38_event` עומד לבדו: ארוע אחרון שמזכיר תמ״א 38 הוא סימן חיובי
-    אמיתי גם כשהיעדרו אינו אומר דבר.
+    ‏`tama38_event` עומד לבדו: בקשה בתיק שמזכירה תמ״א 38 — בארוע האחרון,
+    בסוגה או במהותה — היא סימן חיובי אמיתי גם כשהיעדרו אינו אומר דבר.
     """
     reasons = []
     if tama38_event:
-        reasons.append("ארוע אחרון בבקשה בתיק מזכיר תמ״א 38 או חיזוק")
+        reasons.append("בקשה בתיק הבניין מזכירה תמ״א 38 או חיזוק")
 
     ratio = built_sqm / lot_sqm if built_sqm and lot_sqm else None
     if post_2005_permit:

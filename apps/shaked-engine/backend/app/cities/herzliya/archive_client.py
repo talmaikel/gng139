@@ -17,6 +17,12 @@ BuildingArchive (POC/app/sources.py):
 
 The public methods worker.py already calls (find_tik_ids, find_documents,
 download) keep their signatures.
+
+‏**המטמון של הארכיון חי `archive_cache_days` (90 יום), לא יממה.** (16.09) חיפוש
+גוש/חלקה, עמוד תיק, דף בקשה, רשימת מסמכים וה-PDF עצמו — כולם נקראים דרך
+כאן, ולכן המסירה (‏`archive_facts.enrich`) והפקת התיק (‏`worker`) שפונות
+לאותם עמודים משלמות את ה-10 שניות פעם אחת. עמוד סירוב עדיין נמחק מהמטמון
+מיד (‏`forget`), כך שהארכה זו אינה מקבעת חסימה.
 """
 
 import html
@@ -104,8 +110,12 @@ class HerzliyaArchiveClient:
     async def __aexit__(self, *exc_info: object) -> None:
         await self.close()
 
+    @property
+    def _ttl(self) -> int:
+        return get_settings().archive_cache_days * 86_400
+
     async def _page(self, params: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-        raw, meta = await self._public.get(ARCHIVE_URL, params)
+        raw, meta = await self._public.get(ARCHIVE_URL, params, ttl=self._ttl)
         page = raw.decode("utf-8", errors="replace")
         if any(marker in page for marker in BLOCKED_MARKERS):
             # מהמטמון החוצה: אחרת כל ניסיון חוזר ביממה הקרובה קורא את הסירוב שוב
@@ -189,6 +199,20 @@ class HerzliyaArchiveClient:
         )
         return {"id": str(tik_id), "source": meta, "text": text_from_html(page), "html": page}
 
+    async def request(self, request_no: str | int) -> dict[str, Any]:
+        """A permit request's own page: type, description, permit date, essence.
+
+        ‏16.09 · זה הדף שעמוד התיק אינו מציג. עמוד התיק נותן לכל בקשה רק את
+        ״ארוע אחרון להצגה״; כאן כתוב **מה** הבקשה — ״בקשה להיתר לתמ״א 38״,
+        ״תמ״א 38 - תוספת וחיזוק״ — ומתי הופק ההיתר. הקורא (`archive_facts`)
+        חותך את הדף לפני ״בעלי עניין״, ששם השמות.
+        """
+        page, meta = await self._page(
+            {"appname": "cixpa", "prgname": "GetBakashaFile", "siteid": SITE_ID,
+             "b": int(request_no), "arguments": "siteid,b"}
+        )
+        return {"id": str(request_no), "source": meta, "html": page}
+
     async def find_documents(self, tik_id: str) -> list[ArchiveDocument]:
         """Downloadable PDF links attached to one building-permit file."""
         page, _ = await self._page(
@@ -206,7 +230,7 @@ class HerzliyaArchiveClient:
         host = httpx.URL(document.url).host
         if host not in ALLOWED_DOCUMENT_HOSTS:
             raise HerzliyaArchiveError(f"Refusing to download from untrusted host: {host}")
-        return await self._public.get(document.url)
+        return await self._public.get(document.url, ttl=self._ttl)
 
     async def download(self, document: ArchiveDocument) -> bytes:
         content, _ = await self.download_with_source(document)

@@ -125,6 +125,16 @@ MUTS = [
   ("cities/herzliya/archive_facts.py", "הארוע האחרון נקרא שוב כחיזוק",
    '"tama38_event": any(STRENGTHENING.search(r.get("last_event") or "") for r in requests),',
    '"tama38_event": any(STRENGTHENING.search(r.get("last_event") or "") for r in requests), "strengthened": False,'),
+  # ‏16.09 · דף הבקשה
+  ("cities/herzliya/archive_facts.py", "בקשת תמ״א 38 בלי היתר נקראת כחיזוק",
+   'permitted = [d for d in tama if d.get("permit_date")]', "permitted = list(tama)"),
+  ("cities/herzliya/archive_facts.py", "דף הבקשה נקרא כולל בעלי העניין",
+   "head = page_html.split(INTERESTED_PARTIES, 1)[0]", "head = page_html"),
+  ("cities/herzliya/archive_facts.py", "קריאה חלקית אומרת ״לא נמצא״",
+   "return True if found else (False if complete else None)", "return found"),
+  ("cities/herzliya/archive_facts.py", "השורה העיוורת שורדת את השליפה",
+   "or_(FieldEvidence.method.is_(None), FieldEvidence.method != REQUEST_METHOD)))",
+   "FieldEvidence.method == REQUEST_METHOD))"),
   ("cities/herzliya/rights.py", "חשד עובר את השער",
    'result, detail = "needs_review", (', 'result, detail = "passed", ('),
   # ‏W10 · יחס המגורים מטבלת השטחים בהיתר מכריע את שער ה-70%

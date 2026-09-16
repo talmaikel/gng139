@@ -167,9 +167,12 @@ GATE_FIELD = {"not_renewed": "renewal_status"}
 # ל-needs_verification. ‏W10 · שער ה-70% מוכרע רק כשאדם הזין את היחס מטבלת
 # השטחים בהיתר (`services/residential_share.py`) — ואז הוא עובר או נכשל ככל שער.
 UNOBTAINABLE = {"residential_share", "strengthened", "occupied"}
-# ‏W5 · 16.09 · `strengthened` ו-`occupied` נגזרו מ״ארוע אחרון להצגה״ בתיק,
-# שאינו תיאור הבקשה — והיו עיוורים. דף הבקשה (GetBakashaFile) עונה עליהם,
-# ואינו נקרא. עד אז הם שאלה פתוחה בתיק, וההגנה בפועל היא `not_renewed`.
+# ‏W5 · 16.09 (טל): כל עוד דפי הבקשות בתיק הבניין לא נקראו, `strengthened`
+# ו-`occupied` נשארים ״לא ידוע״ ואינם חוסמים מסירה — עוברים כברירת מחדל.
+# הם חוזרים לחסום ברגע שהשליפה (`archive_client.request`) קובעת ערך:
+# `strengthened=True` מפיל את הסטטוס ל-ineligible (נכשל, לא unknown),
+# ו-`occupied=True` מנתב ל-urban_renewal_compound — שניהם דרך `_status()`
+# ולא דרך `UNOBTAINABLE`, ולכן ״הוכח אחרת״ עדיין חוסם כרגיל.
 
 # ‏§70א: ״70% לפחות משטח הבנייה הכולל הקיים שלו משמש כדין למגורים״.
 RESIDENTIAL_SHARE_MIN = 0.7
@@ -256,9 +259,9 @@ def threshold_checks(f: dict) -> list[Check]:
     out.append(Check("strengthened", "לא בוצע חיזוק מכוח היתר",
                      "unknown" if s is None else ("passed" if s is False else "failed"),
                      POLICY_URL, 3,
-                     "תיק הבניין מציג רק את הארוע האחרון בכל בקשה ולא את תיאורה — "
-                     "לא נקבע; ראו שער החידוש" if s is None else
-                     ("לא נמצאה בקשת חיזוק עם היתר" if not s else "חוזק — §70א(2)")))
+                     "דפי הבקשות בתיק הבניין טרם נקראו — נדרשת שליפה" if s is None else
+                     ("אין בתיק בקשת תמ״א 38 שהופק לה היתר" if not s
+                      else "בקשת תמ״א 38 שהופק לה היתר — §70א(2)")))
 
     # ״תפוס״ אינו תנאי סף בחוק — מבנה כזה כשיר לחלוטין. הוא פשוט אינו
     # זמין: בקשת חיזוק שהוגשה ולא הבשילה להיתר פירושה שיזם אחר כבר עובד
@@ -270,11 +273,11 @@ def threshold_checks(f: dict) -> list[Check]:
     out.append(Check("occupied", "לא נמצאה בקשה פעילה של יזם אחר בארכיון",
                      "unknown" if occ is None else ("passed" if occ is False else "routed"),
                      POLICY_URL, None,
-                     "תיק הבניין אינו מציג את תיאור הבקשות — לא נקבע · "
+                     "דפי הבקשות בתיק הבניין טרם נקראו · "
                      "החתמת דיירים אינה במקור ציבורי ולא נבדקה" if occ is None else
-                     ("אין בקשת חיזוק פתוחה בתיק הבניין · החתמת דיירים אינה במקור ציבורי ולא נבדקה"
+                     ("אין בקשת תמ״א 38 פתוחה בתיק הבניין · החתמת דיירים אינה במקור ציבורי ולא נבדקה"
                       if not occ else
-                      "בקשת חיזוק ללא היתר — יזם אחר כבר מול הדיירים")))
+                      "בקשת תמ״א 38 ללא היתר — יזם אחר כבר מול הדיירים")))
 
     out.append(renewal_check(f.get("renewal_status")))
 

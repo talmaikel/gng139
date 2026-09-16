@@ -30,6 +30,21 @@ def test_the_seventy_percent_test_is_unknown_rather_than_assumed_to_pass():
     assert status({"residential_share": 0.70}) == "passed"
 
 
+def test_the_two_archive_gates_block_delivery_until_the_request_pages_are_read():
+    """‏16.09 · `strengthened` ו-`occupied` נענים מדף הבקשה. הם אינם ״אין מקור״
+    עוד, ולכן ״לא ידוע״ בהם חוסם מסירה עד שליפה — ואינו עובר בשקט."""
+    from app.cities.herzliya.archive_facts import ARCHIVE_ANSWERS
+    assert R.UNOBTAINABLE == {"residential_share"}
+    assert {"strengthened", "occupied"} <= ARCHIVE_ANSWERS
+
+    def gate(d, i):
+        return next(c for c in R.threshold_checks(d) if c.id == i)
+    assert gate({}, "strengthened").status == "unknown"
+    assert "טרם נקראו" in gate({}, "strengthened").detail
+    assert gate({"strengthened": True}, "strengthened").status == "failed"
+    assert gate({"occupied": True}, "occupied").status == "routed"
+
+
 def test_a_plot_not_designated_for_housing_fails_rather_than_waits():
     def status(d):
         return next(c.status for c in R.threshold_checks(d) if c.id == "residential_zoning")
