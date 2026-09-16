@@ -97,7 +97,7 @@ export default function UnitMixPage({ params }: { params: Promise<{ id: string }
   return (
     <>
       <PageHeader
-        back={{ href: `/dossier/${id}`, label: "חזרה לתיק" }}
+        back={{ href: `/app/dossier/${id}`, label: "חזרה לתיק" }}
         eyebrow="תיק הזדמנות · הרצליה"
         title="תמהיל דירות ורווחיות"
         meta="הזן את התמורה לבעלי הדירות. שינוי התמורה מחשב מחדש את השטח ליזם, התמהיל והרווח. אם השדה נשאר ריק, המערכת משתמשת בתמורת ברירת המחדל המסומנת כאומדן."
@@ -124,7 +124,7 @@ export default function UnitMixPage({ params }: { params: Promise<{ id: string }
       {error && (
         <Alert color="brick" mb="md" title={error}>
           {error.includes("לוח דירות") && (
-            <Link href={`/dossier/${id}/units`} className="text-link">פתח את מסך אישור הדירות הקיימות ←</Link>
+            <Link href={`/app/dossier/${id}/units`} className="text-link">פתח את מסך אישור הדירות הקיימות ←</Link>
           )}
         </Alert>
       )}

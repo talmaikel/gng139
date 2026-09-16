@@ -22,6 +22,14 @@ const nextConfig = {
   // על תיקים שכבר קיבל.
   experimental: { proxyTimeout: 90_000 },
 
+  // הכתובות הישנות של המוצר, למי ששמר קישור: /dashboard ו-/dossier/* עברו ל-/app.
+  async redirects() {
+    return [
+      { source: "/dashboard", destination: "/app", permanent: true },
+      { source: "/dossier/:path*", destination: "/app/dossier/:path*", permanent: true },
+    ];
+  },
+
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${API_ORIGIN}/api/:path*` }];
   },

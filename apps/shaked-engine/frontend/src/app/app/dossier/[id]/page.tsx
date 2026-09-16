@@ -162,7 +162,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
     return (
       <>
         <Alert color="brick" title={error} />
-        <p style={{ marginTop: "1rem" }}><Link href="/dashboard" className="text-link">← חזרה למסך החיפוש</Link></p>
+        <p style={{ marginTop: "1rem" }}><Link href="/app" className="text-link">← חזרה למסך החיפוש</Link></p>
       </>
     );
   }
@@ -176,7 +176,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
   return (
     <>
       <PageHeader
-        back={{ href: "/dashboard", label: "חזרה" }}
+        back={{ href: "/app", label: "חזרה" }}
         eyebrow="תיק הזדמנות · הרצליה"
         title={d.identity.address}
         meta={
@@ -288,7 +288,7 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                 {unitReview.pending > 0
                   ? `${unitReview.pending} מתוך ${unitReview.total} הדירות שנקראו מההיתר ממתינות לאישור. `
                   : `כל ${unitReview.total} הדירות שנקראו מההיתר אושרו. `}
-                <Link href={`/dossier/${id}/units`} className="text-link">
+                <Link href={`/app/dossier/${id}/units`} className="text-link">
                   {unitReview.pending > 0 ? "אשר דירות ←" : "לוח הדירות ←"}
                 </Link>
               </Text>
@@ -301,12 +301,12 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
                 {d.economics.unit_mix?.summary ? (
                   <>
                     {d.economics.unit_mix.summary}{" "}
-                    <Link href={`/dossier/${id}/mix`} className="text-link">שנה את התמורה ←</Link>
+                    <Link href={`/app/dossier/${id}/mix`} className="text-link">שנה את התמורה ←</Link>
                   </>
                 ) : (
                   <>
                     תמהיל הדירות עוד לא חושב.{" "}
-                    <Link href={`/dossier/${id}/mix`} className="text-link">חשב תמהיל ורווחיות ←</Link>
+                    <Link href={`/app/dossier/${id}/mix`} className="text-link">חשב תמהיל ורווחיות ←</Link>
                   </>
                 )}
               </Text>

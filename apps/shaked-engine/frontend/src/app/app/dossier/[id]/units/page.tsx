@@ -128,7 +128,7 @@ export default function DwellingUnitReviewPage({ params }: { params: Promise<{ i
   return (
     <>
       <PageHeader
-        back={{ href: `/dossier/${id}`, label: "חזרה לתיק" }}
+        back={{ href: `/app/dossier/${id}`, label: "חזרה לתיק" }}
         eyebrow="תיק הזדמנות · הרצליה"
         title="אימות שטחי הדירות"
         meta={<>{state.address} · ספירה עירונית: {state.municipal_unit_count ?? "—"} דירות</>}

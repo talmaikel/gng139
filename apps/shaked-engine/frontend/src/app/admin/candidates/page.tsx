@@ -212,10 +212,10 @@ export default function LegacyCandidatesPage() {
     <AppShell>
       <p className="eyebrow">חלופת שקד · ניהול</p>
       <h1 style={{ margin: ".15rem 0 .4rem" }}>כל המועמדים</h1>
-      {/* ‏S2 · הרשימה המלאה הוחלפה אצל הלקוח בסריקה (/dashboard). הדף הזה
+      {/* ‏S2 · הרשימה המלאה הוחלפה אצל הלקוח בסריקה (/app). הדף הזה
           נשאר לצוות כגיבוי להדגמה של 16.09, ואינו מקושר מהמסך של הלקוח. */}
       <p className="text-warn" style={{ margin: "0 0 1rem", fontSize: ".85rem" }}>
-        מסך צוות · רשימת כל המועמדים (גיבוי). הלקוח רואה את הסריקה ב-<Link href="/dashboard">/dashboard</Link>.
+        מסך צוות · רשימת כל המועמדים (גיבוי). הלקוח רואה את הסריקה ב-<Link href="/app">/app</Link>.
       </p>
 
       <div style={{ marginBottom: "1rem" }}>
@@ -395,7 +395,7 @@ export default function LegacyCandidatesPage() {
                     const willFetch = candidate.assessment?.deliverable === false;
                     if (owned) {
                       return (
-                        <Link href={`/dossier/${candidate.id}`} className="text-link" style={{ fontSize: ".82rem" }}>
+                        <Link href={`/app/dossier/${candidate.id}`} className="text-link" style={{ fontSize: ".82rem" }}>
                           פתח תיק ←
                         </Link>
                       );

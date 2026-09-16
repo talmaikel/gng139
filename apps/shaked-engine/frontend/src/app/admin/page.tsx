@@ -102,7 +102,7 @@ export default function AdminPage() {
         <div className="card auth-card">
           <h1>אין הרשאה</h1>
           <p>המסך הזה מיועד לצוות שקדן בלבד.</p>
-          <Link href="/dashboard" className="text-link">חזרה</Link>
+          <Link href="/app" className="text-link">חזרה</Link>
         </div>
       </AppShell>
     );

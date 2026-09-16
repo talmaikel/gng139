@@ -50,7 +50,7 @@ export default function VerifyPage() {
         <Verify />
       </Suspense>
       <p style={authFooter}>
-        <Link href="/dashboard">למסך הראשי</Link>
+        <Link href="/app">למסך הראשי</Link>
       </p>
     </AuthCard>
   );

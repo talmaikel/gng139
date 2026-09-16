@@ -49,7 +49,7 @@ export default function DeliveredTable({ rows }: { rows: DeliveredOpportunity[] 
                 {row.data_version ? ` · ${row.data_version}` : ""}
               </td>
               <td style={{ textAlign: "end" }}>
-                <Link href={`/dossier/${row.opportunity_id}`} className="text-link" style={{ fontSize: ".85rem" }}>
+                <Link href={`/app/dossier/${row.opportunity_id}`} className="text-link" style={{ fontSize: ".85rem" }}>
                   פתח תיק ←
                 </Link>
               </td>

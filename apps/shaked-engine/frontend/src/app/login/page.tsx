@@ -37,7 +37,7 @@ export default function LoginPage() {
         const { access_token } = await response.json();
         if (cancelled) return;
         setToken(access_token);
-        router.replace("/dashboard");
+        router.replace("/app");
       } catch {
         if (!cancelled) setAutoLoggingIn(false);
       }
@@ -56,7 +56,7 @@ export default function LoginPage() {
     try {
       const { access_token } = await login(email, password);
       setToken(access_token);
-      router.push("/dashboard");
+      router.push("/app");
     } catch (e) {
       // ‏429 אינו ״סיסמה שגויה״ — מי שנחסם צריך לדעת שעליו לחכות.
       setError(e instanceof ApiError && e.status === 429 ? e.detail : "כתובת או סיסמה שגויות.");

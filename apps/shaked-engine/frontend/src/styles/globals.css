@@ -238,3 +238,11 @@ tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--almond); }
 .subnav { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--rule); margin: 0 0 1.4rem; font-size: 0.9rem; font-weight: 600; overflow-x: auto; }
 .subnav a { text-decoration: none; color: var(--muted); padding: 0.55rem 0.9rem; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .subnav a[data-active] { color: var(--ink); border-bottom-color: var(--almond); }
+
+/* ── scan results: up to three dossiers under the map ── */
+.results { display: grid; grid-template-columns: 1fr; gap: 0.8rem; margin-bottom: 1.2rem; }
+@media (min-width: 760px) { .results { grid-template-columns: repeat(3, 1fr); } }
+.result { display: flex; flex-direction: column; justify-content: space-between; gap: 0.8rem; padding: 1rem 1.1rem; cursor: pointer; }
+.result.is-selected { border-color: var(--almond); box-shadow: 0 0 0 3px var(--almond-soft); }
+.sk-btn-like { align-self: flex-start; font-weight: 700; font-size: 0.9rem; color: var(--ink); background: var(--almond); border-radius: var(--r); padding: 0.5rem 0.9rem; text-decoration: none; }
+.sk-btn-like:hover { background: var(--almond-deep); }

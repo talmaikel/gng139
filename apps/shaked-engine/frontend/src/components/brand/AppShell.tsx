@@ -8,8 +8,8 @@ import { clearToken, getMe, type Me } from "@/lib/api";
 import { IconLogout, IconMenu } from "./icons";
 
 const NAV = [
-  { href: "/dashboard", label: "סריקה", match: (p: string) => p === "/dashboard" },
-  { href: "/dashboard#mine", label: "המאגר שלי", match: () => false },
+  { href: "/app", label: "סריקה", match: (p: string) => p === "/app" },
+  { href: "/app#mine", label: "המאגר שלי", match: () => false },
 ];
 
 /**
@@ -38,7 +38,7 @@ export function AppHeader() {
   return (
     <header className="app-header">
       <div className="app-header-inner">
-        <Link href="/dashboard" className="app-brand" aria-label="Shaked Engine">
+        <Link href="/app" className="app-brand" aria-label="Shaked Engine">
           <img src="/brand/shakdan-lockup.svg" alt="shakdan" width={114} height={28} />
           <span>Shaked Engine</span>
         </Link>

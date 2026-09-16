@@ -26,7 +26,7 @@ export default function SignupPage() {
         password,
       });
       setToken(access_token);
-      router.push("/dashboard");
+      router.push("/app");
     } catch (e) {
       // ‏422 של ולידציה (למשל מייל לא תקין) מגיע בלי משפט — ה-FALLBACK
       // אומר ״הבקשה אינה תקינה״, וזה מספיק כדי שהגולש יבדוק את השדות.

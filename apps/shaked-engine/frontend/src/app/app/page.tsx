@@ -1,5 +1,6 @@
 "use client";
 
+import { Slider } from "@mantine/core";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,14 +27,17 @@ import DeliveredTable from "@/components/DeliveredTable";
 import SearchControls from "@/components/SearchControls";
 // מ-`lib` ולא מהקומפוננטה: ייבוא מ-`DrawPolygon` גורר את leaflet
 // לחבילת ה-SSR, שם אין `window`, והדף מחזיר 500 בטעינה נקייה.
-import { MAX_AREA_SQM } from "@/lib/searchArea";
+import { MAX_RADIUS_M, circlePolygon, geodesicArea, type LatLngTuple } from "@/lib/searchArea";
 import { dunam } from "@/lib/format";
 import { AppShell } from "@/components/brand/AppShell";
-import { IconPencil, IconSearch } from "@/components/brand/icons";
+import { IconSearch } from "@/components/brand/icons";
+import { assessmentBadge } from "@/components/brand/ui";
 
 const OpportunityMap = dynamic(() => import("@/components/Map"), { ssr: false });
 
 const CITY = "herzliya";
+const DEFAULT_RADIUS_M = 200;
+const MIN_RADIUS_M = 80;
 
 /** המפה מקבלת מועמדים; הלקוח רואה עליה רק את מה שכבר נמסר לו. */
 function asMapRows(mine: DeliveredOpportunity[]): Candidate[] {
@@ -48,9 +52,10 @@ function asMapRows(mine: DeliveredOpportunity[]): Candidate[] {
  * ‏S2 · הסריקה של הלקוח (בועז, 15.09).
  *
  * **הלקוח אינו רואה מועמדים.** רשימה עם כתובות ממוינות היא המוצר עצמו
- * בחינם. במקומה: מצייר אזור → ״חפש״ → *״נמצאו N — לקבל?״* → עד שלושה תיקים,
- * לפי התנאים וההעדפות שלו, מוכנים קודם. נמצאו פחות משלושה — הזכאות שנשארה
- * משמשת לאזור הבא. הרשימה המלאה נשארה לצוות ב-/admin/candidates.
+ * בחינם. במקומה: לוחץ נקודה על המפה, בוחר רדיוס → ״חפש״ → *״נמצאו N — לקבל?״*
+ * → עד שלושה תיקים, לפי התנאים וההעדפות שלו, מוכנים קודם. השלושה שנמסרו
+ * מופיעים ברשימה מתחת למפה ועל המפה עצמה. הרשימה המלאה נשארה לצוות
+ * ב-/admin/candidates.
  */
 export default function DashboardPage() {
   const router = useRouter();
@@ -67,9 +72,9 @@ export default function DashboardPage() {
   const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [mine, setMine] = useState<DeliveredOpportunity[]>([]);
 
-  const [drawing, setDrawing] = useState(false);
-  const [searchArea, setSearchArea] = useState<object | null>(null);
-  const [liveArea, setLiveArea] = useState<{ points: number; sqm: number } | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [center, setCenter] = useState<LatLngTuple | null>(null);
+  const [radiusM, setRadiusM] = useState(DEFAULT_RADIUS_M);
   const [options, setOptions] = useState<SearchOptions>({});
   const [showControls, setShowControls] = useState(false);
 
@@ -77,6 +82,7 @@ export default function DashboardPage() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [busy, setBusy] = useState<"preview" | "deliver" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const signInIfUnauthorized = useCallback((e: unknown) => {
     if (e instanceof ApiError && e.status === 401) {
@@ -99,8 +105,13 @@ export default function DashboardPage() {
   const credits = balance?.credits_remaining ?? 0;
   // ‏useMemo ולא חישוב ב-render: המפה ממקדת את עצמה מחדש בכל פעם שהמערך
   // מתחלף, ומערך חדש בכל render החזיר אותה לחלקות בכל הקלדה — המשתמש לא
-  // יכול היה להתרחק כדי לצייר אזור.
+  // יכול היה להתרחק כדי לבחור נקודה.
   const mapRows = useMemo(() => asMapRows(mine), [mine]);
+
+  // אזור החיפוש: העיגול כפוליגון, כמו שהשרת מצפה. השטח נמדד כאן רק כרמז מוקדם.
+  const area = useMemo(() => (center ? circlePolygon(center, radiusM) : null), [center, radiusM]);
+  const searchArea = area?.polygon ?? null;
+  const areaSqm = area ? geodesicArea(area.ring) : 0;
 
   /** כל שינוי באזור או בתנאים מבטל את התצוגה המקדימה: היא נכונה לשאלה אחרת. */
   function resetScan() {
@@ -109,10 +120,10 @@ export default function DashboardPage() {
     setError(null);
   }
 
-  function onPolygon(polygon: object) {
-    setDrawing(false);
-    setLiveArea(null);
-    setSearchArea(polygon);
+  function onPick(c: LatLngTuple) {
+    setPicking(false);
+    setCenter(c);
+    setSelectedId(null);
     resetScan();
   }
 
@@ -154,12 +165,19 @@ export default function DashboardPage() {
     [options.minAreaSqm, options.minUnits, options.minFloors, options.minCap400Sqm]
       .filter((v) => v !== undefined).length
     + (options.certainFloorsOnly ? 1 : 0) + (options.preferences?.length ?? 0);
-  const overLimit = liveArea !== null && liveArea.points >= 3 && liveArea.sqm > MAX_AREA_SQM;
+
+  const hint = picking
+    ? "לחיצה על המפה קובעת את מרכז החיפוש · Escape לביטול"
+    : credits < 1
+      ? "לא נותרה זכאות לחברה"
+      : center
+        ? `אזור של ${dunam(areaSqm)} סביב הנקודה — אפשר להגדיר תנאים וללחוץ ״חפש״`
+        : `בחר נקודה על המפה, ותקבל עד ${Math.min(3, credits)} תיקי הזדמנות מסביבה`;
 
   return (
     <AppShell>
       <p className="eyebrow">חלופת שקד · הרצליה</p>
-      <h1 style={{ margin: ".15rem 0 1rem" }}>סריקה</h1>
+      <h1 style={{ margin: ".15rem 0 1rem" }}>האזור האישי</h1>
 
       <VerifyEmailNotice />
 
@@ -186,13 +204,13 @@ export default function DashboardPage() {
       <>
       <div className="card" style={{ marginBottom: "1rem", padding: "0.9rem 1.1rem" }}>
         <div style={{ display: "flex", gap: ".6rem", alignItems: "center", flexWrap: "wrap" }}>
-          {!drawing ? (
-            <button className={searchArea ? "btn-secondary" : "btn-dark"} onClick={() => { setDrawing(true); setLiveArea(null); resetScan(); }}>
-              <IconPencil size={14} /> {searchArea ? "צייר אזור אחר" : "צייר אזור חיפוש"}
+          {!picking ? (
+            <button className={center ? "btn-secondary" : "btn-dark"} onClick={() => { setPicking(true); resetScan(); }}>
+              ◎ {center ? "בחר נקודה אחרת" : "בחר נקודה על המפה"}
             </button>
           ) : (
-            <button className="btn-secondary" onClick={() => { setDrawing(false); setLiveArea(null); }}>
-              בטל ציור
+            <button className="btn-secondary" onClick={() => setPicking(false)}>
+              בטל בחירה
             </button>
           )}
 
@@ -205,28 +223,28 @@ export default function DashboardPage() {
 
           <button
             onClick={search}
-            disabled={!searchArea || drawing || busy !== null || credits < 1}
+            disabled={!searchArea || picking || busy !== null || credits < 1}
           >
             {busy === "preview" ? "מחפש…" : <><IconSearch size={14} /> חפש</>}
           </button>
 
-          <span className="text-muted" style={{ fontSize: ".88rem" }}>
-            {drawing
-              ? liveArea === null
-                ? "לחיצה מוסיפה קודקוד · לחיצה כפולה או Enter לסיום · Escape לביטול"
-                : `${liveArea.points} קודקודים · ${dunam(liveArea.sqm)}`
-              : credits < 1
-                ? "לא נותרה זכאות לחברה"
-                : searchArea
-                  ? "האזור מסומן — אפשר להגדיר תנאים וללחוץ ״חפש״"
-                  : `צייר אזור על המפה, ותקבל עד ${Math.min(3, credits)} תיקי הזדמנות ממנו`}
-          </span>
+          <span className="text-muted" style={{ fontSize: ".88rem" }}>{hint}</span>
+        </div>
 
-          {overLimit && (
-            <span className="text-bad" style={{ fontWeight: 600, fontSize: ".88rem" }}>
-              מעל מגבלת {MAX_AREA_SQM / 1000} הדונם — השרת ידחה
-            </span>
-          )}
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap", marginTop: ".9rem", paddingTop: ".8rem", borderTop: "1px solid var(--rule-2)" }}>
+          <span style={{ fontSize: ".85rem", fontWeight: 600 }}>רדיוס החיפוש</span>
+          <Slider
+            style={{ flex: "1 1 220px", maxWidth: 360 }}
+            min={MIN_RADIUS_M} max={MAX_RADIUS_M} step={10}
+            value={radiusM}
+            onChange={(v) => { setRadiusM(v); resetScan(); }}
+            label={(v) => `${v} מ׳`}
+            marks={[{ value: 100, label: "100 מ׳" }, { value: 200, label: "200 מ׳" }, { value: MAX_RADIUS_M, label: `${MAX_RADIUS_M} מ׳` }]}
+            disabled={busy !== null}
+          />
+          <span className="num text-muted" style={{ fontSize: ".85rem", minWidth: "7rem" }}>
+            {radiusM} מ׳ · {dunam(Math.PI * radiusM * radiusM)}
+          </span>
         </div>
       </div>
 
@@ -264,11 +282,31 @@ export default function DashboardPage() {
             <strong className="text-warn">לא נותרה זכאות לחברה. יש לרכוש חבילה כדי להמשיך.</strong>
           ) : (
             <strong className="text-warn">
-              לא נמצאו מועמדים באזור שעומדים בתנאים — לא חויבת. אפשר לצייר אזור אחר או לשנות את התנאים.
+              לא נמצאו מועמדים באזור שעומדים בתנאים — לא חויבת. אפשר לבחור נקודה אחרת או לשנות את התנאים.
             </strong>
           )}
         </div>
       )}
+
+      {error && (
+        <div className="card tone-bad" style={{ marginBottom: "1rem" }}>
+          <strong className="text-bad">{error}</strong>
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom: "1.2rem", padding: 0, overflow: "hidden" }}>
+        <OpportunityMap
+          candidates={mapRows}
+          mode="circle"
+          drawing={picking}
+          circle={center ? { center, radiusM } : null}
+          onPick={onPick}
+          onCancelDraw={() => setPicking(false)}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          dossierHref={(id) => `/app/dossier/${id}`}
+        />
+      </div>
 
       {result && (
         <div className="card tone-ok" style={{ marginBottom: "1rem" }}>
@@ -277,18 +315,6 @@ export default function DashboardPage() {
               ? "לא נמסר תיק מהאזור הזה — לא חויבת."
               : `נמסרו ${result.delivered.length === 1 ? "תיק אחד" : `${result.delivered.length} תיקים`} · נוכו ${result.delivered.length} זכאויות`}
           </strong>
-          {result.delivered.length > 0 && (
-            <ul style={{ margin: ".5rem 0", paddingInlineStart: "1.1rem" }}>
-              {result.delivered.map((d) => (
-                <li key={d.opportunity_id} style={{ marginBottom: ".2rem" }}>
-                  <Link href={`/dossier/${d.opportunity_id}`} className="text-link">
-                    {d.address} ←
-                  </Link>
-                  <span className="text-muted" style={{ fontSize: ".85rem" }}> · גוש {d.block} חלקה {d.parcel}</span>
-                </li>
-              ))}
-            </ul>
-          )}
           {result.skipped > 0 && (
             <p className="text-muted" style={{ margin: ".3rem 0", fontSize: ".88rem" }}>
               {result.skipped === 1 ? "מועמד אחד דולג" : `${result.skipped} מועמדים דולגו`}: תיק הבניין לא השלים את תנאי הסף. לא חויבת עליהם.
@@ -305,32 +331,40 @@ export default function DashboardPage() {
             )}
             {!result.retryable && result.delivered.length < result.requested && result.credits_remaining > 0 && (
               <span className="text-ok" style={{ fontSize: ".88rem" }}>
-                נותרו {result.credits_remaining} זכאויות — אפשר לצייר אזור נוסף.
+                נותרו {result.credits_remaining} זכאויות — אפשר לבחור נקודה נוספת.
               </span>
             )}
           </div>
         </div>
       )}
 
-      {error && (
-        <div className="card tone-bad" style={{ marginBottom: "1rem" }}>
-          <strong className="text-bad">{error}</strong>
+      {/* עד שלושה תיקים מהסריקה האחרונה, מתחת למפה; לחיצה על שורה מדגישה את החלקה על המפה */}
+      {result && result.delivered.length > 0 && (
+        <div className="results">
+          {result.delivered.slice(0, 3).map((d) => (
+            <div
+              key={d.opportunity_id}
+              className={`card result${selectedId === d.opportunity_id ? " is-selected" : ""}`}
+              onClick={() => setSelectedId(d.opportunity_id)}
+            >
+              <div>
+                <strong>{d.address}</strong>
+                <div className="text-muted" style={{ fontSize: ".82rem" }}>
+                  גוש <span className="mono">{d.block ?? "—"}</span> · חלקה <span className="mono">{d.parcel ?? "—"}</span>
+                </div>
+                <div style={{ marginTop: ".35rem" }}>{d.assessment ? assessmentBadge(d.assessment.status) : null}</div>
+              </div>
+              <Link href={`/app/dossier/${d.opportunity_id}`} className="sk-btn-like" onClick={(e) => e.stopPropagation()}>
+                פתח תיק ←
+              </Link>
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="card" style={{ marginBottom: "1.2rem", padding: 0, overflow: "hidden" }}>
-        <OpportunityMap
-          candidates={mapRows}
-          drawing={drawing}
-          searchArea={searchArea}
-          onPolygon={onPolygon}
-          onCancelDraw={() => { setDrawing(false); setLiveArea(null); }}
-          onDrawProgress={(points, sqm) => setLiveArea({ points, sqm })}
-        />
-      </div>
-      {mine.length > 0 && (
+      {mine.length > 0 && !result && (
         <p className="text-muted" style={{ fontSize: ".82rem", marginTop: "-.6rem" }}>
-          על המפה מסומנים רק התיקים שכבר קיבלת.
+          על המפה מסומנים רק התיקים שכבר קיבלת. לחיצה על חלקה פותחת את התיק.
         </p>
       )}
       </>
