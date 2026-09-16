@@ -91,12 +91,12 @@
   "block": "6531",
   "parcel": "156",
   "address": "אלוף יגאל אלון 6",
-  "status": "suspected",
-  "source": "manual review 16.09 — partners",
+  "status": "verified_renewed",
+  "source": "אישור טל 16.09 (עבר תמ״א 38) + סקירת השותפים",
   "evidence_url": "https://github.com/talmaikel/gng139/issues/110",
-  "checked_by": null,
+  "checked_by": "טל",
   "checked_at": "2026-09-16",
-  "note": "השותפים: הבניינים שם כבר עברו שקד/תמ״א 38 · היתר נמסר ב-2017, 7 קומות"
+  "note": "טל: הבניין עבר תמ״א 38 לפני כמה שנים · השותפים: היתר נמסר ב-2017, 7 קומות"
  },
  {
   "block": "6531",

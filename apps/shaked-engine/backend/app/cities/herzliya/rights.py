@@ -193,6 +193,30 @@ def _zoning_note(names) -> str:
     return f" · הייעוד מגורים בלבד ({', '.join(sorted(set(residential)))}) — סביר, ועדיין לא מוכרע"
 
 
+# ‏#136 · 16.09 (טל): נכון להיום, ייעוד ״מגורים ב׳״ בלבד (בלי ייעוד מעורב
+# לצדו) נספר כברירת מחדל כ-70%+ מגורים בפועל, כל עוד לא נמדד אחרת.
+#
+# ‏G1 (15.09) קבע שהייעוד אינו מספיק, כי §70א בודק **שימוש בפועל** ולא את
+# התכנית — וזה עדיין נכון: זו הנחת עבודה זמנית, לא מדידה, והתיק אומר זאת
+# ליד המספר. היא נסוגה ברגע שיש ראיה אמיתית: ‏`deciding()` מעדיף הזנה
+# ידנית על פני שדה גזור תמיד, כך ש״הוכח אחרת״ (כולל מתחת ל-70%) ממשיך
+# לגבור על ברירת המחדל הזו.
+PURE_RESIDENTIAL_ZONING = "מגורים ב'"
+
+
+def _zoning_default_share(names) -> float | None:
+    """‏70%+ כברירת מחדל למגרש שמיועד רק `PURE_RESIDENTIAL_ZONING`.
+
+    מגרש שגם נושא ייעוד מעורב (מסחר/תעסוקה/מעורב) אינו מקבל את ההנחה —
+    שם השאלה ״כמה מהשטח הבנוי בפועל משמש למגורים״ עדיין פתוחה ממש."""
+    names = names or []
+    if PURE_RESIDENTIAL_ZONING not in names:
+        return None
+    if any(any(w in n for w in MIXED_ZONING_WORDS) for n in names):
+        return None
+    return RESIDENTIAL_SHARE_MIN
+
+
 def share_basis(field: dict | None) -> str | None:
     """‏W10 · על מה נשען יחס המגורים: המקום במקור, והאם אדם אימת אותו.
 
@@ -225,22 +249,30 @@ def threshold_checks(f: dict) -> list[Check]:
 
     share = f.get("residential_share")
     zoning_note = _zoning_note(f.get("zoning_names"))
+    # ‏#136 · 16.09 · אין מדידה → ברירת מחדל לפי ייעוד מגורים ב׳ טהור, אם יש.
+    default_share = _zoning_default_share(f.get("zoning_names")) if share is None else None
+    effective_share = share if share is not None else default_share
     # ‏W10 · הבסיס מגיע מ-`assess()`; בלעדיו לא טוענים מקור שאינו ידוע.
     basis = f.get("residential_share_basis")
-    share_detail = None if share is None else (
-        f"{_share_pct(share)} מגורים" + (f" {basis}" if basis else "")
-        + ("" if share >= RESIDENTIAL_SHARE_MIN else " — פחות מ-70%"))
+    share_detail = None if effective_share is None else (
+        f"{_share_pct(effective_share)} מגורים"
+        + (f" {basis}" if basis else "")
+        + (" · הנחת ברירת מחדל לפי ייעוד מגורים ב׳ — לא נמדד, ניתן להפרכה"
+           if default_share is not None else "")
+        + ("" if effective_share >= RESIDENTIAL_SHARE_MIN else " — פחות מ-70%"))
     out.append(Check("residential_share", "לפחות 70% מהשטח הבנוי משמש כדין למגורים",
-                     "unknown" if share is None else
-                     ("passed" if share >= RESIDENTIAL_SHARE_MIN else "failed"),
+                     "unknown" if effective_share is None else
+                     ("passed" if effective_share >= RESIDENTIAL_SHARE_MIN else "failed"),
                      POLICY_URL, 3,
                      # ‏G1 · 15.09 · בועז שאל אם ״מגורים א/ב״ בשכבות העירייה עונה על
                      # זה. לא: הייעוד הוא התנאי הראשון (השער שלמעלה), וכאן נבדק
                      # **שימוש כדין בשטח הבנוי** — חנות בקומת קרקע בייעוד מגורים
                      # נספרת כאן. ‏״97%״ בנוסח הקודם לא נמצא בשום חישוב בריפו.
+                     # מאז 16.09, ייעוד מגורים ב׳ טהור נותן ברירת מחדל עוברת —
+                     # ראו `_zoning_default_share` — ולכן מגיע לכאן רק בלעדיו.
                      "הייעוד בתכנית אינו מראה שימוש בפועל. היחס נקבע מטבלת השטחים בהיתר "
                      "(תיק הבניין) או בביקור, ואין לו מקור פתוח" + zoning_note
-                     if share is None else share_detail))
+                     if effective_share is None else share_detail))
 
     permit, opinion = f.get("permit_date"), f.get("engineer_opinion")
     if permit is None:
