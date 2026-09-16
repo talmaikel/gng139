@@ -1,6 +1,6 @@
 "use client";
 
-import { Accordion, ActionIcon, Alert, Anchor, Button, Group, List, Paper, Popover, Table, Text } from "@mantine/core";
+import { Accordion, Alert, Anchor, Button, Group, List, Table, Text } from "@mantine/core";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,10 +9,12 @@ import { ApiError, downloadDossier, getDossier, getUnitReviewCounts,
          type Betterment, type Dossier, type EvidenceRow, type Gate, type TermId } from "@/lib/api";
 import { fmtDate as date, ils, ilsApprox, sqm } from "@/lib/format";
 import type { Tone } from "@/lib/labels";
-import { IconFile, IconHelp, IconSheet } from "@/components/brand/icons";
+import { IconFile, IconSheet } from "@/components/brand/icons";
 import { assumptionBadge, gateBadge, PageHeader, Section, Stat, StatStrip, StatusBadge } from "@/components/brand/ui";
 import { GlossaryContext, Term, WithTerm } from "@/components/Term";
-import type { CostRow, LevyExplainParagraph, PolicyArea, PolicyDossier, RightsVerdict, ScenarioCard } from "@/lib/dossier";
+import { WithRowInfo } from "@/components/CostRowInfo";
+import { ScenarioCalculator } from "@/components/ScenarioCalculator";
+import type { LevyExplainParagraph, PolicyArea, PolicyDossier, RightsVerdict, ScenarioCard } from "@/lib/dossier";
 
 const CITY = "herzliya";
 
@@ -212,34 +214,10 @@ function PolicyAreaBlock({ p }: { p: PolicyArea }) {
   );
 }
 
-/** ‏W4 · נקודה 6: ״?״ ליד שורה בטבלת העלויות — מה השורה, הנוסחה ומאיפה הקלט. בלחיצה, כמו המונחים. */
-function RowInfo({ row }: { row: CostRow }) {
-  return (
-    <Popover width={340} position="bottom" withArrow shadow="md" trapFocus returnFocus>
-      <Popover.Target>
-        <ActionIcon variant="subtle" color="gray" size={24} my={-4} radius="xl"
-                    aria-label={`מה זה: ${row.label}`} style={{ verticalAlign: "middle", flex: "none" }}>
-          <IconHelp size={14} />
-        </ActionIcon>
-      </Popover.Target>
-      <Popover.Dropdown style={{ maxWidth: "calc(100vw - 2rem)" }}>
-        <Text size="sm" fw={600}>{row.label}</Text>
-        <Text size="sm" mt={4} style={{ lineHeight: 1.55 }}>{row.explain}</Text>
-        <Text size="sm" mt={6} className="mono" style={{ lineHeight: 1.55 }}>{row.formula}</Text>
-        <Text size="xs" c="dimmed" mt={6} style={{ lineHeight: 1.5 }}>מקור: {row.source}</Text>
-      </Popover.Dropdown>
-    </Popover>
-  );
-}
-
 /** ‏W4 · ערך הנחה ביחידה שיזם קורא: שיעור כאחוז, ו-₪ למ״ר במקום ILS/sqm. */
 function assumptionValue(a: { value: number; unit: string; unit_label?: string }) {
   if (a.unit === "ratio") return `${(a.value * 100).toLocaleString("he-IL", { maximumFractionDigits: 2 })}%`;
   return `${a.value.toLocaleString("he-IL")} ${a.unit_label ?? a.unit}`;
-}
-
-function WithRowInfo({ row }: { row: CostRow }) {
-  return <span>{row.label}{"\u00a0"}<RowInfo row={row} /></span>;
 }
 
 const VERDICT: Record<RightsVerdict["case"], { title: string; color: string }> = {
@@ -341,6 +319,12 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
           : e instanceof ApiError ? e.detail : "לא ניתן לטעון את התיק.");
       });
   }, [id, router]);
+
+  // ‏W8 · ‏/mix מפנה ל-#economics. הדפדפן גולל לעוגן בטעינה — לפני שהתיק הגיע והקטע קיים.
+  useEffect(() => {
+    if (!d || typeof window === "undefined" || !window.location.hash) return;
+    document.getElementById(decodeURIComponent(window.location.hash.slice(1)))?.scrollIntoView();
+  }, [d]);
 
   if (error) {
     return (
@@ -503,23 +487,10 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
               </Text>
             )}
 
-            {/* ‏B15 · התמהיל שהיזם חישב. המשפט מהשרת, כמו ב-PDF ובאקסל,
-                והרווח שמעליו אינו זז בגללו (בועז, 15.09). */}
-            <Paper withBorder={false} bg="var(--ground-2)" p="sm" mt="md" mb="md">
-              <Text size="sm">
-                {d.economics.unit_mix?.summary ? (
-                  <>
-                    {d.economics.unit_mix.summary}{" "}
-                    <Link href={`/app/dossier/${id}/mix`} className="text-link">שנה את התמורה ←</Link>
-                  </>
-                ) : (
-                  <>
-                    תמהיל הדירות עוד לא חושב.{" "}
-                    <Link href={`/app/dossier/${id}/mix`} className="text-link">חשב תמהיל ורווחיות ←</Link>
-                  </>
-                )}
-              </Text>
-            </Paper>
+            {/* ‏W8 · התמהיל אינו מסך נפרד אלא חלק מהדוח (בקשה 12): מחשבון התרחיש מתחת לטבלה. */}
+            <Text size="sm" mt="md" mb="md">
+              <a href="#scenario" className="text-link">שנה מחיר, עלויות, תמורה ותמהיל במחשבון התרחיש ←</a>
+            </Text>
 
             <Table>
               <Table.Tbody>
@@ -569,6 +540,9 @@ export default function DossierPage({ params }: { params: Promise<{ id: string }
             </Table>
 
             {d.economics.betterment && <BettermentBlock b={d.economics.betterment} />}
+
+            {/* ‏W8 · הנתונים שלנו כברירת מחדל, והיזם משנה (בקשה 14). החישוב בשרת, ושום דבר אינו נשמר. */}
+            <ScenarioCalculator cityCode={CITY} opportunityId={id} econ={econ} rights={d.rights} />
           </>
         ) : (
           <Text className="text-warn">{d.economics.why ?? "לא חושב תרחיש."}</Text>
