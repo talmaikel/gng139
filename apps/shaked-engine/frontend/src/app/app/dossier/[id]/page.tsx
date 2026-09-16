@@ -115,7 +115,7 @@ function BettermentBlock({ b }: { b: Betterment }) {
         )}
       </StatStrip>
       {b.calculation && (
-        <div style={{ marginTop: ".65rem", padding: ".65rem .8rem", background: "var(--surface-2)", borderRadius: "var(--mantine-radius-sm)" }}>
+        <div style={{ marginTop: ".65rem", padding: ".65rem .8rem", background: "rgba(15, 38, 31, .04)", borderRadius: "var(--mantine-radius-sm)" }}>
           <Text size="xs" c="dimmed" fw={600}>כך חושב האומדן</Text>
           <Text size="sm" fw={600}>{b.calculation}</Text>
         </div>
