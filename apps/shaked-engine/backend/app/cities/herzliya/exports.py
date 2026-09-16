@@ -163,11 +163,16 @@ def pdf(d: dict[str, Any]) -> bytes:
                 line(econ["betterment"]["summary"], 9, (0.54, 0.38, 0.00), gap=2)
                 continue
             line(f'{name}: {s[key]:,.0f} ₪', 9, gap=2)
+            if key == "betterment_levy_ils" and (econ.get("betterment") or {}).get("summary"):
+                # ‏W2 · האומדן בתוך הרווח, והמשפט אומר שזה אומדן ומה התקרה.
+                line(econ["betterment"]["summary"], 8.5, (0.54, 0.38, 0.00), gap=2, indent=10)
         line(f'רווח: {s["projected_profit_ils"]:,.0f} ₪  ·  '
              f'{s["profit_margin_on_cost_ratio"]:.0%} על העלות', 11, (0.06, 0.15, 0.12), gap=5)
         if econ.get("profit_verdict"):
             line(econ["profit_verdict"], 9, (0.54, 0.38, 0.00) if not s.get("meets_developer_target")
                  else (0.12, 0.37, 0.33), gap=4)
+        # ‏W2 · הזכויות לפי המדיניות מול 400%, ומה נדרש כדי להיות כלכלי.
+        _pdf_rights_comparison(econ, d["rights"], line)
         # ‏B8 · הסייגים נוסעים עם הרווח. פרק הזכויות כתב ״התקרה מנופחת״,
         # והתרחיש מתחתיו הציג רווח בלי מילה.
         if econ.get("caveats"):
@@ -285,6 +290,64 @@ INPUT_ASSUMPTION = {
 STATUS_LABEL = {"data": "נתון", "estimate": "אומדן", "missing": "חסר"}
 
 
+def comparison_rows(econ: dict[str, Any]) -> list[tuple[str, Any, Any, str]]:
+    """‏W2 · שורות ההשוואה בין שטח המדיניות לתקרת ה-400% — אותן שורות ב-PDF ובאקסל."""
+    sc = econ.get("scenarios") or {}
+    pol, cap = sc.get("policy") or {}, sc.get("cap_400") or {}
+    return [
+        ("שטח לבנייה (מ״ר)", pol.get("area_sqm"), cap.get("area_sqm"), "sqm"),
+        ("אחוזי בנייה מהמגרש", pol.get("far_pct"), cap.get("far_pct"), "pct100"),
+        ("שטח ליזם (מ״ר)", pol.get("developer_allocation_sqm"), cap.get("developer_allocation_sqm"), "sqm"),
+        ("רווח לפני היטל (₪)", pol.get("profit_before_levy_ils"), cap.get("profit_before_levy_ils"), "ils"),
+        ("תקרת היטל שמשאירה רווח מזערי (₪)", pol.get("levy_ceiling_ils"), cap.get("levy_ceiling_ils"), "ils"),
+        ("אומדן היטל השבחה (₪)", pol.get("levy_estimate_ils"), cap.get("levy_estimate_ils"), "ils"),
+        ("רווח אחרי אומדן היטל (₪)", pol.get("profit_after_levy_ils"), cap.get("profit_after_levy_ils"), "ils"),
+        ("שיעור רווח על העלות, לפני היטל", pol.get("margin_before_levy"), cap.get("margin_before_levy"), "ratio"),
+        ("שיעור רווח על העלות, אחרי אומדן היטל", pol.get("margin_after_levy"), cap.get("margin_after_levy"), "ratio"),
+    ]
+
+
+def _fmt(v: Any, kind: str) -> str:
+    if v is None:
+        return "—"
+    if kind == "ratio":
+        return f"{v:.1%}"
+    if kind == "pct100":
+        return f"{v:,.0f}%"
+    return f"{v:,.0f}"
+
+
+def _pdf_rights_comparison(econ: dict[str, Any], rights_: dict[str, Any], line) -> None:
+    p = rights_.get("policy_area") or {}
+    verdict = econ.get("rights_verdict") or {}
+    line("זכויות לפי מדיניות הרצליה מול תקרת 400%", 11, (0.06, 0.15, 0.12), gap=4)
+    if p.get("base"):
+        b, lo, hi = p["base"], p["low"], p["high"]
+        line(f'מגרש {p["plot_sqm"]:,.0f} מ״ר · מעטפת בתוך קווי הבניין {p["envelope_sqm"]:,.0f} מ״ר לקומה', 9, gap=2)
+        if p.get("cap_400_sqm"):
+            line(f'תקרת 400% (פי 4 מהשטח הבנוי הקיים): {p["cap_400_sqm"]:,.0f} מ״ר · '
+                 f'{p["cap_400_far_pct"]:,.0f}% בנייה — תקרה בחוק, לא זכות', 9, gap=2)
+        line(f'לפי המדיניות: {b["sqm"]:,.0f} מ״ר (טווח {lo["sqm"]:,.0f}–{hi["sqm"]:,.0f}) · '
+             f'{b["far_pct"]:,.0f}% בנייה'
+             + (f' · {b["share_of_cap"]:.0%} מהתקרה' if b.get("share_of_cap") is not None else ""), 9, gap=2)
+        if b.get("gap_sqm") is not None:
+            line(f'פער: {b["gap_sqm"]:,.0f} מ״ר · {b["gap_far_pct"]:,.0f} נקודות אחוזי בנייה · '
+                 f'{b["unrealizable_share"]:.0%} מהזכויות אינן ניתנות למימוש לפי המדיניות', 9, gap=2)
+        for lim in p.get("limits") or []:
+            line(f"· {lim}", 8, (0.42, 0.40, 0.36), gap=1, indent=10)
+        for asm in p.get("assumptions") or []:
+            line(f"· הנחה: {asm}", 8, (0.42, 0.40, 0.36), gap=1, indent=10)
+    elif p.get("why"):
+        line(p["why"], 9, (0.54, 0.38, 0.00), gap=2)
+    if econ.get("scenarios", {}).get("policy"):
+        line("השוואה · לפי המדיניות מול 400%", 9.5, (0.06, 0.15, 0.12), gap=2)
+        for label, pol, cap, kind in comparison_rows(econ):
+            line(f"{label}: מדיניות {_fmt(pol, kind)} · תקרה {_fmt(cap, kind)}", 8.5, gap=1, indent=10)
+    if verdict.get("text"):
+        colour = (0.12, 0.37, 0.33) if verdict.get("case") == "A" else (0.54, 0.38, 0.00)
+        line(verdict["text"], 9.5, colour, gap=5)
+
+
 def _levy_unknown(econ: dict[str, Any]) -> bool:
     """בסיס ההשבחה אינו ידוע, ויש משפט תקרה להדפיס במקום ״0 ₪״."""
     base = (econ.get("assumptions") or {}).get("betterment_base_ils") or {}
@@ -296,7 +359,8 @@ def _scenario_inputs(d: dict[str, Any]) -> dict[str, float | None]:
     ident, rights_ = d["identity"], d["rights"]
     out: dict[str, float | None] = {
         "plot": ident.get("area_sqm"), "units": ident.get("existing_units"),
-        "buildable": rights_.get("cap_400_sqm"),
+        # ‏W2 · השטח שעליו התרחיש מחושב: לפי המדיניות, ותקרת ה-400% רק כשאין.
+        "buildable": d["economics"].get("buildable_area_sqm") or rights_.get("cap_400_sqm"),
     }
     out.update({key: (a[name]["value"] if name in a else None)
                 for key, name in INPUT_ASSUMPTION.items()})
@@ -318,8 +382,10 @@ def _input_provenance(d: dict[str, Any]) -> dict[str, tuple[str, str]]:
         if r:
             out[key] = (r.get("certainty_label") or r.get("certainty") or "",
                         " · ".join(x for x in (r.get("location"), r.get("method")) if x))
-    rights_ = d["rights"]
-    if rights_.get("cap_400_sqm"):
+    rights_, econ = d["rights"], d["economics"]
+    if econ.get("area_basis") == "policy":
+        out["buildable"] = ("אומדן", econ.get("buildable_basis") or "")
+    elif rights_.get("cap_400_sqm"):
         certainty = rights_.get("cap_400_certainty")
         out["buildable"] = ("אומדן" if certainty not in ("official", "derived", "manually_verified")
                             else "נגזר", rights_.get("cap_400_basis") or "")
@@ -405,7 +471,8 @@ def excel(d: dict[str, Any]) -> bytes:
     tail = out_start + len(OUTPUT_ROWS) + 2
     # ‏B8/B13 · הסייגים ומשפט ההיטל, מתחת לרווח ולא בגיליון אחר.
     lines = ([econ["profit_verdict"]] if econ.get("profit_verdict") else []) + \
-            ([econ["betterment"]["summary"]] if _levy_unknown(econ) else []) + \
+            ([econ["rights_verdict"]["text"]] if (econ.get("rights_verdict") or {}).get("text") else []) + \
+            ([econ["betterment"]["summary"]] if (econ.get("betterment") or {}).get("summary") else []) + \
             [cav["text"] for cav in econ.get("caveats") or []]
     if lines:
         sc.merge_range(tail, 0, tail, 4, "על מה הרווח נשען", head)
@@ -434,5 +501,73 @@ def excel(d: dict[str, Any]) -> bytes:
                    f'כללים {v["rules_version"]} · נתונים {v["data_version"] or "—"} · '
                    f'תבנית {v["template_version"]}', note)
 
+    _excel_rights_sheet(wb, d, head, note, wrap)
     wb.close()
     return buf.getvalue()
+
+
+def _excel_rights_sheet(wb, d: dict[str, Any], head, note, wrap) -> None:
+    """‏W2 · גיליון ״מדיניות מול 400%״: השטח, הפער, ההשוואה הכלכלית ומה נדרש."""
+    econ, p = d["economics"], d["rights"].get("policy_area") or {}
+    ws = wb.add_worksheet("מדיניות מול 400%")
+    ws.right_to_left()
+    ws.set_column(0, 0, 44)
+    ws.set_column(1, 2, 20)
+    ws.set_column(3, 3, 70)
+    num = wb.add_format({"num_format": "#,##0"})
+    pct = wb.add_format({"num_format": "0.0%"})
+    r = 0
+    ws.merge_range(r, 0, r, 3, "זכויות לפי מדיניות הרצליה מול תקרת 400%", head)
+    r += 1
+    if p.get("base"):
+        b, lo, hi = p["base"], p["low"], p["high"]
+        rows = [
+            ("שטח המגרש (מ״ר)", p.get("plot_sqm"), num, "שטח המגרש הקובע"),
+            ("מעטפת בתוך קווי הבניין, לקומה (מ״ר)", p.get("envelope_sqm"), num, "אומדן בסיס"),
+            ("תקרת 400% (מ״ר)", p.get("cap_400_sqm"), num, "פי 4 מהשטח הבנוי הקיים (§70ב) — תקרה בחוק, לא זכות"),
+            ("תקרת 400% באחוזי בנייה מהמגרש", (p.get("cap_400_far_pct") or 0) / 100, pct, ""),
+            ("שטח לפי המדיניות — בסיס (מ״ר)", b["sqm"], num, "התרחיש בגיליון ״תרחיש״ מחושב על המספר הזה"),
+            ("שטח לפי המדיניות — נמוך (מ״ר)", lo["sqm"], num, "הכיוון הגרוע, בקומות המינימום"),
+            ("שטח לפי המדיניות — גבוה (מ״ר)", hi["sqm"], num, "הכיוון הטוב, בקומות המקסימום"),
+            ("אחוזי בנייה לפי המדיניות", (b.get("far_pct") or 0) / 100, pct, ""),
+            ("פער מול התקרה (מ״ר)", b.get("gap_sqm"), num, ""),
+            ("פער באחוזי בנייה", (b.get("gap_far_pct") or 0) / 100, pct, ""),
+            ("שיעור הזכויות שאינו ניתן למימוש לפי המדיניות", b.get("unrealizable_share"), pct, ""),
+        ]
+        for label, value, fmt, why in rows:
+            ws.write(r, 0, label)
+            if value is None:
+                ws.write_blank(r, 1, None)
+            else:
+                ws.write_number(r, 1, value, fmt)
+            ws.write(r, 3, why, note)
+            r += 1
+        for title, items in (("גורמים מגבילים", p.get("limits") or []), ("הנחות", p.get("assumptions") or [])):
+            r += 1
+            ws.merge_range(r, 0, r, 3, title, head)
+            r += 1
+            for text in items:
+                ws.merge_range(r, 0, r, 3, text, note)
+                r += 1
+    elif p.get("why"):
+        ws.merge_range(r, 0, r, 3, p["why"], note)
+        r += 1
+    if (econ.get("scenarios") or {}).get("policy"):
+        r += 1
+        ws.write_row(r, 0, ["השוואה כלכלית", "לפי המדיניות", "תקרת 400%", ""], head)
+        r += 1
+        for label, pol, cap, kind in comparison_rows(econ):
+            ws.write(r, 0, label)
+            for col, v in ((1, pol), (2, cap)):
+                if v is None:
+                    ws.write(r, col, "—")
+                elif kind == "pct100":
+                    ws.write_number(r, col, v / 100, pct)
+                else:
+                    ws.write_number(r, col, v, pct if kind == "ratio" else num)
+            r += 1
+    verdict = econ.get("rights_verdict") or {}
+    if verdict.get("text"):
+        r += 1
+        ws.merge_range(r, 0, r, 3, verdict["text"], wrap)
+        ws.set_row(r, 45)

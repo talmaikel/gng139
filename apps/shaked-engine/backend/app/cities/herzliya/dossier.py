@@ -505,6 +505,7 @@ MARGINAL_LAND_VALUE_ILS = 10_000.0
 
 def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
                 result=None) -> dict[str, Any]:
+    # ‏W2 · ‏`cap` הוא השטח שעליו התרחיש מחושב: שטח המדיניות, או תקרת ה-400% להשוואה.
     """‏B11 · הסף, ולא אומדן של ההשבחה.
 
     מפורט ב-`POC/layer_a/data/BETTERMENT_BASE.md`. בקצרה: אנחנו לא
@@ -528,7 +529,8 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
 
     threshold = breakeven_betterment(above_target, rate=rate)
 
-    added = cap - cap / 4 if cap else None          # התקרה היא 400% מהקיים
+    # התוספת היא השטח החדש פחות הקיים. בתקרה זה שלושה רבעים ממנה (400% מהקיים).
+    added = (cap - existing_area if existing_area else cap - cap / 4) if cap else None
     existing_price = live["existing_price"]["value"]
     per_right = breakeven_land_value_per_right(
         threshold, existing_area_sqm=existing_area,
@@ -626,13 +628,17 @@ def _betterment(inputs, a, live: dict, cap: float, existing_area: float | None,
     }
 
 
-def _profit_verdict(result, target: float) -> str:
+def _profit_verdict(result, target: float, after_levy: bool = False) -> str:
     """‏*״הרווח היזמי חייב להיות מעל 16% כדי שיהיה כדאי״* (בועז, 15.09).
 
     הרווח הוצג במספר גדול ובצבע, והמשפט ״מתחת ליעד״ לא נאמר במילים —
     יזם שקרא 31 מיליון ₪ לא ראה שהפרויקט אינו עומד בסף שלו.
     """
     margin = result.profit_margin_on_cost_ratio
+    # ‏W2 · נקודה 7: הרווח שנשפט הוא אחרי אומדן ההיטל כשיש אומדן.
+    if after_levy:
+        side = "מעל הרווח היזמי המזערי" if result.meets_developer_target else "מתחת לרווח היזמי המזערי"
+        return f"{side} ({target:.0%}): {margin:.1%} על העלות, אחרי אומדן היטל השבחה"
     if result.meets_developer_target:
         return f"מעל הרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, לפני היטל השבחה"
     return (f"מתחת לרווח היזמי המזערי ({target:.0%}): {margin:.1%} על העלות, "
@@ -653,13 +659,15 @@ def _levy_summary(category: str, band: dict, estimate, target: float) -> str:
     ‏״0 ₪״ נקרא כמו ״אין היטל״, והוא שקר: ההיטל הוא רבע מההשבחה, והבסיס
     דורש שומה. מה שכן אפשר לומר הוא התקרה — ההיטל שמעליו הרווח מתאפס.
     """
+    # ‏W2 · כשיש אומדן, הוא נכנס לרווח — ולכן ההיטל אינו ״לא ידוע״ אלא אומדן שאינו שומה.
+    known = "אומדן ולא שומה" if estimate is not None and band.get("low_ils") is not None else "לא ידוע"
     if category == NO_THRESHOLD or not band.get("viable_up_to_ils"):
         # ‏E1 · מתחת ל-16% עוד לפני היטל. האומדן עדיין נאמר: הוא אומר בכמה
         # עוד יירד הרווח, וזה מה שיזם ישאל מיד אחרי ״לא כדאי״.
-        text = (f"היטל השבחה: לא ידוע · הפרויקט אינו מגיע לרווח יזמי של {target:.0%} "
+        text = (f"היטל השבחה: {known} · הפרויקט אינו מגיע לרווח יזמי של {target:.0%} "
                 "גם בלי היטל — הבעיה אינה ההיטל")
     else:
-        text = (f"היטל השבחה: לא ידוע · רווח של {target:.0%} נשמר כל עוד ההיטל מתחת ל-"
+        text = (f"היטל השבחה: {known} · רווח של {target:.0%} נשמר כל עוד ההיטל מתחת ל-"
                 f"{_millions(band['viable_up_to_ils'])} ({_CATEGORY_SHORT[category]})")
     if estimate is not None and band.get("low_ils") is not None:
         # שיטת היזם: שווי המצב החדש פחות הקיים, כפול רבע. הטווח הוא ±10%
@@ -836,21 +844,170 @@ async def _economics(session, opp: Opportunity, assessment: dict, fields: dict) 
             betterment_base_ils=a.betterment_base_ils.value,
             vat_rate=a.vat_rate.value,
     )
-    result = calculate_feasibility(inputs, missing_inputs=blocking)
-    betterment = _betterment(inputs, a, live, cap,
-                             _numeric(fields.get("existing_area")), result)
+    existing_area = _numeric(fields.get("existing_area"))
+    target = a.developer_profit_target_ratio.value
+
+    def run(area: float) -> dict[str, Any]:
+        return _run(inputs.model_copy(update={"buildable_area_sqm": area}), a, live,
+                    existing_area, blocking)
+
+    # ‏**W2 · 16.09 · הדוח הכלכלי נקבע לפי המדיניות, ו-400% להשוואה בלבד.**
+    # ‏400% הוא תקרה בחוק ולא זכות (§70ב); הרווח עליו הוא ״מה היה אילו״.
+    policy = (assessment.get("policy_area") or {}).get("base") or {}
+    policy_sqm = policy.get("sqm")
+    cap_run = run(cap)
+    policy_run = run(policy_sqm) if policy_sqm else None
+    head = policy_run or cap_run
+    result, betterment, after = head["result"], head["betterment"], head["after"]
+
+    # שורת בסיס ההשבחה בטבלה היא מה שהתרחיש השתמש בו: האומדן כשיש, ״חסר״ כשאין.
+    # האקסל קורא אותה לתא הכחול, ולכן גם שם הרווח הוא אחרי אומדן ההיטל.
+    if after is not None:
+        base["assumptions"]["betterment_base_ils"] = {
+            **base["assumptions"]["betterment_base_ils"],
+            "value": after["betterment_ils"], "status": AssumptionStatus.ESTIMATE.value,
+            "source": ("אומדן בשיטת היזם: שווי הזכויות (שווי קרקע שיורי) פחות שווי הדירות "
+                       f"הקיימות — {betterment['levy'].get('estimate_ils', 0) / 1e6:,.1f} מיליון ₪ היטל. "
+                       "אינו שומה")}
+
+    rights_verdict = _rights_verdict(policy_run, cap_run, run, assessment, target)
     return {**base,
             "scenario": result.model_dump(),
             "live_inputs": live,
             "betterment": betterment,
+            "after_levy": after,
+            "before_levy": {"profit_ils": head["before"].projected_profit_ils,
+                            "margin": head["before"].profit_margin_on_cost_ratio,
+                            "meets_target": head["before"].meets_developer_target},
+            "area_basis": "policy" if policy_run else "cap_400",
+            "buildable_area_sqm": head["area_sqm"],
+            "scenarios": {"policy": _scenario_card(policy_run, assessment) if policy_run else None,
+                          "cap_400": _scenario_card(cap_run, assessment)},
+            "rights_verdict": rights_verdict,
             "inputs_missing": result.inputs_missing,
             "not_delivered_reason": _not_delivered(result.inputs_missing),
             "is_deliverable": result.is_deliverable,
             # ‏E1 · המשפט ליד הרווח, בשרת — אותו נוסח במסך, ב-PDF ובאקסל.
-            "profit_verdict": _profit_verdict(result, a.developer_profit_target_ratio.value),
-            # תקרת ה-400% נשענת על אומדן שטח קיים, וזה נכתב ולא נבלע.
-            "buildable_basis": assessment.get("cap_400_basis"),
-            "buildable_certainty": assessment.get("cap_400_certainty")}
+            "profit_verdict": _profit_verdict(result, target, after_levy=after is not None),
+            "buildable_basis": (_policy_basis(assessment) if policy_run
+                                else assessment.get("cap_400_basis")),
+            "buildable_certainty": ("estimate" if policy_run
+                                    else assessment.get("cap_400_certainty"))}
+
+
+def _run(inputs, a, live: dict, existing_area: float | None, blocking: list[str]) -> dict[str, Any]:
+    """תרחיש אחד על שטח אחד: לפני היטל, התקרה והאומדן, ואחרי אומדן ההיטל."""
+    area = inputs.buildable_area_sqm
+    before = calculate_feasibility(inputs, missing_inputs=blocking)
+    betterment = _betterment(inputs, a, live, area, existing_area, before)
+    est = betterment.get("estimate")
+    after = None
+    result = before
+    if est is not None:
+        # ‏**W2 · נקודה 7: ״רווח על העלות — רווח יזמי אחרי היטל השבחה״.** האומדן
+        # נכנס לעלות כמו שהיטל נכנס בפועל, כולל המימון עליו — אותה הנחה שעליה
+        # נשענת התקרה, ולכן רווח ≥16% ⇔ ההיטל מתחת לתקרה.
+        def with_levy(b: float):
+            return calculate_feasibility(
+                inputs.model_copy(update={"betterment_base_ils": max(b, 0.0)}), missing_inputs=blocking)
+        swing = 0.10
+        mid = with_levy(est["betterment_ils"])
+        worst = with_levy(est["after_ils"] * (1 + swing) - est["before_ils"])
+        best = with_levy(est["after_ils"] * (1 - swing) - est["before_ils"])
+        after = {"betterment_ils": max(est["betterment_ils"], 0.0),
+                 "levy_ils": mid.betterment_levy_ils,
+                 "levy_low_ils": best.betterment_levy_ils, "levy_high_ils": worst.betterment_levy_ils,
+                 "profit_ils": mid.projected_profit_ils,
+                 "margin": mid.profit_margin_on_cost_ratio,
+                 "margin_low": worst.profit_margin_on_cost_ratio,
+                 "margin_high": best.profit_margin_on_cost_ratio,
+                 "meets_target": mid.meets_developer_target}
+        result = mid
+    return {"area_sqm": area, "before": before, "after": after, "result": result,
+            "betterment": betterment}
+
+
+def _scenario_card(r: dict[str, Any], assessment: dict) -> dict[str, Any]:
+    """תקציר של תרחיש אחד להשוואה בין שטח המדיניות לתקרת ה-400%."""
+    b, after = r["before"], r["after"]
+    plot = ((assessment.get("policy_area") or {}).get("plot_sqm"))
+    return {
+        "area_sqm": r["area_sqm"],
+        "far_pct": r["area_sqm"] / plot * 100 if plot else None,
+        "developer_allocation_sqm": b.developer_allocation_sqm,
+        "total_revenue_ils": b.total_revenue_ils,
+        "total_cost_before_levy_ils": b.total_cost_ils,
+        "profit_before_levy_ils": b.projected_profit_ils,
+        "margin_before_levy": b.profit_margin_on_cost_ratio,
+        "levy_ceiling_ils": r["betterment"]["levy"].get("viable_up_to_ils"),
+        "levy_estimate_ils": after["levy_ils"] if after else None,
+        "profit_after_levy_ils": after["profit_ils"] if after else None,
+        "margin_after_levy": after["margin"] if after else None,
+        "meets_target": r["result"].meets_developer_target,
+    }
+
+
+def _policy_basis(assessment: dict) -> str:
+    p = assessment.get("policy_area") or {}
+    low, base, high = p.get("low") or {}, p.get("base") or {}, p.get("high") or {}
+    return (f"שטח לפי מדיניות הרצליה, אומדן בסיס {base.get('sqm', 0):,.0f} מ״ר "
+            f"(טווח {low.get('sqm', 0):,.0f}–{high.get('sqm', 0):,.0f}) — בתוך קווי הבניין והנסיגות; "
+            f"תקרת 400% ({p.get('cap_400_sqm') or 0:,.0f} מ״ר) להשוואה בלבד")
+
+
+REQUIRED_AREA_ITERATIONS = 30
+
+
+def _rights_verdict(policy_run, cap_run, run, assessment: dict, target: float) -> dict[str, Any]:
+    """‏**W2 · האם כלכלי לפי המדיניות, ואם לא — כמה זכויות צריך לבקש.**
+
+    ארבעה מצבים, ולא כן/לא: ״לא כלכלי לפי המדיניות וכלכלי ב-400%״ הוא בדיוק
+    הטיעון של יזם מול הוועדה המקומית, ו״לא כלכלי גם ב-400%״ אומר שהגדלת
+    זכויות אינה הפתרון. הרווח נשפט אחרי אומדן ההיטל כשיש אומדן, ולפניו כשאין.
+    """
+    p = assessment.get("policy_area") or {}
+    if policy_run is None:
+        return {"case": "D", "basis": None,
+                "text": ("לא חושב שטח לפי מדיניות הרצליה"
+                         + (f": {p['why']}" if p.get("why") else "")
+                         + ". הרווח מחושב על תקרת ה-400%, שהיא תקרה בחוק ולא זכות.")}
+    after = policy_run["after"] is not None
+    when = "אחרי אומדן היטל השבחה" if after else "לפני היטל השבחה"
+    plot = p.get("plot_sqm")
+    cap = cap_run["area_sqm"]
+    pm = policy_run["result"].profit_margin_on_cost_ratio
+    cm = cap_run["result"].profit_margin_on_cost_ratio
+    area = policy_run["area_sqm"]
+    far = f" ({area / plot * 100:,.0f}% בנייה)" if plot else ""
+    if policy_run["result"].meets_developer_target:
+        return {"case": "A", "basis": "after_levy" if after else "before_levy",
+                "text": (f"כלכלי לפי מדיניות הרצליה: {pm:.1%} על העלות {when}, "
+                         f"על {area:,.0f} מ״ר{far} — מעל הרווח היזמי המזערי ({target:.0%}).")}
+    if not cap_run["result"].meets_developer_target:
+        return {"case": "C", "basis": "after_levy" if after else "before_levy",
+                "text": (f"לא כלכלי לפי המדיניות ({pm:.1%} על העלות {when}), וגם לא בניצול מלא של "
+                         f"תקרת ה-400% ({cm:.1%}). הגדלת זכויות אינה פותרת — הפער במחיר, "
+                         "בעלויות או בתמורה לדיירים.")}
+    lo, hi = area, cap
+    for _ in range(REQUIRED_AREA_ITERATIONS):
+        mid = (lo + hi) / 2
+        if run(mid)["result"].meets_developer_target:
+            hi = mid
+        else:
+            lo = mid
+    required = hi
+    addition = required - area
+    out = {"case": "B", "basis": "after_levy" if after else "before_levy",
+           "required_area_sqm": required, "required_addition_sqm": addition,
+           "required_share_of_cap": required / cap if cap else None,
+           "required_far_pct": required / plot * 100 if plot else None,
+           "addition_far_pct": addition / plot * 100 if plot else None}
+    add_far = f", כ-{out['addition_far_pct']:,.0f} נקודות אחוזי בנייה" if plot else ""
+    out["text"] = (f"לא כלכלי לפי המדיניות ({pm:.1%} על העלות {when}), וכלכלי בתקרת ה-400% ({cm:.1%}). "
+                   f"כדי להגיע לרווח יזמי של {target:.0%} נדרשים כ-{required:,.0f} מ״ר — תוספת של "
+                   f"כ-{addition:,.0f} מ״ר מעל המדיניות{add_far} ({required / cap:.0%} מהתקרה). "
+                   "זה הבסיס לבקשת הגדלת זכויות מהוועדה המקומית, עד תקרת החוק.")
+    return out
 
 
 async def build(session, city_rules, opportunity_id: UUID, company_id: UUID) -> dict[str, Any]:
