@@ -35,7 +35,9 @@ ANSWERED = dict(residential_zoning=True, permit_date="1978-01-01", strengthened=
                 occupied=False, post_2005_permit=False, floors=4, units=28,
                 scope_buildings=1, street_width=12.0,
                 renewal_policy_category="התחדשות מגרשית מוטת מגורים",
-                in_tama70=True, registration_area='שז"ר')
+                in_tama70=True, registration_area='שז"ר',
+                # ‏W5 · בלי הכרעת חידוש מגרש אינו נמסר
+                renewal_status={"status": "none", "reasons": [], "manual": False})
 
 DRAWING = "https://archive.example.test/tik/123/gramushka.pdf"
 

@@ -238,6 +238,11 @@ async def test_a_scan_never_charges_for_suspected_and_never_offers_verified(sess
         raise AssertionError("a held parcel must not reach the archive")
     monkeypatch.setattr(api, "fetch_for_delivery", never)
 
+    # ‏W6 · הסריקה מדרגת לפי כלכלה; כאן הבדיקה היא על החזקה, ולכן כל מגרש כלכלי.
+    async def economic(*_a, **_k):
+        return {"case": "A", "margin": 0.2, "cap_margin": 0.3, "after_levy": True}
+    monkeypatch.setattr(api, "parcel_economics", economic)
+
     app.dependency_overrides[get_async_session] = lambda: session
     app.dependency_overrides[current_active_user] = lambda: u
     try:
