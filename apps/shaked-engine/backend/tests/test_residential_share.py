@@ -26,6 +26,7 @@ from app.models.package import Balance
 from app.models.tenant import Company, User
 from app.services.deliveries import deliver
 from app.services.evidence_store import deciding, fields_for
+from app.services.residential_share import record_ocr_candidate
 
 SQUARE = ("MULTIPOLYGON(((34.8470000 32.1670000,34.8474000 32.1670000,"
           "34.8474000 32.1673000,34.8470000 32.1673000,34.8470000 32.1670000)))")
@@ -220,6 +221,103 @@ async def test_nonsense_input_is_refused(client, session, payload):
     r = await client.put(f"/api/v1/dossiers/{opp.id}/residential-share", json=payload)
     assert r.status_code == 422
     assert await _manual_rows(session, opp) == []
+
+
+# ── W10: המועמד האוטומטי (record_ocr_candidate) ──
+
+@pytest.mark.asyncio
+async def test_ocr_candidate_is_displayed_but_never_decides(client, session):
+    opp = await _delivered(session, client.user, "9710")
+    wrote = await record_ocr_candidate(
+        session, opp.id, residential_sqm=820, total_sqm=1000,
+        source_url=DRAWING, retrieved_at=None,
+        location="טבלת השטחים בהיתר · עמ׳ 3", method="tesseract_regex")
+    await session.commit()
+    assert wrote is True
+
+    r = (await client.get(f"/api/v1/dossiers/{opp.id}/residential-share")).json()
+    assert r["residential_share"] is None            # לא מכריע
+    assert r["gate"]["status"] == "unknown"           # השער עדיין לא ידוע
+    assert r["entry"] is None                          # אין הזנה ידנית
+    assert r["ocr_candidate"]["residential_share"] == 0.82   # אבל מוצג
+
+
+@pytest.mark.asyncio
+async def test_a_rerun_replaces_its_own_candidate_instead_of_piling_up(client, session):
+    opp = await _delivered(session, client.user, "9711")
+    await record_ocr_candidate(session, opp.id, residential_sqm=820, total_sqm=1000,
+                               source_url=DRAWING, retrieved_at=None,
+                               location="עמ׳ 3", method="tesseract_regex")
+    await record_ocr_candidate(session, opp.id, residential_sqm=850, total_sqm=1000,
+                               source_url=DRAWING, retrieved_at=None,
+                               location="עמ׳ 3", method="tesseract_regex")
+    await session.commit()
+    rows = await _manual_rows(session, opp)
+    ocr_rows = [r for r in rows if r.certainty == Certainty.OCR_CANDIDATE.value]
+    assert len(ocr_rows) == 1 and ocr_rows[0].value == 0.85
+
+
+@pytest.mark.asyncio
+async def test_ocr_candidate_never_contests_an_already_decided_gate(client, session):
+    """A person confirmed 82%; a later automated pass reading a different
+    number must not turn that into a conflict."""
+    opp = await _delivered(session, client.user, "9712")
+    await client.put(f"/api/v1/dossiers/{opp.id}/residential-share", json=_body(820, 1000))
+    wrote = await record_ocr_candidate(
+        session, opp.id, residential_sqm=550, total_sqm=1000,
+        source_url=DRAWING, retrieved_at=None, location="עמ׳ 3", method="tesseract_regex")
+    await session.commit()
+    assert wrote is False
+
+    r = (await client.get(f"/api/v1/dossiers/{opp.id}/residential-share")).json()
+    assert r["residential_share"] == 0.82 and r["gate"]["status"] == "passed"
+    assert r["ocr_candidate"] is None
+
+
+@pytest.mark.asyncio
+async def test_a_manual_correction_clears_the_stale_candidate_it_replaces(client, session):
+    """The review screen exists to correct the automatic reading -- a human
+    typing a different number must decide outright, not end up in a
+    conflict against the very candidate they were reviewing."""
+    opp = await _delivered(session, client.user, "9713")
+    await record_ocr_candidate(session, opp.id, residential_sqm=550, total_sqm=1000,
+                               source_url=DRAWING, retrieved_at=None,
+                               location="עמ׳ 3", method="tesseract_regex")
+    await session.commit()
+
+    body = (await client.put(f"/api/v1/dossiers/{opp.id}/residential-share",
+                             json=_body(820, 1000))).json()
+    assert body["residential_share"] == 0.82 and body["gate"]["status"] == "passed"
+    assert body["certainty"] == "manually_verified"    # ולא "conflict"
+    rows = await _manual_rows(session, opp)
+    assert [r.certainty for r in rows] == [Certainty.MANUALLY_VERIFIED.value]  # ה-OCR נמחקה
+
+
+@pytest.mark.asyncio
+async def test_an_unrelated_ai_candidate_still_conflicts_with_a_manual_entry(client, session):
+    """record() clears its own OCR_CANDIDATE, but an independent AI_CANDIDATE
+    observation from elsewhere is a different kind of evidence -- disagreeing
+    with it stays a real conflict (unchanged from before this feature)."""
+    opp = await _delivered(session, client.user, "9714")
+    session.add(FieldEvidence(
+        opportunity_id=opp.id, field="residential_share", value=0.9,
+        certainty=Certainty.AI_CANDIDATE.value, source_url=DRAWING,
+        retrieved_at=datetime.now(timezone.utc), location="עמ׳ 2"))
+    await session.flush()
+    body = (await client.put(f"/api/v1/dossiers/{opp.id}/residential-share",
+                             json=_body(820, 1000))).json()
+    assert body["certainty"] == "conflict"
+    assert body["residential_share"] is None and body["gate"]["status"] == "unknown"
+
+
+@pytest.mark.asyncio
+async def test_record_ocr_candidate_rejects_the_same_nonsense_as_the_endpoint(session):
+    """`worker.py` calls this directly, with no request validation in front
+    of it -- it has to reject a bad reading on its own."""
+    with pytest.raises(ValueError):
+        await record_ocr_candidate(
+            session, uuid.uuid4(), residential_sqm=1200, total_sqm=1000,
+            source_url=DRAWING, retrieved_at=None, location="עמ׳ 3", method="tesseract_regex")
 
 
 # ── נוסח השער ──

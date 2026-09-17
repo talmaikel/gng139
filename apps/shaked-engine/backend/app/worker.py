@@ -22,6 +22,7 @@ from app.models.opportunity import Opportunity
 from app.pipeline.extractor import extract_total_building_area
 from app.pipeline.preprocessor import preprocess_blueprint
 from app.services.dwelling_units import (
+    check_unit_count,
     load_units,
     persist_unit_readings,
     resolve_existing_unit_area,
@@ -34,6 +35,7 @@ from app.services.economic.construction_costs import (
 from app.services.economic.schemas import FeasibilityInput
 from app.services.market_data.govmap import MarketDataUnavailable
 from app.services.market_data.service import get_or_refresh_market_valuation
+from app.services.residential_share import location_for as residential_location_for, record_ocr_candidate
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("shaked.worker")
@@ -99,6 +101,49 @@ async def _existing_area_sqm(session, opportunity_id) -> float | None:
         return float(value) if value is not None else None
     except (TypeError, ValueError):
         return None
+
+
+async def _existing_floors(session, opportunity_id) -> int | None:
+    """The seeded existing-building floor count (AGOL `Num_floors`, max over
+    the parcel's buildings) -- mirrors `_existing_area_sqm`. This is the
+    *existing* building's floors, an independent official reading; it has
+    nothing to do with `rights.floors()`, which computes how many *new*
+    floors the Shaked policy permits.
+    """
+    result = await session.execute(
+        select(FieldEvidence.value)
+        .where(
+            FieldEvidence.opportunity_id == opportunity_id,
+            FieldEvidence.field == "floors",
+            FieldEvidence.value.isnot(None),
+        )
+        .order_by(FieldEvidence.created_at.desc())
+        .limit(1)
+    )
+    value = result.scalar_one_or_none()
+    try:
+        return int(float(value)) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _check_floor_count(declared: int | None, known: int | None) -> str | None:
+    """Cross-check the permit legend's own declared floor count against the
+    existing official reading. Same shape as dwelling_units.check_unit_count
+    and the same caution: a note to record, never used to overwrite either
+    figure -- agreement is free corroboration, disagreement is a genuine
+    finding (an addition since the permit, a misread legend, or the
+    official layer being wrong), not something this pipeline may resolve
+    on its own.
+    """
+    if declared is None or known is None or declared == known:
+        return None
+    return (
+        f"Floor-count conflict: the permit legend states {declared} floor(s), "
+        f"the existing official reading shows {known}. Both are kept; the gap "
+        "may mean the building was altered since the permit, that the legend "
+        "was misread, or that the official reading is wrong."
+    )
 
 
 def _average_existing_unit_input(assumptions, unit_area):
@@ -253,6 +298,18 @@ async def generate_dossier_handler(payload: dict) -> dict:
         best_schedule: tuple[list, str, str, dict] | None = None
         best_schedule_plausible_count = 0
 
+        # W10 (#115): the first page that states its own residential-area
+        # figure against a known, sane total. "First" rather than "best" --
+        # unlike the unit schedule, this is a single scalar a legend states
+        # once; there is no partial reading to prefer over another.
+        best_residential: tuple[float, float, str, str, dict] | None = None
+
+        # First non-null declared count seen for either -- both are single
+        # scalars a legend states once (a summary line, not a per-row
+        # count), so there is nothing to prefer one reading over another.
+        best_declared_unit_count: int | None = None
+        best_declared_floor_count: int | None = None
+
         for document_index, (pdf_bytes, document_source) in enumerate(pdf_documents, start=1):
             for page_index, page_bytes in enumerate(_rasterize_pdf(pdf_bytes), start=1):
                 preprocessed = preprocess_blueprint(page_bytes)
@@ -271,12 +328,30 @@ async def generate_dossier_handler(payload: dict) -> dict:
                         "units_read": len(extraction.units),
                         "declared_unit_count": extraction.declared_unit_count,
                         "units_total_area_sqm": extraction.units_total_area_sqm,
+                        "residential_area_sqm": extraction.residential_area_sqm,
+                        "declared_floor_count": extraction.declared_floor_count,
                     }
                 )
                 usable_units = [u for u in extraction.units if u.is_plausible]
                 if len(usable_units) > best_schedule_plausible_count:
                     best_schedule = (extraction.units, extraction.method, page_ref, document_source)
                     best_schedule_plausible_count = len(usable_units)
+
+                if best_declared_unit_count is None and extraction.declared_unit_count is not None:
+                    best_declared_unit_count = extraction.declared_unit_count
+                if best_declared_floor_count is None and extraction.declared_floor_count is not None:
+                    best_declared_floor_count = extraction.declared_floor_count
+
+                if (
+                    best_residential is None
+                    and extraction.residential_area_sqm is not None
+                    and extraction.total_building_area_sqm is not None
+                    and 0 < extraction.residential_area_sqm <= extraction.total_building_area_sqm
+                ):
+                    best_residential = (
+                        extraction.residential_area_sqm, extraction.total_building_area_sqm,
+                        extraction.method, page_ref, document_source,
+                    )
 
         dossier["extraction_results"] = extraction_results
 
@@ -296,6 +371,24 @@ async def generate_dossier_handler(payload: dict) -> dict:
                 retrieved_at=datetime.fromisoformat(retrieved_at) if retrieved_at else None,
             )
             await session.flush()
+
+        # W10 (#115): the §70א 70%-residential gate previously had no open
+        # source at all -- a person had to read the gramoshka's area table
+        # by hand. When the same table states its own residential figure,
+        # write it as a displayed candidate; it still cannot decide the gate
+        # on its own (see residential_share.record_ocr_candidate), and it
+        # never contests a person's own manually-verified answer.
+        if best_residential:
+            residential_sqm, total_sqm, method, page_ref, document_source = best_residential
+            retrieved_at_raw = document_source.get("retrieved_at")
+            await record_ocr_candidate(
+                session, opportunity_id,
+                residential_sqm=residential_sqm, total_sqm=total_sqm,
+                source_url=document_source.get("url"),
+                retrieved_at=datetime.fromisoformat(retrieved_at_raw) if retrieved_at_raw else None,
+                location=residential_location_for(residential_sqm, total_sqm, page=page_ref),
+                method=method,
+            )
 
         stored_units = await load_units(session, opportunity_id)
         dossier["dwelling_units"] = [
@@ -321,6 +414,20 @@ async def generate_dossier_handler(payload: dict) -> dict:
         # construction -- k was calibrated against a single permit -- so it can
         # only ever produce another ESTIMATE.
         existing_area_sqm = await _existing_area_sqm(session, opportunity_id)
+
+        # Every number the gramoshka's legend states about the building,
+        # cross-checked against what was already known -- never used to
+        # overwrite either side. Displayed unconditionally (empty when there
+        # is nothing to compare) rather than only appearing on disagreement,
+        # so its absence cannot be mistaken for "no permit was read."
+        existing_floors = await _existing_floors(session, opportunity_id)
+        dossier["gramoshka_cross_checks"] = [
+            note for note in (
+                check_unit_count(best_declared_unit_count, opportunity.existing_units),
+                _check_floor_count(best_declared_floor_count, existing_floors),
+            ) if note
+        ]
+
         unit_area = resolve_existing_unit_area(
             stored_units,
             municipal_unit_count=opportunity.existing_units,

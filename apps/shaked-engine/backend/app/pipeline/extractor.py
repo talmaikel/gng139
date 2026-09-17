@@ -29,6 +29,16 @@ AREA_ROW_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# W10 (#115): the same legend sometimes states how much of the building is
+# residential use -- "שטח למגורים" / "שטח עיקרי למגורים" / "סה״כ מגורים" --
+# distinct from AREA_ROW_PATTERN's "שטח כולל/עיקרי" rows, which don't say
+# residential vs. any other use. Matched opportunistically, same as the unit
+# schedule: most sheets won't have it, and that's not a failure.
+RESIDENTIAL_AREA_ROW_PATTERN = re.compile(
+    r"שטח\s*(?:עיקרי\s*)?ל?מגורים\D{0,10}([\d,.]+)\s*(?:מ\"?ר|sq\s*m|m2|sqm)?",
+    re.IGNORECASE,
+)
+
 # One schedule row per apartment: a unit number, optionally a floor, and an
 # area. Two orderings are tried because Hebrew RTL text comes back from
 # Tesseract with the number on either side depending on the sheet.
@@ -52,6 +62,15 @@ UNIT_ROW_PATTERNS = (
 UNIT_COUNT_PATTERNS = (
     re.compile(r"(?:סה[\"'״]?כ|סך\s*הכל)?\s*(?:יח[\"'״]?ד|יחידות\s*דיור|דירות)\D{0,12}?(\d{1,3})\b"),
     re.compile(r"\b(\d{1,3})\s*(?:יח[\"'״]?ד|יחידות\s*דיור|דירות)"),
+)
+
+# Declared floor count for the whole building, e.g. "מספר קומות: 7" or
+# "בניין בן 7 קומות". Distinct from a unit row's own `floor` group in
+# UNIT_ROW_PATTERNS (which apartment sits on which floor) -- this is how
+# many floors the permit describes the building as having overall.
+FLOOR_COUNT_PATTERNS = (
+    re.compile(r"(?:מספר\s*)?קומות\D{0,10}?(\d{1,2})\b"),
+    re.compile(r"\bבן\s*[\-]?\s*(\d{1,2})\s*קומות\b"),
 )
 
 MIN_OCR_CONFIDENCE = 60.0
@@ -149,6 +168,22 @@ def _parse_unit_rows(text: str) -> list[DwellingUnitReading]:
     return readings
 
 
+def _parse_residential_area(text: str) -> float | None:
+    """The legend's own residential-use figure, when it states one.
+
+    Returns the first match rather than summing multiple: a legend that
+    states residential area once did not intend it to be added to itself,
+    and a repeated title-block line is the same value twice, not two rows.
+    """
+    match = RESIDENTIAL_AREA_ROW_PATTERN.search(text)
+    if not match:
+        return None
+    try:
+        return float(match.group(1).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+
+
 def _parse_unit_count(text: str) -> int | None:
     for pattern in UNIT_COUNT_PATTERNS:
         match = pattern.search(text)
@@ -158,6 +193,28 @@ def _parse_unit_count(text: str) -> int | None:
             except (TypeError, ValueError):
                 continue
             if 1 <= count <= 300:
+                return count
+    return None
+
+
+def _parse_floor_count(text: str) -> int | None:
+    """The building's own declared floor count, when the legend states one.
+
+    Unverified against a real scan (no sample with this exact wording was
+    available while writing it) -- opportunistic like the rest of this
+    module: taken when found, left None otherwise, and never the only
+    source a floor count can come from (see worker.py, which only ever
+    displays a disagreement against the existing official reading, never
+    overwrites it).
+    """
+    for pattern in FLOOR_COUNT_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            try:
+                count = int(match.group(1))
+            except (TypeError, ValueError):
+                continue
+            if 1 <= count <= 40:
                 return count
     return None
 
@@ -185,12 +242,20 @@ EXTRACTION_JSON_SCHEMA = {
                 },
             },
             "declared_unit_count": {"type": ["integer", "null"]},
+            # W10 (#115): how much of total_building_area_sqm is residential
+            # use, when the legend states it -- feeds the §70א 70%-residential
+            # gate as a candidate, never as a decided answer (see worker.py).
+            "residential_area_sqm": {"type": ["number", "null"]},
+            # The building's own declared floor count, when the legend
+            # states one -- distinct from a unit row's individual floor.
+            "declared_floor_count": {"type": ["integer", "null"]},
             "confidence": {"type": "number"},
             "notes": {"type": ["string", "null"]},
         },
         # OpenAI's strict structured-output mode requires every property to be
         # listed here, even ones that are semantically optional/nullable above.
-        "required": ["total_building_area_sqm", "units", "declared_unit_count", "confidence", "notes"],
+        "required": ["total_building_area_sqm", "units", "declared_unit_count",
+                    "residential_area_sqm", "declared_floor_count", "confidence", "notes"],
         "additionalProperties": False,
     },
     "strict": True,
@@ -220,6 +285,16 @@ class ExtractionResult:
     # same thing as len(units): a schedule can be partly illegible while the
     # summary line is readable, and the disagreement is worth keeping.
     declared_unit_count: int | None = None
+    # W10 (#115): the legend's own residential-area figure, when it states
+    # one. Left unvalidated against total_building_area_sqm here -- the
+    # caller (worker.py) already has to re-check it against whichever total
+    # it ends up selecting, which may come from a different page.
+    residential_area_sqm: float | None = None
+    # The building's own declared floor count, when the legend states one.
+    # Never used to overwrite the existing official floor count (see
+    # worker.py) -- only to display a disagreement, the same caution as
+    # every other OCR-read figure in this module.
+    declared_floor_count: int | None = None
 
     @property
     def units_total_area_sqm(self) -> float | None:
@@ -247,6 +322,8 @@ def _extract_via_tesseract(legend_crop: np.ndarray, plot_area_sqm: float | None)
 
     units = _parse_unit_rows(text)
     declared_unit_count = _parse_unit_count(text)
+    residential_area_sqm = _parse_residential_area(text)
+    declared_floor_count = _parse_floor_count(text)
 
     # A schedule that lists every apartment but no total is common on older
     # sheets. Summing the plausible unit rows is a legitimate reading of that
@@ -266,6 +343,8 @@ def _extract_via_tesseract(legend_crop: np.ndarray, plot_area_sqm: float | None)
         raw_text=text,
         units=units,
         declared_unit_count=declared_unit_count,
+        residential_area_sqm=residential_area_sqm,
+        declared_floor_count=declared_floor_count,
     )
 
 
@@ -291,7 +370,14 @@ async def _extract_via_openai(image_bytes: bytes, plot_area_sqm: float | None) -
                     "number, floor and area. If only individual unit areas are legible, sum "
                     "them into the total. Report a unit you cannot read as a row with a null "
                     "area rather than omitting it or guessing a value, and return an empty "
-                    "list when the sheet has no per-apartment schedule at all."
+                    "list when the sheet has no per-apartment schedule at all. Also extract "
+                    "residential_area_sqm when the legend states how much of the building is "
+                    "for residential use specifically (e.g. \"שטח למגורים\"), as opposed to the "
+                    "total built area alone -- null when the legend does not distinguish "
+                    "residential from any other use. Also extract declared_floor_count: the "
+                    "building's own stated number of floors (e.g. \"מספר קומות\", \"בניין בן 7 "
+                    "קומות\"), not any individual unit's floor -- null when the legend does not "
+                    "state one."
                 ),
             },
             {
@@ -331,6 +417,8 @@ async def _extract_via_openai(image_bytes: bytes, plot_area_sqm: float | None) -
         plausibility_reason=plausibility_reason,
         units=units,
         declared_unit_count=payload.get("declared_unit_count"),
+        residential_area_sqm=payload.get("residential_area_sqm"),
+        declared_floor_count=payload.get("declared_floor_count"),
         # Always True: an AI-read figure is never auto-trusted as verified
         # fact, even when it clears the bounds check -- the live test showed
         # gpt-4o-mini confidently misread a plot number as a building area,
