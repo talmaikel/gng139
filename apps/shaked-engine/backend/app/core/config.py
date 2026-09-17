@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_extraction_model: str = "gpt-4o-mini"
 
+    # ‏W5 · חיפוש אינטרנט אוטומטי לאיתור בניין שכבר חודש (Brave Search API,
+    # ‏app/cities/herzliya/renewal_search_provider.py). בלי מפתח — כל בדיקה
+    # חדשה מוחזרת כ-`retryable` (לא נבדקת כ״אין חידוש״, ולא נמסרת).
+    # לעולם לא בקוד ולא במאגר; ‏#127.
+    brave_search_api_key: str | None = None
+
     tesseract_cmd: str = "/usr/bin/tesseract"
     tesseract_lang: str = "heb+eng"
 
