@@ -1212,14 +1212,22 @@ async def test_the_dossier_explains_the_levy_with_its_own_numbers(session):
     assert f"{b['levy']['estimate_ils'] / 1e6:,.1f} מיליון" in text["estimate"]
     assert f"{b['levy']['low_ils'] / 1e6:,.1f} מיליון" in text["range"]
     assert f"{b['levy']['viable_up_to_ils'] / 1e6:,.1f} מיליון" in text["ceiling"]
+    # התרגיל הקצר מוצג מתחת לשורת ההיטל עם אותם מספרים, לא כדוגמה כללית.
+    calc = b["calculation"]
+    assert f"{b['estimate']['after_ils']:,.0f} ₪" in calc
+    assert f"{b['estimate']['before_ils']:,.0f} ₪" in calc
+    assert f"{max(b['estimate']['betterment_ils'], 0):,.0f} ₪ × 25%" in calc
+    assert calc.endswith(f"{b['levy']['estimate_ils']:,.0f} ₪ (אומדן)")
     strings = {v for kind, v in _cells(exports.excel(d)).values() if kind == "s"}
     assert any(text["ceiling"] in s_ for s_ in strings)
+    assert calc in strings
 
     # בלי מחירי יד שנייה — אומרים למה אין אומדן, ולא ממציאים
     c2, _, opp2 = await _delivered(session, block="9698")
     b2 = (await build(session, HerzliyaCityRules(), opp2.id, c2.id))["economics"]["betterment"]
     assert [p["id"] for p in b2["explain"]][:2] == ["what", "estimate"]
     assert b2["explain"][1]["title"] == "למה אין אומדן"
+    assert b2["calculation"] is None
 
 
 @pytest.mark.asyncio
