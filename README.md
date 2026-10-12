@@ -13,6 +13,32 @@ Excel workbook with live formulas.
 The product itself is in Hebrew. Code, commits, pull requests and repository documentation
 are in English; task tracking in GitHub issues may stay in Hebrew.
 
+## Try the beta
+
+**Live beta:** <https://gng139.online>
+
+The beta runs on a free hosting plan, so the first page load can take up to a minute while
+the server wakes up. If the page does not respond, wait and refresh.
+
+### Signing in
+
+1. Open <https://gng139.online> and sign in with the review account:
+   - **Email:** `admin@gng139.online`
+   - **Password:** provided in the submission document.
+2. Draw a rectangle on the map over the demo area in Herzliya and run a scan.
+3. Open one of the opportunity dossiers the scan returns.
+4. Download the dossier as **PDF** and as **Excel**. In the Excel workbook, change the sale
+   price in the blue cell and watch the profit recalculate.
+
+The full walkthrough, including the demo area and what to show in which order, is in the
+demo script (Hebrew): [`apps/shaked-engine/DEMO.md`](apps/shaked-engine/DEMO.md).
+
+### Running it yourself
+
+Step-by-step local setup is in
+[`apps/shaked-engine/RUN_LOCAL.md`](apps/shaked-engine/RUN_LOCAL.md). The engine overview,
+architecture and scripts are in [`apps/shaked-engine/README.md`](apps/shaked-engine/README.md).
+
 ## Repository layout
 
 | Path | What it is |
@@ -23,7 +49,9 @@ are in English; task tracking in GitHub issues may stay in Hebrew.
 
 ## Where to start
 
-- **Run it locally:** [`apps/shaked-engine/README.md`](apps/shaked-engine/README.md)
+- **Try the live beta:** <https://gng139.online> (see [Try the beta](#try-the-beta))
+- **Run it locally:** [`apps/shaked-engine/RUN_LOCAL.md`](apps/shaked-engine/RUN_LOCAL.md)
+- **Engine overview:** [`apps/shaked-engine/README.md`](apps/shaked-engine/README.md)
 - **How to contribute:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
 - **What exists and what is next:** [`apps/shaked-engine/PRODUCT_STRUCTURE.md`](apps/shaked-engine/PRODUCT_STRUCTURE.md)
 - **The demo script (Hebrew):** [`apps/shaked-engine/DEMO.md`](apps/shaked-engine/DEMO.md)
