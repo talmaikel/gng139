@@ -14,13 +14,14 @@ from app.evidence import Certainty
 from app.pipeline.extractor import (
     DwellingUnitReading,
     ExtractionResult,
+    _parse_floor_count,
     _parse_unit_count,
     _parse_unit_rows,
     _unit_plausibility,
 )
 from app.services.dwelling_units import check_unit_count, resolve_existing_unit_area
 from app.services.economic.assumptions import get_assumptions
-from app.worker import _average_existing_unit_input
+from app.worker import _average_existing_unit_input, _check_floor_count
 
 HEBREW_SCHEDULE = """טבלת שטחים
 דירה 1 קומה 1 78.50 מ"ר
@@ -66,6 +67,19 @@ def test_declared_count_is_read_separately_from_the_rows():
     assert _parse_unit_count(HEBREW_SCHEDULE) == 3
     assert _parse_unit_count("הבניין כולל 6 יחידות דיור") == 6
     assert _parse_unit_count(COLUMNAR_SCHEDULE) is None
+
+
+def test_declared_floor_count_is_read_from_the_legend():
+    """Distinct from a unit row's own floor -- this is the building's own
+    stated total, e.g. from a title block rather than the schedule."""
+    assert _parse_floor_count("מספר קומות: 7") == 7
+    assert _parse_floor_count("בניין בן 9 קומות") == 9
+    assert _parse_floor_count(HEBREW_SCHEDULE) is None  # אין הצהרה כללית כאן, רק שורות דירה
+
+
+def test_declared_floor_count_rejects_out_of_range_values():
+    assert _parse_floor_count("קומות: 0") is None
+    assert _parse_floor_count("קומות: 85") is None
 
 
 def test_gush_and_parcel_numbers_are_not_mistaken_for_units():
@@ -124,6 +138,25 @@ def test_disagreeing_unit_counts_are_reported():
 def test_conflict_is_not_raised_when_one_side_is_unknown():
     assert check_unit_count(None, 28) is None
     assert check_unit_count(6, None) is None
+
+
+# ── the same cross-check, for the building's declared floor count ─────────
+
+
+def test_matching_floor_counts_are_not_a_conflict():
+    assert _check_floor_count(7, 7) is None
+
+
+def test_disagreeing_floor_counts_are_reported_but_never_overwrite():
+    """The note names both figures; nothing about calling this function
+    changes either the legend's reading or the official one."""
+    note = _check_floor_count(7, 9)
+    assert note is not None and "7" in note and "9" in note
+
+
+def test_floor_count_conflict_is_not_raised_when_one_side_is_unknown():
+    assert _check_floor_count(None, 9) is None
+    assert _check_floor_count(7, None) is None
 
 
 # ── what may decide a scenario ─────────────────────────────────────────────
