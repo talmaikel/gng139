@@ -1,14 +1,19 @@
-"""כתיבת `renewal_status` כראיה. (W5 · #110)
+"""כתיבת `renewal_status` כראיה. (W5 · #110, #127)
 
-שלושה מקורות, לפי סדר:
+ארבעה מקורות, לפי סדר:
 
   1. **החלטת צוות** מהמסך (`record_team_decision`) — כל עוד היא חדשה
-     מהבדיקה שברשימה.
+     מהבדיקה שברשימה. נשאר לתאימות לאחור; אין מסלול חדש שמזין אותו עוד.
   2. **הרשימה הידנית** `data/verified_renewed.json` — ‏MANUALLY_VERIFIED.
-  3. **הסימנים** מתיק הבניין ומשכבת המבנים — ‏DERIVED.
+     רשומות היסטוריות בלבד — אין להוסיף אליה חלקות חדשות (#127).
+  3. **חיפוש אינטרנט אוטומטי** (`renewal_search.py`) — תוצאה ודאית פוסלת
+     מיד, בלי מסך אישור ובלי היתר תיק. ‏DERIVED, לעולם לא MANUALLY_VERIFIED.
+  4. **הסימנים** מתיק הבניין ומשכבת המבנים — ‏DERIVED.
 
 סימנים שאין מולם היתרי תיק אינם נכתבים כלל: השער נשאר ״לא ידוע״ והמסירה
-נחסמת, ולא נקראת כ״לא נמצא חידוש״.
+נחסמת, ולא נקראת כ״לא נמצא חידוש״. בדיקת חיפוש שלא הסתיימה (`retryable`)
+מורידה תוצאת סימנים ״נקייה״ ל-״לא ידוע״ מאותה סיבה בדיוק — ראו
+`renewal_signals.combine_with_search`.
 """
 from datetime import date, datetime, timezone
 from typing import Any
@@ -30,6 +35,13 @@ SIGNAL_METHOD = "היתר אחרי 18.5.2005 ו-6+ קומות, בנוי/מגרש
 # השדות שהחשד נשען עליהם. הראשונים מהתיק — מהם נלקח המקור.
 ARCHIVE_INPUTS = ("post_2005_permit", "tama38_event", "representative_event")
 LAYER_INPUTS = ("floors", "parcel_area")
+
+# ‏W5 · 16.09 · תוצאת חיפוש הרשת האוטומטי (`renewal_search.py`). שם השדה
+# חוזר כמחרוזת ולא כיבוא של המודול, כמו `ARCHIVE_INPUTS` למעלה — `renewal_search.py`
+# מייבא את `renewal.py` כדי לקרוא ל-`apply()`, וייבוא בכיוון ההפוך היה מעגלי.
+SEARCH_INPUT = "renewal_web_search"
+SEARCH_METHOD = "חיפוש אינטרנט אוטומטי (Brave Search API)"
+SEARCH_SOURCE_DOC_URL = "https://api.search.brave.com/res/v1/web/search"
 
 
 def _at(opp: Opportunity) -> str:
@@ -60,13 +72,23 @@ def _team_is_newer(team: FieldEvidence, entry: dict | None) -> bool:
 
 
 def _row(opp: Opportunity, decision: dict, entry: dict | None,
-         fields: dict[str, dict], now: datetime) -> dict[str, Any] | None:
+         fields: dict[str, dict], now: datetime,
+         search: dict[str, Any] | None = None) -> dict[str, Any] | None:
     if entry is not None:
         return dict(field=FIELD, value=decision, certainty=Certainty.MANUALLY_VERIFIED.value,
                     source_url=entry.get("evidence_url") or LIST_URL, retrieved_at=now,
                     # מתי נבדק — שונה ממתי קראנו את הרשימה
                     source_updated_at=entry.get("checked_at"),
                     location=f'{_at(opp)} · {entry["source"]}', method=LIST_METHOD)
+    # ‏W5 · תוצאה ודאית מהחיפוש האוטומטי היא מקור עצמאי — אינה MANUALLY_VERIFIED
+    # (הצוות לא אישר אותה), ואינה תלויה בהיתר תיק כמו ה-DERIVED שלמטה.
+    if decision["status"] == "verified_renewed" and (search or {}).get("status") == "verified_renewed":
+        checked_at = search.get("checked_at")
+        retrieved = datetime.fromisoformat(checked_at) if checked_at else now
+        return dict(field=FIELD, value=decision, certainty=Certainty.DERIVED.value,
+                    source_url=search.get("result_url") or SEARCH_SOURCE_DOC_URL,
+                    retrieved_at=retrieved,
+                    location=f'{_at(opp)} · {search.get("normalized_address")}', method=SEARCH_METHOD)
     if decision["status"] not in ("suspected", "none"):
         return None
     used = [fields[n] for n in ARCHIVE_INPUTS + LAYER_INPUTS
@@ -98,8 +120,11 @@ async def plan(session, opp: Opportunity, *, now: datetime | None = None,
     if team is not None and _team_is_newer(team, entry):
         return {"decision": team.value, "row": None, "keep_team": True, "existing": existing}
     fields = await fields_for(session, opp.id)
-    decision = RS.decide(entry, RS.signals(**signal_inputs(fields, opp.area_sqm, extra)))
-    return {"decision": decision, "row": _row(opp, decision, entry, fields, now),
+    # ‏`extra` יכול גם להזין `renewal_web_search` ישירות — למשל בהרצה יבשה
+    # שמדמה בדיקה שעוד לא נכתבה למסד, כמו ש-`signal_inputs` כבר עושה לשדות אחרים.
+    search = deciding(fields).get(SEARCH_INPUT) or (extra or {}).get(SEARCH_INPUT)
+    decision = RS.decide(entry, RS.signals(**signal_inputs(fields, opp.area_sqm, extra)), search)
+    return {"decision": decision, "row": _row(opp, decision, entry, fields, now, search),
             "keep_team": False, "existing": existing}
 
 

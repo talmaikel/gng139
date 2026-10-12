@@ -124,6 +124,25 @@ def never_reach_the_archive(request, monkeypatch):
     monkeypatch.setattr(HerzliyaArchiveClient, "request", refuse)
 
 
+@pytest.fixture(autouse=True)
+def never_reach_brave_search(monkeypatch):
+    """‏W5 · הסוויטה אינה פונה ל-Brave Search API האמיתי — לעולם.
+
+    כמו `never_reach_the_archive` למעלה: בדיקת חידוש שרוצה תוצאת חיפוש
+    מדמה ספק (`FakeSearchProvider` ב-`tests/test_renewal_search.py`) ומזריקה
+    אותו במפורש; שום בדיקה לא אמורה להגיע ל-`BraveSearchProvider` עצמו.
+    """
+    from app.cities.herzliya.renewal_search_provider import BraveSearchProvider
+
+    async def refuse(*_args, **_kwargs):
+        raise AssertionError(
+            "בדיקה ניסתה לפנות ל-Brave Search API האמיתי. יש לדמות ספק "
+            "(FakeSearchProvider) ולהזריק אותו במפורש."
+        )
+
+    monkeypatch.setattr(BraveSearchProvider, "search", refuse)
+
+
 @pytest.fixture
 async def session():
     """
