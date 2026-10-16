@@ -54,6 +54,16 @@ UNIT_COUNT_PATTERNS = (
     re.compile(r"\b(\d{1,3})\s*(?:יח[\"'״]?ד|יחידות\s*דיור|דירות)"),
 )
 
+# Explicit building-floor statements only. A unit row saying "קומה 3" is not
+# enough to prove that the building has three floors (there may be a ground,
+# pilotis, roof level or another floor with no dwelling-unit row), so this
+# parser deliberately avoids deriving the building count from apartment rows.
+FLOOR_COUNT_PATTERNS = (
+    re.compile(r"(?:בניין|מבנה)\s*(?:בן|בת)\s*(\d{1,2})\s*קומות", re.IGNORECASE),
+    re.compile(r"(?:סה[\"'״]?כ|סך\s*הכל)\D{0,12}?(\d{1,2})\s*קומות", re.IGNORECASE),
+    re.compile(r"(?:מספר|מס[\"'״]?)\s*קומות\D{0,8}?(\d{1,2})\b", re.IGNORECASE),
+)
+
 MIN_OCR_CONFIDENCE = 60.0
 
 # Bounds for a single dwelling unit, deliberately wider than any normal
@@ -84,6 +94,7 @@ def _check_plausibility(area_sqm: float | None, plot_area_sqm: float | None) -> 
     if plot_area_sqm and area_sqm > plot_area_sqm * MAX_AREA_TO_PLOT_RATIO:
         return False, f"{area_sqm} sqm exceeds {MAX_AREA_TO_PLOT_RATIO}x the plot area ({plot_area_sqm} sqm)"
     return True, None
+
 
 @dataclass
 class DwellingUnitReading:
@@ -162,6 +173,26 @@ def _parse_unit_count(text: str) -> int | None:
     return None
 
 
+def _parse_declared_floor_count(text: str) -> int | None:
+    """Read an explicit whole-building floor count from OCR text.
+
+    This is deliberately narrower than looking at the highest apartment floor.
+    The latter can miss pilotis, a non-residential level or a small upper floor
+    and would quietly turn a partial schedule into a legal/planning fact.
+    """
+    for pattern in FLOOR_COUNT_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        try:
+            count = int(match.group(1))
+        except (TypeError, ValueError):
+            continue
+        if 1 <= count <= 60:
+            return count
+    return None
+
+
 EXTRACTION_JSON_SCHEMA = {
     "name": "building_area_extraction",
     "schema": {
@@ -185,12 +216,20 @@ EXTRACTION_JSON_SCHEMA = {
                 },
             },
             "declared_unit_count": {"type": ["integer", "null"]},
+            "declared_floor_count": {"type": ["integer", "null"]},
             "confidence": {"type": "number"},
             "notes": {"type": ["string", "null"]},
         },
         # OpenAI's strict structured-output mode requires every property to be
         # listed here, even ones that are semantically optional/nullable above.
-        "required": ["total_building_area_sqm", "units", "declared_unit_count", "confidence", "notes"],
+        "required": [
+            "total_building_area_sqm",
+            "units",
+            "declared_unit_count",
+            "declared_floor_count",
+            "confidence",
+            "notes",
+        ],
         "additionalProperties": False,
     },
     "strict": True,
@@ -220,6 +259,11 @@ class ExtractionResult:
     # same thing as len(units): a schedule can be partly illegible while the
     # summary line is readable, and the disagreement is worth keeping.
     declared_unit_count: int | None = None
+    # Whole-building count only when explicitly stated on the sheet. This is
+    # kept separate from the per-unit floor column because a schedule can be
+    # partial and §70a-style floor counting has rules this extractor does not
+    # attempt to decide.
+    declared_floor_count: int | None = None
 
     @property
     def units_total_area_sqm(self) -> float | None:
@@ -247,6 +291,7 @@ def _extract_via_tesseract(legend_crop: np.ndarray, plot_area_sqm: float | None)
 
     units = _parse_unit_rows(text)
     declared_unit_count = _parse_unit_count(text)
+    declared_floor_count = _parse_declared_floor_count(text)
 
     # A schedule that lists every apartment but no total is common on older
     # sheets. Summing the plausible unit rows is a legitimate reading of that
@@ -266,6 +311,7 @@ def _extract_via_tesseract(legend_crop: np.ndarray, plot_area_sqm: float | None)
         raw_text=text,
         units=units,
         declared_unit_count=declared_unit_count,
+        declared_floor_count=declared_floor_count,
     )
 
 
@@ -288,16 +334,18 @@ async def _extract_via_openai(image_bytes: bytes, plot_area_sqm: float | None) -
                     "You read degraded Hebrew architectural blueprint legends and schedules. "
                     "Extract the total building area in square meters, and, when the sheet "
                     "carries a per-apartment schedule, one row per dwelling unit with its "
-                    "number, floor and area. If only individual unit areas are legible, sum "
-                    "them into the total. Report a unit you cannot read as a row with a null "
-                    "area rather than omitting it or guessing a value, and return an empty "
-                    "list when the sheet has no per-apartment schedule at all."
+                    "number, floor and area. Also extract a whole-building floor count only "
+                    "when the sheet explicitly states one; do not infer it from the highest "
+                    "apartment floor. If only individual unit areas are legible, sum them into "
+                    "the total. Report a unit you cannot read as a row with a null area rather "
+                    "than omitting it or guessing a value, and return an empty list when the "
+                    "sheet has no per-apartment schedule at all."
                 ),
             },
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Extract the total building area (sqm) from this legend/schedule."},
+                    {"type": "text", "text": "Extract the total building area (sqm), unit schedule, and any explicitly declared building floor count from this legend/schedule."},
                     {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{encoded}"}},
                 ],
             },
@@ -331,6 +379,7 @@ async def _extract_via_openai(image_bytes: bytes, plot_area_sqm: float | None) -
         plausibility_reason=plausibility_reason,
         units=units,
         declared_unit_count=payload.get("declared_unit_count"),
+        declared_floor_count=payload.get("declared_floor_count"),
         # Always True: an AI-read figure is never auto-trusted as verified
         # fact, even when it clears the bounds check -- the live test showed
         # gpt-4o-mini confidently misread a plot number as a building area,
