@@ -2,7 +2,7 @@
 
 import { Carousel, type Embla } from "@mantine/carousel";
 import { ActionIcon } from "@mantine/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const THRESHOLDS = ["מועד ההיתר", "70% מגורים", "בוצע חיזוק", "מספר מבנים", "יוזמה קיימת"];
 const PREFERENCES = ["גודל מגרש", "קומות", "רוחב רחוב", "מספר דירות", "שכונה", "תקרת זכויות"];
@@ -99,8 +99,6 @@ const STEPS = [
 export function HowItWorks() {
   const [embla, setEmbla] = useState<Embla | null>(null);
   const [active, setActive] = useState(0);
-  const viewport = useRef<HTMLDivElement>(null);
-  const dots = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!embla) return;
@@ -109,59 +107,50 @@ export function HowItWorks() {
     return () => { embla.off("select", onSelect); };
   }, [embla]);
 
-  // At either end, a click nudges the slides toward where the user tried to go and springs back.
-  const bounce = useCallback((dir: 1 | -1) => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const px = dir * 34; // RTL: "next" lies to the left, so the content moves right
-    viewport.current?.animate(
-      [{ transform: "translateX(0)" }, { transform: `translateX(${px}px)`, offset: 0.28 }, { transform: `translateX(${-px * 0.35}px)`, offset: 0.6 }, { transform: `translateX(${px * 0.1}px)`, offset: 0.82 }, { transform: "translateX(0)" }],
-      { duration: 620, easing: "ease-out" },
-    );
-    const dot = dots.current?.children[active] as HTMLElement | undefined;
-    dot?.animate(
-      [{ transform: "translateX(0) scale(1)" }, { transform: `translateX(${-dir * 7}px) scale(1.25,.8)`, offset: 0.3 }, { transform: `translateX(${dir * 3}px) scale(.92,1.08)`, offset: 0.62 }, { transform: "translateX(0) scale(1)" }],
-      { duration: 560, easing: "ease-out" },
-    );
-  }, [active]);
-
   const go = (i: number) => {
-    if (!embla) return;
-    if (i < 0) return bounce(-1);
-    if (i >= STEPS.length) return bounce(1);
-    embla.scrollTo(i);
+    if (embla && i >= 0 && i < STEPS.length) embla.scrollTo(i);
   };
 
   return (
     <div className="sk-car" data-bf="">
-      <div ref={viewport}>
-        <Carousel withControls={false} withIndicators={false} loop={false} slideGap={0} slideSize="100%" getEmblaApi={setEmbla} aria-roledescription="carousel">
-          {STEPS.map((s, i) => (
-            <Carousel.Slide key={s.title} aria-label={`שלב ${i + 1} מתוך ${STEPS.length}`}>
-              <div className="sk-slide">
-                <div>
-                  <div className="sk-num"><b>{i + 1}</b><small>שלב {i + 1} מתוך {STEPS.length}</small></div>
-                  <h3>{s.title}</h3>
-                  {s.body}
-                  <div className="sk-out">מקבלים: {s.out}</div>
+      {/* The four steps by name: the whole process is visible before the first click. */}
+      <ol className="sk-steps">
+        {STEPS.map((s, i) => (
+          <li key={s.title}>
+            <button type="button" aria-current={i === active ? "step" : undefined} onClick={() => go(i)}>
+              <span className="sk-mono">{String(i + 1).padStart(2, "0")}</span>
+              {s.title}
+            </button>
+          </li>
+        ))}
+      </ol>
+      <div className="sk-car-body">
+        <div>
+          <Carousel withControls={false} withIndicators={false} loop={false} slideGap={0} slideSize="100%" getEmblaApi={setEmbla} aria-roledescription="carousel">
+            {STEPS.map((s, i) => (
+              <Carousel.Slide key={s.title} aria-label={`שלב ${i + 1} מתוך ${STEPS.length}`}>
+                <div className="sk-slide">
+                  <div>
+                    <div className="sk-num"><b className="sk-mono">{i + 1}</b><small>שלב {i + 1} מתוך {STEPS.length}</small></div>
+                    <h3>{s.title}</h3>
+                    {s.body}
+                    <div className="sk-out"><span>מקבלים</span><div>{s.out}</div></div>
+                  </div>
+                  <div className="sk-pic"><Pic step={i} /></div>
                 </div>
-                <div className="sk-pic"><Pic step={i} /></div>
-              </div>
-            </Carousel.Slide>
-          ))}
-        </Carousel>
-      </div>
-      <div className="sk-car-nav">
-        <ActionIcon variant="default" size={40} radius="xl" aria-label="השלב הקודם" onClick={() => go(active - 1)} style={{ opacity: active === 0 ? 0.45 : 1 }}>
-          <Arrow d="M9 6l6 6-6 6" />
-        </ActionIcon>
-        <div className="sk-dots" ref={dots}>
-          {STEPS.map((s, i) => (
-            <button key={s.title} type="button" className="sk-dot" data-active={i === active} aria-label={`שלב ${i + 1}`} onClick={() => go(i)} />
-          ))}
+              </Carousel.Slide>
+            ))}
+          </Carousel>
         </div>
-        <ActionIcon variant="default" size={40} radius="xl" aria-label="השלב הבא" onClick={() => go(active + 1)} style={{ opacity: active === STEPS.length - 1 ? 0.45 : 1 }}>
-          <Arrow d="M15 6l-6 6 6 6" />
-        </ActionIcon>
+        <div className="sk-car-nav">
+          <ActionIcon variant="default" size={40} radius="xl" aria-label="השלב הקודם" onClick={() => go(active - 1)} disabled={active === 0}>
+            <Arrow d="M9 6l6 6-6 6" />
+          </ActionIcon>
+          <span className="sk-mono sk-count" aria-live="polite">{String(active + 1).padStart(2, "0")} / {String(STEPS.length).padStart(2, "0")}</span>
+          <ActionIcon variant="default" size={40} radius="xl" aria-label="השלב הבא" onClick={() => go(active + 1)} disabled={active === STEPS.length - 1}>
+            <Arrow d="M15 6l-6 6 6 6" />
+          </ActionIcon>
+        </div>
       </div>
     </div>
   );

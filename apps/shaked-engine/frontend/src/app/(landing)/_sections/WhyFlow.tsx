@@ -30,15 +30,21 @@ export function WhyFlow() {
     const fr = el.getBoundingClientRect();
     const rect = (n: Element) => {
       const r = n.getBoundingClientRect();
-      return { l: r.left - fr.left, r: r.right - fr.left, cy: r.top - fr.top + r.height / 2 };
+      return { l: r.left - fr.left, r: r.right - fr.left, cx: r.left - fr.left + r.width / 2, t: r.top - fr.top, b: r.bottom - fr.top, cy: r.top - fr.top + r.height / 2 };
     };
     const E = rect(e), O = rect(o);
     const next = srcs.current.filter(Boolean).map((n) => {
       const S = rect(n!), mx = (S.l + E.r) / 2;
       return `M${S.l},${S.cy} C${mx},${S.cy} ${mx},${E.cy} ${E.r},${E.cy}`;
     });
-    const mx = (E.l + O.r) / 2;
-    next.push(`M${E.l},${E.cy} C${mx},${E.cy} ${mx},${O.cy} ${O.r},${O.cy}`);
+    if (size.narrow) {
+      // Narrow: the dossier sits under the engine, so the last wire runs down.
+      const my = (E.b + O.t) / 2;
+      next.push(`M${E.cx},${E.b} C${E.cx},${my} ${O.cx},${my} ${O.cx},${O.t}`);
+    } else {
+      const mx = (E.l + O.r) / 2;
+      next.push(`M${E.l},${E.cy} C${mx},${E.cy} ${mx},${O.cy} ${O.r},${O.cy}`);
+    }
     setPaths(next);
   }, [size]);
 
@@ -63,16 +69,16 @@ export function WhyFlow() {
           key={s}
           ref={(n) => { srcs.current[k] = n; }}
           className="sk-node"
-          style={{ left: w * (narrow ? 0.74 : 0.82), top: h * (0.14 + k * 0.18) }}
+          style={narrow ? { left: w * 0.72, top: h * (0.08 + k * 0.105) } : { left: w * 0.82, top: h * (0.14 + k * 0.18) }}
         >
           <i />{s}
         </div>
       ))}
-      <div ref={engine} className="sk-node sk-engine" style={{ left: w * (narrow ? 0.44 : 0.5), top: h / 2 }}>
+      <div ref={engine} className="sk-node sk-engine" style={narrow ? { left: w * 0.27, top: h * 0.29 } : { left: w * 0.5, top: h / 2 }}>
         <img src="/brand/shakdan-lockup.svg" alt="" />
         <span>Shaked Engine</span>
       </div>
-      <div ref={out} className="sk-node sk-out-node" style={{ left: w * (narrow ? 0.14 : 0.15), top: h / 2 }}>
+      <div ref={out} className="sk-node sk-out-node" style={narrow ? { left: w * 0.5, top: h * 0.84 } : { left: w * 0.15, top: h / 2 }}>
         <b>תיק ליזם</b>
         <small>זכויות · תנאי הסף</small>
         <small>תרחיש כלכלי · מקורות</small>

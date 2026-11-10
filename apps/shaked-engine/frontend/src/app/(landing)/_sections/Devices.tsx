@@ -19,10 +19,9 @@ export function Devices() {
   return (
     <div className="sk-screens" data-bf="">
       <div className="sk-laptop">
-        <span className="sk-beam" style={{ inset: -11 }} />
         <div className="sk-bar" aria-hidden>
           <i style={{ background: "#FF5F57" }} /><i style={{ background: "#FEBC2E" }} /><i style={{ background: "#28C840" }} />
-          <span>app.shakdan.co.il</span>
+          <span>gng139.online/app</span>
         </div>
         <div className="sk-app" role="img" aria-label="מסך המועמדים של Shaked Engine: רשימת חלקות ומפת הרצליה">
           <div className="sk-app-top">
